@@ -922,13 +922,43 @@ async function getMvuData() {
     return { type: 'message', message_id: 'latest' };
 }
 function getVariableReadOptions() {
-    const options = [];
     const current = getMessageVariableOption();
-    options.push(current);
-    options.push({ type: 'chat' });
-    if (current.message_id !== 'latest')
-        options.push({ type: 'message', message_id: 'latest' });
-    return options;
+    const liveOptions = [{ type: 'chat' }, { type: 'message', message_id: 'latest' }, current];
+    const historicalOptions = [current, { type: 'chat' }, { type: 'message', message_id: 'latest' }];
+    return dedupeVariableReadOptions(shouldPreferCurrentVariableSnapshot(current) ? historicalOptions : liveOptions);
+}
+function getLatestMessageIdForReadOptions() {
+    try {
+        if (typeof getChatMessages !== 'function')
+            return null;
+        const messages = getChatMessages(-1);
+        if (!Array.isArray(messages) || messages.length === 0)
+            return null;
+        const latest = messages[messages.length - 1];
+        return latest?.message_id ?? latest?.mesid ?? latest?.id ?? messages.length - 1;
+    }
+    catch {
+        return null;
+    }
+}
+function shouldPreferCurrentVariableSnapshot(current) {
+    const currentMessageId = current?.message_id;
+    const latestMessageId = getLatestMessageIdForReadOptions();
+    return currentMessageId !== undefined && currentMessageId !== null && currentMessageId !== 'latest' && latestMessageId !== null && String(currentMessageId) !== String(latestMessageId);
+}
+function dedupeVariableReadOptions(options) {
+    const seen = new Set();
+    const result = [];
+    for (const option of options) {
+        if (!option)
+            continue;
+        const key = option.type + ':' + String(option.message_id ?? '');
+        if (seen.has(key))
+            continue;
+        seen.add(key);
+        result.push(option);
+    }
+    return result;
 }
 function scoreMvuCandidate(mvu) {
     const statData = mvu?.stat_data;
@@ -1773,28 +1803,73 @@ function scoreStatDataCandidate(value) {
     return score;
 }
 function getFrontendVariableOptions() {
-    const options = [];
+    const currentMessageId = getCurrentMessageIdSafe();
+    const currentOption = currentMessageId !== null && currentMessageId !== 'latest'
+        ? { type: 'message', message_id: currentMessageId }
+        : null;
+    const liveOptions = [CHAT_OPTION, { type: 'message', message_id: 'latest' }, currentOption].filter(Boolean);
+    const historicalOptions = [currentOption, CHAT_OPTION, { type: 'message', message_id: 'latest' }].filter(Boolean);
+    return dedupeVariableOptions(shouldPreferCurrentMessageSnapshot() ? historicalOptions : liveOptions);
+}
+function getCurrentMessageIdSafe() {
     try {
         const currentMessageId = getCurrentMessageId();
         if (currentMessageId !== undefined && currentMessageId !== null && currentMessageId !== 'latest')
-            options.push({ type: 'message', message_id: currentMessageId });
+            return currentMessageId;
     }
     catch {
         // ignore
     }
-    options.push(CHAT_OPTION);
-    options.push({ type: 'message', message_id: 'latest' });
-    return options;
-}
-function pickBestVariableSnapshot(candidates) {
-    for (const candidate of candidates) {
-        const score = scoreStatDataCandidate(candidate);
-        if (score >= 0)
-            return candidate;
-    }
     return null;
 }
-function getLatestVariablesSync() {
+function getLatestMessageIdSafe() {
+    try {
+        if (typeof getChatMessages !== 'function')
+            return null;
+        const messages = getChatMessages(-1);
+        if (!Array.isArray(messages) || messages.length === 0)
+            return null;
+        const latest = messages[messages.length - 1];
+        const explicitId = latest?.message_id ?? latest?.mesid ?? latest?.id;
+        return explicitId ?? messages.length - 1;
+    }
+    catch {
+        return null;
+    }
+}
+function shouldPreferCurrentMessageSnapshot() {
+    const currentMessageId = getCurrentMessageIdSafe();
+    const latestMessageId = getLatestMessageIdSafe();
+    return currentMessageId !== null && latestMessageId !== null && String(currentMessageId) !== String(latestMessageId);
+}
+function dedupeVariableOptions(options) {
+    const seen = new Set();
+    const result = [];
+    for (const option of options) {
+        if (!option)
+            continue;
+        const key = option.type + ':' + String(option.message_id ?? '');
+        if (seen.has(key))
+            continue;
+        seen.add(key);
+        result.push(option);
+    }
+    return result;
+}
+function pickBestVariableSnapshot(candidates) {
+    let best = null;
+    for (const candidate of candidates) {
+        const score = scoreStatDataCandidate(candidate);
+        if (score < 0)
+            continue;
+        if (shouldPreferCurrentMessageSnapshot())
+            return candidate;
+        if (!best || score > best.score)
+            best = { candidate, score };
+    }
+    return best?.candidate ?? null;
+}
+function getVariableSnapshotsSync() {
     const candidates = [];
     for (const option of getFrontendVariableOptions()) {
         try {
@@ -1832,10 +1907,142 @@ function getLatestVariablesSync() {
     catch {
         // ignore
     }
-    return pickBestVariableSnapshot(candidates) ?? {};
+    const seen = new Set();
+    return candidates.filter(candidate => {
+        if (!isPlainVariableObject(candidate))
+            return false;
+        const key = [
+            candidate['系统']?.['当前日期'] ?? '',
+            candidate['系统']?.['当前时间'] ?? '',
+            candidate['系统']?.['_MC能量'] ?? candidate['系统']?.['MC能量'] ?? '',
+            candidate['系统']?.['当前MC点'] ?? candidate['系统']?.['MC点'] ?? '',
+            Object.keys(candidate['角色'] ?? {}).join(','),
+            Object.keys(candidate['任务'] ?? {}).join(','),
+        ].join('\\u0001');
+        if (seen.has(key))
+            return false;
+        seen.add(key);
+        return true;
+    });
+}
+function getLatestVariablesSync() {
+    return pickBestVariableSnapshot(getVariableSnapshotsSync()) ?? {};
 }
 function getLatestChatVariables() {
     return normalizeChatVariables(getLatestVariablesSync());
+}`
+  );
+  output = output.replace(
+    `function normalizeSystemAliases(systemRaw) {
+    const existingEnergy = toFiniteNumber(systemRaw._MC能量);
+    if (existingEnergy === null) {
+        const mcEnergy = toFiniteNumber(systemRaw.MC能量);
+        if (mcEnergy !== null)
+            systemRaw._MC能量 = mcEnergy;
+    }
+    const existingEnergyMax = toFiniteNumber(systemRaw._MC能量上限);
+    if (existingEnergyMax === null) {
+        const mcEnergyMax = toFiniteNumber(systemRaw.MC能量上限);
+        if (mcEnergyMax !== null)
+            systemRaw._MC能量上限 = mcEnergyMax;
+    }
+    return systemRaw;
+}`,
+    `const USER_RESOURCE_ALIASES = {
+    mcEnergy: ['_MC能量', 'MC能量', '当前MC能量', 'MC能量值', '当前能量', '能量', 'mcEnergy'],
+    mcEnergyMax: ['_MC能量上限', 'MC能量上限', '当前MC能量上限', '最大MC能量', 'MC最大能量', '能量上限', 'mcEnergyMax'],
+    mcPoints: ['当前MC点', 'MC点', 'MC点数', '_MC点', '_MC点数', '当前PT', 'PT', 'PT点数', '点数', 'mcPoints'],
+    totalConsumedMc: ['_累计消耗MC点', '累计消耗MC点', '累计消耗MC', '总消耗MC点', '消耗MC点', 'totalConsumedMc'],
+    money: ['持有零花钱', '零花钱', '持有金钱', '持有资金', '当前资金', '资金', '金钱', 'money'],
+    suspicion: ['主角可疑度', '可疑度', '当前可疑度', '_可疑度', 'suspicion'],
+};
+const USER_RESOURCE_CANONICAL_KEYS = {
+    mcEnergy: '_MC能量',
+    mcEnergyMax: '_MC能量上限',
+    mcPoints: '当前MC点',
+    totalConsumedMc: '_累计消耗MC点',
+    money: '持有零花钱',
+    suspicion: '主角可疑度',
+};
+function readSystemAliasNumber(systemRaw, keys) {
+    if (!isPlainVariableObject(systemRaw))
+        return null;
+    for (const key of keys) {
+        if (!Object.prototype.hasOwnProperty.call(systemRaw, key))
+            continue;
+        const value = toFiniteNumber(systemRaw[key]);
+        if (value !== null)
+            return value;
+    }
+    return null;
+}
+function readExplicitUserResourcePatch(systemRaw) {
+    if (!isPlainVariableObject(systemRaw))
+        return null;
+    const patch = {};
+    for (const [field, keys] of Object.entries(USER_RESOURCE_ALIASES)) {
+        const value = readSystemAliasNumber(systemRaw, keys);
+        if (value !== null)
+            patch[field] = value;
+    }
+    return Object.keys(patch).length > 0 ? patch : null;
+}
+function normalizeSystemAliases(systemRaw) {
+    const system = isPlainVariableObject(systemRaw) ? systemRaw : {};
+    for (const [field, keys] of Object.entries(USER_RESOURCE_ALIASES)) {
+        const canonicalKey = USER_RESOURCE_CANONICAL_KEYS[field];
+        if (toFiniteNumber(system[canonicalKey]) !== null)
+            continue;
+        const value = readSystemAliasNumber(system, keys);
+        if (value !== null)
+            system[canonicalKey] = value;
+    }
+    return system;
+}`
+  );
+  output = output.replace(
+    `function systemToUserResources(system) {
+    return {
+        mcEnergy: system._MC能量,
+        mcEnergyMax: system._MC能量上限,
+        mcPoints: system.当前MC点,
+        totalConsumedMc: system._累计消耗MC点,
+        money: system.持有零花钱,
+        suspicion: system.主角可疑度,
+    };
+}`,
+    `function systemToUserResources(system) {
+    return {
+        mcEnergy: system._MC能量,
+        mcEnergyMax: system._MC能量上限,
+        mcPoints: system.当前MC点,
+        totalConsumedMc: system._累计消耗MC点,
+        money: system.持有零花钱,
+        suspicion: system.主角可疑度,
+    };
+}
+function chooseUserResourcesFromSystems(systems) {
+    const user = { ...DEFAULT_USER_DATA };
+    const seenFields = new Set();
+    for (const systemRaw of systems) {
+        const patch = readExplicitUserResourcePatch(systemRaw);
+        if (!patch)
+            continue;
+        for (const [field, value] of Object.entries(patch)) {
+            if (seenFields.has(field) && user[field] !== DEFAULT_USER_DATA[field])
+                continue;
+            user[field] = value;
+            seenFields.add(field);
+        }
+    }
+    if (seenFields.size > 0)
+        return user;
+    for (const systemRaw of systems) {
+        if (!isPlainVariableObject(systemRaw))
+            continue;
+        return systemToUserResources(SYSTEM_SCHEMA.parse(normalizeSystemAliases({ ...systemRaw })));
+    }
+    return null;
 }`
   );
   output = output.replace(
@@ -1893,37 +2100,58 @@ function getLatestChatVariables() {
         return await maybeSync(getSystemClockFrom(system));
     },`,
     `    getUserData: async () => {
-        let user;
+        const systems = [];
         try {
-            const mvuSystem = await _mvuBridge__WEBPACK_IMPORTED_MODULE_3__.MvuBridge.getSystem();
-            if (mvuSystem)
-                user = systemToUserResources(SYSTEM_SCHEMA.parse(normalizeSystemAliases(mvuSystem)));
+            for (const snapshot of getVariableSnapshotsSync()) {
+                if (isPlainVariableObject(snapshot?.系统))
+                    systems.push(snapshot.系统);
+            }
         }
         catch (err) {
-            console.warn('[HypnoOS] 读取 MVU 系统变量失败，回退到聊天变量', err);
+            console.warn('[HypnoOS] 收集聊天系统变量失败，使用可用资源', err);
         }
-        if (!user) {
-            try {
-                const { system } = normalizeChatVariables(getVariables(CHAT_OPTION));
-                user = systemToUserResources(system);
-            }
-            catch (err) {
-                console.warn('[HypnoOS] 读取聊天系统变量失败，使用默认资源', err);
-            }
+        try {
+            const mvuSystem = await _mvuBridge__WEBPACK_IMPORTED_MODULE_3__.MvuBridge.getSystem();
+            if (isPlainVariableObject(mvuSystem))
+                systems.push(mvuSystem);
         }
+        catch (err) {
+            console.warn('[HypnoOS] 读取 MVU 系统变量失败，使用可用资源', err);
+        }
+        const user = chooseUserResourcesFromSystems(systems);
         return user ?? DEFAULT_USER_DATA;
     },
     getSystemClock: async () => {
+        const systems = [];
         try {
-            const mvuSystem = await _mvuBridge__WEBPACK_IMPORTED_MODULE_3__.MvuBridge.getSystem();
-            if (mvuSystem)
-                return getSystemClockFrom(mvuSystem);
+            for (const snapshot of getVariableSnapshotsSync()) {
+                if (isPlainVariableObject(snapshot?.系统))
+                    systems.push(snapshot.系统);
+            }
         }
         catch (err) {
-            console.warn('[HypnoOS] 读取 MVU 系统时间失败，回退到聊天变量', err);
+            console.warn('[HypnoOS] 收集聊天系统时间失败，使用可用时间', err);
         }
-        const { system } = normalizeChatVariables(getVariables(CHAT_OPTION));
-        return getSystemClockFrom(system);
+        try {
+            const mvuSystem = await _mvuBridge__WEBPACK_IMPORTED_MODULE_3__.MvuBridge.getSystem();
+            if (isPlainVariableObject(mvuSystem))
+                systems.push(mvuSystem);
+        }
+        catch (err) {
+            console.warn('[HypnoOS] 读取 MVU 系统时间失败，使用可用时间', err);
+        }
+        let fallbackClock = null;
+        for (const system of systems) {
+            if (!isPlainVariableObject(system))
+                continue;
+            if (system['当前日期'] == null && system['当前时间'] == null && system['当前日程'] == null)
+                continue;
+            const clock = getSystemClockFrom(system);
+            fallbackClock ??= clock;
+            if (clock.dateText !== '4月9日 星期三' || clock.timeText !== '12:00' || clock.scheduleText !== '午休')
+                return clock;
+        }
+        return fallbackClock ?? getSystemClockFrom({});
     },`
   );
   output = output.replace(
@@ -2294,14 +2522,52 @@ function upgradeInternalMchanApp(html) {
   }
 
   function getLatestVariableOptions() {
-    const options = [];
+    const currentMessageId = getCurrentMessageIdSafe();
+    const currentOption = currentMessageId !== null && currentMessageId !== "latest"
+      ? { type: "message", message_id: currentMessageId }
+      : null;
+    const liveOptions = [{ type: "chat" }, { type: "message", message_id: "latest" }, currentOption].filter(Boolean);
+    const historicalOptions = [currentOption, { type: "chat" }, { type: "message", message_id: "latest" }].filter(Boolean);
+    return dedupeVariableOptions(shouldPreferCurrentMessageSnapshot() ? historicalOptions : liveOptions);
+  }
+
+  function getCurrentMessageIdSafe() {
     try {
       const currentMessageId = getCurrentMessageId();
-      if (currentMessageId !== undefined && currentMessageId !== null && currentMessageId !== "latest") options.push({ type: "message", message_id: currentMessageId });
+      if (currentMessageId !== undefined && currentMessageId !== null && currentMessageId !== "latest") return currentMessageId;
     } catch {}
-    options.push({ type: "chat" });
-    options.push({ type: "message", message_id: "latest" });
-    return options;
+    return null;
+  }
+
+  function getLatestMessageIdSafe() {
+    try {
+      if (typeof getChatMessages !== "function") return null;
+      const messages = getChatMessages(-1);
+      if (!Array.isArray(messages) || messages.length === 0) return null;
+      const latest = messages[messages.length - 1];
+      return latest?.message_id ?? latest?.mesid ?? latest?.id ?? messages.length - 1;
+    } catch {
+      return null;
+    }
+  }
+
+  function shouldPreferCurrentMessageSnapshot() {
+    const currentMessageId = getCurrentMessageIdSafe();
+    const latestMessageId = getLatestMessageIdSafe();
+    return currentMessageId !== null && latestMessageId !== null && String(currentMessageId) !== String(latestMessageId);
+  }
+
+  function dedupeVariableOptions(options) {
+    const seen = new Set();
+    const result = [];
+    for (const option of options) {
+      if (!option) continue;
+      const key = option.type + ":" + String(option.message_id ?? "");
+      if (seen.has(key)) continue;
+      seen.add(key);
+      result.push(option);
+    }
+    return result;
   }
 
   function scoreStatDataCandidate(value) {
@@ -2347,11 +2613,14 @@ function upgradeInternalMchanApp(html) {
       const mvu = window.Mvu?.getMvuData?.();
       if (mvu?.stat_data && typeof mvu.stat_data === "object") candidates.push(mvu.stat_data);
     } catch {}
+    let best = null;
     for (const candidate of candidates) {
       const score = scoreStatDataCandidate(candidate);
-      if (score >= 0) return candidate;
+      if (score < 0) continue;
+      if (shouldPreferCurrentMessageSnapshot()) return candidate;
+      if (!best || score > best.score) best = { candidate, score };
     }
-    return null;
+    return best?.candidate ?? null;
   }
 
   function getStatsRoles() {
@@ -3592,14 +3861,52 @@ function injectInternalMchanApp(html, staticSeed) {
   }
 
   function getLatestVariableOptions() {
-    const options = [];
+    const currentMessageId = getCurrentMessageIdSafe();
+    const currentOption = currentMessageId !== null && currentMessageId !== "latest"
+      ? { type: "message", message_id: currentMessageId }
+      : null;
+    const liveOptions = [{ type: "chat" }, { type: "message", message_id: "latest" }, currentOption].filter(Boolean);
+    const historicalOptions = [currentOption, { type: "chat" }, { type: "message", message_id: "latest" }].filter(Boolean);
+    return dedupeVariableOptions(shouldPreferCurrentMessageSnapshot() ? historicalOptions : liveOptions);
+  }
+
+  function getCurrentMessageIdSafe() {
     try {
       const currentMessageId = getCurrentMessageId();
-      if (currentMessageId !== undefined && currentMessageId !== null && currentMessageId !== "latest") options.push({ type: "message", message_id: currentMessageId });
+      if (currentMessageId !== undefined && currentMessageId !== null && currentMessageId !== "latest") return currentMessageId;
     } catch {}
-    options.push({ type: "chat" });
-    options.push({ type: "message", message_id: "latest" });
-    return options;
+    return null;
+  }
+
+  function getLatestMessageIdSafe() {
+    try {
+      if (typeof getChatMessages !== "function") return null;
+      const messages = getChatMessages(-1);
+      if (!Array.isArray(messages) || messages.length === 0) return null;
+      const latest = messages[messages.length - 1];
+      return latest?.message_id ?? latest?.mesid ?? latest?.id ?? messages.length - 1;
+    } catch {
+      return null;
+    }
+  }
+
+  function shouldPreferCurrentMessageSnapshot() {
+    const currentMessageId = getCurrentMessageIdSafe();
+    const latestMessageId = getLatestMessageIdSafe();
+    return currentMessageId !== null && latestMessageId !== null && String(currentMessageId) !== String(latestMessageId);
+  }
+
+  function dedupeVariableOptions(options) {
+    const seen = new Set();
+    const result = [];
+    for (const option of options) {
+      if (!option) continue;
+      const key = option.type + ":" + String(option.message_id ?? "");
+      if (seen.has(key)) continue;
+      seen.add(key);
+      result.push(option);
+    }
+    return result;
   }
 
   function scoreStatDataCandidate(value) {
@@ -3645,11 +3952,14 @@ function injectInternalMchanApp(html, staticSeed) {
       const mvu = window.Mvu?.getMvuData?.();
       if (mvu?.stat_data && typeof mvu.stat_data === "object") candidates.push(mvu.stat_data);
     } catch {}
+    let best = null;
     for (const candidate of candidates) {
       const score = scoreStatDataCandidate(candidate);
-      if (score >= 0) return candidate;
+      if (score < 0) continue;
+      if (shouldPreferCurrentMessageSnapshot()) return candidate;
+      if (!best || score > best.score) best = { candidate, score };
     }
-    return null;
+    return best?.candidate ?? null;
   }
 
   function getStatsRoles() {
