@@ -497,7 +497,7 @@ function patchBundledHypnosisApp(html) {
       "            // “角色状态可视化(vip1_stats)”购买/订阅成功一次后永久解锁，用于主屏幕显示“身体检测”APP。\\n            purchases: { ...store.purchases, vip1_stats: true },",
       "            purchases: { ...store.purchases },"
     );
-  outputHtml = patchEvalModuleSources(outputHtml, (code) => patchAppEntryModule(patchAppRootModule(patchMvuBridgeModule(patchHypnosisDataServiceModule(patchHypnosisAppModule(patchAchievementAppModule(code)))))));
+  outputHtml = patchEvalModuleSources(outputHtml, (code) => patchAppEntryModule(patchAppRootModule(patchMvuBridgeModule(patchHypnosisDataServiceModule(patchHypnosisAppModule(patchHypnosisSendModule(patchAchievementAppModule(code))))))));
   return outputHtml;
 }
 
@@ -560,6 +560,19 @@ function replaceBetween(source, startMarker, endMarker, replacement) {
   const end = source.indexOf(endMarker, start);
   if (end < 0) return source;
   return source.slice(0, start) + replacement + source.slice(end);
+}
+
+function patchHypnosisSendModule(code) {
+  if (!code.includes("function buildHypnosisSendMessage")) return code;
+  return code
+    .replace(
+      "        lines.push('    备注:');\n        lines.push(indentLines(f.userNote ?? '', 6));\n",
+      ""
+    )
+    .replace(
+      "    lines.push(`本次催眠的持续时间: ${durationMinutes}分钟`);\n    lines.push('备注:');\n    lines.push(indentLines(globalNote ?? '', 2));\n",
+      ""
+    );
 }
 
 function patchAchievementAppModule(code) {
@@ -1490,26 +1503,13 @@ const ActiveSessionView = ({ timeLeft, sessionEndVirtualMinutes, sessionEndAtMs,
         const enabledFeatures = features
             .filter(f => f.isEnabled && f.id !== 'vip1_stats' && canUseEnabledFeature(f))
             .map(f => f);
-        let message = '';
-        try {
-            message = (0,_prompts_hypnosisSend__WEBPACK_IMPORTED_MODULE_6__.buildHypnosisSendMessage)({
-                features: enabledFeatures,
-                durationMinutes: duration,
-                globalNote: '',
-            });
-        }
-        catch (err) {
-            console.warn('[HypnoOS] 催眠指令生成失败', err);
-        }
         recordOperationIntent({
             来源: '催眠APP',
             操作: '启动催眠',
-            持续时间: \`\${duration}分钟\`,
             预计消耗: \`\${totalEnergyCost} MC\${totalPointsCost > 0 ? \` + \${totalPointsCost} PT\` : ''}\`,
             当前缺口: \`\${missingEnergy} MC\${missingPoints > 0 ? \` + \${missingPoints} PT\` : ''}\`,
             结算说明: '前端只做预估并逐项记录人数/时间是否参与计费；是否成功、实际扣除和变量更新由AI根据世界书规则判断。',
             功能: enabledFeatures.map(formatFeatureIntent),
-            指令文本: message,
         });
         setIsTransitioning(true);
         window.setTimeout(() => setIsTransitioning(false), 3200);
