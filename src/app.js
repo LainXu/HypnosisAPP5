@@ -2358,16 +2358,16 @@ const __stClone = (value) => JSON.parse(JSON.stringify(value ?? {}));
 const __stDefaultRoles = () => (${defaultRoles});
 const __stDefaultVariables = () => ({
   "系统": {
-    "_MC能量": 25,
-    "_MC能量上限": 25,
+    "MC能量": 25,
+    "MC能量上限": 25,
     "当前MC点": 25,
-    "_累计消耗MC点": 0,
+    "累计消耗MC点": 0,
     "持有零花钱": 6000,
     "主角可疑度": 0,
     "当前日期": "4月9日 星期三",
     "当前时间": "12:00",
     "当前日程": "午休",
-    "_hypnoos": {}
+    "hypnoos": {}
   },
   "角色": __stDefaultRoles()
 });
@@ -2474,7 +2474,30 @@ function applyPhoneForumPolicy() {
   applyMergedLightPolicy();
 }
 
+function migrateUnprefixedSystemVariableNames(text) {
+  return String(text || "")
+    .replaceAll("_催眠APP订阅等级", "催眠APP订阅等级")
+    .replaceAll("_MC能量上限", "MC能量上限")
+    .replaceAll("_MC能量", "MC能量")
+    .replaceAll("_累计消耗MC点", "累计消耗MC点")
+    .replaceAll("_hypnoos", "hypnoos")
+    .replaceAll(
+      "don't update field names starts with `_` as they are readonly, such as `_变量`",
+      "only update fields that clearly changed; app variables are no longer frontend-only readonly fields"
+    );
+}
+
+function migrateEntriesToUnprefixedSystemVariables(entries) {
+  for (const entry of entries || []) {
+    if (entry && typeof entry.content === "string") {
+      entry.content = migrateUnprefixedSystemVariableNames(entry.content);
+    }
+  }
+}
+
 function patchOriginalWorldbookForMergedPolicy(entries) {
+  migrateEntriesToUnprefixedSystemVariables(entries);
+
   [
     "[workbench]身体检测默认开放",
     "[workbench]AI变量接管策略",
@@ -2516,7 +2539,7 @@ function patchOriginalWorldbookForMergedPolicy(entries) {
         `${bodyStatsLine}\n- 当前持有金钱为：{{format_message_variable::stat_data.系统.持有零花钱}}，这个值优先于其他叙述`
       );
     }
-    const resourceGlossaryLine = "- 资源名必须严格区分：`系统._MC能量`是催眠功能实际消耗的能量余额；`系统._MC能量上限`只是能量容量上限，不是可花费余额；`系统.当前MC点`是PT/MC点货币，不等于MC能量，不能替代能量支付。";
+    const resourceGlossaryLine = "- 资源名必须严格区分：`系统.MC能量`是催眠功能实际消耗的能量余额；`系统.MC能量上限`只是能量容量上限，不是可花费余额；`系统.当前MC点`是PT/MC点货币，不等于MC能量，不能替代能量支付。";
     if (!next.includes(resourceGlossaryLine)) {
       next = next.replace(
         "- 当前持有金钱为：{{format_message_variable::stat_data.系统.持有零花钱}}，这个值优先于其他叙述",
@@ -2543,10 +2566,10 @@ function patchOriginalWorldbookForMergedPolicy(entries) {
       ),
       [
         "- 新前端会在启动催眠和每条催眠功能里用中文字段写明`预计消耗`、`MC能量消耗`、`当前MC点消耗`、`是否受人数影响`、`是否受时间影响`、`人数`和`时间`；AI应优先按这些字段结算。群体类命令本身不因人数额外加价，永久/一次性命令不因时间额外加价。",
-        "- 所有涉及花费的催眠APP功能在生效前必须逐项检查余额：`系统._MC能量`支付能量费用，`系统.当前MC点`支付PT/MC点费用，`系统.持有零花钱`支付金钱费用；余额不足则该功能失败，不产生催眠效果，也不得扣成负数。",
+        "- 所有涉及花费的催眠APP功能在生效前必须逐项检查余额：`系统.MC能量`支付能量费用，`系统.当前MC点`支付PT/MC点费用，`系统.持有零花钱`支付金钱费用；余额不足则该功能失败，不产生催眠效果，也不得扣成负数。",
         "- 同一批次内后续依赖失败功能、启动催眠成功状态或同一资源余额的操作，若受余额不足影响也必须失败；AI不能贷款、透支、自动补给、自动把MC点/金钱兑换成MC能量，除非`本轮APP操作`明确包含对应兑换/补给且该兑换本身费用充足。",
         "- 前端价格只是预估；若剧情条件、风险、抵抗、失败或部分成功导致费用/效果不同，AI应在正文解释并只写最终变量。",
-        "- 临时/持续中的催眠若成功生效，AI应写入 `系统._hypnoos.sessionEndVirtualMinutes` 或 `系统._hypnoos.sessionEndAtMs`，并可写入 `系统._hypnoos.sessionSummary` 或 `系统._hypnoos.sessionFeatures` 作为前端顶部状态条摘要。",
+        "- 临时/持续中的催眠若成功生效，AI应写入 `系统.hypnoos.sessionEndVirtualMinutes` 或 `系统.hypnoos.sessionEndAtMs`，并可写入 `系统.hypnoos.sessionSummary` 或 `系统.hypnoos.sessionFeatures` 作为前端顶部状态条摘要。",
         "- 永久催眠效果只能写入永久效果/角色状态相关变量，不要写入 `sessionSummary`、`sessionFeatures` 或任何正在倒计时的会话字段；永久效果不算作“催眠中”。",
         "- 临时催眠结束、被解除、失败或剧情判定不再持续时，AI应清空 `sessionEndVirtualMinutes`、`sessionEndAtMs`、`sessionSummary`、`sessionFeatures` 等会话字段。"
       ]
@@ -2600,21 +2623,22 @@ function patchOriginalWorldbookForMergedPolicy(entries) {
 
   patchEntryContent(entries, "[mvu_update]变量说明和更新规则🈯", (content) => {
     const resourceRuleBlock = [
-      "    _MC能量:",
+      "    MC能量:",
       "      type: number",
       "      info: 催眠APP功能实际消耗的能量余额；这是能不能启动/追加催眠的主要余额。",
       "      check:",
-      "        - 催眠功能消耗MC能量时只从`_MC能量`扣除，不能从`当前MC点`、`_MC能量上限`或`持有零花钱`代扣。",
+      "        - 催眠功能消耗MC能量时只从`MC能量`扣除，不能从`当前MC点`、`MC能量上限`或`持有零花钱`代扣。",
       "        - 花费前必须先判断余额是否足够；不足则对应操作失败，不扣费、不生效、不得让数值低于0。",
-      "    _MC能量上限:",
+      "        - 若本轮APP操作中的催眠功能成功且有`MC能量消耗`，必须输出JSON Patch：`{ \"op\": \"replace\", \"path\": \"/系统/MC能量\", \"value\": 当前系统.MC能量 - 实际MC能量消耗 }`；失败则不要扣。",
+      "    MC能量上限:",
       "      type: number",
       "      info: MC能量容量上限，只表示最多能存多少能量，不是可花费余额。",
       "      check:",
       "        - 普通催眠消耗不会改变此值；只有明确升级、扩容、订阅或规则说明时才更新。",
-      "        - 不能把`_MC能量上限`当成当前可用能量，也不能用它支付费用。",
+      "        - 不能把`MC能量上限`当成当前可用能量，也不能用它支付费用。",
       "    当前MC点:",
       "      type: number",
-      "      info: PT/MC点货币，用于购买功能、订阅、领取奖励或匿名版相关收支；与`_MC能量`完全分离。",
+      "      info: PT/MC点货币，用于购买功能、订阅、领取奖励或匿名版相关收支；与`MC能量`完全分离。",
       "      check:",
       "        - 被催眠角色每个部位每高潮一次获得5点",
       "        - 快感值大于200的高潮获得10点, 大于300获得20, 大于400获得40点, 大于500获得80点",
@@ -2644,8 +2668,15 @@ function patchOriginalWorldbookForMergedPolicy(entries) {
       /    当前MC点:\n      type: number\n      check:\n        - 被催眠角色每个部位每高潮一次获得5点\n        - 快感值大于200的高潮获得10点, 大于300获得20, 大于400获得40点, 大于500获得80点\n        - 完成任务根据任务说明获得\n        - 重要：\*\*只有\*\*在上述情况下当前MC点才会更新，如果没有完成任务或任务高潮\*\*永远不要\*\*更新/,
       resourceRuleBlock
     );
-    if (!next.includes("    _MC能量:\n      type: number")) {
+    if (!next.includes("    MC能量:\n      type: number")) {
       next = next.replace("    持有零花钱:", `${resourceRuleBlock}\n    持有零花钱:`);
+    }
+    const mcEnergyPatchLine = "        - 若本轮APP操作中的催眠功能成功且有`MC能量消耗`，必须输出JSON Patch：`{ \"op\": \"replace\", \"path\": \"/系统/MC能量\", \"value\": 当前系统.MC能量 - 实际MC能量消耗 }`；失败则不要扣。";
+    if (!next.includes(mcEnergyPatchLine)) {
+      next = next.replace(
+        "        - 花费前必须先判断余额是否足够；不足则对应操作失败，不扣费、不生效、不得让数值低于0。",
+        `        - 花费前必须先判断余额是否足够；不足则对应操作失败，不扣费、不生效、不得让数值低于0。\n${mcEnergyPatchLine}`
+      );
     }
     if (!next.includes("    心理:\n      type: string\n      info: 角色此刻正在想什么/当下内心念头")) {
       next = next.replace("    ${部位}敏感度:", `${profileRuleBlock}\n    \${部位}敏感度:`);
@@ -2663,11 +2694,13 @@ function patchOriginalWorldbookForMergedPolicy(entries) {
       "- 如果为`无`或者空, 则代表{{user}}没有操作APP, 严禁进行相关新增操作描写。",
       "- 前端只记录用户在手机界面里的操作意图，不直接发送指令，也不直接改最终变量。",
       "- AI必须根据剧情、资源/金钱/MC点、订阅或购买状态、人数、时间、目标状态、风险和合理性判断操作是否成功。",
-      "- 资源名必须严格区分：`_MC能量`=催眠能量余额；`_MC能量上限`=容量上限，不可花费；`当前MC点`=PT/MC点货币；`持有零花钱`=金钱。不同资源不能互相顶替。",
+      "- 资源名必须严格区分：`MC能量`=催眠能量余额；`MC能量上限`=容量上限，不可花费；`当前MC点`=PT/MC点货币；`持有零花钱`=金钱。不同资源不能互相顶替。",
       "- 所有涉及花费的操作必须按同一批次顺序先验算余额再生效：余额不足则该操作失败，不扣费、不产生奖励/物品/催眠效果/订阅状态，不得把任何余额写成负数。",
       "- 如果某个操作失败，同批次后续依赖它、依赖启动催眠成功状态、或继续消耗同一不足资源的操作也失败；可以继续结算与失败项无关且余额充足的独立操作。",
-      "- AI禁止贷款、赊账、透支、自动补给、自动购买能量、自动把`当前MC点`或`持有零花钱`兑换成`_MC能量`；只有当`本轮APP操作`明确包含兑换/补给/购买且该操作本身余额充足时才可进行。",
+      "- AI禁止贷款、赊账、透支、自动补给、自动购买能量、自动把`当前MC点`或`持有零花钱`兑换成`MC能量`；只有当`本轮APP操作`明确包含兑换/补给/购买且该操作本身余额充足时才可进行。",
       "- 催眠APP启动/追加催眠会携带总`预计消耗`、`MC能量消耗`、`当前MC点消耗`，并在每项功能里携带`是否受人数影响`与`是否受时间影响`；AI结算时优先按这些中文字段处理。标记为不受人数影响的群体类命令不按人数乘算，标记为不受时间影响的永久/一次性命令不按持续时间乘算。",
+      "- 若催眠功能成功并产生`MC能量消耗`，必须用JSON Patch更新`/系统/MC能量`为扣除后的余额；若余额不足或操作失败，则不得扣除。",
+      "- 前端每条操作只记录数值和路径；本条世界书规则是余额/扣费提醒的唯一来源，AI不要在同一批次多个催眠命令里反复复述余额提醒。",
       "- 催眠APP、领取任务、完成成就、购买功能、订阅、补给、库存、日历、扫描角色、删除角色和新增任务等操作都按本规则结算。",
       "- 新增任务操作只表示用户希望AI根据当前上下文剧情新增若干未完成任务；AI应按用户填写的数量和倾向生成任务名、完成条件和奖励，并写入`任务`变量，初始不得直接标记为已接或已完成。",
       "- APP操作本身不是结果；若失败、部分成功或费用/效果与前端预估不同，需在正文解释并只写最终变量。",
@@ -2684,17 +2717,26 @@ function patchOriginalWorldbookForMergedPolicy(entries) {
     const updatePolicyLines = [
       "    - `警戒度` Added **only** when the HypnosisAPP actived or directly witnesses <user> hypnotizing another person.",
       "    - only update fields that clearly changed in this reply; do not rewrite the whole stat_data or unchanged character objects.",
-      "    - resource values must obey spending checks: never write negative `_MC能量`, `当前MC点`, or `持有零花钱`; never convert between `_MC能量`, `_MC能量上限`, `当前MC点`, and money unless an explicit successful APP operation says so.",
+      "    - resource values must obey spending checks: never write negative `MC能量`, `当前MC点`, or `持有零花钱`; never convert between `MC能量`, `MC能量上限`, `当前MC点`, and money unless an explicit successful APP operation says so.",
+      "    - 中文结算要求：成功的催眠APP操作如果有`MC能量消耗`，必须写 `{ \"op\": \"replace\", \"path\": \"/系统/MC能量\", \"value\": 扣除后的数字 }`；不能只更新`当前MC点`或`累计消耗MC点`而漏掉它。",
       "    - if `本轮APP操作` has been handled, add a JSON Patch command: `{ \"op\": \"replace\", \"path\": \"/本轮APP操作\", \"value\": \"无\" }`.",
       "    - front-end state is only an operation log; if it conflicts with narrative judgment, the AI update is authoritative."
     ];
     let next = content
       .replace(
         "    - don't update field names starts with `_` as they are readonly, such as `_变量`",
-        "    - `_`开头的催眠APP相关字段不再由前端独占；AI可在剧情或`本轮APP操作`明确结算后更新，但禁止无依据地批量重写"
+        "    - 催眠APP相关字段由AI按剧情或`本轮APP操作`结算后更新；禁止无依据地批量重写"
+      )
+      .replace(
+        "    - `_`开头的催眠APP相关字段不再由前端独占；AI可在剧情或`本轮APP操作`明确结算后更新，但禁止无依据地批量重写",
+        "    - 催眠APP相关字段由AI按剧情或`本轮APP操作`结算后更新；禁止无依据地批量重写"
       );
     if (!next.includes(updatePolicyLines[1])) {
       next = next.replace(updatePolicyLines[0], updatePolicyLines.join("\n"));
+    }
+    for (const line of updatePolicyLines) {
+      if (next.includes(line)) continue;
+      next = next.replace("  format: |-", `${line}\n  format: |-`);
     }
     if (!next.includes("/本轮APP操作")) {
       next = next.replace("</json_patch>", '      { "op": "replace", "path": "/本轮APP操作", "value": "无" }\n    </json_patch>');
@@ -2716,7 +2758,7 @@ function patchOriginalWorldbookForMergedPolicy(entries) {
       "当前前端实现:",
       "  - 匿名版/MChan 是手机内部静态只读页面，与库存、日历同级；不再作为独立前端正则渲染。",
       "  - 前端只读展示旧角色卡种子帖；用户只能浏览版块、搜索帖子、点击帖子看详情并返回匿名版首页，没有发帖、回帖、编辑、删除。",
-      "  - 浏览匿名版不写入 `系统.手机.MChan.*`、`系统._hypnoos.mchan` 或任何论坛状态字段，也不要求AI每轮刷新帖子列表。",
+      "  - 浏览匿名版不写入 `系统.手机.MChan.*`、`系统.hypnoos.mchan` 或任何论坛状态字段，也不要求AI每轮刷新帖子列表。",
       "  - 匿名版内容只是论坛文本、传闻、提示或误导素材，不能自动证明线下事实；是否为事实由剧情判断。",
       "  - 若正文剧情明确让{{user}}接取悬赏或发布内容，再按任务/MC点规则结算；不能因为静态展示或浏览动作自动添加任务、收益或变量。"
     ].join("\n");
@@ -2740,6 +2782,8 @@ function patchOriginalWorldbookForMergedPolicy(entries) {
     }
     return content.replace("</人物列表>", `${scanBlock}\n</人物列表>`);
   });
+
+  migrateEntriesToUnprefixedSystemVariables(entries);
 }
 
 function ensureLinesBeforeEndTag(content, lines) {
