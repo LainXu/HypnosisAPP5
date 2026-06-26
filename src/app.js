@@ -2516,6 +2516,13 @@ function patchOriginalWorldbookForMergedPolicy(entries) {
         `${bodyStatsLine}\n- 当前持有金钱为：{{format_message_variable::stat_data.系统.持有零花钱}}，这个值优先于其他叙述`
       );
     }
+    const resourceGlossaryLine = "- 资源名必须严格区分：`系统._MC能量`是催眠功能实际消耗的能量余额；`系统._MC能量上限`只是能量容量上限，不是可花费余额；`系统.当前MC点`是PT/MC点货币，不等于MC能量，不能替代能量支付。";
+    if (!next.includes(resourceGlossaryLine)) {
+      next = next.replace(
+        "- 当前持有金钱为：{{format_message_variable::stat_data.系统.持有零花钱}}，这个值优先于其他叙述",
+        `- 当前持有金钱为：{{format_message_variable::stat_data.系统.持有零花钱}}，这个值优先于其他叙述\n${resourceGlossaryLine}`
+      );
+    }
     const nsfwLine = "- 保留并理解角色卡既有成人/NSFW/露骨设定；不得因为内容露骨而删除、留空、净化或改写旧世界书、正则、匿名版种子帖和静态前端文本。";
     if (!next.includes(nsfwLine)) {
       next = next.replace(bodyStatsLine, `${bodyStatsLine}\n${nsfwLine}`);
@@ -2536,6 +2543,8 @@ function patchOriginalWorldbookForMergedPolicy(entries) {
       ),
       [
         "- 新前端会在每条催眠功能里写明`预计消耗`、`是否受人数影响`、`是否受时间影响`、`人数`和`时间`；AI应优先按这些字段结算。群体类命令本身不因人数额外加价，永久/一次性命令不因时间额外加价。",
+        "- 所有涉及花费的催眠APP功能在生效前必须逐项检查余额：`系统._MC能量`支付能量费用，`系统.当前MC点`支付PT/MC点费用，`系统.持有零花钱`支付金钱费用；余额不足则该功能失败，不产生催眠效果，也不得扣成负数。",
+        "- 同一批次内后续依赖失败功能、启动催眠成功状态或同一资源余额的操作，若受余额不足影响也必须失败；AI不能贷款、透支、自动补给、自动把MC点/金钱兑换成MC能量，除非`本轮APP操作`明确包含对应兑换/补给且该兑换本身费用充足。",
         "- 前端价格只是预估；若剧情条件、风险、抵抗、失败或部分成功导致费用/效果不同，AI应在正文解释并只写最终变量。",
         "- 临时/持续中的催眠若成功生效，AI应写入 `系统._hypnoos.sessionEndVirtualMinutes` 或 `系统._hypnoos.sessionEndAtMs`，并可写入 `系统._hypnoos.sessionSummary` 或 `系统._hypnoos.sessionFeatures` 作为前端顶部状态条摘要。",
         "- 永久催眠效果只能写入永久效果/角色状态相关变量，不要写入 `sessionSummary`、`sessionFeatures` 或任何正在倒计时的会话字段；永久效果不算作“催眠中”。",
@@ -2590,6 +2599,29 @@ function patchOriginalWorldbookForMergedPolicy(entries) {
   });
 
   patchEntryContent(entries, "[mvu_update]变量说明和更新规则🈯", (content) => {
+    const resourceRuleBlock = [
+      "    _MC能量:",
+      "      type: number",
+      "      info: 催眠APP功能实际消耗的能量余额；这是能不能启动/追加催眠的主要余额。",
+      "      check:",
+      "        - 催眠功能消耗MC_ENERGY时只从`_MC能量`扣除，不能从`当前MC点`、`_MC能量上限`或`持有零花钱`代扣。",
+      "        - 花费前必须先判断余额是否足够；不足则对应操作失败，不扣费、不生效、不得让数值低于0。",
+      "    _MC能量上限:",
+      "      type: number",
+      "      info: MC能量容量上限，只表示最多能存多少能量，不是可花费余额。",
+      "      check:",
+      "        - 普通催眠消耗不会改变此值；只有明确升级、扩容、订阅或规则说明时才更新。",
+      "        - 不能把`_MC能量上限`当成当前可用能量，也不能用它支付费用。",
+      "    当前MC点:",
+      "      type: number",
+      "      info: PT/MC点货币，用于购买功能、订阅、领取奖励或匿名版相关收支；与`_MC能量`完全分离。",
+      "      check:",
+      "        - 被催眠角色每个部位每高潮一次获得5点",
+      "        - 快感值大于200的高潮获得10点, 大于300获得20, 大于400获得40点, 大于500获得80点",
+      "        - 完成任务根据任务说明获得",
+      "        - 购买/订阅/领取等需要支付MC点时必须先检查余额；不足则失败，不得负数、贷款或自动兑换。",
+      "        - 重要：**只有**在上述情况下当前MC点才会更新，如果没有完成任务或任务高潮**永远不要**更新"
+    ].join("\n");
     const profileRuleBlock = [
       "    外观:",
       "      type: string",
@@ -2608,6 +2640,13 @@ function patchOriginalWorldbookForMergedPolicy(entries) {
         "        - 参考日程表变更为上学 -> 上课 -> 午休 -> 放学 或 校庆, 盂兰盆节等\n        - 参考日历的特殊日期或节日",
         "        - 参考日程表、周课表和本月日历变更为早训、朝礼、具体科目、午休、终礼、清扫、放学后、节日/考试/特别活动等\n        - 特殊日期优先于普通课表；周末和假期通常没有固定课程，除非剧情或日历明确安排社团、补习、合宿、考试或活动"
       );
+    next = next.replace(
+      /    当前MC点:\n      type: number\n      check:\n        - 被催眠角色每个部位每高潮一次获得5点\n        - 快感值大于200的高潮获得10点, 大于300获得20, 大于400获得40点, 大于500获得80点\n        - 完成任务根据任务说明获得\n        - 重要：\*\*只有\*\*在上述情况下当前MC点才会更新，如果没有完成任务或任务高潮\*\*永远不要\*\*更新/,
+      resourceRuleBlock
+    );
+    if (!next.includes("    _MC能量:\n      type: number")) {
+      next = next.replace("    持有零花钱:", `${resourceRuleBlock}\n    持有零花钱:`);
+    }
     if (!next.includes("    心理:\n      type: string\n      info: 角色此刻正在想什么/当下内心念头")) {
       next = next.replace("    ${部位}敏感度:", `${profileRuleBlock}\n    \${部位}敏感度:`);
     }
@@ -2624,6 +2663,10 @@ function patchOriginalWorldbookForMergedPolicy(entries) {
       "- 如果为`无`或者空, 则代表{{user}}没有操作APP, 严禁进行相关新增操作描写。",
       "- 前端只记录用户在手机界面里的操作意图，不直接发送指令，也不直接改最终变量。",
       "- AI必须根据剧情、资源/金钱/MC点、订阅或购买状态、人数、时间、目标状态、风险和合理性判断操作是否成功。",
+      "- 资源名必须严格区分：`_MC能量`=催眠能量余额；`_MC能量上限`=容量上限，不可花费；`当前MC点`=PT/MC点货币；`持有零花钱`=金钱。不同资源不能互相顶替。",
+      "- 所有涉及花费的操作必须按同一批次顺序先验算余额再生效：余额不足则该操作失败，不扣费、不产生奖励/物品/催眠效果/订阅状态，不得把任何余额写成负数。",
+      "- 如果某个操作失败，同批次后续依赖它、依赖启动催眠成功状态、或继续消耗同一不足资源的操作也失败；可以继续结算与失败项无关且余额充足的独立操作。",
+      "- AI禁止贷款、赊账、透支、自动补给、自动购买能量、自动把`当前MC点`或`持有零花钱`兑换成`_MC能量`；只有当`本轮APP操作`明确包含兑换/补给/购买且该操作本身余额充足时才可进行。",
       "- 催眠APP启动/追加催眠会携带总`预计消耗`，并在每项功能里携带`是否受人数影响`与`是否受时间影响`；AI结算时优先按这些字段处理。标记为不受人数影响的群体类命令不按人数乘算，标记为不受时间影响的永久/一次性命令不按持续时间乘算。",
       "- 催眠APP、领取任务、完成成就、购买功能、订阅、补给、库存、日历、扫描角色、删除角色和新增任务等操作都按本规则结算。",
       "- 新增任务操作只表示用户希望AI根据当前上下文剧情新增若干未完成任务；AI应按用户填写的数量和倾向生成任务名、完成条件和奖励，并写入`任务`变量，初始不得直接标记为已接或已完成。",
@@ -2641,6 +2684,7 @@ function patchOriginalWorldbookForMergedPolicy(entries) {
     const updatePolicyLines = [
       "    - `警戒度` Added **only** when the HypnosisAPP actived or directly witnesses <user> hypnotizing another person.",
       "    - only update fields that clearly changed in this reply; do not rewrite the whole stat_data or unchanged character objects.",
+      "    - resource values must obey spending checks: never write negative `_MC能量`, `当前MC点`, or `持有零花钱`; never convert between `_MC能量`, `_MC能量上限`, `当前MC点`, and money unless an explicit successful APP operation says so.",
       "    - if `本轮APP操作` has been handled, add a JSON Patch command: `{ \"op\": \"replace\", \"path\": \"/本轮APP操作\", \"value\": \"无\" }`.",
       "    - front-end state is only an operation log; if it conflicts with narrative judgment, the AI update is authoritative."
     ];
