@@ -118,7 +118,10 @@ html.st-hypnoos-booting body{background:#05070f}
 html.st-hypnoos-booting #app{opacity:0!important}
 </style><script>
 document.documentElement.classList.add("st-hypnoos-booting");
-window.setTimeout(() => document.documentElement.classList.remove("st-hypnoos-booting"), 1600);
+window.__ST_HYPNOOS_PATCH_READY__ = false;
+window.setTimeout(() => {
+  if (!window.__ST_HYPNOOS_PATCH_READY__) document.documentElement.classList.remove("st-hypnoos-booting");
+}, 6000);
 </script>`;
   const shim = `<script>
     const __hypnoosLocalHost = ["localhost", "127.0.0.1", "::1", ""].includes(window.location.hostname);
@@ -4763,6 +4766,7 @@ function injectInternalMchanApp(html, staticSeed) {
   }
 
   function releaseBootGuard() {
+    window.__ST_HYPNOOS_PATCH_READY__ = true;
     document.documentElement.classList.remove("st-hypnoos-booting");
   }
 
