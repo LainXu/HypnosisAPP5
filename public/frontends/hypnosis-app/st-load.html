@@ -1217,7 +1217,6 @@ var __webpack_exports__ = __webpack_require__("./src/催眠APP前端/index.tsx")
     style.textContent = `
 .st-drag-scroll{cursor:grab;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;scroll-behavior:auto}
 .st-drag-scroll.is-dragging{cursor:grabbing;user-select:none}
-.st-author-status-credit{font-size:11px!important;font-weight:850!important;letter-spacing:0!important;line-height:1.1!important;white-space:nowrap!important;color:rgba(248,250,252,.96)!important;text-shadow:0 1px 8px rgba(0,0,0,.32)}
 .st-help-author-card{margin:10px 12px 12px;border:1px solid rgba(34,211,238,.2);border-radius:16px;background:linear-gradient(135deg,rgba(34,211,238,.14),rgba(168,85,247,.1));box-shadow:0 12px 26px rgba(8,47,73,.18);padding:12px;color:#f8fafc}
 .st-help-author-card strong{display:block;font-size:14px;line-height:1.2}
 .st-help-author-card p{margin:6px 0 0;color:rgba(226,232,240,.78);font-size:12px;line-height:1.5}
@@ -1571,12 +1570,12 @@ var __webpack_exports__ = __webpack_require__("./src/催眠APP前端/index.tsx")
       title: "异世界杀手",
       note: "已填写示例",
       roleName: "千杀百花",
-      aliases: "百花, 异世界杀手, 千杀",
-      summary: "{{user}}在她确认主角很弱、准备离开前扫描并锁定的异世界杀手。她来自中世纪剑与魔法异世界，身形小巧可爱，带着轻便暗杀装备和异界旅者的气息。",
-      relation: "她误会{{user}}是把她传送来的元凶，短暂敌视和试探；确认{{user}}很弱后决定离开，在离开前被手机扫描。",
-      appearance: "小巧可爱的少女体型，动作轻盈隐蔽，衣装带有中世纪剑与魔法世界的皮革护具、短刃和旅行痕迹。",
-      personality: "不善言辞，戒备心强，行动比语言更直接；作为杀手习惯先观察威胁，确认无害后迅速撤离。",
-      extra: "保持异世界来客、杀手身份、误会与离开前被扫描的时间点；AI建档时可补全她的世界观常识、战斗经验和对现代环境的不适应。"
+      aliases: "百花, 异世界杀手, 原勇者小队成员, 异世界英雄",
+      summary: "{{user}}在她确认主角很弱、准备离开前扫描并锁定的异世界杀手。她来自中世纪剑与魔法异世界，曾是拯救异世界人类的勇者小队成员与英雄，身形小巧可爱，却带着真正经历过战争与魔物讨伐的气息。",
+      relation: "她误会{{user}}是把她传送来的元凶，短暂敌视和试探；确认{{user}}很弱后决定离开，在离开前被手机扫描。她对勇者抱有深切倾慕，却无法理解这种情感，只会在勇者面前露出不自觉的羞涩反应。",
+      appearance: "小巧可爱的少女体型，动作轻盈隐蔽，衣装带有中世纪剑与魔法世界的皮革护具、短刃和旅行痕迹；身上能看出长期冒险留下的细小伤痕与战斗磨损。",
+      personality: "不善言辞，戒备心强，行动比语言更直接；作为原勇者小队成员，她责任感强、战斗经验丰富，对人类存续和同伴有英雄式执念。她无法准确命名自己对勇者的倾慕，只会在勇者面前短暂慌乱、移开视线或变得笨拙。",
+      extra: "保持异世界来客、原勇者小队成员、拯救异世界人类的英雄、杀手身份、误会与离开前被扫描的时间点；AI建档时可补全她的世界观常识、战斗经验、对现代环境的不适应，以及她对勇者倾慕却无法理解感情的矛盾。"
     },
     {
       title: "作弊模式",
@@ -1602,7 +1601,12 @@ var __webpack_exports__ = __webpack_require__("./src/催眠APP前端/index.tsx")
   }
 
   function shouldUseScanExampleFallback(example, index) {
-    if (index !== 2 || !example || typeof example !== "object" || Array.isArray(example)) return false;
+    if (!example || typeof example !== "object" || Array.isArray(example)) return false;
+    if (index === 1) {
+      const text = SCAN_EXAMPLE_FIELDS.map((key) => String(example[key] || "")).join("\n");
+      return String(example.roleName || "").trim() === "千杀百花" && !text.includes("勇者") && !text.includes("英雄");
+    }
+    if (index !== 2) return false;
     const contentFields = ["roleName", "aliases", "summary", "relation", "appearance", "personality", "extra"];
     const isContentEmpty = contentFields.every((key) => !String(example[key] || "").trim());
     const title = String(example.title || "").trim();
@@ -1806,48 +1810,6 @@ var __webpack_exports__ = __webpack_require__("./src/催眠APP前端/index.tsx")
   }
 
   const ST_AUTHOR_CREDIT = "原作者：Ramiel";
-
-  function patchPhoneAuthorCredit(root) {
-    if (!root) return;
-    const rootRect = root.getBoundingClientRect?.();
-    if (!rootRect) return;
-    const directText = (element) => Array.from(element.childNodes || [])
-      .filter((node) => node.nodeType === Node.TEXT_NODE)
-      .map((node) => String(node.nodeValue || ""))
-      .join(" ")
-      .replace(/s+/g, " ")
-      .trim();
-    const writeDirectText = (element) => {
-      if (directText(element) === ST_AUTHOR_CREDIT) {
-        element.classList.add("st-author-status-credit");
-        return;
-      }
-      const textNodes = Array.from(element.childNodes || []).filter((node) => node.nodeType === Node.TEXT_NODE && /^\s*\d{1,2}[:：]\d{2}\s*$/.test(String(node.nodeValue || "")));
-      if (textNodes.length) {
-        textNodes[0].nodeValue = ST_AUTHOR_CREDIT;
-        for (let i = 1; i < textNodes.length; i += 1) textNodes[i].nodeValue = "";
-      } else {
-        element.textContent = ST_AUTHOR_CREDIT;
-      }
-      element.classList.add("st-author-status-credit");
-    };
-    const candidates = Array.from(root.querySelectorAll("span,div,p"))
-      .filter((element) => {
-        const ownText = directText(element);
-        const text = ownText || (element.children.length ? "" : compactText(element));
-        if (text === ST_AUTHOR_CREDIT) return true;
-        if (!/^\d{1,2}[:：]\d{2}$/.test(text)) return false;
-        const rect = element.getBoundingClientRect?.();
-        if (!rect) return false;
-        const top = rect.top - rootRect.top;
-        const left = rect.left - rootRect.left;
-        const fontSize = parseFloat(getComputedStyle(element).fontSize || "0");
-        return top >= 0 && top < 82 && left >= 0 && left < 230 && fontSize <= 34;
-      });
-    for (const element of candidates) {
-      writeDirectText(element);
-    }
-  }
 
   function patchHelpAuthorCredit(root) {
     if (!root?.dataset || root.dataset.stPhoneApp !== "help") return;
@@ -2448,7 +2410,6 @@ var __webpack_exports__ = __webpack_require__("./src/催眠APP前端/index.tsx")
     ensurePhoneDarkThemeStyle();
     const root = document.querySelector(".w-full.h-full.bg-black.overflow-hidden.relative");
     if (!root) return;
-    patchPhoneAuthorCredit(root);
     const app = detectPhoneApp(root);
     if (app) root.dataset.stPhoneApp = app;
     else delete root.dataset.stPhoneApp;
@@ -3006,7 +2967,6 @@ var __webpack_exports__ = __webpack_require__("./src/催眠APP前端/index.tsx")
 
   function patchHomeTile() {
     const root = findPhoneRoot(document.body);
-    patchPhoneAuthorCredit(root);
     patchHomeCourseStatus(root);
     removeHomeOperationConfirm(root);
     ensureOperationSidePanel();
