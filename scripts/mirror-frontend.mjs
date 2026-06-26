@@ -7,7 +7,7 @@ const DEFAULT_SOURCE = "public/frontends/hypnosis-app/source.html";
 const DEFAULT_OUTPUT = "public/frontends/hypnosis-app/index.html";
 const MCHAN_STATIC_SOURCE = "public/frontends/mchan/index.html";
 const MCHAN_BOARD_DEFINITIONS = [
-  { id: "notice", name: "公告区", description: "系统提示、版规和公共信息。" },
+  { id: "notice", name: "公告区", description: "系统提示、版规和公共信息。原作者：Ramiel" },
   { id: "guide", name: "新手引导区", description: "操作提示、界面说明和任务线索。" },
   { id: "general", name: "综合讨论区", description: "普通讨论与当日动态。" },
   { id: "showcase", name: "成果展示区", description: "可公开查看的进展记录。" },
@@ -895,19 +895,23 @@ async function getMvuData() {
     }
 }`,
     `function getMessageVariableOption() {
-    return { type: 'message', message_id: 'latest' };
-}
-function getVariableReadOptions() {
-    const options = [getMessageVariableOption()];
     try {
         const currentMessageId = getCurrentMessageId();
-        if (currentMessageId !== 'latest')
-            options.push({ type: 'message', message_id: currentMessageId });
+        if (currentMessageId !== undefined && currentMessageId !== null && currentMessageId !== 'latest')
+            return { type: 'message', message_id: currentMessageId };
     }
     catch {
         // ignore
     }
+    return { type: 'message', message_id: 'latest' };
+}
+function getVariableReadOptions() {
+    const options = [];
+    const current = getMessageVariableOption();
+    options.push(current);
     options.push({ type: 'chat' });
+    if (current.message_id !== 'latest')
+        options.push({ type: 'message', message_id: 'latest' });
     return options;
 }
 function scoreMvuCandidate(mvu) {
@@ -943,23 +947,17 @@ async function getMvuData() {
         if (!ready)
             return null;
         let firstError = null;
-        let best = null;
-        let bestScore = -1;
         for (const option of getVariableReadOptions()) {
             try {
                 const mvu = Mvu.getMvuData(option);
                 const score = scoreMvuCandidate(mvu);
-                if (score > bestScore) {
-                    best = { mvu, option };
-                    bestScore = score;
-                }
+                if (score >= 0)
+                    return { mvu, option };
             }
             catch (err) {
                 firstError ??= err;
             }
         }
-        if (best)
-            return best;
         if (firstError)
             throw firstError;
         return null;
@@ -1772,29 +1770,26 @@ function scoreStatDataCandidate(value) {
     return score;
 }
 function getFrontendVariableOptions() {
-    const options = [{ type: 'message', message_id: 'latest' }];
+    const options = [];
     try {
         const currentMessageId = getCurrentMessageId();
-        if (currentMessageId !== 'latest')
+        if (currentMessageId !== undefined && currentMessageId !== null && currentMessageId !== 'latest')
             options.push({ type: 'message', message_id: currentMessageId });
     }
     catch {
         // ignore
     }
     options.push(CHAT_OPTION);
+    options.push({ type: 'message', message_id: 'latest' });
     return options;
 }
 function pickBestVariableSnapshot(candidates) {
-    let best = null;
-    let bestScore = -1;
     for (const candidate of candidates) {
         const score = scoreStatDataCandidate(candidate);
-        if (score > bestScore) {
-            best = candidate;
-            bestScore = score;
-        }
+        if (score >= 0)
+            return candidate;
     }
-    return best;
+    return null;
 }
 function getLatestVariablesSync() {
     const candidates = [];
@@ -2229,12 +2224,16 @@ function normalizeMchanSeed(rawSeed) {
         ...(Array.isArray(post?.floors) ? post.floors : [])
       ].join("\n");
       const createdAt = baseTime + (boardOrder[board.name] || 0) * 3600000 + Math.max(0, postNo - 1) * 600000;
+      let body = cleanMchanSeedText(post?.body);
+      if (board.name === "公告区" && postNo === 1 && !body.includes("原作者：Ramiel")) {
+        body = (body ? body + "\n\n" : "") + "原作者：Ramiel";
+      }
       threads.push({
         id: "seed-" + boardIdByName[board.name] + "-" + postNo,
         boardId: boardIdByName[board.name],
         title: cleanMchanSeedText(post?.title, board.name + "帖子" + postNo),
         author: "anonymous",
-        body: cleanMchanSeedText(post?.body),
+        body,
         pinned: board.name === "公告区" && postNo === 1,
         postNo,
         source: "card-seed",
@@ -2292,12 +2291,13 @@ function upgradeInternalMchanApp(html) {
   }
 
   function getLatestVariableOptions() {
-    const options = [{ type: "message", message_id: "latest" }];
+    const options = [];
     try {
       const currentMessageId = getCurrentMessageId();
-      if (currentMessageId !== "latest") options.push({ type: "message", message_id: currentMessageId });
+      if (currentMessageId !== undefined && currentMessageId !== null && currentMessageId !== "latest") options.push({ type: "message", message_id: currentMessageId });
     } catch {}
     options.push({ type: "chat" });
+    options.push({ type: "message", message_id: "latest" });
     return options;
   }
 
@@ -2344,16 +2344,11 @@ function upgradeInternalMchanApp(html) {
       const mvu = window.Mvu?.getMvuData?.();
       if (mvu?.stat_data && typeof mvu.stat_data === "object") candidates.push(mvu.stat_data);
     } catch {}
-    let best = null;
-    let bestScore = -1;
     for (const candidate of candidates) {
       const score = scoreStatDataCandidate(candidate);
-      if (score > bestScore) {
-        best = candidate;
-        bestScore = score;
-      }
+      if (score >= 0) return candidate;
     }
-    return best;
+    return null;
   }
 
   function getStatsRoles() {
@@ -2421,7 +2416,7 @@ function injectInternalMchanApp(html, staticSeed) {
       boardId: "notice",
       title: "匿名版静态镜像",
       author: "system",
-      body: "这里是手机内部的只读匿名版页面。点击帖子可查看内容，返回按钮回到匿名版首页。",
+      body: "这里是手机内部的只读匿名版页面。点击帖子可查看内容，返回按钮回到匿名版首页。\\n\\n原作者：Ramiel",
       pinned: true,
       createdAt: 1813929600000,
       updatedAt: 1813929600000,
@@ -2971,6 +2966,11 @@ function injectInternalMchanApp(html, staticSeed) {
     style.textContent = \`
 .st-drag-scroll{cursor:grab;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;scroll-behavior:auto}
 .st-drag-scroll.is-dragging{cursor:grabbing;user-select:none}
+.st-author-status-credit{font-size:11px!important;font-weight:850!important;letter-spacing:0!important;line-height:1.1!important;white-space:nowrap!important;color:rgba(248,250,252,.96)!important;text-shadow:0 1px 8px rgba(0,0,0,.32)}
+.st-help-author-card{margin:10px 12px 12px;border:1px solid rgba(34,211,238,.2);border-radius:16px;background:linear-gradient(135deg,rgba(34,211,238,.14),rgba(168,85,247,.1));box-shadow:0 12px 26px rgba(8,47,73,.18);padding:12px;color:#f8fafc}
+.st-help-author-card strong{display:block;font-size:14px;line-height:1.2}
+.st-help-author-card p{margin:6px 0 0;color:rgba(226,232,240,.78);font-size:12px;line-height:1.5}
+.st-author-credit-line{margin-top:8px;padding-top:7px;border-top:1px solid rgba(255,255,255,.08);color:rgba(125,211,252,.78)!important;font-size:10px!important;font-weight:800!important;line-height:1.3!important}
 .st-home-course-strip{margin-top:8px;display:inline-flex;max-width:100%;align-items:center;gap:7px;border:1px solid rgba(255,255,255,.12);border-radius:999px;background:rgba(2,6,23,.34);backdrop-filter:blur(12px);box-shadow:0 10px 22px rgba(0,0,0,.16);padding:5px 9px;color:rgba(241,245,249,.9);font-size:11px;line-height:1.2}
 .st-home-course-strip strong{font-size:12px;color:#fff;white-space:nowrap}
 .st-home-course-strip span{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(203,213,225,.82)}
@@ -3545,13 +3545,67 @@ function injectInternalMchanApp(html, staticSeed) {
     return String(element?.textContent || "").replace(/\\s+/g, " ").trim();
   }
 
+  const ST_AUTHOR_CREDIT = "原作者：Ramiel";
+
+  function patchPhoneAuthorCredit(root) {
+    if (!root) return;
+    const rootRect = root.getBoundingClientRect?.();
+    if (!rootRect) return;
+    const candidates = Array.from(root.querySelectorAll("span,div,p"))
+      .filter((element) => {
+        const text = compactText(element);
+        if (text === ST_AUTHOR_CREDIT) return true;
+        if (!/^\\d{1,2}[:：]\\d{2}$/.test(text)) return false;
+        if (element.children.length > 0) return false;
+        const rect = element.getBoundingClientRect?.();
+        if (!rect) return false;
+        const top = rect.top - rootRect.top;
+        const left = rect.left - rootRect.left;
+        const fontSize = parseFloat(getComputedStyle(element).fontSize || "0");
+        return top >= 0 && top < 70 && left >= 0 && left < 180 && fontSize <= 22;
+      });
+    for (const element of candidates) {
+      element.textContent = ST_AUTHOR_CREDIT;
+      element.classList.add("st-author-status-credit");
+    }
+  }
+
+  function patchHelpAuthorCredit(root) {
+    if (!root?.dataset || root.dataset.stPhoneApp !== "help") return;
+    const app = root.firstElementChild;
+    if (!app) return;
+    const content = app.querySelector('[class*="overflow-y-auto"]') || app;
+    let card = content.querySelector(":scope > .st-help-author-card");
+    if (!card) {
+      card = document.createElement("section");
+      card.className = "st-help-author-card";
+      const header = app.firstElementChild;
+      if (header?.parentElement === content && header.nextSibling) content.insertBefore(card, header.nextSibling);
+      else content.prepend(card);
+    }
+    card.innerHTML = '<strong>原作者</strong><p>原作者为Ramiel，我只是二改</p><div class="st-author-credit-line">原作者：Ramiel</div>';
+    const blocks = Array.from(content.children).filter((element) => {
+      if (element === card || element.classList?.contains("st-help-author-card")) return false;
+      const text = compactText(element);
+      return text.length >= 8 && !text.includes("原作者：Ramiel");
+    });
+    for (const block of blocks) {
+      if (block.querySelector?.(":scope > .st-author-credit-line")) continue;
+      const line = document.createElement("div");
+      line.className = "st-author-credit-line";
+      line.textContent = ST_AUTHOR_CREDIT;
+      block.appendChild(line);
+    }
+  }
+
   function getLatestVariableOptions() {
-    const options = [{ type: "message", message_id: "latest" }];
+    const options = [];
     try {
       const currentMessageId = getCurrentMessageId();
-      if (currentMessageId !== "latest") options.push({ type: "message", message_id: currentMessageId });
+      if (currentMessageId !== undefined && currentMessageId !== null && currentMessageId !== "latest") options.push({ type: "message", message_id: currentMessageId });
     } catch {}
     options.push({ type: "chat" });
+    options.push({ type: "message", message_id: "latest" });
     return options;
   }
 
@@ -3598,16 +3652,11 @@ function injectInternalMchanApp(html, staticSeed) {
       const mvu = window.Mvu?.getMvuData?.();
       if (mvu?.stat_data && typeof mvu.stat_data === "object") candidates.push(mvu.stat_data);
     } catch {}
-    let best = null;
-    let bestScore = -1;
     for (const candidate of candidates) {
       const score = scoreStatDataCandidate(candidate);
-      if (score > bestScore) {
-        best = candidate;
-        bestScore = score;
-      }
+      if (score >= 0) return candidate;
     }
-    return best;
+    return null;
   }
 
   function getStatsRoles() {
@@ -4120,9 +4169,13 @@ function injectInternalMchanApp(html, staticSeed) {
     ensurePhoneDarkThemeStyle();
     const root = document.querySelector(".w-full.h-full.bg-black.overflow-hidden.relative");
     if (!root) return;
+    patchPhoneAuthorCredit(root);
     const app = detectPhoneApp(root);
     if (app) root.dataset.stPhoneApp = app;
     else delete root.dataset.stPhoneApp;
+    if (app === "help") {
+      patchHelpAuthorCredit(root);
+    }
     if (app === "stats") {
       enhanceStatsRolePicker(root);
       enhanceStatsOverview(root);
@@ -4674,6 +4727,7 @@ function injectInternalMchanApp(html, staticSeed) {
 
   function patchHomeTile() {
     const root = findPhoneRoot(document.body);
+    patchPhoneAuthorCredit(root);
     patchHomeCourseStatus(root);
     removeHomeOperationConfirm(root);
     ensureOperationSidePanel();
