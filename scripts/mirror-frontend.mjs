@@ -651,7 +651,7 @@ function patchAchievementAppModule(code) {
             操作: '领取成就',
             成就: ach.title,
             条件: ach.description,
-            奖励: \`+\${ach.rewardMcPoints} PT\`,
+            奖励: \`当前MC点 +\${ach.rewardMcPoints}点\`,
         });
         setNotice(\`已记录领取成就：\${ach.title}\`);
         setTimeout(() => setNotice(null), 2000);
@@ -662,7 +662,7 @@ function patchAchievementAppModule(code) {
             操作: '接取任务',
             任务: quest.title,
             条件: quest.description,
-            奖励: \`+\${quest.rewardMcPoints} PT\`,
+            奖励: \`当前MC点 +\${quest.rewardMcPoints}点\`,
         });
         setNotice(\`已记录接取任务：\${quest.title}\`);
         setTimeout(() => setNotice(null), 2000);
@@ -683,7 +683,7 @@ function patchAchievementAppModule(code) {
             操作: '提交任务',
             任务: quest.title,
             条件: quest.description,
-            奖励: \`+\${quest.rewardMcPoints} PT\`,
+            奖励: \`当前MC点 +\${quest.rewardMcPoints}点\`,
         });
         setNotice(\`已记录提交任务：\${quest.title}\`);
         setTimeout(() => setNotice(null), 2000);
@@ -1261,7 +1261,7 @@ const ActiveSessionView = ({ timeLeft, sessionEndVirtualMinutes, sessionEndAtMs,
     const getFeatureNumericConfig = (feature) => {
         switch (feature.id) {
             case 'vip1_temp_sensitivity':
-                return { label: '敏感度增加', unit: '点', min: 1, max: 999, step: 1, hint: '每点2MC能量' };
+                return { label: '敏感度增加', unit: '点', min: 1, max: 999, step: 1, hint: '每点消耗2点MC能量' };
             case 'vip1_estrus':
                 return { label: '发情增加', unit: '', min: 1, max: 999, step: 1 };
             case 'vip1_memory_erase':
@@ -1326,7 +1326,7 @@ const ActiveSessionView = ({ timeLeft, sessionEndVirtualMinutes, sessionEndAtMs,
         const billing = getFeatureBilling(feature);
         const people = getFeaturePeople(feature);
         const minutes = getFeatureMinutes(feature);
-        const currency = feature.costCurrency === 'MC_POINTS' ? 'PT' : 'MC';
+        const currency = feature.costCurrency === 'MC_POINTS' ? 'MC点' : 'MC能量';
         const charged = cost.points || cost.energy || 0;
         return {
             ...cost,
@@ -1345,6 +1345,14 @@ const ActiveSessionView = ({ timeLeft, sessionEndVirtualMinutes, sessionEndAtMs,
                         ? \`按时间（\${minutes}分钟）\`
                         : '固定/永久',
         };
+    };
+    const formatCostPartsForAi = (energy, points) => {
+        const parts = [];
+        if (energy)
+            parts.push(\`MC能量 \${energy}点\`);
+        if (points)
+            parts.push(\`当前MC点 \${points}点\`);
+        return parts.join(' + ') || '无';
     };
 `
   );
@@ -1419,13 +1427,15 @@ const ActiveSessionView = ({ timeLeft, sessionEndVirtualMinutes, sessionEndAtMs,
         const cost = { energy: details.energy, points: details.points };
         const costParts = [];
         if (cost.energy)
-            costParts.push(\`\${cost.energy} MC\`);
+            costParts.push(\`MC能量 \${cost.energy}点\`);
         if (cost.points)
-            costParts.push(\`\${cost.points} PT\`);
+            costParts.push(\`当前MC点 \${cost.points}点\`);
         return {
             功能: feature.title,
             描述: feature.description,
             预计消耗: costParts.join(' + ') || '0',
+            MC能量消耗: \`\${cost.energy || 0}点\`,
+            当前MC点消耗: \`\${cost.points || 0}点\`,
             计费方式: details.billingLabel,
             是否受人数影响: details.usesPeople ? '是' : '否',
             是否受时间影响: details.usesTime ? '是' : '否',
@@ -1465,7 +1475,7 @@ const ActiveSessionView = ({ timeLeft, sessionEndVirtualMinutes, sessionEndAtMs,
             操作: '购买功能',
             功能: feature.title,
             描述: feature.description,
-            价格: \`\${feature.purchasePricePoints ?? 0} PT\`,
+            当前MC点消耗: \`\${feature.purchasePricePoints ?? 0}点\`,
         });
     };
     const toggleFeature = (id) => {
@@ -1479,7 +1489,7 @@ const ActiveSessionView = ({ timeLeft, sessionEndVirtualMinutes, sessionEndAtMs,
                 操作: '查看未购买功能',
                 功能: target.title,
                 描述: target.description,
-                价格: \`\${target.purchasePricePoints ?? 0} PT\`,
+                当前MC点价格: \`\${target.purchasePricePoints ?? 0}点\`,
             });
             return;
         }
@@ -1536,8 +1546,11 @@ const ActiveSessionView = ({ timeLeft, sessionEndVirtualMinutes, sessionEndAtMs,
         recordOperationIntent({
             来源: '催眠APP',
             操作: '启动催眠',
-            预计消耗: \`\${totalEnergyCost} MC\${totalPointsCost > 0 ? \` + \${totalPointsCost} PT\` : ''}\`,
-            当前缺口: \`\${missingEnergy} MC\${missingPoints > 0 ? \` + \${missingPoints} PT\` : ''}\`,
+            预计消耗: formatCostPartsForAi(totalEnergyCost, totalPointsCost),
+            MC能量消耗: \`\${totalEnergyCost}点\`,
+            当前MC点消耗: \`\${totalPointsCost}点\`,
+            扣费变量: 'MC能量消耗只扣系统._MC能量；当前MC点消耗只扣系统.当前MC点；二者不能互相代扣，也不能使用系统._MC能量上限支付。',
+            余额判断: 'AI必须按同一批次顺序先检查余额。任一必要余额不足则该项与后续依赖项失败，不扣费、不生效、不允许贷款、负数或自动兑换。',
             结算说明: '前端只做预估并逐项记录人数/时间是否参与计费；是否成功、实际扣除和变量更新由AI根据世界书规则判断。',
             功能: enabledFeatures.map(formatFeatureIntent),
         });
@@ -1568,8 +1581,9 @@ const ActiveSessionView = ({ timeLeft, sessionEndVirtualMinutes, sessionEndAtMs,
         recordOperationIntent({
             来源: '催眠APP',
             操作: '购买能量',
-            数量: \`+\${actualAmount} MC\`,
-            价格: money(unitPrice * actualAmount),
+            MC能量增加: \`+\${actualAmount}点\`,
+            金钱消耗: money(unitPrice * actualAmount),
+            余额判断: 'AI必须先检查系统.持有零花钱是否足够；不足则购买失败，不能贷款或自动兑换。',
         });
     };
     const purchaseMaxEnergy = async (desiredAmount) => {
@@ -1579,8 +1593,9 @@ const ActiveSessionView = ({ timeLeft, sessionEndVirtualMinutes, sessionEndAtMs,
         recordOperationIntent({
             来源: '催眠APP',
             操作: '提升能量上限',
-            数量: \`+\${amount}\`,
-            价格: \`\${amount} PT\`,
+            MC能量上限增加: \`+\${amount}点\`,
+            当前MC点消耗: \`\${amount}点\`,
+            余额判断: 'AI必须先检查系统.当前MC点是否足够；不足则提升失败，不能扣系统._MC能量。',
         });
     };
     const purchasePoints = async (desiredAmount) => {
@@ -1591,8 +1606,9 @@ const ActiveSessionView = ({ timeLeft, sessionEndVirtualMinutes, sessionEndAtMs,
         recordOperationIntent({
             来源: '催眠APP',
             操作: '充值点数',
-            数量: \`+\${amount} PT\`,
-            价格: money(unitPrice * amount),
+            当前MC点增加: \`+\${amount}点\`,
+            金钱消耗: money(unitPrice * amount),
+            余额判断: 'AI必须先检查系统.持有零花钱是否足够；不足则充值失败，不能贷款。',
         });
     };
     // --- Render Helpers ---
@@ -1613,7 +1629,7 @@ const ActiveSessionView = ({ timeLeft, sessionEndVirtualMinutes, sessionEndAtMs,
     "        const formatFeatureCost = (feature) => {",
     "        return ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)(\"div\", { className: \"mb-6 relative\",",
     `        const formatFeatureCost = (feature) => {
-            const currency = feature.costCurrency === 'MC_POINTS' ? 'PT' : 'MC';
+            const currency = feature.costCurrency === 'MC_POINTS' ? 'MC点' : 'MC能量';
             const billing = getFeatureBilling(feature);
             if (feature.id === 'vip1_stats')
                 return '订阅后自动解锁';
@@ -1736,10 +1752,11 @@ const ActiveSessionView = ({ timeLeft, sessionEndVirtualMinutes, sessionEndAtMs,
                                             const topUpCost = missingEnergy * 100 + missingPoints * 1000;
                                             recordOperationIntent({
                                                 来源: '催眠APP',
-                                                操作: '补齐资源',
-                                                能量: \`+\${missingEnergy} MC\`,
-                                                点数: \`+\${missingPoints} PT\`,
-                                                价格: money(topUpCost),
+                                                操作: '请求补给资源',
+                                                MC能量增加: \`+\${missingEnergy}点\`,
+                                                当前MC点增加: \`+\${missingPoints}点\`,
+                                                金钱消耗: money(topUpCost),
+                                                余额判断: '这只是用户请求补给，AI必须先检查系统.持有零花钱是否足够；不足则补给失败，不能贷款、透支或自动兑换。',
                                             });
                                             setShowLowEnergyModal(false);
                                         }, disabled: false,`
