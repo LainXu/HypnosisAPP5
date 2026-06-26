@@ -1527,7 +1527,7 @@ const ActiveSessionView = ({ timeLeft, sessionEndVirtualMinutes, sessionEndAtMs,
         const parsed = Number.parseInt(quickSupplyQtyInput, 10);
         if (!Number.isFinite(parsed) || parsed <= 0)
             return 1;
-        return Math.min(999, parsed);
+        return parsed;
     }, [quickSupplyQtyInput]);
     const purchaseEnergy = async (desiredAmount) => {
         const unitPrice = 100;
