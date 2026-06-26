@@ -582,7 +582,7 @@ function patchAchievementAppModule(code) {
     `    const [notice, setNotice] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(null);
     const [achievementFilter, setAchievementFilter] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)('ALL');
     const [questFilter, setQuestFilter] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)('UNFINISHED');
-    const [newQuestCountInput, setNewQuestCountInput] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)('3');
+    const [newQuestCountInput, setNewQuestCountInput] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)('1');
     const [newQuestBias, setNewQuestBias] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)('');
     const refreshTimerRef = (0,react__WEBPACK_IMPORTED_MODULE_1__.useRef)(null);`
   );
@@ -677,34 +677,37 @@ function patchAchievementAppModule(code) {
         setNotice(\`已记录取消任务：\${quest.title}\`);
         setTimeout(() => setNotice(null), 1800);
     };
-    const handleClaimQuest = async (quest) => {
-        recordOperationIntent({
-            来源: '成就和任务',
-            操作: '提交任务',
-            任务: quest.title,
-            条件: quest.description,
-            奖励: \`当前MC点 +\${quest.rewardMcPoints}点\`,
-        });
-        setNotice(\`已记录提交任务：\${quest.title}\`);
-        setTimeout(() => setNotice(null), 2000);
-    };
-    const normalizeNewQuestCount = (value) => {
-        const parsed = Number.parseInt(String(value ?? ''), 10);
-        if (!Number.isFinite(parsed))
-            return 1;
-        return Math.max(1, Math.min(10, parsed));
-    };
-    const handleRequestNewQuests = () => {
-        const count = normalizeNewQuestCount(newQuestCountInput);
-        const bias = String(newQuestBias || '').trim();
-        recordOperationIntent({
-            来源: '成就和任务',
-            操作: '新增任务',
-            数量: \`\${count}个\`,
-            倾向: bias || '由AI根据当前上下文剧情决定',
-            初始状态: '未完成任务',
-            生成规则: '根据当前上下文剧情新增若干未完成任务；不要直接标记为已接或已完成，奖励和条件由AI按世界书与当前局势决定。',
-        });
+	    const handleClaimQuest = async (quest) => {
+	        setNotice('任务完成后由AI自动结算奖励，无需手动提交');
+	        setTimeout(() => setNotice(null), 2200);
+	    };
+	    const normalizeNewQuestCount = (value) => {
+	        const parsed = Number.parseInt(String(value ?? ''), 10);
+	        const maxCount = Math.max(0, 3 - activeQuestCount);
+	        if (maxCount <= 0)
+	            return 0;
+	        if (!Number.isFinite(parsed))
+	            return 1;
+	        return Math.max(1, Math.min(maxCount, parsed));
+	    };
+	    const handleRequestNewQuests = () => {
+	        const count = normalizeNewQuestCount(newQuestCountInput);
+	        if (count <= 0) {
+	            setNotice('已接任务已满：最多同时进行3个任务');
+	            setTimeout(() => setNotice(null), 2200);
+	            return;
+	        }
+	        const bias = String(newQuestBias || '').trim();
+	        recordOperationIntent({
+	            来源: '成就和任务',
+	            操作: '新增任务',
+	            数量: \`\${count}个\`,
+	            当前已接任务数: \`\${activeQuestCount}个\`,
+	            剩余可新增数量: \`\${Math.max(0, 3 - activeQuestCount)}个\`,
+	            倾向: bias || '由AI根据当前上下文剧情决定',
+	            初始状态: '直接写入任务变量，作为已接/进行中的任务',
+	            生成规则: '根据当前上下文剧情新增若干进行中任务；写入/任务，包含完成条件、奖励MC点和已完成=false；不要写入前端静态列表，也不要标记为已完成。',
+	        });
         setNotice(\`已请求新增 \${count} 个任务\`);
         setTimeout(() => setNotice(null), 2200);
     };
@@ -750,16 +753,15 @@ function patchAchievementAppModule(code) {
             return 1;
         return 0;
     });
-    const visibleAchievements = sortedAchievements.filter(matchesAchievementFilter);
-    const activeQuestCount = quests.filter(q => q.status === 'ACTIVE' || q.status === 'COMPLETED').length;
-    const visibleQuests = quests.filter(q => {
-        if (questFilter === 'ACTIVE')
-            return q.status === 'ACTIVE';
-        if (questFilter === 'DONE')
-            return q.status === 'COMPLETED' || q.status === 'CLAIMED';
-        return q.status === 'AVAILABLE';
-    });
-`
+	    const visibleAchievements = sortedAchievements.filter(matchesAchievementFilter);
+	    const activeQuestCount = quests.filter(q => q.status === 'ACTIVE' || q.status === 'COMPLETED').length;
+	    const remainingQuestSlots = Math.max(0, 3 - activeQuestCount);
+	    const visibleQuests = quests.filter(q => {
+	        if (questFilter === 'ACTIVE')
+	            return q.status === 'ACTIVE' || q.status === 'COMPLETED';
+	        return q.status === 'AVAILABLE';
+	    });
+	`
   );
   output = replaceBetween(
     output,
@@ -775,6 +777,36 @@ function patchAchievementAppModule(code) {
   output = output.replace(
     `!loading && activeTab === 'QUESTS' && ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "space-y-3 animate-fade-in", children: [`,
     `!loading && activeTab === 'QUESTS' && ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "space-y-3 animate-fade-in", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "rounded-2xl border border-white/10 bg-white/5 px-3 py-2 flex items-center justify-between gap-2", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("span", { className: "text-[11px] text-white/60", children: "任务筛选" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("select", { value: questFilter, onChange: e => setQuestFilter(e.target.value), className: "bg-slate-950/80 border border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("option", { value: "UNFINISHED", children: "未完成" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("option", { value: "ACTIVE", children: "已接任务" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("option", { value: "DONE", children: "已完成任务" })] })] }),`
+  );
+  output = output.replace(
+    `(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("option", { value: "DONE", children: "已完成任务" })`,
+    ``
+  );
+  output = output.replace(
+    `children: "根据当前上下文剧情，让 AI 新增若干未完成任务。前端只记录意图，不直接改变量。"`,
+    `children: "根据当前上下文剧情，让 AI 直接生成并接取进行中任务；最多同时3个，满了会禁用。"`
+  );
+  output = output.replace(
+    `min: 1, max: 10, step: 1, value: newQuestCountInput, onChange: e => setNewQuestCountInput(e.target.value), onBlur: () => setNewQuestCountInput(String(normalizeNewQuestCount(newQuestCountInput))), className:`,
+    `min: 1, max: Math.max(1, remainingQuestSlots), step: 1, disabled: remainingQuestSlots <= 0, value: newQuestCountInput, onChange: e => setNewQuestCountInput(e.target.value), onBlur: () => setNewQuestCountInput(String(normalizeNewQuestCount(newQuestCountInput))), className:`
+  );
+  output = output.replace(
+    `onClick: handleRequestNewQuests, className: "w-full rounded-xl bg-gradient-to-r from-cyan-500 to-sky-500 px-4 py-3 text-sm font-black text-white shadow-lg active:scale-[0.98]", children: "写入新增任务请求"`,
+    `onClick: handleRequestNewQuests, disabled: remainingQuestSlots <= 0, style: remainingQuestSlots <= 0 ? { opacity: 0.45, cursor: 'not-allowed' } : undefined, className: "w-full rounded-xl bg-gradient-to-r from-cyan-500 to-sky-500 px-4 py-3 text-sm font-black text-white shadow-lg active:scale-[0.98]", children: remainingQuestSlots <= 0 ? "已接任务已满" : "写入新增任务请求"`
+  );
+  output = output.replace(
+    `const statusLabel = q.status === 'COMPLETED'
+                                    ? '可提交'`,
+    `const statusLabel = q.status === 'COMPLETED'
+                                    ? '待自动结算'`
+  );
+  output = output.replace(
+    `const canClaim = q.status === 'COMPLETED';`,
+    `const canClaim = false;`
+  );
+  output = output.replace(
+    `const canCancel = q.status === 'ACTIVE' || q.status === 'COMPLETED';`,
+    `const canCancel = q.status === 'ACTIVE';`
   );
   output = output.replaceAll("quests.map(q =>", "visibleQuests.map(q =>");
   output = output.replaceAll("quests.length === 0", "visibleQuests.length === 0");
@@ -2199,6 +2231,84 @@ function chooseUserResourcesFromSystems(systems) {
     `            purchaseRequired: false,
             purchasePricePoints: undefined,
             isPurchased: true,`
+  );
+  output = output.replace(
+    `    getQuests: async () => {
+        const { store } = normalizeChatVariables(getVariables(CHAT_OPTION));
+        const claimed = store.quests ?? {};
+        const tasks = (await _mvuBridge__WEBPACK_IMPORTED_MODULE_3__.MvuBridge.getTasks().catch(() => null)) ?? {};
+        const quests = QUEST_DATABASE.map(q => {
+            const locked = claimed[q.id] === 'CLAIMED';
+            if (locked) {
+                return {
+                    id: q.id,
+                    title: q.name,
+                    description: q.condition,
+                    rewardMcPoints: q.rewardMcPoints,
+                    status: 'CLAIMED',
+                };
+            }
+            const taskState = tasks[q.name];
+            const completed = Boolean(taskState && typeof taskState === 'object' && taskState.已完成 === true);
+            const active = Boolean(taskState && typeof taskState === 'object' && typeof taskState.已完成 === 'boolean');
+            return {
+                id: q.id,
+                title: q.name,
+                description: q.condition,
+                rewardMcPoints: q.rewardMcPoints,
+                status: completed
+                    ? 'COMPLETED'
+                    : active
+                        ? 'ACTIVE'
+                        : 'AVAILABLE',
+            };
+        });
+        const order = { COMPLETED: 0, ACTIVE: 1, AVAILABLE: 2, CLAIMED: 3 };
+        quests.sort((a, b) => order[a.status] - order[b.status]);
+        return quests;
+    },`,
+    `    getQuests: async () => {
+        const { store } = normalizeChatVariables(getVariables(CHAT_OPTION));
+        const claimed = store.quests ?? {};
+        const tasks = (await _mvuBridge__WEBPACK_IMPORTED_MODULE_3__.MvuBridge.getTasks().catch(() => null)) ?? {};
+        const seenTaskNames = new Set();
+        const quests = QUEST_DATABASE.flatMap(q => {
+            if (claimed[q.id] === 'CLAIMED')
+                return [];
+            const taskState = tasks[q.name];
+            if (taskState && typeof taskState === 'object')
+                seenTaskNames.add(q.name);
+            const completed = Boolean(taskState && typeof taskState === 'object' && taskState.已完成 === true);
+            const active = Boolean(taskState && typeof taskState === 'object' && typeof taskState.已完成 === 'boolean');
+            return [{
+                id: q.id,
+                title: q.name,
+                description: q.condition,
+                rewardMcPoints: q.rewardMcPoints,
+                status: completed
+                    ? 'COMPLETED'
+                    : active
+                        ? 'ACTIVE'
+                        : 'AVAILABLE',
+            }];
+        });
+        for (const [name, taskState] of Object.entries(tasks)) {
+            if (seenTaskNames.has(name))
+                continue;
+            if (!taskState || typeof taskState !== 'object' || typeof taskState.已完成 !== 'boolean')
+                continue;
+            quests.push({
+                id: \`dynamic:\${name}\`,
+                title: name,
+                description: String(taskState.完成条件 ?? ''),
+                rewardMcPoints: Number(taskState.奖励MC点 ?? taskState.奖励 ?? taskState.rewardMcPoints ?? 0) || 0,
+                status: taskState.已完成 === true ? 'COMPLETED' : 'ACTIVE',
+            });
+        }
+        const order = { COMPLETED: 0, ACTIVE: 1, AVAILABLE: 2, CLAIMED: 3 };
+        quests.sort((a, b) => order[a.status] - order[b.status]);
+        return quests;
+    },`
   );
   output = output.replaceAll(
     "normalizeChatVariables(getVariables(CHAT_OPTION))",
