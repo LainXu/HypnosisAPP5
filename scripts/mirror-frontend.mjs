@@ -1427,33 +1427,17 @@ const ActiveSessionView = ({ timeLeft, sessionEndVirtualMinutes, sessionEndAtMs,
             等级: \`VIP\${tier.slice(3)}\`,
             价格: money(price),
             当前是否满足前端解锁: canSubscribeTier(tier) ? '是' : '否',
+            解锁说明: '订阅/解锁对应VIP后，该VIP等级内功能可直接启用，无需单独购买功能。',
+            使用限制: '本次只订阅/解锁权限，不代表自动使用任何催眠功能。',
         });
     };
-    const purchaseFeature = async (feature) => {
-        recordOperationIntent({
-            来源: '催眠APP',
-            操作: '购买功能',
-            功能: feature.title,
-            描述: feature.description,
-            当前MC点消耗: \`\${feature.purchasePricePoints ?? 0}点\`,
-            扣费路径: '/系统/当前MC点',
-        });
+    const purchaseFeature = async (_feature) => {
+        return;
     };
     const toggleFeature = (id) => {
         const target = features.find(f => f.id === id);
         if (!target)
             return;
-        if (target.purchaseRequired && !target.isPurchased) {
-            triggerPurchaseShake(id);
-            recordOperationIntent({
-                来源: '催眠APP',
-                操作: '查看未购买功能',
-                功能: target.title,
-                描述: target.description,
-                当前MC点价格: \`\${target.purchasePricePoints ?? 0}点\`,
-            });
-            return;
-        }
         if (!hasAccessForFeature(target)) {
             recordOperationIntent({
                 来源: '催眠APP',
@@ -2207,6 +2191,14 @@ function chooseUserResourcesFromSystems(systems) {
         ].map(summarizeSessionValue).filter(Boolean)[0] ?? '';
         return { endVirtualMinutes, endAtMs, sessionSummary };
     },`
+  );
+  output = output.replace(
+    `            purchaseRequired: isPurchaseRequired(f),
+            purchasePricePoints: getPurchasePricePoints(f) ?? undefined,
+            isPurchased: !isPurchaseRequired(f) || Boolean(store.purchases?.[f.id]),`,
+    `            purchaseRequired: false,
+            purchasePricePoints: undefined,
+            isPurchased: true,`
   );
   output = output.replaceAll(
     "normalizeChatVariables(getVariables(CHAT_OPTION))",
