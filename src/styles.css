@@ -836,21 +836,57 @@ pre {
 }
 
 .course-rhythm {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 6px;
-  overflow-x: auto;
   padding: 0 10px 12px;
 }
 
-.course-rhythm span {
-  flex: 0 0 auto;
+.course-rhythm-item {
+  min-width: 0;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: 12px;
   background: #f8fafc;
-  color: var(--muted);
-  padding: 5px 8px;
-  font-size: 11px;
+  padding: 7px 4px;
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  text-align: center;
+}
+
+.course-rhythm-item b,
+.course-rhythm-item i {
+  color: #0f172a;
+  font-size: 10px;
+  font-style: normal;
   font-weight: 700;
+  line-height: 1;
+}
+
+.course-rhythm-item span {
+  position: relative;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.course-rhythm-item span::before,
+.course-rhythm-item span::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  width: 1px;
+  height: 7px;
+  background: rgba(20, 184, 166, 0.32);
+}
+
+.course-rhythm-item span::before {
+  bottom: calc(100% + 1px);
+}
+
+.course-rhythm-item span::after {
+  top: calc(100% + 1px);
 }
 
 .calendar-event {

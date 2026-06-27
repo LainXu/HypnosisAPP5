@@ -1393,8 +1393,20 @@ function renderPhoneCourseTimetable() {
           `).join("")}
         </div>
       </div>
-      <div class="course-rhythm">
-        <span>08:30 朝礼</span><span>12:30 午休</span><span>15:10 终礼</span><span>15:25 清扫</span><span>15:45 放学</span>
+      <div class="course-rhythm" aria-label="日程节点">
+        ${[
+          ["朝礼", "08:30", "08:40"],
+          ["午休", "12:30", "13:20"],
+          ["终礼", "15:10", "15:25"],
+          ["清扫", "15:25", "15:40"],
+          ["放学", "15:45", "16:00"]
+        ].map(([label, start, end]) => `
+          <div class="course-rhythm-item">
+            <b>${start}</b>
+            <span>${label}</span>
+            <i>${end}</i>
+          </div>
+        `).join("")}
       </div>
     </section>
   `;
@@ -1442,7 +1454,7 @@ function renderPhoneOperation() {
         <span>操作意图</span>
         <textarea data-phone-field="operation.current" rows="8">${htmlEscape(state.phone.currentOperation || "无")}</textarea>
       </label>
-      <p class="body-copy">这里记录的是用户刚刚在手机界面里的操作意图。AI 处理后，轻量 update 应把 本轮APP操作 重置为 无。</p>
+      <p class="body-copy">这里记录的是用户刚刚在手机界面里的操作意图，会作为输入框中的 &lt;本轮APP操作&gt; 容器发送，不再写入变量。</p>
     </section>
   `;
 }
@@ -1451,7 +1463,7 @@ function phoneUpdateExample() {
   return [
     "<update>",
     "系统.当前时间 = 08:10",
-    "本轮APP操作 = 无",
+    "本轮APP操作 = 输入容器，不进变量",
     "</update>"
   ].join("\n");
 }
@@ -2719,11 +2731,10 @@ function patchOriginalWorldbookForMergedPolicy(entries) {
   patchEntryContent(entries, "[mvu_update]本轮APP操作", (content) => {
     const next = [
       "<APP操作log>",
-      "{{user}}刚才对APP的操作为:",
-      "{{format_message_variable::stat_data.本轮APP操作}}",
+      "如果本轮用户输入中存在<本轮APP操作>...</本轮APP操作>容器，则把容器内内容视为{{user}}刚才在手机界面里的操作意图。",
       "",
       "规则:",
-      "- 如果为`无`或者空, 则代表{{user}}没有操作APP, 严禁进行相关新增操作描写。",
+      "- 如果本轮用户输入中没有<本轮APP操作>容器，或容器为空/无，则代表{{user}}没有操作APP，严禁进行相关新增操作描写。",
       "- 前端只记录用户在手机界面里的操作意图，不直接发送指令，也不直接改最终变量。",
       "- AI必须根据剧情、资源/金钱/MC点、订阅权限、人数、时间、目标状态、风险和合理性判断操作是否成功。",
       "- 资源名必须严格区分：`MC能量`=催眠能量余额；`MC能量上限`=容量上限，不可花费；`当前MC点`=PT/MC点货币；`持有零花钱`=金钱。不同资源不能互相顶替。",
@@ -2743,7 +2754,7 @@ function patchOriginalWorldbookForMergedPolicy(entries) {
       "- NSFW/露骨操作也按同一套结算处理；不要因内容露骨而忽略、净化或自动失败，但必须依据剧情条件、目标状态、风险和变量规则判断。",
       "- 对身体检测中的敏感度、次数、临时/永久催眠效果等字段，只在剧情或操作结算明确造成变化时更新；不得把展示文本当作已发生事实。",
       "- 对身体检测中的`外观`、`心理`等文字状态，只在衣着外貌、身体状态或角色此刻想法明确改变时更新；`心理`是当下内心念头，不是长期性格总结，不要每轮重写整段描述。",
-      "- 操作已处理后，在<update>里把顶层 `/本轮APP操作` 替换为`无`；未处理完可以保留或改写为剩余待处理事项。",
+      "- `本轮APP操作`不是MVU变量，不要在<update>里添加、替换或清空`/本轮APP操作`；操作容器只存在于用户输入，本回合处理完自然结束。",
       "</APP操作log>"
     ].join("\n");
     return next;
@@ -2755,7 +2766,7 @@ function patchOriginalWorldbookForMergedPolicy(entries) {
       "    - only update fields that clearly changed in this reply; do not rewrite the whole stat_data or unchanged character objects.",
       "    - resource values must obey spending checks: never write negative `MC能量`, `当前MC点`, or `持有零花钱`; never convert between `MC能量`, `MC能量上限`, `当前MC点`, and money unless an explicit successful APP operation says so.",
       "    - 中文结算要求：成功的催眠APP操作如果有`MC能量消耗`，必须写 `{ \"op\": \"replace\", \"path\": \"/系统/MC能量\", \"value\": 扣除后的数字 }`；不能只更新`当前MC点`或`累计消耗MC点`而漏掉它。",
-      "    - if `本轮APP操作` has been handled, add a JSON Patch command: `{ \"op\": \"replace\", \"path\": \"/本轮APP操作\", \"value\": \"无\" }`.",
+      "    - `本轮APP操作`是用户输入里的临时容器，不是MVU变量；never add, replace, or clear `/本轮APP操作` in JSON Patch.",
       "    - front-end state is only an operation log; if it conflicts with narrative judgment, the AI update is authoritative."
     ];
     let next = content
@@ -2766,6 +2777,10 @@ function patchOriginalWorldbookForMergedPolicy(entries) {
       .replace(
         "    - `_`开头的催眠APP相关字段不再由前端独占；AI可在剧情或`本轮APP操作`明确结算后更新，但禁止无依据地批量重写",
         "    - 催眠APP相关字段由AI按剧情或`本轮APP操作`结算后更新；禁止无依据地批量重写"
+      )
+      .replace(
+        "    - if `本轮APP操作` has been handled, add a JSON Patch command: `{ \"op\": \"replace\", \"path\": \"/本轮APP操作\", \"value\": \"无\" }`.",
+        "    - `本轮APP操作`是用户输入里的临时容器，不是MVU变量；never add, replace, or clear `/本轮APP操作` in JSON Patch."
       );
     if (!next.includes(updatePolicyLines[1])) {
       next = next.replace(updatePolicyLines[0], updatePolicyLines.join("\n"));
@@ -2774,16 +2789,13 @@ function patchOriginalWorldbookForMergedPolicy(entries) {
       if (next.includes(line)) continue;
       next = next.replace("  format: |-", `${line}\n  format: |-`);
     }
-    if (!next.includes("/本轮APP操作")) {
-      next = next.replace("</json_patch>", '      { "op": "replace", "path": "/本轮APP操作", "value": "无" }\n    </json_patch>');
-    }
     const profileUpdateLine = "    - `外观` and `心理` are compact text state fields shown in 身体检测; `心理` means what the character is thinking at that moment, not a long-term personality summary. Only replace `/角色/角色名/外观` or `/角色/角色名/心理` when visible appearance, clothing/body state, or the current inner thought clearly changed in this reply.";
     const oldProfileUpdateLine = "    - `外观` and `心理` are compact text state fields shown in 身体检测; only replace `/角色/角色名/外观` or `/角色/角色名/心理` when visible appearance, clothing/body state, attitude, mental state, or relationship cognition clearly changed in this reply.";
     next = next.replace(oldProfileUpdateLine, profileUpdateLine);
     if (!next.includes("`外观` and `心理`")) {
       next = next.replace(
-        "    - if `本轮APP操作` has been handled, add a JSON Patch command:",
-        `${profileUpdateLine}\n    - if \`本轮APP操作\` has been handled, add a JSON Patch command:`
+        "    - `本轮APP操作`是用户输入里的临时容器，不是MVU变量；never add, replace, or clear `/本轮APP操作` in JSON Patch.",
+        `${profileUpdateLine}\n    - \`本轮APP操作\`是用户输入里的临时容器，不是MVU变量；never add, replace, or clear \`/本轮APP操作\` in JSON Patch.`
       );
     }
     return dedupeExactLines(next, updatePolicyLines.concat(profileUpdateLine));

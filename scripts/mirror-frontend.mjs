@@ -1428,8 +1428,6 @@ function scoreStatDataCandidate(value) {
         score += 30 + Object.keys(roles).length * 5;
     if (isPlainVariableObject(tasks))
         score += 8 + Object.keys(tasks).length;
-    if (value['本轮APP操作'] != null)
-        score += 2;
     return score;
 }
 function getFrontendVariableOptions() {
@@ -2360,7 +2358,6 @@ function upgradeInternalMchanApp(html) {
     }
     if (roles && typeof roles === "object" && !Array.isArray(roles)) score += 30 + Object.keys(roles).length * 5;
     if (tasks && typeof tasks === "object" && !Array.isArray(tasks)) score += 8 + Object.keys(tasks).length;
-    if (value["本轮APP操作"] != null) score += 2;
     return score;
   }
 
@@ -3054,7 +3051,12 @@ function injectInternalMchanApp(html, staticSeed) {
 .st-tt-period strong{font-size:10px;color:#f8fafc;line-height:1.15;word-break:keep-all}
 .st-tt-period em{font-style:normal;font-size:8px;color:#a5f3fc;line-height:1.1}
 .st-tt-rhythm{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
-.st-tt-rhythm span{min-width:0;border:1px solid rgba(255,255,255,.08);border-radius:999px;background:rgba(255,255,255,.045);padding:6px 5px;color:rgba(226,232,240,.68);font-size:9px;font-weight:800;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.st-tt-rhythm-item{min-width:0;border:1px solid rgba(255,255,255,.08);border-radius:13px;background:rgba(255,255,255,.045);padding:7px 3px;display:grid;justify-items:center;gap:3px;text-align:center}
+.st-tt-rhythm-item b,.st-tt-rhythm-item i{color:rgba(226,232,240,.78);font-size:9px;font-style:normal;font-weight:900;line-height:1}
+.st-tt-rhythm-item span{position:relative;color:#a5f3fc;font-size:8px;font-weight:900;line-height:1;white-space:nowrap}
+.st-tt-rhythm-item span:before,.st-tt-rhythm-item span:after{content:"";position:absolute;left:50%;width:1px;height:6px;background:rgba(34,211,238,.35)}
+.st-tt-rhythm-item span:before{bottom:calc(100% + 1px)}
+.st-tt-rhythm-item span:after{top:calc(100% + 1px)}
 @media (max-width:420px){.st-mchan-header{padding-top:38px}.st-mchan-board{padding:7px 10px}.st-mchan-content.is-detail{padding:10px}}
 \`;
     document.head.appendChild(style);
@@ -3758,7 +3760,6 @@ function injectInternalMchanApp(html, staticSeed) {
     }
     if (roles && typeof roles === "object" && !Array.isArray(roles)) score += 30 + Object.keys(roles).length * 5;
     if (tasks && typeof tasks === "object" && !Array.isArray(tasks)) score += 8 + Object.keys(tasks).length;
-    if (value["本轮APP操作"] != null) score += 2;
     return score;
   }
 
@@ -3903,8 +3904,7 @@ function injectInternalMchanApp(html, staticSeed) {
       AI执行规范: [
         "只能删除用户后续添加的自建角色，不能删除西园寺爱丽莎、月咏深雪、犬冢夏美。",
         "AI 判断确认后，只删除 stat_data.角色." + roleName + " 中的自建角色变量。",
-        "若该角色仍在剧情现场或删除会破坏连续性，AI 应在正文说明并拒绝删除或延后删除。",
-        "删除后需要在 <update> 中清空本轮APP操作。"
+        "若该角色仍在剧情现场或删除会破坏连续性，AI 应在正文说明并拒绝删除或延后删除。"
       ]
     });
   }
@@ -4707,7 +4707,13 @@ function injectInternalMchanApp(html, staticSeed) {
           '<div class="st-tt-badge">' + escapeHtml(slot.detail || (special?.detail || "普通授课")) + '</div>' +
         '</section>' +
         '<section class="st-tt-week">' + weekHtml + '</section>' +
-        '<section class="st-tt-rhythm"><span>08:30 朝礼</span><span>12:30 午休</span><span>15:10 终礼</span><span>15:25 清扫</span><span>15:45 放学</span></section>' +
+        '<section class="st-tt-rhythm">' +
+          '<div class="st-tt-rhythm-item"><b>08:30</b><span>朝礼</span><i>08:40</i></div>' +
+          '<div class="st-tt-rhythm-item"><b>12:30</b><span>午休</span><i>13:20</i></div>' +
+          '<div class="st-tt-rhythm-item"><b>15:10</b><span>终礼</span><i>15:25</i></div>' +
+          '<div class="st-tt-rhythm-item"><b>15:25</b><span>清扫</span><i>15:40</i></div>' +
+          '<div class="st-tt-rhythm-item"><b>15:45</b><span>放学</span><i>16:00</i></div>' +
+        '</section>' +
       '</main>';
     page.querySelector('[data-lite-action="back"]')?.addEventListener("click", () => page.remove());
   }
