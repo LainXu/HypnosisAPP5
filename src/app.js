@@ -2524,6 +2524,39 @@ function patchOriginalWorldbookForMergedPolicy(entries) {
     "[mvu_update]扫描角色增删规范"
   ].forEach((comment) => removeBookEntry(entries, comment));
 
+  const schoolRuleWorldbook = [
+    "<校规规则>",
+    "校规变量:",
+    "  path: /校规",
+    "  format:",
+    "    校规名:",
+    "      内容: 校规正文",
+    "      目标范围: 全体 | 指定个体/群体列表",
+    "      生效范围: 学校内",
+    "",
+    "生效规则:",
+    "- 校规不是催眠效果，绝不能写入任何角色的`临时催眠效果`或`永久催眠效果`。",
+    "- 校规只存放在`/校规`，最多3条；删除校规只`remove /校规/校规名`，不返还任何资源。",
+    "- 只要校规仍存在于`/校规`，所有位于学校内且落入`目标范围`的人都必须遵守；目标可以是全校全体，也可以是指定个体、若干角色、某类群体。",
+    "- 若目标范围未写明，默认覆盖学校内全体人员，包括学生、教师、家属、工作人员、访客、男女等所有在场人。",
+    "- 离开学校后校规不主动生效；再次进入学校且仍在目标范围内时恢复约束。",
+    "- 叙事中可体现角色对校规的适应、疑惑、合理化或抵触，但不能把校规误当成单体催眠、临时催眠或永久催眠。",
+    "",
+    "发布/删除结算:",
+    "- 发布校规必须同时满足：`系统.催眠APP订阅等级`为VIP5、`角色.西园寺爱丽莎.好感度`至少100、当前校规少于3条、本轮只发布一条、`系统.当前MC点`至少500000。",
+    "- 成功发布时只扣除500000当前MC点，并`add`到`/校规/校规名`；任一条件不足则失败，不扣费、不新增校规。",
+    "- 删除校规不需要退款，也不得补偿MC点、MC能量或金钱。",
+    "</校规规则>"
+  ].join("\n");
+  upsertBookEntry(entries, {
+    comment: "[mvu_update]校规规则",
+    keys: ["校规", "立校规", "申请立校规", "删除校规", "学校规则"],
+    content: schoolRuleWorldbook,
+    constant: true,
+    selective: false,
+    insertion_order: 12
+  });
+
   patchEntryContent(entries, "[mvu_plot]强调要求", (content) => {
     let next = content
       .replace(
@@ -2747,7 +2780,7 @@ function patchOriginalWorldbookForMergedPolicy(entries) {
       "- 前端每条操作只记录数值和路径；本条世界书规则是余额/扣费提醒的唯一来源，AI不要在同一批次多个催眠命令里反复复述余额提醒。",
       "- 单功能购买已取消：只要对应VIP等级已经订阅/解锁，前端允许直接启用该等级内功能；AI不需要写入或维护任何`购买状态`变量。",
 	      "- 订阅/解锁VIP只代表获得权限，不等于自动使用功能；除非本轮APP操作同时包含`启动催眠`且功能列表中明确启用了某功能，否则不得擅自产生催眠效果。",
-	      "- 催眠APP、领取任务、完成成就、订阅、补给、库存、日历、扫描角色、删除角色和新增任务等操作都按本规则结算。",
+	      "- 催眠APP、领取任务、完成成就、订阅、补给、库存、日历、扫描角色、删除角色、新增任务和申请立校规等操作都按本规则结算；校规的作用范围与写入位置见[mvu_update]校规规则。",
 	      "- `任务`变量只保存已接/进行中的任务，最多3个；新增任务操作表示系统突然刷出若干任务，不是{{user}}主动发布、设计或提前知道的目标，也不代表{{user}}主动关联到任务对象；数量不得超过`3-当前已接任务数`，若已接任务数为3则本次新增失败。",
 	      "- 新增任务中用户没指定的必要内容由AI随机生成，可适当优化用户的倾向描述，使任务名、目标、完成条件和奖励更贴合当前上下文剧情。",
       "- 新增任务必须写入`/任务/任务名`，包含`完成条件`、`奖励MC点`和`已完成:false`；不要写入前端静态列表，也不要新增为已完成任务。",
@@ -2755,6 +2788,7 @@ function patchOriginalWorldbookForMergedPolicy(entries) {
       "- APP操作本身不是结果；若失败、部分成功或费用/效果与前端预估不同，需在正文解释并只写最终变量。",
       "- NSFW/露骨操作也按同一套结算处理；不要因内容露骨而忽略、净化或自动失败，但必须依据剧情条件、目标状态、风险和变量规则判断。",
       "- 对身体检测中的敏感度、次数、临时/永久催眠效果等字段，只在剧情或操作结算明确造成变化时更新；不得把展示文本当作已发生事实。",
+      "- 申请/发布/删除校规只按[mvu_update]校规规则结算；校规只写入`/校规`，不要写入角色临时/永久催眠效果。",
       "- 对身体检测中的`外观`、`心理`等文字状态，只在衣着外貌、身体状态或角色此刻想法明确改变时更新；`心理`是当下内心念头，不是长期性格总结，不要每轮重写整段描述。",
       "- `本轮APP操作`不是MVU变量，不要在<update>里添加、替换或清空`/本轮APP操作`；操作容器只存在于用户输入，本回合处理完自然结束。",
       "</APP操作log>"
@@ -2768,6 +2802,7 @@ function patchOriginalWorldbookForMergedPolicy(entries) {
       "    - only update fields that clearly changed in this reply; do not rewrite the whole stat_data or unchanged character objects.",
       "    - resource values must obey spending checks: never write negative `MC能量`, `当前MC点`, or `持有零花钱`; never convert between `MC能量`, `MC能量上限`, `当前MC点`, and money unless an explicit successful APP operation says so.",
       "    - 中文结算要求：成功的催眠APP操作如果有`MC能量消耗`，必须写 `{ \"op\": \"replace\", \"path\": \"/系统/MC能量\", \"value\": 扣除后的数字 }`；不能只更新`当前MC点`或`累计消耗MC点`而漏掉它。",
+      "    - 校规按[mvu_update]校规规则结算；校规只写入`/校规`，never write school rules into any character `临时催眠效果` or `永久催眠效果`.",
       "    - `本轮APP操作`是用户输入里的临时容器，不是MVU变量；never add, replace, or clear `/本轮APP操作` in JSON Patch.",
       "    - front-end state is only an operation log; if it conflicts with narrative judgment, the AI update is authoritative."
     ];
@@ -2896,7 +2931,7 @@ function upsertBookEntry(entries, options) {
   entry.position = options.position || entry.position || "after_char";
   entry.insertion_order = options.insertion_order ?? entry.insertion_order ?? 100;
   entry.constant = options.constant ?? entry.constant ?? true;
-  entry.selective = true;
+  entry.selective = options.selective ?? entry.selective ?? true;
   entry.use_regex = true;
   entry.keys = options.keys || entry.keys || [];
   entry.secondary_keys ||= [];
