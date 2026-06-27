@@ -1220,10 +1220,34 @@ var __webpack_exports__ = __webpack_require__("./src/催眠APP前端/index.tsx")
 .st-lite-card{border:1px solid rgba(255,255,255,.1);border-radius:16px;background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.035));box-shadow:0 14px 30px rgba(0,0,0,.2);padding:12px}
 .st-todo-card{min-height:220px;display:grid;place-items:center;text-align:center}
 .st-todo-card strong{font-size:34px;letter-spacing:.12em;color:#f8fafc}
-.st-school-options{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.st-school-options article{border:1px solid rgba(34,211,238,.18);border-radius:14px;background:rgba(34,211,238,.07);padding:12px;color:#f8fafc}
-.st-school-options strong{display:block;font-size:14px;line-height:1.2}
-.st-school-options span{display:block;margin-top:4px;color:rgba(203,213,225,.58);font-size:11px}
+.st-graph-tabs,.st-graph-tools{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.st-graph-tab,.st-graph-tool,.st-rule-button{border:1px solid rgba(255,255,255,.1);border-radius:13px;background:rgba(255,255,255,.055);color:rgba(226,232,240,.78);font-size:12px;font-weight:850;padding:9px 10px;cursor:pointer}
+.st-graph-tab.active,.st-rule-button{border-color:rgba(34,211,238,.36);background:linear-gradient(135deg,rgba(34,211,238,.18),rgba(168,85,247,.15));color:#f8fafc}
+.st-graph-tool{color:#a5f3fc}
+.st-graph-card{display:grid;gap:10px}
+.st-graph-head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
+.st-graph-head strong{font-size:15px;color:#fff}
+.st-graph-head span{font-size:10px;color:rgba(203,213,225,.5);font-weight:800}
+.st-graph-canvas{position:relative;min-height:330px;border:1px solid rgba(34,211,238,.13);border-radius:16px;background:radial-gradient(circle at 18% 12%,rgba(34,211,238,.16),transparent 28%),radial-gradient(circle at 80% 76%,rgba(236,72,153,.12),transparent 30%),rgba(2,6,23,.38);overflow:hidden}
+.st-graph-canvas svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.st-graph-line{stroke:rgba(125,211,252,.35);stroke-width:2;stroke-linecap:round}
+.st-graph-line.school{stroke:rgba(251,191,36,.34)}
+.st-graph-node{position:absolute;transform:translate(-50%,-50%);max-width:110px;min-width:74px;border:1px solid rgba(255,255,255,.12);border-radius:16px;background:rgba(15,23,42,.82);box-shadow:0 12px 24px rgba(0,0,0,.26),inset 0 1px 0 rgba(255,255,255,.06);padding:9px 8px;text-align:center}
+.st-graph-node strong{display:block;font-size:12px;color:#f8fafc;line-height:1.25;word-break:keep-all}
+.st-graph-node small{display:block;margin-top:3px;font-size:9px;color:rgba(203,213,225,.5);line-height:1.2}
+.st-graph-node.world{border-color:rgba(34,211,238,.36);background:linear-gradient(135deg,rgba(8,47,73,.78),rgba(49,46,129,.62))}
+.st-graph-node.home{border-color:rgba(236,72,153,.26)}
+.st-graph-node.school{border-color:rgba(251,191,36,.32)}
+.st-rule-list{display:grid;gap:8px}
+.st-rule-empty{margin:0;color:rgba(203,213,225,.52);font-size:12px;text-align:center;padding:18px 4px}
+.st-rule-item{border:1px solid rgba(255,255,255,.09);border-radius:14px;background:rgba(255,255,255,.05);padding:10px}
+.st-rule-item strong{display:block;color:#f8fafc;font-size:13px;line-height:1.3}
+.st-rule-item p{margin:5px 0 0;color:rgba(226,232,240,.68);font-size:12px;line-height:1.5;white-space:pre-wrap}
+.st-rule-form{display:grid;gap:8px}
+.st-rule-input{width:100%;min-height:74px;border:1px solid rgba(255,255,255,.1);border-radius:14px;background:rgba(2,6,23,.45);color:#f8fafc;outline:none;padding:10px;font-size:12px;line-height:1.5;resize:vertical;font-family:inherit}
+.st-rule-input:focus{border-color:rgba(34,211,238,.55);box-shadow:0 0 0 3px rgba(34,211,238,.12)}
+.st-rule-cost{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.st-rule-cost span{border:1px solid rgba(255,255,255,.08);border-radius:12px;background:rgba(2,6,23,.32);padding:7px 5px;text-align:center;color:rgba(226,232,240,.72);font-size:10px;font-weight:850}
 .st-cal-hero{display:grid;gap:8px;border-color:rgba(34,211,238,.18);background:linear-gradient(135deg,rgba(34,211,238,.14),rgba(168,85,247,.1))}
 .st-cal-date{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
 .st-cal-date strong{font-size:24px;line-height:1;color:#fff}
@@ -3243,24 +3267,256 @@ var __webpack_exports__ = __webpack_require__("./src/催眠APP前端/index.tsx")
     renderTimetablePage(page);
   }
 
-  function renderTodoPage(page, title, subtitle, schoolMode = false) {
+  const STATIC_GRAPH_DEFAULTS = {
+    world: {
+      title: "区域地图",
+      nodes: [
+        { id: "school", label: "私立斋明学园", kind: "world", x: 50, y: 45 },
+        { id: "saionji-company", label: "西园寺企业", kind: "world", x: 77, y: 23 },
+        { id: "saionji-home", label: "西园寺的家", kind: "home", x: 78, y: 70 },
+        { id: "miyuki-home", label: "深雪的家", kind: "home", x: 23, y: 70 },
+        { id: "natsumi-home", label: "夏美的家", kind: "home", x: 22, y: 25 }
+      ],
+      edges: [["school", "saionji-company"], ["school", "saionji-home"], ["school", "miyuki-home"], ["school", "natsumi-home"]]
+    },
+    school: {
+      title: "学校地图",
+      nodes: [
+        { id: "classroom", label: "教室", kind: "school", x: 50, y: 28 },
+        { id: "corridor", label: "走廊", kind: "school", x: 50, y: 50 },
+        { id: "library", label: "图书馆", kind: "school", x: 23, y: 42 },
+        { id: "principal", label: "校长室", kind: "school", x: 24, y: 68 },
+        { id: "pool", label: "游泳池", kind: "school", x: 77, y: 33 },
+        { id: "field", label: "操场", kind: "school", x: 76, y: 66 }
+      ],
+      edges: [["corridor", "classroom"], ["corridor", "library"], ["corridor", "principal"], ["corridor", "pool"], ["corridor", "field"], ["pool", "field"]]
+    }
+  };
+
+  function graphScopeKey() {
+    try {
+      const chatId = window?.SillyTavern?.getCurrentChatId?.();
+      if (chatId !== undefined && chatId !== null && String(chatId).trim()) return String(chatId).trim();
+    } catch {}
+    return "global";
+  }
+
+  function graphStorageKey(scope) {
+    return "hypnoos.static-map." + scope + ".v1:" + graphScopeKey();
+  }
+
+  function cloneGraph(value) {
+    try {
+      return JSON.parse(JSON.stringify(value));
+    } catch {
+      return { nodes: [], edges: [] };
+    }
+  }
+
+  function normalizeGraphGraph(raw, scope) {
+    const fallback = STATIC_GRAPH_DEFAULTS[scope] || STATIC_GRAPH_DEFAULTS.world;
+    const source = raw && typeof raw === "object" ? raw : fallback;
+    const nodes = Array.isArray(source.nodes) ? source.nodes : fallback.nodes;
+    const normalizedNodes = nodes
+      .filter((node) => node && typeof node === "object" && String(node.id || node.label || "").trim())
+      .map((node, index) => ({
+        id: String(node.id || node.label || ("node-" + index)),
+        label: String(node.label || node.name || node.id || ("地点" + (index + 1))),
+        kind: String(node.kind || node.type || (scope === "school" ? "school" : "world")),
+        x: Math.max(7, Math.min(93, Number(node.x ?? node.left ?? 50))),
+        y: Math.max(9, Math.min(91, Number(node.y ?? node.top ?? 50)))
+      }));
+    const ids = new Set(normalizedNodes.map((node) => node.id));
+    const rawEdges = Array.isArray(source.edges) ? source.edges : fallback.edges;
+    const edges = rawEdges
+      .map((edge) => Array.isArray(edge) ? edge : [edge?.from, edge?.to])
+      .filter(([from, to]) => ids.has(String(from)) && ids.has(String(to)))
+      .map(([from, to]) => [String(from), String(to)]);
+    return {
+      title: String(source.title || fallback.title || (scope === "school" ? "学校地图" : "地图")),
+      nodes: normalizedNodes,
+      edges
+    };
+  }
+
+  function saveStaticGraph(scope, graph) {
+    try {
+      localStorage.setItem(graphStorageKey(scope), JSON.stringify(normalizeGraphGraph(graph, scope)));
+    } catch {}
+  }
+
+  function parseStaticGraphUpdateText(text) {
+    const source = String(text || "");
+    if (!source.includes("<地图更新>") && !source.includes("<学校地图更新>")) return;
+    const specs = [
+      { scope: "world", re: /<地图更新>([\s\S]*?)<\/地图更新>/g },
+      { scope: "school", re: /<学校地图更新>([\s\S]*?)<\/学校地图更新>/g }
+    ];
+    for (const spec of specs) {
+      for (const match of source.matchAll(spec.re)) {
+        try {
+          saveStaticGraph(spec.scope, JSON.parse(String(match[1] || "").trim()));
+        } catch {}
+      }
+    }
+  }
+
+  function syncStaticGraphUpdatesFromChat() {
+    const messages = [];
+    try {
+      if (typeof getCurrentMessageId === "function" && typeof getChatMessages === "function") {
+        messages.push(...(getChatMessages(getCurrentMessageId()) || []));
+      }
+    } catch {}
+    try {
+      if (typeof getChatMessages === "function") messages.push(...(getChatMessages(-1) || []));
+    } catch {}
+    const seen = new Set();
+    for (const message of messages) {
+      const body = String(message?.message || "");
+      const key = String(message?.message_id ?? message?.id ?? "") + ":" + body.length;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      parseStaticGraphUpdateText(body);
+    }
+  }
+
+  function loadStaticGraph(scope) {
+    syncStaticGraphUpdatesFromChat();
+    try {
+      const stored = JSON.parse(localStorage.getItem(graphStorageKey(scope)) || "null");
+      if (stored) return normalizeGraphGraph(stored, scope);
+    } catch {}
+    const graph = normalizeGraphGraph(cloneGraph(STATIC_GRAPH_DEFAULTS[scope]), scope);
+    saveStaticGraph(scope, graph);
+    return graph;
+  }
+
+  function resetStaticGraph(scope) {
+    const graph = normalizeGraphGraph(cloneGraph(STATIC_GRAPH_DEFAULTS[scope]), scope);
+    saveStaticGraph(scope, graph);
+    return graph;
+  }
+
+  function renderStaticGraphCard(scope) {
+    const graph = loadStaticGraph(scope);
+    const nodeById = new Map(graph.nodes.map((node) => [node.id, node]));
+    const lines = graph.edges.map(([from, to]) => {
+      const a = nodeById.get(from);
+      const b = nodeById.get(to);
+      if (!a || !b) return "";
+      return '<line class="st-graph-line ' + escapeAttr(scope) + '" x1="' + a.x + '%" y1="' + a.y + '%" x2="' + b.x + '%" y2="' + b.y + '%"></line>';
+    }).join("");
+    const nodes = graph.nodes.map((node) => (
+      '<button type="button" class="st-graph-node ' + escapeAttr(node.kind) + '" style="left:' + node.x + '%;top:' + node.y + '%" title="' + escapeAttr(node.label) + '">' +
+        '<strong>' + escapeHtml(node.label) + '</strong><small>' + escapeHtml(node.kind === "home" ? "住处" : node.kind === "school" ? "校内" : "地点") + '</small>' +
+      '</button>'
+    )).join("");
+    return '<section class="st-lite-card st-graph-card">' +
+      '<div class="st-graph-head"><strong>' + escapeHtml(graph.title) + '</strong><span>' + graph.nodes.length + ' 地点 / ' + graph.edges.length + ' 连接</span></div>' +
+      '<div class="st-graph-canvas"><svg viewBox="0 0 100 100" preserveAspectRatio="none">' + lines + '</svg>' + nodes + '</div>' +
+      '<div class="st-graph-tools"><button class="st-graph-tool" type="button" data-graph-action="reset" data-graph-scope="' + escapeAttr(scope) + '">恢复默认</button><button class="st-graph-tool" type="button" data-graph-action="sync" data-graph-scope="' + escapeAttr(scope) + '">读取更新</button></div>' +
+    '</section>';
+  }
+
+  function getSchoolRules() {
+    const variables = getLatestStatDataSync();
+    const rules = variables?.["校规"] || variables?.["系统"]?.["校规"];
+    return rules && typeof rules === "object" && !Array.isArray(rules) ? rules : {};
+  }
+
+  function renderSchoolRulesCard() {
+    const rules = getSchoolRules();
+    const entries = Object.entries(rules);
+    const list = entries.length
+      ? entries.map(([name, value]) => {
+          const text = typeof value === "object" && value !== null ? (value["内容"] || value["效果"] || JSON.stringify(value)) : value;
+          return '<article class="st-rule-item"><strong>' + escapeHtml(name) + '</strong><p>' + escapeHtml(text) + '</p></article>';
+        }).join("")
+      : '<p class="st-rule-empty">暂无校规</p>';
+    return '<section class="st-lite-card st-graph-card">' +
+      '<div class="st-graph-head"><strong>现行校规</strong><span>' + entries.length + ' 条</span></div>' +
+      '<div class="st-rule-list">' + list + '</div>' +
+    '</section>' +
+    '<section class="st-lite-card st-rule-form">' +
+      '<textarea class="st-rule-input" data-school-rule-input placeholder="输入想制定的校规"></textarea>' +
+      '<div class="st-rule-cost"><span>¥1,000,000</span><span>MC能量 10000</span><span>MC点 10000</span></div>' +
+      '<button class="st-rule-button" type="button" data-school-rule-submit>申请立校规</button>' +
+    '</section>';
+  }
+
+  function bindGraphPageActions(page) {
+    page.querySelectorAll("[data-graph-action]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const scope = button.getAttribute("data-graph-scope") || "world";
+        if (button.getAttribute("data-graph-action") === "reset") resetStaticGraph(scope);
+        else syncStaticGraphUpdatesFromChat();
+        if (page.classList.contains("st-school-app")) renderSchoolPage(page);
+        else renderMapPage(page);
+      });
+    });
+    page.querySelector("[data-school-rule-submit]")?.addEventListener("click", () => {
+      const input = page.querySelector("[data-school-rule-input]");
+      const ruleText = String(input?.value || "").trim();
+      if (!ruleText) return;
+      appendAppOperation({
+        来源: "学校",
+        操作: "申请立校规",
+        校规内容: ruleText,
+        固定代价: {
+          持有零花钱: "1000000日元",
+          MC能量: 10000,
+          当前MC点: 10000
+        },
+        AI执行规范: "余额全部足够时扣除三项代价并在/校规中新增；任一不足则失败，不扣费不生效。"
+      });
+      input.value = "";
+    });
+  }
+
+  function renderMapPage(page) {
     page.innerHTML =
       '<header class="st-lite-header">' +
         '<button class="st-lite-back" data-lite-action="back" title="返回桌面">‹</button>' +
-        '<div class="st-lite-title"><strong>' + escapeHtml(title) + '</strong><span>' + escapeHtml(subtitle) + '</span></div>' +
+        '<div class="st-lite-title"><strong>地图</strong><span>区域信息</span></div>' +
       '</header>' +
       '<main class="st-lite-body">' +
-        (schoolMode ? '<section class="st-school-options">' +
-          '<article><strong>学校地图</strong><span>待续</span></article>' +
-          '<article><strong>校规</strong><span>待续</span></article>' +
-        '</section>' : '') +
-        '<section class="st-lite-card st-todo-card"><strong>待续</strong></section>' +
+        renderStaticGraphCard("world") +
       '</main>';
     page.querySelector('[data-lite-action="back"]')?.addEventListener("click", () => {
       const root = page.parentElement;
       if (root?.dataset) delete root.dataset.stPhoneApp;
       page.remove();
     });
+    bindGraphPageActions(page);
+  }
+
+  function renderSchoolPage(page) {
+    const active = page.dataset.schoolTab || "map";
+    page.innerHTML =
+      '<header class="st-lite-header">' +
+        '<button class="st-lite-back" data-lite-action="back" title="返回桌面">‹</button>' +
+        '<div class="st-lite-title"><strong>学校</strong><span>学校地图与校规</span></div>' +
+      '</header>' +
+      '<main class="st-lite-body">' +
+        '<section class="st-graph-tabs">' +
+          '<button type="button" class="st-graph-tab ' + (active === "map" ? "active" : "") + '" data-school-tab="map">学校地图</button>' +
+          '<button type="button" class="st-graph-tab ' + (active === "rules" ? "active" : "") + '" data-school-tab="rules">校规</button>' +
+        '</section>' +
+        (active === "rules" ? renderSchoolRulesCard() : renderStaticGraphCard("school")) +
+      '</main>';
+    page.querySelector('[data-lite-action="back"]')?.addEventListener("click", () => {
+      const root = page.parentElement;
+      if (root?.dataset) delete root.dataset.stPhoneApp;
+      page.remove();
+    });
+    page.querySelectorAll("[data-school-tab]").forEach((button) => {
+      button.addEventListener("click", () => {
+        page.dataset.schoolTab = button.getAttribute("data-school-tab") || "map";
+        renderSchoolPage(page);
+      });
+    });
+    bindGraphPageActions(page);
   }
 
   function openTodoPage(tile, appName, className, title, subtitle, schoolMode = false) {
@@ -3274,7 +3530,8 @@ var __webpack_exports__ = __webpack_require__("./src/催眠APP前端/index.tsx")
     page.className = "st-lite-app " + className;
     page.setAttribute("aria-label", title);
     root.appendChild(page);
-    renderTodoPage(page, title, subtitle, schoolMode);
+    if (schoolMode) renderSchoolPage(page);
+    else renderMapPage(page);
   }
 
   function looksLikePhoneHome(root) {
@@ -3340,7 +3597,7 @@ var __webpack_exports__ = __webpack_require__("./src/催眠APP前端/index.tsx")
       ? ["成就", "名称", "目标", "角色"]
       : String(item?.action || "").includes("任务")
         ? ["任务", "名称", "数量", "目标", "角色"]
-        : ["功能", "命令", "目标", "角色", "角色名", "名称", "等级", "数量"];
+        : ["校规内容", "功能", "命令", "目标", "角色", "角色名", "名称", "等级", "数量"];
     for (const key of keys) {
       const value = readField(key);
       if (value) return value.length > 18 ? value.slice(0, 18) + "..." : value;
