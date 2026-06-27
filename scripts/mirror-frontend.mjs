@@ -653,8 +653,6 @@ function patchAchievementAppModule(code) {
             条件: ach.description,
             奖励: \`当前MC点 +\${ach.rewardMcPoints}点\`,
         });
-        setNotice(\`已记录领取成就：\${ach.title}\`);
-        setTimeout(() => setNotice(null), 2000);
     };
     const handleAcceptQuest = async (quest) => {
         recordOperationIntent({
@@ -664,8 +662,6 @@ function patchAchievementAppModule(code) {
             条件: quest.description,
             奖励: \`当前MC点 +\${quest.rewardMcPoints}点\`,
         });
-        setNotice(\`已记录接取任务：\${quest.title}\`);
-        setTimeout(() => setNotice(null), 2000);
     };
     const handleCancelQuest = async (quest) => {
         recordOperationIntent({
@@ -674,12 +670,9 @@ function patchAchievementAppModule(code) {
             任务: quest.title,
             条件: quest.description,
         });
-        setNotice(\`已记录取消任务：\${quest.title}\`);
-        setTimeout(() => setNotice(null), 1800);
     };
 	    const handleClaimQuest = async (quest) => {
-	        setNotice('任务完成后由AI自动结算奖励，无需手动提交');
-	        setTimeout(() => setNotice(null), 2200);
+	        return;
 	    };
 	    const normalizeNewQuestCount = (value) => {
 	        const parsed = Number.parseInt(String(value ?? ''), 10);
@@ -693,8 +686,6 @@ function patchAchievementAppModule(code) {
 	    const handleRequestNewQuests = () => {
 	        const count = normalizeNewQuestCount(newQuestCountInput);
 	        if (count <= 0) {
-	            setNotice('已接任务已满：最多同时进行3个任务');
-	            setTimeout(() => setNotice(null), 2200);
 	            return;
 	        }
 	        const bias = String(newQuestBias || '').trim();
@@ -708,8 +699,6 @@ function patchAchievementAppModule(code) {
 	            初始状态: '直接写入任务变量，作为已接/进行中的任务',
 	            生成规则: '根据当前上下文剧情新增若干进行中任务；写入/任务，包含完成条件、奖励MC点和已完成=false；不要写入前端静态列表，也不要标记为已完成。',
 	        });
-        setNotice(\`已请求新增 \${count} 个任务\`);
-        setTimeout(() => setNotice(null), 2200);
     };
 `
   );
@@ -1043,6 +1032,16 @@ const recordOperationIntent = (payload) => {
     const text = typeof payload === 'string' ? payload : JSON.stringify(payload);
     void _services_mvuBridge__WEBPACK_IMPORTED_MODULE_5__.MvuBridge.appendThisTurnAppOperationLog(text);
 };
+const normalizePositiveInt = (value, fallback = 1) => {
+    const parsed = Number.parseInt(String(value ?? ''), 10);
+    if (!Number.isFinite(parsed) || parsed <= 0)
+        return fallback;
+    return Math.floor(parsed);
+};
+const featurePersonCount = (feature) => normalizePositiveInt(feature.userPersonCount, 1);
+const featureDurationMinutes = (feature, fallbackDuration) => normalizePositiveInt(feature.userDuration, fallbackDuration || 10);
+const featureUsesPersonCount = (feature) => feature.id === 'vip4_closed_space_common_sense';
+const featureUsesDuration = (feature) => feature.costType !== 'ONE_TIME' && !['vip1_temp_sensitivity', 'vip1_estrus', 'vip1_memory_erase'].includes(feature.id);
 const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
     const initialDraft = (0,react__WEBPACK_IMPORTED_MODULE_1__.useMemo)(() => readCustomHypnosisDraft(), []);`
   );
@@ -1072,6 +1071,8 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
                     isEnabled: Boolean(draft.isEnabled ?? feature.isEnabled ?? false),
                     userNote: String(draft.userNote ?? feature.userNote ?? ''),
                     userNumber: typeof draft.userNumber === 'undefined' ? feature.userNumber : draft.userNumber,
+                    userPersonCount: typeof draft.userPersonCount === 'undefined' ? feature.userPersonCount : draft.userPersonCount,
+                    userDuration: typeof draft.userDuration === 'undefined' ? feature.userDuration : draft.userDuration,
                     purchaseRequired: false,
                     purchasePricePoints: undefined,
                     isPurchased: true,
@@ -1090,6 +1091,8 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
                 isEnabled: Boolean(feature.isEnabled),
                 userNote: feature.userNote || '',
                 userNumber: feature.userNumber,
+                userPersonCount: feature.userPersonCount,
+                userDuration: feature.userDuration,
             };
         }
         writeCustomHypnosisDraft({ features: featureDrafts, quickSupplyQtyInput, durationInput });
@@ -1158,6 +1161,33 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
       "        void _services_dataService__WEBPACK_IMPORTED_MODULE_4__.DataService.updateFeature(id, { userNumber: value === null ? undefined : value });\n",
       ""
     );
+  output = output
+    .replace(
+      "        const persons = feature.userNumber ?? parseFirstNumber(feature.userNote) ?? 1;\n        let amount = 0;",
+      "        const persons = featurePersonCount(feature);\n        const commandDuration = featureDurationMinutes(feature, duration);\n        let amount = 0;"
+    )
+    .replace(
+      "                amount = feature.costValue * intensity * duration;",
+      "                amount = feature.costValue * intensity * commandDuration;"
+    )
+    .replace(
+      "                amount = feature.costValue * persons * duration;",
+      "                amount = feature.costValue * persons * commandDuration;"
+    )
+    .replace(
+      "                amount = feature.costType === 'ONE_TIME' ? feature.costValue : feature.costValue * duration;",
+      "                amount = feature.costType === 'ONE_TIME' ? feature.costValue : feature.costValue * commandDuration;"
+    )
+    .replace(
+      "    const handleStart = async () => {",
+      `    const updateFeaturePersonCount = (id, value) => {
+        setFeatures(prev => prev.map(f => (f.id === id ? { ...f, userPersonCount: normalizePositiveInt(value, 1) } : f)));
+    };
+    const updateFeatureDuration = (id, value) => {
+        setFeatures(prev => prev.map(f => (f.id === id ? { ...f, userDuration: normalizePositiveInt(value, 10) } : f)));
+    };
+    const handleStart = async () => {`
+    );
   output = replaceBetween(
     output,
     "    const handleStart = async () => {",
@@ -1170,13 +1200,19 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
             return;
         const featureDetails = enabledFeatures.map(feature => {
             const cost = getFeatureCost(feature);
+            const commandPersons = featurePersonCount(feature);
+            const commandDuration = featureDurationMinutes(feature, duration);
+            const usesPersons = featureUsesPersonCount(feature);
+            const usesDuration = featureUsesDuration(feature);
             return {
                 功能: feature.title,
                 等级: feature.tier,
                 说明: feature.description,
                 备注: feature.userNote || '无',
-                人数: typeof feature.userNumber === 'number' ? String(feature.userNumber) : '默认',
-                时间: String(duration) + '分钟',
+                人数: String(commandPersons),
+                人数是否计费: usesPersons ? '是' : '否',
+                时间: usesDuration ? String(commandDuration) + '分钟' : '不计时',
+                时间是否计费: usesDuration ? '是' : '否',
                 消耗类型: feature.costCurrency === 'MC_POINTS' ? '当前MC点' : 'MC能量',
                 预计消耗: String(feature.costCurrency === 'MC_POINTS' ? cost.points : cost.energy) + '点',
             };
@@ -1310,6 +1346,23 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
     "(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)(lucide_react__WEBPACK_IMPORTED_MODULE_16__[\"default\"], { size: 18, fill: \"currentColor\" }), missingEnergy > 0 ? '能量不足' : missingPoints > 0 ? '点数不足' : '启动催眠'",
     "'启动催眠'"
   );
+  output = output
+    .replace(
+      '(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "text-xs text-gray-400 mt-0.5", children: formatFeatureCost(feature) })] })',
+      '(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "text-xs text-gray-400 mt-0.5", children: formatFeatureCost(feature) }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("p", { className: "mt-1 text-[11px] leading-relaxed text-gray-500", children: feature.description })] })'
+    )
+    .replace(
+      '(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("p", { className: "text-xs text-gray-300 mt-2 leading-relaxed opacity-90", children: feature.description }), (() => {',
+      `(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "mt-3 grid grid-cols-2 gap-2", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("label", { className: "block", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "text-[10px] text-gray-400 mb-1", children: "人数" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("input", { type: "number", inputMode: "numeric", min: 1, step: 1, value: featurePersonCount(feature), onChange: e => updateFeaturePersonCount(feature.id, e.target.value), className: "w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-pink-500/50 transition-colors" })] }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("label", { className: "block", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "text-[10px] text-gray-400 mb-1 flex items-center justify-between gap-2", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("span", { children: "时间(分钟)" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("span", { className: "text-gray-500", children: featureUsesDuration(feature) ? "按时间" : "不计时" })] }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("input", { type: "number", inputMode: "numeric", min: 1, step: 1, value: featureDurationMinutes(feature, duration), onChange: e => updateFeatureDuration(feature.id, e.target.value), className: "w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-pink-500/50 transition-colors" })] })] }), (() => {`
+    )
+    .replace(
+      /className: "mb-4", children: \(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__\.jsx\)\("input", \{ type: "text", placeholder: "\\u53EF\\u4EE5\\u8F93\\u5165\\u4F60\\u8981\\u50AC\\u7720\\u8C01, \\u600E\\u4E48\\u50AC\\u7720\\u6216\\u8005\\u5176\\u4ED6\\u5907\\u6CE8"/,
+      'className: "hidden", children: (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("input", { type: "text", placeholder: "\\u53EF\\u4EE5\\u8F93\\u5165\\u4F60\\u8981\\u50AC\\u7720\\u8C01, \\u600E\\u4E48\\u50AC\\u7720\\u6216\\u8005\\u5176\\u4ED6\\u5907\\u6CE8"'
+    )
+    .replace(
+      'className: "flex items-center bg-gray-800 rounded-lg px-3 py-2 border border-white/5"',
+      'className: "hidden"'
+    );
   return output;
 }
 
@@ -3485,7 +3538,8 @@ function injectInternalMchanApp(html, staticSeed) {
       /日\s*一\s*二\s*三\s*四\s*五\s*六/.test(compactPhoneText)
     ) return "calendar";
     if (text.includes("身体检测") || text.includes("角色状态") || text.includes("目标档案")) return "stats";
-    if (text.includes("帮助中心") || text.includes("MC 能量") || text.includes("Internal Build")) return "help";
+    if (text.includes("成就和任务") && (text.includes("成就筛选") || text.includes("任务筛选") || text.includes("新增"))) return "achievements";
+    if (text.includes("帮助中心") || text.includes("Internal Build")) return "help";
     if (text.includes("库存") && (text.includes("暂无持有物品") || text.includes("数量:") || text.includes("描述:"))) return "inventory";
     return "";
   }
@@ -4146,6 +4200,9 @@ function injectInternalMchanApp(html, staticSeed) {
     const app = detectPhoneApp(root);
     if (app) root.dataset.stPhoneApp = app;
     else delete root.dataset.stPhoneApp;
+    if (app !== "help") {
+      root.querySelectorAll(".st-help-author-card,.st-author-credit-line").forEach((element) => element.remove());
+    }
     if (app === "help") {
       patchHelpAuthorCredit(root);
     }
