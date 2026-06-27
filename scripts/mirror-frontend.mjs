@@ -1009,29 +1009,164 @@ async function getMvuData() {
   return output;
 }
 
-function patchHypnosisAppModule(code) {
-  if (!code.includes("const HypnosisApp") || !code.includes("buildHypnosisSendMessage")) return code;
-  let output = code;
-  output = replaceBetween(
-    output,
-    "// --- Active Session View (Countdown) ---",
-    "const HypnosisApp =",
-    `// --- Active Session View (Countdown) ---
-const ActiveSessionView = ({ timeLeft, sessionEndVirtualMinutes, sessionEndAtMs, sessionSummary, onStop, }) => {
+function rebuildHypnosisAppModule(code) {
+  const start = code.indexOf("// --- Active Session View (Countdown) ---");
+  const end = code.indexOf("\n//# sourceURL=", start);
+  if (start < 0 || end <= start) return code;
+  const replacement = `// --- Custom Hypnosis App (rebuilt local page) ---
+const CUSTOM_HYPNOSIS_DRAFT_KEY = 'hypnoos.hypnosis-app.rebuild.v1';
+const TIER_ORDER = { TRIAL: 0, VIP1: 1, VIP2: 2, VIP3: 3, VIP4: 4, VIP5: 5, VIP6: 6 };
+const PEOPLELESS_FEATURE_IDS = new Set(['vip4_closed_space_common_sense', 'vip5_open_space_common_sense']);
+const TIMELESS_FEATURE_IDS = new Set(['vip1_temp_sensitivity', 'vip1_estrus', 'vip1_memory_erase']);
+const SPECIAL_VALUE_FEATURES = {
+    vip1_temp_sensitivity: { label: '敏感度增幅', unit: '点', defaultValue: 10 },
+    vip1_estrus: { label: '性欲增幅', unit: '点', defaultValue: 10 },
+    vip1_memory_erase: { label: '记忆时长', unit: '分钟', defaultValue: 5 },
+    vip2_pleasure: { label: '快感强度', unit: '级', defaultValue: 1 },
+};
+const jsx = react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx;
+const jsxs = react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs;
+const formatClockSeconds = (seconds) => {
+    const value = Math.max(0, Math.floor(Number(seconds) || 0));
+    const m = Math.floor(value / 60);
+    const s = value % 60;
+    return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+};
+const parsePositiveNumber = (value, fallback = 1) => {
+    const next = Number(value);
+    if (!Number.isFinite(next) || next <= 0)
+        return fallback;
+    return next;
+};
+const parsePositiveInt = (value, fallback = 1) => Math.max(1, Math.floor(parsePositiveNumber(value, fallback)));
+const formatMoney = (value) => '¥' + Math.max(0, Number(value) || 0).toLocaleString();
+const normalizeTierValue = (value) => {
+    const text = String(value || '').toUpperCase().replace(/\\s+/g, '');
+    if (text.includes('VIP6'))
+        return 'VIP6';
+    if (text.includes('VIP5'))
+        return 'VIP5';
+    if (text.includes('VIP4'))
+        return 'VIP4';
+    if (text.includes('VIP3'))
+        return 'VIP3';
+    if (text.includes('VIP2'))
+        return 'VIP2';
+    if (text.includes('VIP1'))
+        return 'VIP1';
+    return 'TRIAL';
+};
+const getTierRank = (tier) => TIER_ORDER[normalizeTierValue(tier)] ?? 0;
+const getTierLabel = (tier) => {
+    const normalized = normalizeTierValue(tier);
+    const config = _types__WEBPACK_IMPORTED_MODULE_3__.VIP_LEVELS.find(item => item.tier === normalized);
+    return config?.label || normalized;
+};
+const readCustomHypnosisDraft = () => {
+    try {
+        const raw = localStorage.getItem(CUSTOM_HYPNOSIS_DRAFT_KEY);
+        if (!raw)
+            return {};
+        const parsed = JSON.parse(raw);
+        return parsed && typeof parsed === 'object' ? parsed : {};
+    }
+    catch {
+        return {};
+    }
+};
+const writeCustomHypnosisDraft = (draft) => {
+    try {
+        localStorage.setItem(CUSTOM_HYPNOSIS_DRAFT_KEY, JSON.stringify(draft));
+    }
+    catch {
+    }
+};
+const featureUsesPeople = (feature) => !PEOPLELESS_FEATURE_IDS.has(feature.id);
+const featureUsesTime = (feature) => feature.costType !== 'ONE_TIME' && !TIMELESS_FEATURE_IDS.has(feature.id);
+const getFeatureExtraValue = (feature) => parsePositiveNumber(feature.userExtraValue ?? SPECIAL_VALUE_FEATURES[feature.id]?.defaultValue ?? 1, SPECIAL_VALUE_FEATURES[feature.id]?.defaultValue ?? 1);
+const calculateFeatureCost = (feature) => {
+    const people = parsePositiveInt(feature.userNumber ?? 1, 1);
+    const minutes = parsePositiveInt(feature.userMinutes ?? 10, 10);
+    const usesPeople = featureUsesPeople(feature);
+    const usesTime = featureUsesTime(feature);
+    const extra = getFeatureExtraValue(feature);
+    const base = Math.max(0, Number(feature.costValue) || 0);
+    let amount = base;
+    if (feature.id === 'vip1_temp_sensitivity')
+        amount = 2 * extra;
+    else if (feature.id === 'vip1_estrus')
+        amount = base * extra;
+    else if (feature.id === 'vip1_memory_erase')
+        amount = base * extra;
+    else if (feature.id === 'vip2_pleasure')
+        amount = base * extra * minutes;
+    else if (feature.costType !== 'ONE_TIME')
+        amount = base * minutes;
+    if (usesPeople)
+        amount *= people;
+    const currency = feature.costCurrency === 'MC_POINTS' ? 'MC_POINTS' : 'MC_ENERGY';
+    return {
+        amount: Math.max(0, Math.ceil(amount)),
+        currency,
+        currencyLabel: currency === 'MC_POINTS' ? '当前MC点' : 'MC能量',
+        people,
+        minutes,
+        usesPeople,
+        usesTime,
+        extra,
+    };
+};
+const summarizeCosts = (features) => features.reduce((sum, feature) => {
+    const cost = calculateFeatureCost(feature);
+    if (cost.currency === 'MC_POINTS')
+        sum.points += cost.amount;
+    else
+        sum.energy += cost.amount;
+    return sum;
+}, { energy: 0, points: 0 });
+const operationAppendFallback = async (payload) => {
+    const selectors = ['#send_textarea', 'textarea#send_textarea', 'textarea[name="send_textarea"]', 'textarea[data-testid="send-textarea"]'];
+    const text = '<本轮APP操作>\\n<催眠APP>\\n- 启动催眠｜内容=' + JSON.stringify(payload) + '\\n</催眠APP>\\n</本轮APP操作>';
+    const docs = [document, window.parent?.document].filter(Boolean);
+    for (const doc of docs) {
+        for (const selector of selectors) {
+            const input = doc.querySelector(selector);
+            if (!input)
+                continue;
+            const current = 'value' in input ? input.value : input.textContent;
+            const next = String(current || '').replace(/\\s*$/, '') + (current ? '\\n' : '') + text;
+            if ('value' in input)
+                input.value = next;
+            else
+                input.textContent = next;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+            return true;
+        }
+    }
+    return false;
+};
+const recordOperationIntent = (payload) => {
+    const append = globalThis.__ST_APPEND_OPERATION_TO_INPUT__;
+    if (typeof append === 'function') {
+        void append(payload);
+        return;
+    }
+    void operationAppendFallback(payload);
+};
+const ActiveSessionView = ({ timeLeft, sessionEndVirtualMinutes, sessionEndAtMs, sessionSummary, onStop }) => {
     const [remaining, setRemaining] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(timeLeft);
     (0,react__WEBPACK_IMPORTED_MODULE_1__.useEffect)(() => {
         let stopped = false;
-        let lastRemaining = timeLeft;
         const tick = async () => {
             if (stopped)
                 return;
             if (sessionEndVirtualMinutes !== null) {
-                const clock = await _services_dataService__WEBPACK_IMPORTED_MODULE_4__.DataService.getSystemClock();
+                const clock = await _services_dataService__WEBPACK_IMPORTED_MODULE_4__.DataService.getSystemClock().catch(() => null);
                 if (stopped)
                     return;
-                if (clock.virtualMinutes !== null) {
-                    const remainingMinutes = sessionEndVirtualMinutes - clock.virtualMinutes;
-                    setRemaining(Math.max(0, Math.ceil(remainingMinutes * 60)));
+                if (clock?.virtualMinutes !== null && clock?.virtualMinutes !== undefined) {
+                    setRemaining(Math.max(0, Math.ceil((sessionEndVirtualMinutes - clock.virtualMinutes) * 60)));
                     return;
                 }
             }
@@ -1039,8 +1174,7 @@ const ActiveSessionView = ({ timeLeft, sessionEndVirtualMinutes, sessionEndAtMs,
                 setRemaining(Math.max(0, Math.ceil((sessionEndAtMs - Date.now()) / 1000)));
                 return;
             }
-            lastRemaining = Math.max(0, lastRemaining - 1);
-            setRemaining(lastRemaining);
+            setRemaining(value => Math.max(0, value - 1));
         };
         void tick();
         const timer = setInterval(() => void tick(), 1000);
@@ -1049,707 +1183,306 @@ const ActiveSessionView = ({ timeLeft, sessionEndVirtualMinutes, sessionEndAtMs,
             clearInterval(timer);
         };
     }, [sessionEndAtMs, sessionEndVirtualMinutes, timeLeft]);
-    const formatTime = (secs) => {
-        const safeSecs = Math.max(0, Number(secs) || 0);
-        const m = Math.floor(safeSecs / 60);
-        const s = safeSecs % 60;
-        return \`\${m.toString().padStart(2, '0')}:\${s.toString().padStart(2, '0')}\`;
-    };
-    const summary = typeof sessionSummary === 'string' && sessionSummary.trim() ? sessionSummary.trim() : '临时催眠进行中';
-    return ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "mx-4 mt-3 mb-1 rounded-2xl border border-pink-400/25 bg-black/45 shadow-[0_0_22px_rgba(217,70,239,0.18)] overflow-hidden shrink-0 animate-fade-in", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "relative flex items-center gap-3 px-3 py-2.5", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "relative h-11 w-11 rounded-xl overflow-hidden border border-pink-400/30 bg-[#14051c] shrink-0", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)(VortexBackground, { speed: "spin-slow" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "absolute inset-0 flex items-center justify-center", children: (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)(HypnoLogoSVG, { className: "w-7 h-7 text-pink-300 drop-shadow-[0_0_8px_rgba(217,70,239,0.9)] animate-pulse" }) })] }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "min-w-0 flex-1", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "flex items-center gap-2", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("span", { className: "h-2 w-2 rounded-full bg-pink-400 shadow-[0_0_10px_rgba(244,114,182,0.95)] animate-pulse shrink-0" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("span", { className: "text-[10px] uppercase tracking-[0.22em] text-pink-300 font-bold", children: "Running" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("span", { className: "ml-auto text-lg font-mono font-black tabular-nums text-white drop-shadow-[0_0_10px_rgba(217,70,239,0.85)]", children: formatTime(remaining) })] }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "mt-1 text-xs leading-snug text-gray-300 truncate", title: summary, children: summary })] }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("button", { onClick: onStop, className: "shrink-0 rounded-xl border border-pink-300/30 bg-pink-500/10 px-3 py-2 text-xs font-bold text-pink-200 active:scale-95 hover:bg-pink-500/20 transition", children: "解除" })] }), remaining <= 0 && ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "border-t border-pink-400/15 px-3 py-1.5 text-[10px] text-amber-200/90 bg-amber-500/5", children: "倒计时结束，等待 AI 结算并更新变量。" }))] }));
+    if (remaining <= 0)
+        return null;
+    const content = typeof sessionSummary === 'string'
+        ? sessionSummary
+        : Array.isArray(sessionSummary)
+            ? sessionSummary.join('、')
+            : sessionSummary && typeof sessionSummary === 'object'
+                ? Object.values(sessionSummary).filter(Boolean).slice(0, 3).join('、')
+                : '催眠进行中';
+    return jsxs('div', { className: 'relative z-10 mx-4 mt-3 rounded-2xl border border-fuchsia-400/30 bg-fuchsia-950/30 px-4 py-3 text-white shadow-lg', children: [
+            jsxs('div', { className: 'flex items-center justify-between gap-3', children: [
+                    jsxs('div', { className: 'min-w-0', children: [
+                            jsx('div', { className: 'text-xs font-bold uppercase tracking-widest text-fuchsia-200', children: '催眠中' }),
+                            jsx('div', { className: 'truncate text-sm text-white/80', children: content || '催眠进行中' }),
+                        ] }),
+                    jsxs('div', { className: 'flex shrink-0 items-center gap-2', children: [
+                            jsx('span', { className: 'rounded-full bg-black/30 px-3 py-1 text-sm font-black text-fuchsia-100', children: formatClockSeconds(remaining) }),
+                            jsx('button', { type: 'button', onClick: onStop, className: 'rounded-full border border-white/15 px-3 py-1 text-xs font-bold text-white/70', children: '取消' }),
+                        ] }),
+                ] }),
+        ] });
 };
-`
-  );
-  output = output.replace(
-    "                    void _services_dataService__WEBPACK_IMPORTED_MODULE_4__.DataService.clearSessionEnd();",
-    "                    // Frontend is read-only; AI is responsible for clearing expired session variables."
-  );
-  output = output.replace(
-    `    const normalizeDurationMinutes = (raw) => {
-        const numeric = Number(raw);
-        if (!Number.isFinite(numeric))
-            return 1;
-        const minutes = Math.floor(numeric);
-        if (minutes <= 0)
-            return 1;
-        return Math.min(9999, minutes);
+const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
+    const initialDraft = (0,react__WEBPACK_IMPORTED_MODULE_1__.useMemo)(() => readCustomHypnosisDraft(), []);
+    const [features, setFeatures] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)([]);
+    const [subscription, setSubscription] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(null);
+    const [collapsedTiers, setCollapsedTiers] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(initialDraft.collapsedTiers || { VIP2: true, VIP3: true, VIP4: true, VIP5: true, VIP6: true });
+    const [globalNote, setGlobalNote] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(String(initialDraft.globalNote || ''));
+    const [notice, setNotice] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)('');
+    const [isFlashing, setIsFlashing] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(false);
+    const [timeLeft, setTimeLeft] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(0);
+    const [sessionEndVirtualMinutes, setSessionEndVirtualMinutes] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(null);
+    const [sessionEndAtMs, setSessionEndAtMs] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(null);
+    const [sessionSummary, setSessionSummary] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(null);
+    const subscriptionTier = normalizeTierValue(subscription?.tier || subscription?.label || userData?.subscriptionTier || 'TRIAL');
+    const subscriptionRank = getTierRank(subscriptionTier);
+    const refreshSession = async () => {
+        const [sessionEnd, store] = await Promise.all([
+            _services_dataService__WEBPACK_IMPORTED_MODULE_4__.DataService.getSessionEnd().catch(() => ({ endVirtualMinutes: null, endAtMs: null })),
+            (_services_dataService__WEBPACK_IMPORTED_MODULE_4__.DataService.getStore ? _services_dataService__WEBPACK_IMPORTED_MODULE_4__.DataService.getStore() : Promise.resolve(null)).catch(() => null),
+        ]);
+        setSessionEndVirtualMinutes(sessionEnd.endVirtualMinutes ?? null);
+        setSessionEndAtMs(sessionEnd.endAtMs ?? null);
+        setSessionSummary(store?.sessionSummary ?? store?.activeSessionSummary ?? store?.sessionContent ?? null);
+        if (sessionEnd.endAtMs)
+            setTimeLeft(Math.max(0, Math.ceil((sessionEnd.endAtMs - Date.now()) / 1000)));
+        else if (!sessionEnd.endVirtualMinutes)
+            setTimeLeft(0);
     };
-    // State`,
-    `    const normalizeDurationMinutes = (raw) => {
-        const numeric = Number(raw);
-        if (!Number.isFinite(numeric))
-            return 1;
-        const minutes = Math.floor(numeric);
-        if (minutes <= 0)
-            return 1;
-        return Math.min(9999, minutes);
-    };
-    const normalizePeopleCount = (raw) => {
-        const numeric = Number(raw);
-        if (!Number.isFinite(numeric))
-            return 1;
-        const count = Math.floor(numeric);
-        if (count <= 0)
-            return 1;
-        return Math.min(999, count);
-    };
-    // State`
-  );
-  output = output.replace(
-    "    const duration = normalizeDurationMinutes(durationInput);\n",
-    `    const duration = normalizeDurationMinutes(durationInput);
-    const [defaultPeopleInput, setDefaultPeopleInput] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)('1');
-    const defaultPeople = normalizePeopleCount(defaultPeopleInput);
-    const updateDefaultPeopleInput = (value) => {
-        setDefaultPeopleInput(value);
-        const nextPeople = normalizePeopleCount(value);
-        setFeatures(prev => prev.map(feature => feature.id === 'vip1_stats' ? feature : { ...feature, userPeople: nextPeople }));
-    };
-`
-  );
-  output = output.replace(
-    `        for (const f of toDisable) {
-            void _services_dataService__WEBPACK_IMPORTED_MODULE_4__.DataService.updateFeature(f.id, { isEnabled: false, userNote: '' });
-        }`,
-    `        // Keep this cleanup visual-only; AI remains the only writer of persistent variables.`
-  );
-  output = output.replace(
-    `                setSessionEndVirtualMinutes(end.endVirtualMinutes);
-                setSessionEndAtMs(end.endAtMs);
-                let remainingSeconds = null;`,
-    `                setSessionEndVirtualMinutes(end.endVirtualMinutes);
-                setSessionEndAtMs(end.endAtMs);
-                setSessionSummary(typeof end.sessionSummary === 'string' ? end.sessionSummary : '');
-                let remainingSeconds = null;`
-  );
-  output = output.replace(
-    `                else if (end.endVirtualMinutes !== null || end.endAtMs !== null) {
-                    // Frontend is read-only; AI is responsible for clearing expired session variables.
-                }`,
-    `                else if (end.endVirtualMinutes !== null || end.endAtMs !== null) {
-                    // Frontend is read-only; AI is responsible for clearing expired session variables.
-                    setIsActive(false);
-                    setSessionSummary('');
-                }`
-  );
-  output = replaceBetween(
-    output,
-    `    (0,react__WEBPACK_IMPORTED_MODULE_1__.useEffect)(() => {
+    (0,react__WEBPACK_IMPORTED_MODULE_1__.useEffect)(() => {
         let stopped = false;
-        const tick = async () => {`,
-    "    // --- Logic Calculations ---",
-    `    (0,react__WEBPACK_IMPORTED_MODULE_1__.useEffect)(() => {
-        let stopped = false;
-        const tick = async () => {
-            try {
-                const clock = await _services_dataService__WEBPACK_IMPORTED_MODULE_4__.DataService.getSystemClock();
-                if (stopped)
-                    return;
-                setNowVirtualMinutes(clock.virtualMinutes);
-                const nextSub = await _services_dataService__WEBPACK_IMPORTED_MODULE_4__.DataService.getSubscription();
-                if (stopped)
-                    return;
-                setSubscription(nextSub);
-            }
-            catch (err) {
-                console.warn('[HypnoOS] 订阅/时间同步失败', err);
-            }
+        const load = async () => {
+            const [nextFeatures, nextSubscription] = await Promise.all([
+                _services_dataService__WEBPACK_IMPORTED_MODULE_4__.DataService.getFeatures(),
+                _services_dataService__WEBPACK_IMPORTED_MODULE_4__.DataService.getSubscription().catch(() => null),
+            ]);
+            if (stopped)
+                return;
+            const featureDrafts = initialDraft.features && typeof initialDraft.features === 'object' ? initialDraft.features : {};
+            setFeatures(nextFeatures
+                .filter(feature => feature.id !== 'vip1_stats')
+                .map(feature => {
+                const draft = featureDrafts[feature.id] || {};
+                return {
+                    ...feature,
+                    isEnabled: Boolean(draft.isEnabled ?? feature.isEnabled ?? false),
+                    userNote: String(draft.userNote ?? feature.userNote ?? ''),
+                    userNumber: String(draft.userNumber ?? feature.userNumber ?? 1),
+                    userMinutes: String(draft.userMinutes ?? feature.userMinutes ?? 10),
+                    userExtraValue: String(draft.userExtraValue ?? SPECIAL_VALUE_FEATURES[feature.id]?.defaultValue ?? 1),
+                    isPurchased: true,
+                    purchaseRequired: false,
+                };
+            }));
+            setSubscription(nextSubscription);
+            void refreshSession();
         };
-        void tick();
-        const timer = setInterval(() => void tick(), 1000);
+        void load();
         return () => {
             stopped = true;
-            clearInterval(timer);
         };
     }, []);
-    // --- Logic Calculations ---
-`
-  );
-  output = output.replace(
-    "    const [showLowEnergyModal, setShowLowEnergyModal] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(false);",
-    `    const [showLowEnergyModal, setShowLowEnergyModal] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(false);
-    const [sessionSummary, setSessionSummary] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)('');
-    const [collapsedVipTiers, setCollapsedVipTiers] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)({});
-    const toggleVipTierCollapsed = (tier) => {
-        setCollapsedVipTiers(prev => ({ ...prev, [tier]: !prev?.[tier] }));
-    };
-    const draftStorageKey = 'hypnoos.hypnosis-app.draft.v2';
-    const readHypnosisDraft = () => {
-        try {
-            return JSON.parse(localStorage.getItem(draftStorageKey) || '{}') || {};
-        }
-        catch {
-            return {};
-        }
-    };
-    const applyFeatureDraft = (feature, draft) => ({
-        ...feature,
-        ...(draft && typeof draft === 'object' ? {
-            isEnabled: typeof draft.isEnabled === 'boolean' ? draft.isEnabled : feature.isEnabled,
-            userNote: typeof draft.userNote === 'string' ? draft.userNote : feature.userNote,
-            userNumber: typeof draft.userNumber === 'number' ? draft.userNumber : feature.userNumber,
-            userPeople: typeof draft.userPeople === 'number' ? draft.userPeople : feature.userPeople,
-            userMinutes: typeof draft.userMinutes === 'number' ? draft.userMinutes : feature.userMinutes,
-        } : null),
-    });
-    const persistHypnosisDraft = (nextFeatures = features, nextGlobalNote = globalNote, nextDurationInput = durationInput, nextDefaultPeopleInput = defaultPeopleInput) => {
-        if (!Array.isArray(nextFeatures) || nextFeatures.length === 0)
+    (0,react__WEBPACK_IMPORTED_MODULE_1__.useEffect)(() => {
+        const timer = setInterval(() => {
+            void _services_dataService__WEBPACK_IMPORTED_MODULE_4__.DataService.getSubscription().then(setSubscription).catch(() => undefined);
+            void refreshSession();
+        }, 2500);
+        return () => clearInterval(timer);
+    }, []);
+    (0,react__WEBPACK_IMPORTED_MODULE_1__.useEffect)(() => {
+        if (!features.length)
             return;
-        try {
-            const featureDrafts = {};
-            for (const feature of nextFeatures) {
-                featureDrafts[feature.id] = {
-                    isEnabled: Boolean(feature.isEnabled),
-                    userNote: feature.userNote || '',
-                    userNumber: typeof feature.userNumber === 'number' ? feature.userNumber : undefined,
-                    userPeople: typeof feature.userPeople === 'number' ? feature.userPeople : undefined,
-                    userMinutes: typeof feature.userMinutes === 'number' ? feature.userMinutes : undefined,
-                };
-            }
-            localStorage.setItem(draftStorageKey, JSON.stringify({
-                version: 3,
-                durationInput: String(nextDurationInput === '3614' ? '10' : nextDurationInput || '10'),
-                defaultPeopleInput: String(nextDefaultPeopleInput || '1'),
-                globalNote: String(nextGlobalNote || ''),
-                features: featureDrafts,
-            }));
+        const featureDrafts = {};
+        for (const feature of features) {
+            featureDrafts[feature.id] = {
+                isEnabled: Boolean(feature.isEnabled),
+                userNote: feature.userNote || '',
+                userNumber: feature.userNumber || '1',
+                userMinutes: feature.userMinutes || '10',
+                userExtraValue: feature.userExtraValue || '',
+            };
         }
-        catch {
-            // localStorage may be unavailable in embedded or restricted contexts
-        }
-    };`
-  );
-  output = output.replace(
-    "            setFeatures(nextFeatures);",
-    `            const draft = readHypnosisDraft();
-            if (typeof draft.durationInput === 'string')
-                setDurationInput(draft.durationInput === '3614' ? '10' : draft.durationInput);
-            if (typeof draft.defaultPeopleInput === 'string')
-                setDefaultPeopleInput(draft.defaultPeopleInput);
-            const featureDrafts = draft.features && typeof draft.features === 'object' ? draft.features : {};
-            setFeatures(nextFeatures.map(feature => applyFeatureDraft(feature, featureDrafts[feature.id])));`
-  );
-  output = output.replace(
-    "    const debugToggleCountRef = (0,react__WEBPACK_IMPORTED_MODULE_1__.useRef)(0);\n",
-    ""
-  );
-  output = output.replace(
-    `    }, []);
-    (0,react__WEBPACK_IMPORTED_MODULE_1__.useEffect)(() => {
-        return () => {`,
-    `    }, []);
-    (0,react__WEBPACK_IMPORTED_MODULE_1__.useEffect)(() => {
-        persistHypnosisDraft(features, globalNote, durationInput, defaultPeopleInput);
-    }, [defaultPeopleInput, durationInput, features, globalNote]);
-    (0,react__WEBPACK_IMPORTED_MODULE_1__.useEffect)(() => {
-        return () => {`
-  );
-  output = replaceBetween(
-    output,
-    "    const getFeatureNumericConfig = (feature) => {",
-    "    const accessContext =",
-    `    const GROUP_FEATURE_IDS = new Set(['vip4_closed_space_common_sense', 'vip5_open_space_common_sense']);
-    const TIME_NEUTRAL_FEATURE_IDS = new Set(['vip1_temp_sensitivity', 'vip1_estrus', 'vip1_memory_erase']);
-    const getFeatureNumericConfig = (feature) => {
-        switch (feature.id) {
-            case 'vip1_temp_sensitivity':
-                return { label: '敏感度增加', unit: '点', min: 1, max: 999, step: 1, hint: '每点消耗2点MC能量' };
-            case 'vip1_estrus':
-                return { label: '发情增加', unit: '', min: 1, max: 999, step: 1 };
-            case 'vip1_memory_erase':
-                return { label: '记忆消除时长', unit: '分钟', min: 1, max: 1440, step: 1 };
-            case 'vip2_pleasure':
-                return { label: '给予快感', unit: '', min: 1, max: 999, step: 1, hint: '每分钟按该数值计费' };
-            default:
-                return null;
-        }
+        writeCustomHypnosisDraft({ features: featureDrafts, globalNote, collapsedTiers });
+    }, [collapsedTiers, features, globalNote]);
+    const updateFeature = (id, patch) => {
+        setFeatures(current => current.map(feature => feature.id === id ? { ...feature, ...patch } : feature));
     };
-    const getFeatureBilling = (feature) => {
-        const fixedCost = feature.costType === 'ONE_TIME' || TIME_NEUTRAL_FEATURE_IDS.has(feature.id);
-        return {
-            usesPeople: feature.id !== 'vip1_stats' && !GROUP_FEATURE_IDS.has(feature.id),
-            usesTime: feature.id !== 'vip1_stats' && !fixedCost,
-            oneTime: fixedCost,
-        };
-    };
-    const getFeaturePeople = (feature) => clampInt(feature.userPeople, 1, 1, 999);
-    const getFeatureMinutes = (feature) => clampInt(feature.userMinutes, duration, 1, 9999);
-    const getFeatureCost = (feature) => {
-        if (feature.id === 'vip1_stats')
-            return { energy: 0, points: 0 };
-        const currency = feature.costCurrency ?? 'MC_ENERGY';
-        const billing = getFeatureBilling(feature);
-        const people = getFeaturePeople(feature);
-        const minutes = getFeatureMinutes(feature);
-        let amount = 0;
-        switch (feature.id) {
-            case 'vip1_estrus': {
-                const heat = clampInt(feature.userNumber ?? parseFirstNumber(feature.userNote), 1, 1, 999);
-                amount = feature.costValue * heat;
-                break;
-            }
-            case 'vip1_memory_erase': {
-                const memoryMinutes = clampInt(feature.userNumber ?? parseFirstNumber(feature.userNote), 1, 1, 1440);
-                amount = feature.costValue * memoryMinutes;
-                break;
-            }
-            case 'vip1_temp_sensitivity': {
-                const delta = clampInt(feature.userNumber ?? parseFirstNumber(feature.userNote), 1, 1, 999);
-                amount = 2 * delta;
-                break;
-            }
-            case 'vip2_pleasure': {
-                const intensity = clampInt(feature.userNumber ?? parseFirstNumber(feature.userNote), 1, 1, 999);
-                amount = feature.costValue * intensity * minutes;
-                break;
-            }
-            default: {
-                amount = feature.costType === 'ONE_TIME' ? feature.costValue : feature.costValue * minutes;
-            }
-        }
-        if (billing.usesPeople)
-            amount *= people;
-        if (currency === 'MC_POINTS')
-            return { energy: 0, points: amount };
-        return { energy: amount, points: 0 };
-    };
-    const getFeatureCostDetails = (feature) => {
-        const cost = getFeatureCost(feature);
-        const billing = getFeatureBilling(feature);
-        const people = getFeaturePeople(feature);
-        const minutes = getFeatureMinutes(feature);
-        const currency = feature.costCurrency === 'MC_POINTS' ? 'MC点' : 'MC能量';
-        const charged = cost.points || cost.energy || 0;
-        return {
-            ...cost,
-            people,
-            minutes,
-            currency,
-            charged,
-            usesPeople: billing.usesPeople,
-            usesTime: billing.usesTime,
-            oneTime: billing.oneTime,
-            billingLabel: billing.usesPeople && billing.usesTime
-                ? \`按人数×时间（\${people}人 × \${minutes}分钟）\`
-                : billing.usesPeople
-                    ? \`按人数（\${people}人）\`
-                    : billing.usesTime
-                        ? \`按时间（\${minutes}分钟）\`
-                        : '固定/永久',
-        };
-    };
-    const formatCostPartsForAi = (energy, points) => {
-        const parts = [];
-        if (energy)
-            parts.push(\`MC能量 \${energy}点\`);
-        if (points)
-            parts.push(\`当前MC点 \${points}点\`);
-        return parts.join(' + ') || '无';
-    };
-`
-  );
-  output = output.replace(
-    `    (0,react__WEBPACK_IMPORTED_MODULE_1__.useEffect)(() => {
-        if (duration !== 3614)
-            debugToggleCountRef.current = 0;
-    }, [duration]);
-`,
-    ""
-  );
-  output = replaceBetween(
-    output,
-    "    // --- Handlers ---",
-    "    // --- Render Helpers ---",
-    `    // --- Handlers ---
-    const fallbackAppendOperationIntent = (payload) => {
-        const text = typeof payload === 'string' ? payload : JSON.stringify(payload, null, 2);
-        const block = '<本轮APP操作>\\n' + text.trim() + '\\n</本轮APP操作>';
-        const docs = [];
-        for (const candidate of [globalThis.parent?.document, globalThis.top?.document, globalThis.document]) {
-            try {
-                if (candidate && !docs.includes(candidate))
-                    docs.push(candidate);
-            }
-            catch {
-                // ignore inaccessible parent frames
-            }
-        }
-        const isLikelyTavernSendDoc = (doc) => {
-            if (doc === globalThis.document)
-                return true;
-            try {
-                return Boolean(doc.defaultView?.SillyTavern || doc.defaultView?.getContext || doc.defaultView?.getVariables);
-            }
-            catch {
-                return false;
-            }
-        };
-        for (const doc of docs) {
-            if (!isLikelyTavernSendDoc(doc))
-                continue;
-            const input = doc.querySelector("#send_textarea, textarea#send_textarea, textarea[name='send_textarea'], textarea[data-testid='send-textarea']");
-            if (!input)
-                continue;
-            const current = 'value' in input ? input.value : input.textContent;
-            const base = String(current || '').replace(/<本轮APP操作>[\\s\\S]*?<\\/本轮APP操作>/g, '').trim();
-            const next = base ? base.replace(/\\s*$/, '') + '\\n' + block : block;
-            if ('value' in input)
-                input.value = next;
-            else
-                input.textContent = next;
-            input.dispatchEvent(new Event('input', { bubbles: true }));
-            input.dispatchEvent(new Event('change', { bubbles: true }));
-            input.focus?.();
+    const isTierAvailable = (tier) => {
+        const normalized = normalizeTierValue(tier);
+        if (normalized === 'TRIAL')
             return true;
-        }
-        console.info('[HypnoOS] 已记录APP操作', block);
-        return false;
+        const config = _types__WEBPACK_IMPORTED_MODULE_3__.VIP_LEVELS.find(item => item.tier === normalized);
+        const threshold = Number(config?.unlockThreshold ?? Infinity);
+        return subscriptionRank >= getTierRank(normalized) || Number(userData?.totalConsumedMc || 0) >= threshold;
     };
-    const recordOperationIntent = (payload) => {
-        const append = globalThis.__ST_APPEND_OPERATION_TO_INPUT__;
-        if (typeof append === 'function') {
-            void append(payload);
-            return;
-        }
-        fallbackAppendOperationIntent(payload);
-    };
-    const money = (value) => \`¥\${Number(value || 0).toLocaleString()}\`;
-    const formatFeatureIntent = (feature) => {
-        const details = getFeatureCostDetails(feature);
-        const cost = { energy: details.energy, points: details.points };
-        const costParts = [];
-        if (cost.energy)
-            costParts.push(\`MC能量 \${cost.energy}点\`);
-        if (cost.points)
-            costParts.push(\`当前MC点 \${cost.points}点\`);
-        return {
-            功能: feature.title,
-            描述: feature.description,
-            预计消耗: costParts.join(' + ') || '0',
-            MC能量消耗: \`\${cost.energy || 0}点\`,
-            当前MC点消耗: \`\${cost.points || 0}点\`,
-            计费方式: details.billingLabel,
-            是否受人数影响: details.usesPeople ? '是' : '否',
-            是否受时间影响: details.usesTime ? '是' : '否',
-            人数: \`\${details.people}人\`,
-            时间: \`\${details.minutes}分钟\`,
-            数值: feature.userNumber ?? '',
-            备注: feature.userNote || '',
-        };
-    };
-    const handleExitApp = () => {
-        setIsClosing(true);
-        setTimeout(onExit, 300);
-    };
-    const toggleAutoRenew = async () => {
-        if (!subscription)
-            return;
+    const selectedFeatures = (0,react__WEBPACK_IMPORTED_MODULE_1__.useMemo)(() => features.filter(feature => feature.isEnabled && isTierAvailable(feature.tier)), [features, subscriptionRank, userData?.totalConsumedMc]);
+    const selectedCost = (0,react__WEBPACK_IMPORTED_MODULE_1__.useMemo)(() => summarizeCosts(selectedFeatures), [selectedFeatures]);
+    const resourceWarning = selectedCost.energy > Number(userData?.mcEnergy || 0) || selectedCost.points > Number(userData?.mcPoints || 0);
+    const requestTierUnlock = (tierConfig) => {
         recordOperationIntent({
             来源: '催眠APP',
-            操作: '切换自动续订',
-            当前状态: subscription.autoRenew ? '开' : '关',
-            目标状态: subscription.autoRenew ? '关' : '开',
+            操作: '解锁VIP等级',
+            等级: tierConfig.label,
+            当前累计消耗MC点: String(userData?.totalConsumedMc ?? 0) + '点',
+            解锁阈值: String(tierConfig.unlockThreshold ?? 0) + '点',
+            说明: '只请求解锁或订阅该等级；解锁后对应VIP功能可直接启用，本次不会自动使用任何具体催眠指令。',
         });
+        setNotice('已暂存' + tierConfig.label + '解锁请求');
     };
-    const subscribeTier = async (tier) => {
-        const price = _services_dataService__WEBPACK_IMPORTED_MODULE_4__.SUBSCRIPTION_PRICES[tier] ?? 0;
-        recordOperationIntent({
-            来源: '催眠APP',
-            操作: subscription?.tier === tier ? '续订VIP' : '订阅VIP',
-            等级: \`VIP\${tier.slice(3)}\`,
-            价格: money(price),
-            当前是否满足前端解锁: canSubscribeTier(tier) ? '是' : '否',
-            解锁说明: '订阅/解锁对应VIP后，该VIP等级内功能可直接启用，无需单独购买功能。',
-            使用限制: '本次只订阅/解锁权限，不代表自动使用任何催眠功能。',
-        });
-    };
-    const purchaseFeature = async (_feature) => {
-        return;
-    };
-    const toggleFeature = (id) => {
-        const target = features.find(f => f.id === id);
-        if (!target)
-            return;
-        if (!hasAccessForFeature(target)) {
-            recordOperationIntent({
-                来源: '催眠APP',
-                操作: '查看未订阅功能',
-                功能: target.title,
-                描述: target.description,
-            });
+    const startHypnosis = () => {
+        if (!selectedFeatures.length) {
+            setNotice('请先启用至少一条催眠指令');
             return;
         }
-        const currentEnabled = target.isEnabled ?? false;
-        const nextEnabled = !currentEnabled;
-        const getNumericDefault = (featureId) => {
-            switch (featureId) {
-                case 'vip1_temp_sensitivity':
-                    return 1;
-                case 'vip1_estrus':
-                    return 1;
-                case 'vip1_memory_erase':
-                    return 10;
-                case 'vip2_pleasure':
-                    return 3;
-                default:
-                    return null;
+        const featureDetails = selectedFeatures.map(feature => {
+            const cost = calculateFeatureCost(feature);
+            const extraConfig = SPECIAL_VALUE_FEATURES[feature.id];
+            const details = {
+                功能: feature.title,
+                等级: getTierLabel(feature.tier),
+                说明: feature.description,
+                备注: feature.userNote || '无',
+                是否受人数影响: cost.usesPeople ? '是' : '否',
+                是否受时间影响: cost.usesTime ? '是' : '否',
+                人数: cost.usesPeople ? String(cost.people) + '人' : '不按人数计算',
+                时间: cost.usesTime ? String(cost.minutes) + '分钟' : '不按时间计算',
+                消耗类型: cost.currencyLabel,
+                预计消耗: String(cost.amount) + '点',
+            };
+            if (extraConfig)
+                details[extraConfig.label] = String(cost.extra) + extraConfig.unit;
+            return details;
+        });
+        recordOperationIntent({
+            来源: '催眠APP',
+            操作: timeLeft > 0 ? '追加催眠' : '启动催眠',
+            全局备注: globalNote || '无',
+            功能列表: featureDetails,
+            MC能量消耗: String(selectedCost.energy) + '点',
+            当前MC点消耗: String(selectedCost.points) + '点',
+            预计消耗: 'MC能量' + selectedCost.energy + '点，当前MC点' + selectedCost.points + '点',
+            当前可用: { MC能量: String(userData?.mcEnergy ?? 0) + '点', 当前MC点: String(userData?.mcPoints ?? 0) + '点' },
+            结算提示: '涉及花费的功能必须先检查余额；余额不足的功能失败，后续同批次受影响操作也失败，不能贷款或擅自兑换资金。',
+        });
+        setIsFlashing(true);
+        setNotice('启动催眠请求已暂存到右侧列表');
+        window.setTimeout(() => setIsFlashing(false), 800);
+    };
+    const stopSession = () => {
+        recordOperationIntent({
+            来源: '催眠APP',
+            操作: '取消催眠',
+            说明: '请求AI结束当前临时催眠状态；永久催眠效果不计入催眠中，也不应被取消。',
+        });
+        setNotice('取消催眠请求已暂存');
+    };
+    const renderNumberInput = (label, value, onChange, suffix, disabled = false) => jsxs('label', { className: 'min-w-0 rounded-2xl border border-white/10 bg-black/30 px-3 py-2', children: [
+            jsx('span', { className: 'block text-xs font-bold text-white/50', children: label }),
+            jsxs('div', { className: 'mt-1 flex items-center gap-2', children: [
+                    jsx('input', { type: 'number', min: '1', value, disabled, onChange: event => onChange(event.target.value), className: 'w-full bg-transparent text-lg font-black text-white outline-none disabled:text-white/40' }),
+                    jsx('span', { className: 'shrink-0 text-sm font-bold text-white/45', children: suffix }),
+                ] }),
+        ] });
+    const renderFeatureCard = (feature) => {
+        const available = isTierAvailable(feature.tier);
+        const cost = calculateFeatureCost(feature);
+        const extraConfig = SPECIAL_VALUE_FEATURES[feature.id];
+        const enabled = Boolean(feature.isEnabled) && available;
+        const toggle = () => {
+            if (!available) {
+                setNotice(getTierLabel(feature.tier) + '需要先解锁');
+                return;
             }
+            updateFeature(feature.id, { isEnabled: !feature.isEnabled });
         };
-        const nextNumber = nextEnabled && typeof target.userNumber === 'undefined' ? getNumericDefault(target.id) : null;
-        const draftDefaults = nextEnabled ? {
-            userPeople: typeof target.userPeople === 'number' ? target.userPeople : defaultPeople,
-            userMinutes: typeof target.userMinutes === 'number' ? target.userMinutes : duration,
-        } : {};
-        setFeatures(prev => prev.map(f => f.id === id
-            ? { ...f, isEnabled: !f.isEnabled, ...draftDefaults, ...(nextNumber === null ? null : { userNumber: nextNumber }) }
-            : f));
+        return jsxs('article', { className: 'rounded-3xl border p-4 transition ' + (enabled ? 'border-fuchsia-400/70 bg-fuchsia-950/20 shadow-[0_0_24px_rgba(236,72,153,0.18)]' : 'border-white/10 bg-black/25'), children: [
+                jsxs('div', { className: 'flex items-start justify-between gap-3', children: [
+                        jsxs('div', { className: 'min-w-0', children: [
+                                jsx('h3', { className: 'text-xl font-black leading-tight text-white', children: feature.title }),
+                                jsx('p', { className: 'mt-1 text-sm font-bold text-white/50', children: cost.currencyLabel + ': ' + String(cost.amount) + '点' }),
+                            ] }),
+                        jsx('button', { type: 'button', onClick: toggle, className: 'relative h-10 w-20 shrink-0 rounded-full p-1 transition ' + (enabled ? 'bg-fuchsia-500' : available ? 'bg-slate-700' : 'bg-slate-800 opacity-70'), title: available ? '切换启用' : '等级未解锁', children: jsx('span', { className: 'block h-8 w-8 rounded-full bg-white transition ' + (enabled ? 'translate-x-10' : '') }) }),
+                    ] }),
+                jsx('p', { className: 'mt-4 border-t border-white/10 pt-4 text-sm font-semibold leading-relaxed text-white/72', children: feature.description }),
+                jsx('textarea', { value: feature.userNote || '', onChange: event => updateFeature(feature.id, { userNote: event.target.value }), placeholder: '补充这条指令的目标、方式或限制...', className: 'mt-4 h-20 w-full resize-none rounded-2xl border border-white/10 bg-black/35 p-3 text-sm font-semibold text-white outline-none placeholder:text-white/30 focus:border-fuchsia-400/70' }),
+                jsxs('div', { className: 'mt-3 grid grid-cols-2 gap-2', children: [
+                        cost.usesPeople ? renderNumberInput('人数', feature.userNumber || '1', value => updateFeature(feature.id, { userNumber: value }), '人') : jsx('div', { className: 'rounded-2xl border border-white/10 bg-black/20 px-3 py-3 text-sm font-bold text-white/45', children: '不按人数计费' }),
+                        cost.usesTime ? renderNumberInput('时间', feature.userMinutes || '10', value => updateFeature(feature.id, { userMinutes: value }), '分钟') : jsx('div', { className: 'rounded-2xl border border-white/10 bg-black/20 px-3 py-3 text-sm font-bold text-white/45', children: '不按时间计费' }),
+                        extraConfig ? renderNumberInput(extraConfig.label, feature.userExtraValue || String(extraConfig.defaultValue), value => updateFeature(feature.id, { userExtraValue: value }), extraConfig.unit) : null,
+                    ] }),
+                jsxs('div', { className: 'mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-white/10 bg-black/30 px-3 py-2', children: [
+                        jsx('span', { className: 'text-xs font-bold text-white/45', children: '计费' }),
+                        jsx('span', { className: 'text-sm font-black text-yellow-300', children: cost.currencyLabel + ' ' + String(cost.amount) + '点' }),
+                    ] }),
+            ] }, feature.id);
     };
-    const updateFeatureNote = (id, note) => {
-        setFeatures(prev => prev.map(f => (f.id === id ? { ...f, userNote: note } : f)));
+    const renderTierSection = (tierConfig) => {
+        const tierFeatures = features.filter(feature => normalizeTierValue(feature.tier) === tierConfig.tier);
+        if (!tierFeatures.length)
+            return null;
+        const available = isTierAvailable(tierConfig.tier);
+        const collapsed = Boolean(collapsedTiers[tierConfig.tier]);
+        const enabledCount = tierFeatures.filter(feature => feature.isEnabled && available).length;
+        return jsxs('section', { className: 'overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04]', children: [
+                jsxs('button', { type: 'button', onClick: () => setCollapsedTiers(current => ({ ...current, [tierConfig.tier]: !collapsed })), className: 'flex w-full items-center justify-between gap-3 px-4 py-4 text-left', children: [
+                        jsxs('div', { className: 'min-w-0', children: [
+                                jsx('div', { className: 'text-lg font-black text-white', children: tierConfig.label }),
+                                jsx('div', { className: 'mt-1 text-xs font-bold text-white/45', children: (available ? '可用' : '需要解锁') + ' · ' + String(enabledCount) + '/' + String(tierFeatures.length) + ' 已启用' }),
+                            ] }),
+                        jsxs('div', { className: 'flex shrink-0 items-center gap-2', children: [
+                                !available && jsx('span', { className: 'rounded-full bg-slate-800 px-3 py-1 text-xs font-bold text-white/55', children: '未解锁' }),
+                                jsx('span', { className: 'text-xl font-black text-white/55', children: collapsed ? '⌄' : '⌃' }),
+                            ] }),
+                    ] }),
+                !available && !collapsed ? jsx('div', { className: 'px-4 pb-4', children: jsx('button', { type: 'button', onClick: event => { event.stopPropagation(); requestTierUnlock(tierConfig); }, className: 'w-full rounded-2xl bg-gradient-to-r from-violet-500 to-fuchsia-500 px-4 py-3 text-sm font-black text-white', children: '请求解锁 ' + tierConfig.label }) }) : null,
+                !collapsed ? jsx('div', { className: 'space-y-3 border-t border-white/10 p-4', children: tierFeatures.map(renderFeatureCard) }) : null,
+            ] }, tierConfig.tier);
     };
-    const updateFeatureNumber = (id, value) => {
-        setFeatures(prev => prev.map(f => (f.id === id ? { ...f, userNumber: value === null ? undefined : value } : f)));
-    };
-    const updateFeaturePeople = (id, value) => {
-        setFeatures(prev => prev.map(f => (f.id === id ? { ...f, userPeople: value === null ? undefined : value } : f)));
-    };
-    const updateFeatureMinutes = (id, value) => {
-        setFeatures(prev => prev.map(f => (f.id === id ? { ...f, userMinutes: value === null ? undefined : value } : f)));
-    };
-    const handleStart = async () => {
-        const enabledFeatures = features
-            .filter(f => f.isEnabled && f.id !== 'vip1_stats' && canUseEnabledFeature(f))
-            .map(f => f);
-        recordOperationIntent({
-            来源: '催眠APP',
-            操作: '启动催眠',
-            预计消耗: formatCostPartsForAi(totalEnergyCost, totalPointsCost),
-            MC能量消耗: \`\${totalEnergyCost}点\`,
-            当前MC点消耗: \`\${totalPointsCost}点\`,
-            扣费路径: { MC能量: '/系统/MC能量', 当前MC点: '/系统/当前MC点' },
-            结算方式: '按本轮APP操作规则统一结算',
-            功能: enabledFeatures.map(formatFeatureIntent),
-        });
-        setIsTransitioning(true);
-        window.setTimeout(() => setIsTransitioning(false), 3200);
-    };
-    const handleStop = () => {
-        recordOperationIntent({
-            来源: '催眠APP',
-            操作: '解除催眠',
-        });
-    };
-    const quickSupplyQty = (0,react__WEBPACK_IMPORTED_MODULE_1__.useMemo)(() => {
-        const parsed = Number.parseInt(quickSupplyQtyInput, 10);
-        if (!Number.isFinite(parsed) || parsed <= 0)
-            return 1;
-        return parsed;
-    }, [quickSupplyQtyInput]);
-    const purchaseEnergy = async (desiredAmount) => {
-        const unitPrice = 100;
-        const amount = Math.floor(desiredAmount);
-        if (!Number.isFinite(amount) || amount <= 0)
-            return;
-        const missing = Math.max(0, userData.mcEnergyMax - Math.floor(userData.mcEnergy));
-        const actualAmount = Math.min(missing, amount);
-        if (actualAmount <= 0)
-            return;
-        recordOperationIntent({
-            来源: '催眠APP',
-            操作: '购买能量',
-            MC能量增加: \`+\${actualAmount}点\`,
-            金钱消耗: money(unitPrice * actualAmount),
-            扣费路径: '/系统/持有零花钱',
-            增加路径: '/系统/MC能量',
-        });
-    };
-    const purchaseMaxEnergy = async (desiredAmount) => {
-        const amount = Math.floor(desiredAmount);
-        if (!Number.isFinite(amount) || amount <= 0)
-            return;
-        recordOperationIntent({
-            来源: '催眠APP',
-            操作: '提升能量上限',
-            MC能量上限增加: \`+\${amount}点\`,
-            当前MC点消耗: \`\${amount}点\`,
-            扣费路径: '/系统/当前MC点',
-            增加路径: '/系统/MC能量上限',
-        });
-    };
-    const purchasePoints = async (desiredAmount) => {
-        const unitPrice = 1000;
-        const amount = Math.floor(desiredAmount);
-        if (!Number.isFinite(amount) || amount <= 0)
-            return;
-        recordOperationIntent({
-            来源: '催眠APP',
-            操作: '充值点数',
-            当前MC点增加: \`+\${amount}点\`,
-            金钱消耗: money(unitPrice * amount),
-            扣费路径: '/系统/持有零花钱',
-            增加路径: '/系统/当前MC点',
-        });
-    };
-    // --- Render Helpers ---
-`
-  );
-  output = output.replace(
-    `    if (isActive) {
-        return ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)(ActiveSessionView, { timeLeft: timeLeft, sessionEndVirtualMinutes: sessionEndVirtualMinutes, sessionEndAtMs: sessionEndAtMs, onStop: handleStop }));
-    }`,
-    `    // Active hypnosis is shown as a compact status strip so users can append more commands.`
-  );
-  output = output.replace(
-    `(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "flex-1 overflow-y-auto p-4 no-scrollbar", children: _types__WEBPACK_IMPORTED_MODULE_3__.VIP_LEVELS.map(tier => renderTierSection(tier)) })`,
-    `isActive && ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)(ActiveSessionView, { timeLeft: timeLeft, sessionEndVirtualMinutes: sessionEndVirtualMinutes, sessionEndAtMs: sessionEndAtMs, sessionSummary: sessionSummary, onStop: handleStop })), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "flex-1 overflow-y-auto p-4 no-scrollbar", children: _types__WEBPACK_IMPORTED_MODULE_3__.VIP_LEVELS.map(tier => renderTierSection(tier)) })`
-  );
-  output = replaceBetween(
-    output,
-    "        const formatFeatureCost = (feature) => {",
-    "        return ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)(\"div\", { className: \"mb-6 relative\",",
-    `        const formatFeatureCost = (feature) => {
-            const currency = feature.costCurrency === 'MC_POINTS' ? 'MC点' : 'MC能量';
-            const billing = getFeatureBilling(feature);
-            if (feature.id === 'vip1_stats')
-                return '订阅后自动解锁';
-            if (feature.id === 'vip1_temp_sensitivity')
-                return billing.usesPeople ? \`每人每点敏感度: 2 \${currency}\` : \`每点敏感度: 2 \${currency}\`;
-            if (feature.id === 'vip1_estrus')
-                return billing.usesPeople ? \`每人每点发情值: \${feature.costValue} \${currency}\` : \`每点发情值: \${feature.costValue} \${currency}\`;
-            if (feature.id === 'vip1_memory_erase')
-                return billing.usesPeople ? \`每人每分钟记忆: \${feature.costValue} \${currency}\` : \`每分钟记忆: \${feature.costValue} \${currency}\`;
-            if (billing.usesPeople && billing.usesTime)
-                return \`每人每分钟: \${feature.costValue} \${currency}\`;
-            if (billing.usesPeople)
-                return \`每人: \${feature.costValue} \${currency}\`;
-            if (billing.usesTime)
-                return \`每分钟: \${feature.costValue} \${currency}\`;
-            return \`一次性: \${feature.costValue} \${currency}\`;
-        };
-`
-  );
-  output = output.replace(
-    `        const progressPercent = tierConfig.unlockThreshold === 0
-            ? 100
-            : Math.min(100, (userData.totalConsumedMc / tierConfig.unlockThreshold) * 100);
-        const formatFeatureCost = (feature) => {`,
-    `        const progressPercent = tierConfig.unlockThreshold === 0
-            ? 100
-            : Math.min(100, (userData.totalConsumedMc / tierConfig.unlockThreshold) * 100);
-        const tierCollapsed = Boolean(collapsedVipTiers[tierConfig.tier]);
-        const enabledTierCount = tierFeatures.filter(feature => feature.isEnabled && feature.id !== 'vip1_stats').length;
-        const tierCountLabel = \`\${tierFeatures.length}项\${enabledTierCount > 0 ? \` / 已选\${enabledTierCount}\` : ''}\`;
-        const formatFeatureCost = (feature) => {`
-  );
-  output = output.replace(
-    `(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "flex justify-between items-center mb-2 px-1", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("h3", { className: "text-pink-300 font-bold text-sm tracking-wider uppercase", children: tierConfig.label }), isLocked && ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("span", { className: "text-xs text-gray-400 bg-gray-800 px-2 py-0.5 rounded-full", children: ["\\u9700\\u8981\\u6D88\\u8017 ", tierConfig.unlockThreshold, " \\u70B9"] }))] })`,
-    `(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("button", { type: "button", onClick: () => toggleVipTierCollapsed(tierConfig.tier), className: "w-full flex justify-between items-center mb-2 px-3 py-2 rounded-xl border border-white/10 bg-white/[0.04] hover:bg-white/[0.07] active:scale-[0.99] transition text-left", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "flex items-center gap-2 min-w-0", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("span", { className: "w-4 text-center text-base leading-none text-pink-200/80", children: tierCollapsed ? "›" : "⌄" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("h3", { className: "text-pink-300 font-bold text-sm tracking-wider uppercase truncate", children: tierConfig.label })] }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "flex items-center gap-2 shrink-0", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("span", { className: "text-[10px] text-gray-400 bg-gray-800/80 px-2 py-0.5 rounded-full border border-white/5", children: tierCountLabel }), isLocked && ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("span", { className: "text-xs text-gray-400 bg-gray-800 px-2 py-0.5 rounded-full", children: ["\\u9700\\u8981\\u6D88\\u8017 ", tierConfig.unlockThreshold, " \\u70B9"] }))] })] })`
-  );
-  output = output.replace(
-    `isLocked && ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "absolute inset-0 z-10 bg-hypno-dark/60 backdrop-blur-sm rounded-xl border border-white/5 flex flex-col items-center justify-center text-center p-4"`,
-    `!tierCollapsed && isLocked && ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "absolute inset-0 z-10 bg-hypno-dark/60 backdrop-blur-sm rounded-xl border border-white/5 flex flex-col items-center justify-center text-center p-4"`
-  );
-  output = output.replace(
-    "`space-y-3 ${isLocked ? 'opacity-30 pointer-events-none select-none filter blur-[2px]' : ''}`",
-    "`space-y-3 ${tierCollapsed ? 'hidden' : ''} ${isLocked ? 'opacity-30 pointer-events-none select-none filter blur-[2px]' : ''}`"
-  );
-  output = output.replace(
-    `(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "text-xs text-gray-400 mt-0.5", children: formatFeatureCost(feature) })`,
-    `(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.Fragment, { children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "text-xs text-gray-400 mt-0.5", children: formatFeatureCost(feature) }), lockedByPurchase && ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("p", { className: "mt-2 text-xs text-gray-300 leading-relaxed opacity-85", children: feature.description }))] })`
-  );
-  output = output.replace(
-    `feature.id !== 'vip1_stats' && ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("textarea", { placeholder: feature.notePlaceholder || '在此输入具体指令备注...', value: feature.userNote || '', onChange: e => updateFeatureNote(feature.id, e.target.value), className: "w-full mt-3 bg-black/30 border border-white/10 rounded-lg p-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-pink-500/50 transition-colors resize-none h-16" }))`,
-    `feature.id !== 'vip1_stats' && ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.Fragment, { children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("textarea", { placeholder: feature.notePlaceholder || '在此输入具体指令备注...', value: feature.userNote || '', onChange: e => updateFeatureNote(feature.id, e.target.value), className: "w-full mt-3 bg-black/30 border border-white/10 rounded-lg p-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-pink-500/50 transition-colors resize-none h-16" }), (() => {
-                                                const details = getFeatureCostDetails(feature);
-                                                const people = getFeaturePeople(feature);
-                                                const minutes = getFeatureMinutes(feature);
-                                                const clampDraftNumber = (raw, fallback, min, max) => {
-                                                    if (raw === '')
-                                                        return null;
-                                                    const parsed = Number(raw);
-                                                    if (!Number.isFinite(parsed))
-                                                        return fallback;
-                                                    return Math.max(min, Math.min(max, Math.floor(parsed)));
-                                                };
-                                                return ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "mt-2 grid grid-cols-2 gap-2", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("label", { children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "text-[10px] text-gray-400 mb-1 flex items-center justify-between gap-2", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("span", { children: "人数" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("span", { className: details.usesPeople ? "text-amber-300" : "text-gray-500", children: details.usesPeople ? "受人数" : "不受人数" })] }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("input", { type: "number", inputMode: "numeric", min: 1, max: 999, step: 1, value: people, onChange: e => updateFeaturePeople(feature.id, clampDraftNumber(e.target.value, people, 1, 999)), className: "w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-pink-500/50 transition-colors" })] }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("label", { children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "text-[10px] text-gray-400 mb-1 flex items-center justify-between gap-2", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("span", { children: "时间(分钟)" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("span", { className: details.usesTime ? "text-amber-300" : "text-gray-500", children: details.usesTime ? "受时间" : "不受时间" })] }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("input", { type: "number", inputMode: "numeric", min: 1, max: 9999, step: 1, value: minutes, onChange: e => updateFeatureMinutes(feature.id, clampDraftNumber(e.target.value, minutes, 1, 9999)), className: "w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-pink-500/50 transition-colors" })] }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { style: { gridColumn: "1 / -1" }, className: "rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-[10px] text-gray-300 flex items-center justify-between gap-2", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("span", { className: "min-w-0 leading-snug break-words pr-2", children: ["计费：", details.billingLabel] }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("span", { className: "text-amber-300 font-bold tabular-nums shrink-0 text-right", children: [details.charged, " ", details.currency] })] })] }));
-                                            })()] }))`
-  );
-  output = output.replace(
-    `(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "flex items-center bg-gray-800 rounded-lg px-3 py-2 border border-white/5", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)(lucide_react__WEBPACK_IMPORTED_MODULE_13__["default"], { size: 16, className: "text-pink-400 mr-2" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("input", { type: "number", inputMode: "numeric", min: 1, step: 1, value: durationInput, onChange: e => setDurationInput(e.target.value), onBlur: () => setDurationInput(String(duration)), className: "w-12 bg-transparent text-white font-bold text-center focus:outline-none" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("span", { className: "text-xs text-gray-400 ml-1", children: "\\u5206\\u949F" })] })`,
-    `(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)(react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.Fragment, { children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "flex items-center bg-gray-800 rounded-lg px-2 py-2 border border-white/5", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("span", { className: "text-[10px] text-pink-300 mr-1.5 font-bold", children: "人数" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("input", { type: "number", inputMode: "numeric", min: 1, max: 999, step: 1, value: defaultPeopleInput, onChange: e => updateDefaultPeopleInput(e.target.value), onBlur: () => setDefaultPeopleInput(String(defaultPeople)), className: "w-9 bg-transparent text-white font-bold text-center focus:outline-none" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("span", { className: "text-xs text-gray-400 ml-0.5", children: "人" })] }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "flex items-center bg-gray-800 rounded-lg px-2 py-2 border border-white/5", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)(lucide_react__WEBPACK_IMPORTED_MODULE_13__["default"], { size: 16, className: "text-pink-400 mr-1.5" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("input", { type: "number", inputMode: "numeric", min: 1, step: 1, value: durationInput, onChange: e => setDurationInput(e.target.value), onBlur: () => setDurationInput(String(duration)), className: "w-11 bg-transparent text-white font-bold text-center focus:outline-none" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("span", { className: "text-xs text-gray-400 ml-0.5", children: "分钟" })] })] })`
-  );
-  output = replaceBetween(
-    output,
-    `(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { ref: footerControlsRef,`,
-    `showLowEnergyModal &&`,
-    `(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { ref: footerControlsRef, className: "bg-gray-900/95 backdrop-blur-xl border-t border-white/10 p-4 pb-8 rounded-t-2xl shadow-[0_-5px_30px_rgba(0,0,0,0.6)] animate-slide-up shrink-0 flex justify-center", children: (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("button", { onClick: handleStart, disabled: !hasSessionFeaturesEnabled, style: { width: "min(15rem, calc(100% - 2rem))", minHeight: "58px" }, className: \`
-                 px-8 py-4 rounded-2xl font-bold text-white shadow-lg flex items-center justify-center gap-2 transition-all
-                 \${hasSessionFeaturesEnabled
-                                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:shadow-pink-500/25 active:scale-95'
-                                    : 'bg-gray-700 text-gray-400 cursor-not-allowed'}
-               \`, children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)(lucide_react__WEBPACK_IMPORTED_MODULE_17__["default"], { size: 18, fill: "currentColor" }), "启动催眠"] }) }), `
-  );
-  output = output.replaceAll(
-    "disabled: userData.mcPoints < purchasePricePoints,",
-    "disabled: false,"
-  );
-  output = output.replaceAll(
-    `userData.mcPoints < purchasePricePoints
-                                                            ? 'opacity-50 cursor-not-allowed grayscale'
-                                                            : 'hover:shadow-[0_10px_26px_rgba(245,158,11,0.35)] active:scale-[0.97] cursor-pointer'`,
-    "'hover:shadow-[0_10px_26px_rgba(245,158,11,0.35)] active:scale-[0.97] cursor-pointer'"
-  );
-  output = output.replace(
-    `onClick: () => void (async () => {
-                                            const topUpCost = missingEnergy * 100 + missingPoints * 1000;
-                                            if (userData.money < topUpCost)
-                                                return;
-                                            const nextMoney = userData.money - topUpCost;
-                                            const nextEnergy = Math.min(userData.mcEnergyMax, userData.mcEnergy + missingEnergy);
-                                            const nextPoints = userData.mcPoints + missingPoints;
-                                            try {
-                                                const persisted = await _services_dataService__WEBPACK_IMPORTED_MODULE_4__.DataService.updateResources({
-                                                    money: nextMoney,
-                                                    mcEnergy: nextEnergy,
-                                                    mcPoints: nextPoints,
-                                                });
-                                                onUpdateUser(persisted);
-                                            }
-                                            catch (err) {
-                                                console.warn('[HypnoOS] 补齐资源持久化失败', err);
-                                                onUpdateUser({
-                                                    ...userData,
-                                                    money: nextMoney,
-                                                    mcEnergy: nextEnergy,
-                                                    mcPoints: nextPoints,
-                                                });
-                                            }
-                                            void _services_mvuBridge__WEBPACK_IMPORTED_MODULE_5__.MvuBridge.appendThisTurnAppOperationLog(\`补齐资源（-¥\${topUpCost.toLocaleString()}, +\${missingEnergy} MC, +\${missingPoints} PT）\`);
-                                            setShowLowEnergyModal(false);
-                                        })(), disabled: userData.money < missingEnergy * 100 + missingPoints * 1000,`,
-    `onClick: () => {
-                                            const topUpCost = missingEnergy * 100 + missingPoints * 1000;
-                                            recordOperationIntent({
-                                                来源: '催眠APP',
-                                                操作: '请求补给资源',
-                                                MC能量增加: \`+\${missingEnergy}点\`,
-                                                当前MC点增加: \`+\${missingPoints}点\`,
-                                                金钱消耗: money(topUpCost),
-                                                扣费路径: '/系统/持有零花钱',
-                                                增加路径: { MC能量: '/系统/MC能量', 当前MC点: '/系统/当前MC点' },
-                                            });
-                                            setShowLowEnergyModal(false);
-                                        }, disabled: false,`
-  );
-  output = output.replaceAll(
-    "可以输入你要催眠谁, 怎么催眠或者其他备注",
-    "输入目标与催眠方式"
-  );
-  output = output.replaceAll(
-    "\\u53EF\\u4EE5\\u8F93\\u5165\\u4F60\\u8981\\u50AC\\u7720\\u8C01, \\u600E\\u4E48\\u50AC\\u7720\\u6216\\u8005\\u5176\\u4ED6\\u5907\\u6CE8",
-    "\\u8F93\\u5165\\u76EE\\u6807\\u4E0E\\u50AC\\u7720\\u65B9\\u5F0F"
-  );
-  return output;
+    return jsxs('div', { className: 'relative flex h-full w-full flex-col overflow-hidden bg-black text-white', children: [
+            jsx(VortexBackground, { speed: isFlashing ? 'animate-spin' : 'spin-slow' }),
+            jsxs('header', { className: 'relative z-10 flex shrink-0 items-center justify-between border-b border-white/10 bg-slate-950/70 px-4 py-4 backdrop-blur', children: [
+                    jsxs('div', { className: 'flex items-center gap-3', children: [
+                            jsx('button', { type: 'button', onClick: onExit, className: 'flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-3xl text-white/80', children: '‹' }),
+                            jsxs('div', { children: [
+                                    jsxs('div', { className: 'flex items-center gap-2 text-xl font-black', children: [
+                                            jsx(HypnoLogoSVG, { size: 28, className: 'text-fuchsia-300' }),
+                                            jsx('span', { children: '催眠APP' }),
+                                        ] }),
+                                    jsx('div', { className: 'mt-1 text-xs font-bold text-white/45', children: '指令只暂存，变量由AI结算' }),
+                                ] }),
+                        ] }),
+                    jsxs('div', { className: 'text-right', children: [
+                            jsx('div', { className: 'text-xl font-black text-white', children: String(userData?.mcPoints ?? 0) }),
+                            jsx('div', { className: 'text-xs font-bold text-white/45', children: '当前MC点' }),
+                        ] }),
+                ] }),
+            jsx(ActiveSessionView, { timeLeft, sessionEndVirtualMinutes, sessionEndAtMs, sessionSummary, onStop: stopSession }),
+            jsxs('main', { className: 'relative z-10 flex-1 overflow-y-auto p-4 pb-28 no-scrollbar', children: [
+                    jsxs('section', { className: 'rounded-3xl border border-white/10 bg-slate-950/70 p-4 shadow-lg', children: [
+                            jsxs('div', { className: 'flex items-center justify-between gap-4', children: [
+                                    jsxs('div', { className: 'min-w-0 flex-1', children: [
+                                            jsx('div', { className: 'text-xs font-black uppercase tracking-widest text-pink-300', children: 'MC ENERGY' }),
+                                            jsxs('div', { className: 'mt-1 flex items-center gap-2', children: [
+                                                    jsx('div', { className: 'h-2 flex-1 overflow-hidden rounded-full bg-white/10', children: jsx('div', { className: 'h-full rounded-full bg-gradient-to-r from-violet-500 to-pink-500', style: { width: Math.max(0, Math.min(100, Number(userData?.mcEnergy || 0) / Math.max(1, Number(userData?.mcEnergyMax || 1)) * 100)) + '%' } }) }),
+                                                    jsx('span', { className: 'shrink-0 text-sm font-bold text-white/60', children: String(userData?.mcEnergy ?? 0) + ' / ' + String(userData?.mcEnergyMax ?? 0) }),
+                                                ] }),
+                                            jsx('div', { className: 'mt-2 text-xs font-bold text-white/40', children: '等级：' + getTierLabel(subscriptionTier) }),
+                                        ] }),
+                                    jsxs('div', { className: 'rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-right', children: [
+                                            jsx('div', { className: 'text-xs font-bold text-white/45', children: '资金' }),
+                                            jsx('div', { className: 'text-lg font-black text-yellow-300', children: formatMoney(userData?.money ?? 0) }),
+                                        ] }),
+                                ] }),
+                            jsxs('div', { className: 'mt-4 grid grid-cols-3 gap-2 text-center', children: [
+                                    jsxs('div', { className: 'rounded-2xl bg-black/25 p-3', children: [jsx('div', { className: 'text-xs font-bold text-white/45', children: '累计消耗' }), jsx('div', { className: 'mt-1 text-lg font-black text-white', children: String(userData?.totalConsumedMc ?? 0) })] }),
+                                    jsxs('div', { className: 'rounded-2xl bg-black/25 p-3', children: [jsx('div', { className: 'text-xs font-bold text-white/45', children: '可疑度' }), jsx('div', { className: 'mt-1 text-lg font-black text-emerald-300', children: String(userData?.suspicion ?? 0) + '%' })] }),
+                                    jsxs('div', { className: 'rounded-2xl bg-black/25 p-3', children: [jsx('div', { className: 'text-xs font-bold text-white/45', children: '本次预计' }), jsx('div', { className: 'mt-1 text-sm font-black ' + (resourceWarning ? 'text-rose-300' : 'text-fuchsia-200'), children: '能量' + selectedCost.energy + ' / 点' + selectedCost.points })] }),
+                                ] }),
+                        ] }),
+                    jsx('textarea', { value: globalNote, onChange: event => setGlobalNote(event.target.value), placeholder: '全局备注：目标、场景、限制或本次催眠方向...', className: 'mt-4 h-20 w-full resize-none rounded-3xl border border-white/10 bg-black/35 p-4 text-sm font-semibold text-white outline-none placeholder:text-white/35 focus:border-fuchsia-400/70' }),
+                    jsx('div', { className: 'mt-4 space-y-4', children: _types__WEBPACK_IMPORTED_MODULE_3__.VIP_LEVELS.map(renderTierSection) }),
+                ] }),
+            jsxs('footer', { className: 'relative z-20 shrink-0 border-t border-white/10 bg-slate-950/95 p-4 pb-7 shadow-[0_-12px_32px_rgba(0,0,0,0.45)]', children: [
+                    jsxs('div', { className: 'mb-3 flex items-center justify-between gap-3 text-sm font-bold', children: [
+                            jsx('span', { className: resourceWarning ? 'text-rose-300' : 'text-white/55', children: resourceWarning ? '预计余额不足，AI结算时失败' : '预计消耗已按启用指令计算' }),
+                            jsx('span', { className: 'text-white/80', children: 'MC能量 ' + selectedCost.energy + '点 / 当前MC点 ' + selectedCost.points + '点' }),
+                        ] }),
+                    jsx('button', { type: 'button', onClick: startHypnosis, disabled: !selectedFeatures.length, className: 'mx-auto flex h-14 w-[78%] max-w-sm items-center justify-center rounded-2xl bg-gradient-to-r from-violet-500 via-fuchsia-500 to-pink-500 text-lg font-black text-white shadow-lg disabled:cursor-not-allowed disabled:from-slate-700 disabled:to-slate-700 disabled:text-white/40', children: '⚡ 启动催眠' }),
+                    notice ? jsx('div', { className: 'mt-3 text-center text-xs font-bold text-fuchsia-100/75', children: notice }) : null,
+                ] }),
+        ] });
+};
+`;
+  const suffix = code.slice(end).replace(/\n\/\/# sourceMappingURL=data:application\/json;charset=utf-8;base64,[^\n]*/g, "");
+  return code.slice(0, start) + replacement + suffix;
+}
+
+function patchHypnosisAppModule(code) {
+  if (!code.includes("const HypnosisApp") || !code.includes("buildHypnosisSendMessage")) return code;
+  return rebuildHypnosisAppModule(code);
 }
 
 function patchHypnosisDataServiceModule(code) {
