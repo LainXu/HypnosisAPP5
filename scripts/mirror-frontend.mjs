@@ -963,6 +963,9 @@ function patchAppRootModule(code) {
     const [localNow, setLocalNow] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(() => new Date());`,
     `    const [systemDateText, setSystemDateText] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(undefined);
     const [systemScheduleText, setSystemScheduleText] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(undefined);
+    const [systemScheduleDetailText, setSystemScheduleDetailText] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(undefined);
+    const [systemWeekdayText, setSystemWeekdayText] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(undefined);
+    const [systemDateOnlyText, setSystemDateOnlyText] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(undefined);
     const [localNow, setLocalNow] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(() => new Date());`
   );
   output = output.replace(
@@ -970,6 +973,9 @@ function patchAppRootModule(code) {
                 setBodyStatsUnlocked(unlocks.bodyStatsUnlocked);`,
     `                setSystemDateText(clock.dateText);
                 setSystemScheduleText(clock.scheduleText);
+                setSystemScheduleDetailText(clock.scheduleDetailText);
+                setSystemWeekdayText(clock.weekdayText);
+                setSystemDateOnlyText(clock.dateOnlyText);
                 setBodyStatsUnlocked(unlocks.bodyStatsUnlocked);`
   );
   output = output.replace(
@@ -977,11 +983,14 @@ function patchAppRootModule(code) {
                 setBodyStatsUnlocked(true);`,
     `                setSystemDateText(clock.dateText);
                 setSystemScheduleText(clock.scheduleText);
+                setSystemScheduleDetailText(clock.scheduleDetailText);
+                setSystemWeekdayText(clock.weekdayText);
+                setSystemDateOnlyText(clock.dateOnlyText);
                 setBodyStatsUnlocked(true);`
   );
   output = output.replaceAll(
     `systemDateText: systemDateText, localNow: localNow`,
-    `systemDateText: systemDateText, systemScheduleText: systemScheduleText, localNow: localNow`
+    `systemDateText: systemDateText, systemScheduleText: systemScheduleText, systemScheduleDetailText: systemScheduleDetailText, systemWeekdayText: systemWeekdayText, systemDateOnlyText: systemDateOnlyText, localNow: localNow`
   );
   output = output.replace(
     `(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)(_components_OS_StatusBar__WEBPACK_IMPORTED_MODULE_2__.StatusBar, { timeText: systemTimeText })`,
@@ -992,11 +1001,13 @@ function patchAppRootModule(code) {
     const displayTime = systemTimeText || \`\${localNow.getHours()}:\${localNow.getMinutes().toString().padStart(2, '0')}\`;
     const displayDate = systemDateText || localNow.toLocaleDateString('zh-CN', { weekday: 'long', month: 'long', day: 'numeric' });
     const [notice, setNotice] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(null);`,
-    `const HomeScreen = ({ onLaunchApp, bodyStatsUnlocked, systemTimeText, systemDateText, systemScheduleText, localNow, }) => {
+    `const HomeScreen = ({ onLaunchApp, bodyStatsUnlocked, systemTimeText, systemDateText, systemScheduleText, systemScheduleDetailText, systemWeekdayText, systemDateOnlyText, localNow, }) => {
     const displayTime = systemTimeText || \`\${localNow.getHours()}:\${localNow.getMinutes().toString().padStart(2, '0')}\`;
     const displayDate = systemDateText || localNow.toLocaleDateString('zh-CN', { weekday: 'long', month: 'long', day: 'numeric' });
-    const displayWeekday = displayDate.match(/星期[一二三四五六日天]/)?.[0] || displayDate.match(/周[一二三四五六日天]/)?.[0] || '星期三';
+    const displayDateOnly = systemDateOnlyText || displayDate.replace(/\\s*(?:星期|周)[一二三四五六日天]\\s*/g, '').trim() || displayDate;
+    const displayWeekday = systemWeekdayText || displayDate.match(/星期[一二三四五六日天]/)?.[0] || displayDate.match(/周[一二三四五六日天]/)?.[0] || '星期三';
     const displaySchedule = systemScheduleText || '当前日程';
+    const displayScheduleDetail = systemScheduleDetailText || '';
     const makeLineIcon = (body) => ({ size = 28, className = '' }) => ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("svg", { viewBox: "0 0 24 24", width: size, height: size, className: className, fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round", dangerouslySetInnerHTML: { __html: body } }));
     const ScanRoleIcon = makeLineIcon('<path d="M4 8V5h3"/><path d="M17 5h3v3"/><path d="M20 16v3h-3"/><path d="M7 19H4v-3"/><path d="M2.5 12s3.5-5.5 9.5-5.5S21.5 12 21.5 12s-3.5 5.5-9.5 5.5S2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/>');
     const ProfileIcon = makeLineIcon('<rect x="6" y="3" width="12" height="18" rx="2"/><circle cx="12" cy="9" r="2.5"/><path d="M8.5 16c1.4-3 5.6-3 7 0"/>');
@@ -1036,7 +1047,7 @@ function patchAppRootModule(code) {
   );
   output = output.replace(
     `(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "px-6 mb-8 text-white/90 drop-shadow-md", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "text-6xl font-thin tracking-tighter", children: displayTime }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "text-lg font-medium", children: displayDate })] })`,
-    `(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "px-6 mb-7 text-white/90 drop-shadow-md", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "grid grid-cols-[minmax(0,1fr)_minmax(126px,168px)] items-center gap-3", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "min-w-0", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "text-6xl font-thin tracking-tighter leading-none", children: displayTime }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "mt-2 text-lg font-medium", children: displayDate })] }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "rounded-2xl border border-white/15 bg-slate-950/35 px-3 py-2 shadow-xl backdrop-blur-md", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "flex items-center gap-2 text-sm font-black", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("i", { className: "h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_12px_rgba(103,232,249,.8)]" }), displayWeekday] }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "mt-1 truncate text-[11px] font-semibold text-slate-300", children: displaySchedule })] })] })] })`
+    `(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "px-6 mb-7 text-white/90 drop-shadow-md", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "grid grid-cols-[minmax(0,1fr)_minmax(142px,182px)] items-center gap-3", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "min-w-0", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "text-6xl font-thin tracking-tighter leading-none", children: displayTime }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "mt-2 text-lg font-medium", children: displayDateOnly })] }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "rounded-2xl border border-white/15 bg-slate-950/35 px-3 py-2 shadow-xl backdrop-blur-md", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "flex items-center gap-2 text-sm font-black", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("i", { className: "h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_12px_rgba(103,232,249,.8)]" }), displayWeekday] }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "mt-1 truncate text-xs font-bold text-white/90", children: displaySchedule }), displayScheduleDetail && (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "mt-0.5 truncate text-[11px] font-semibold text-slate-300", children: displayScheduleDetail })] })] })] })`
   );
   output = output.replace(
     /        void _services_dataService__WEBPACK_IMPORTED_MODULE_\d+__\.DataService\.updateResources\(data\);\n/,
@@ -1643,15 +1654,81 @@ function patchHypnosisDataServiceModule(code) {
     `function getSystemClockFrom(system) {
     const dateText = typeof system?.当前日期 === 'string' ? system.当前日期 : undefined;
     const timeText = typeof system?.当前时间 === 'string' ? system.当前时间 : undefined;
-    const scheduleText = typeof system?.['当前/待上课程'] === 'string' && system['当前/待上课程'].trim() && system['当前/待上课程'].trim() !== '无'
-        ? system['当前/待上课程']
-        : typeof system?.当前日程 === 'string'
-            ? system.当前日程
-            : undefined;
+    const dateOnlyText = dateText?.replace(/\\s*(?:星期|周)[一二三四五六日天]\\s*/g, '').trim();
+    const explicitWeekday = dateText?.match(/星期[一二三四五六日天]/)?.[0] ?? dateText?.match(/周[一二三四五六日天]/)?.[0]?.replace('周', '星期');
+    const parsedDate = dateText?.match(/(\\d{1,2})\\s*月\\s*(\\d{1,2})\\s*日/);
+    const weekdayNames = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+    const monthDays = { 1: 31, 2: 28, 3: 31, 4: 30, 5: 31, 6: 30, 7: 31, 8: 31, 9: 30, 10: 31, 11: 30, 12: 31 };
+    const monthOrder = [4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3];
+    const schoolDay = (month, day) => {
+        let total = 0;
+        for (const item of monthOrder) {
+            if (item === month)
+                return total + day;
+            total += monthDays[item] || 30;
+        }
+        return day;
+    };
+    const weekdayText = explicitWeekday || (parsedDate
+        ? weekdayNames[((3 + schoolDay(Number(parsedDate[1]), Number(parsedDate[2])) - schoolDay(4, 9)) % 7 + 7) % 7]
+        : undefined);
+    const minutes = (() => {
+        const match = String(timeText || '').match(/(\\d{1,2})\\s*[:：]\\s*(\\d{1,2})/);
+        return match ? Number(match[1]) * 60 + Number(match[2]) : 12 * 60;
+    })();
+    const fmt = value => String(Math.floor(value / 60)).padStart(2, '0') + ':' + String(value % 60).padStart(2, '0');
+    const weekdayIndex = { '星期日': 0, '星期天': 0, '星期一': 1, '星期二': 2, '星期三': 3, '星期四': 4, '星期五': 5, '星期六': 6 }[weekdayText ?? ''];
+    const timetable = {
+        1: ['现代文', '数学', '英语', '日本史', '体育（田径）', '家庭科'],
+        2: ['古典', '化学', '数学', '英语', '美术', '班会'],
+        3: ['英语', '世界史', '生物', '现代文', '体育（游泳）', '信息'],
+        4: ['数学', '古典', '英语', '化学', '音乐', '保健'],
+        5: ['现代文', '日本史', '生物', '英语', '体育（球技）', '综合探究'],
+    };
+    const periods = [
+        { index: 1, start: 520, end: 570, label: '1限' },
+        { index: 2, start: 580, end: 630, label: '2限' },
+        { index: 3, start: 640, end: 690, label: '3限' },
+        { index: 4, start: 700, end: 750, label: '4限' },
+        { index: 5, start: 800, end: 850, label: '5限' },
+        { index: 6, start: 860, end: 910, label: '6限' },
+    ];
+    const course = periods.find(period => minutes >= period.start && minutes < period.end);
+    const fallbackSlot = (() => {
+        if (weekdayIndex === 0 || weekdayIndex === 6)
+            return { title: '周末自由', detail: '无固定课程' };
+        if (minutes >= 510 && minutes < 520)
+            return { title: '朝礼', detail: '08:30-08:40' };
+        if (course) {
+            const subject = timetable[weekdayIndex]?.[course.index - 1] || '自习';
+            return { title: course.label + ' · ' + subject, detail: fmt(course.start) + '-' + fmt(course.end) };
+        }
+        if (minutes >= 750 && minutes < 800)
+            return { title: '午休', detail: '12:30-13:20' };
+        if (minutes >= 910 && minutes < 925)
+            return { title: '终礼', detail: '15:10-15:25' };
+        if (minutes >= 925 && minutes < 940)
+            return { title: '清扫时间', detail: '15:25-15:40' };
+        if (minutes >= 945)
+            return { title: '放学后', detail: '15:45-' };
+        if (minutes < 510)
+            return { title: '上学前', detail: '08:30前' };
+        return { title: '课间', detail: '移动/准备' };
+    })();
+    const manual = typeof system?.['当前/待上课程'] === 'string' && system['当前/待上课程'].trim() && system['当前/待上课程'].trim() !== '无'
+        ? system['当前/待上课程'].trim()
+        : typeof system?.当前日程 === 'string' && system.当前日程.trim()
+            ? system.当前日程.trim()
+            : '';
+    const scheduleText = manual && !['无', '{}'].includes(manual) ? manual : fallbackSlot.title;
+    const scheduleDetailText = fallbackSlot.detail;
     return {
         dateText,
+        dateOnlyText,
         timeText,
+        weekdayText,
         scheduleText,
+        scheduleDetailText,
         virtualMinutes: parseVirtualMinutesFrom(dateText, timeText),
     };
 }`
@@ -3780,14 +3857,6 @@ function injectInternalMchanApp(html, staticSeed) {
 .st-help-author-card strong{display:block;font-size:14px;line-height:1.2}
 .st-help-author-card p{margin:6px 0 0;color:rgba(226,232,240,.78);font-size:12px;line-height:1.5}
 .st-author-credit-line{margin-top:8px;padding-top:7px;border-top:1px solid rgba(255,255,255,.08);color:rgba(125,211,252,.78)!important;font-size:10px!important;font-weight:800!important;line-height:1.3!important}
-.st-home-course-strip{margin-top:8px;display:inline-flex;max-width:100%;align-items:center;gap:7px;border:1px solid rgba(255,255,255,.12);border-radius:999px;background:rgba(2,6,23,.34);backdrop-filter:blur(12px);box-shadow:0 10px 22px rgba(0,0,0,.16);padding:5px 9px;color:rgba(241,245,249,.9);font-size:11px;line-height:1.2}
-.st-home-course-strip.is-clock-side{position:absolute;margin:0;display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto auto;column-gap:8px;row-gap:2px;align-items:center;min-width:148px;border-color:rgba(255,255,255,.16);border-radius:18px;background:linear-gradient(135deg,rgba(15,23,42,.54),rgba(30,41,59,.34));box-shadow:0 14px 30px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.07);padding:9px 11px;transform:translateY(-50%)}
-.st-home-course-strip strong{font-size:12px;color:#fff;white-space:nowrap}
-.st-home-course-strip span{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(203,213,225,.82)}
-.st-home-course-dot{width:6px;height:6px;border-radius:999px;background:#67e8f9;box-shadow:0 0 12px rgba(103,232,249,.8);flex:0 0 auto}
-.st-home-course-strip.is-clock-side .st-home-course-dot{grid-row:1/3;width:7px;height:7px}
-.st-home-course-strip.is-clock-side strong{font-size:14px;line-height:1.15}
-.st-home-course-strip.is-clock-side span{font-size:11px;line-height:1.25}
 .st-home-author-status{font-size:12px!important;font-weight:900!important;letter-spacing:0!important;white-space:nowrap!important;line-height:1.1!important}
 .st-home-hypnosis-island{position:absolute;top:6px;left:50%;z-index:40;display:inline-flex;min-width:88px;max-width:min(54%,280px);height:27px;transform:translateX(-50%);align-items:center;justify-content:center;gap:7px;border:1px solid rgba(216,180,254,.22);border-radius:999px;background:rgba(2,6,23,.78);backdrop-filter:blur(14px);box-shadow:0 12px 26px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.06);padding:0 10px;color:rgba(245,243,255,.94);font-size:11px;line-height:1.2;pointer-events:none}
 .st-home-hypnosis-island.is-idle{width:88px;padding:0;background:rgba(2,6,23,.78)}
@@ -5384,58 +5453,6 @@ function injectInternalMchanApp(html, staticSeed) {
     return normal;
   }
 
-  function currentHomeScheduleInfo() {
-    const system = getSystemState();
-    const dateText = system["当前日期"] || "4月9日 星期三";
-    const timeText = system["当前时间"] || "12:00";
-    const parsedDate = parseStoryDate(dateText);
-    const weekday = weekdayForStoryDate(dateText) || "星期三";
-    const slot = routineSlot(minutesFromTimeText(timeText), weekday, system["当前日程"], parsedDate);
-    return { weekday, title: slot.title, detail: slot.detail };
-  }
-
-  function findHomeClockElement(header, timeText) {
-    const normalized = String(timeText || "").trim();
-    if (!normalized) return null;
-    const candidates = Array.from(header.querySelectorAll("div,span,p,h1,h2,strong"))
-      .filter((element) => element.textContent?.trim() === normalized);
-    if (!candidates.length) return null;
-    candidates.sort((a, b) => {
-      const fontDelta = parseFloat(getComputedStyle(b).fontSize || "0") - parseFloat(getComputedStyle(a).fontSize || "0");
-      if (Math.abs(fontDelta) > 0.5) return fontDelta;
-      return b.getBoundingClientRect().height - a.getBoundingClientRect().height;
-    });
-    return candidates[0] || null;
-  }
-
-  function positionHomeCourseStrip(header, strip) {
-    const system = getSystemState();
-    const clock = findHomeClockElement(header, system["当前时间"] || "12:00");
-    if (!clock) {
-      strip.classList.remove("is-clock-side");
-      strip.removeAttribute("style");
-      return;
-    }
-    header.style.position = header.style.position || "relative";
-    const headerRect = header.getBoundingClientRect();
-    const clockRect = clock.getBoundingClientRect();
-    const clockStyle = getComputedStyle(clock);
-    const fontSize = parseFloat(clockStyle.fontSize || "0") || 72;
-    const timeText = String(system["当前时间"] || "12:00").trim();
-    const estimatedTextWidth = Math.ceil(fontSize * Math.max(4, timeText.length) * 0.58);
-    const clockTextRight = Math.min(clockRect.right, clockRect.left + estimatedTextWidth + 8);
-    const available = Math.floor(headerRect.right - clockTextRight - 18);
-    if (available < 124) {
-      strip.classList.remove("is-clock-side");
-      strip.removeAttribute("style");
-      return;
-    }
-    strip.classList.add("is-clock-side");
-    strip.style.left = Math.round(clockTextRight - headerRect.left + 14) + "px";
-    strip.style.top = Math.round(clockRect.top - headerRect.top + clockRect.height * 0.55) + "px";
-    strip.style.maxWidth = Math.min(220, available) + "px";
-  }
-
   function specialDateLabel(item) {
     const from = item.from ?? item.d;
     const to = item.to ?? item.d;
@@ -6584,25 +6601,6 @@ function injectInternalMchanApp(html, staticSeed) {
     return null;
   }
 
-  function patchHomeCourseStatus(root) {
-    if (!root) return;
-    if (!looksLikePhoneHome(root)) return;
-    const header = getHomeHeader(root);
-    if (!header) return;
-    const info = currentHomeScheduleInfo();
-    const signature = info.weekday + "|" + info.title + "|" + info.detail;
-    let strip = header.querySelector(":scope > .st-home-course-strip");
-    if (!strip) {
-      strip = document.createElement("div");
-      strip.className = "st-home-course-strip";
-      header.appendChild(strip);
-    }
-    positionHomeCourseStrip(header, strip);
-    if (strip.dataset.signature === signature) return;
-    strip.dataset.signature = signature;
-    strip.innerHTML = '<i class="st-home-course-dot"></i><strong>' + escapeHtml(info.weekday) + '</strong><span>' + escapeHtml(info.title + (info.detail ? " · " + info.detail : "")) + '</span>';
-  }
-
   function patchHomeHypnosisIsland(root) {
     if (!root) return;
     let island = root.querySelector(":scope > .st-home-hypnosis-island");
@@ -6753,7 +6751,6 @@ function injectInternalMchanApp(html, staticSeed) {
   function patchHomeTile() {
     const root = findPhoneRoot(document.body);
     patchHomeAuthorStatus(root);
-    patchHomeCourseStatus(root);
     patchHomeHypnosisIsland(root);
     removeHomeOperationConfirm(root);
     ensureOperationSidePanel();
