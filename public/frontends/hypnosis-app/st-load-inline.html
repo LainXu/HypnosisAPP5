@@ -1321,11 +1321,18 @@ var __webpack_exports__ = __webpack_require__("./src/催眠APP前端/index.tsx")
 .st-graph-line{stroke:rgba(125,211,252,.35);stroke-width:2;stroke-linecap:round}
 .st-graph-line.school{stroke:rgba(251,191,36,.34)}
 .st-graph-node{position:absolute;transform:translate(-50%,-50%);max-width:110px;min-width:74px;border:1px solid rgba(255,255,255,.12);border-radius:16px;background:rgba(15,23,42,.82);box-shadow:0 12px 24px rgba(0,0,0,.26),inset 0 1px 0 rgba(255,255,255,.06);padding:9px 8px;text-align:center}
+.st-graph-node.is-current{border-color:rgba(244,114,182,.68);box-shadow:0 0 0 1px rgba(244,114,182,.22),0 14px 30px rgba(190,24,93,.25),inset 0 1px 0 rgba(255,255,255,.08)}
 .st-graph-node strong{display:block;font-size:12px;color:#f8fafc;line-height:1.25;word-break:keep-all}
 .st-graph-node small{display:block;margin-top:3px;font-size:9px;color:rgba(203,213,225,.5);line-height:1.2}
 .st-graph-node.world{border-color:rgba(34,211,238,.36);background:linear-gradient(135deg,rgba(8,47,73,.78),rgba(49,46,129,.62))}
 .st-graph-node.home{border-color:rgba(236,72,153,.26)}
 .st-graph-node.school{border-color:rgba(251,191,36,.32)}
+.st-graph-info{display:grid;gap:8px;border:1px solid rgba(255,255,255,.09);border-radius:15px;background:rgba(2,6,23,.34);padding:10px}
+.st-graph-info-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.st-graph-info-head strong{font-size:14px;color:#f8fafc;line-height:1.25}
+.st-graph-info-head small{font-size:10px;color:rgba(125,211,252,.7);white-space:nowrap}
+.st-graph-info p{margin:0;color:rgba(226,232,240,.72);font-size:12px;line-height:1.55;white-space:pre-wrap}
+.st-graph-delete{justify-self:end;border:1px solid rgba(244,63,94,.28);border-radius:11px;background:rgba(244,63,94,.12);color:#fecdd3;font-size:11px;font-weight:850;padding:7px 10px;cursor:pointer}
 .st-rule-list{display:grid;gap:8px}
 .st-rule-empty{margin:0;color:rgba(203,213,225,.52);font-size:12px;text-align:center;padding:18px 4px}
 .st-rule-item{border:1px solid rgba(255,255,255,.09);border-radius:14px;background:rgba(255,255,255,.05);padding:10px}
@@ -1336,6 +1343,10 @@ var __webpack_exports__ = __webpack_require__("./src/催眠APP前端/index.tsx")
 .st-rule-input:focus{border-color:rgba(34,211,238,.55);box-shadow:0 0 0 3px rgba(34,211,238,.12)}
 .st-rule-cost{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .st-rule-cost span{border:1px solid rgba(255,255,255,.08);border-radius:12px;background:rgba(2,6,23,.32);padding:7px 5px;text-align:center;color:rgba(226,232,240,.72);font-size:10px;font-weight:850}
+.st-rule-cost.is-single{grid-template-columns:1fr}
+.st-rule-state{margin:0;color:rgba(226,232,240,.68);font-size:11px;line-height:1.45}
+.st-rule-button:disabled{opacity:.48;cursor:not-allowed;filter:saturate(.7)}
+.st-rule-delete{margin-top:8px;border:1px solid rgba(244,63,94,.26);border-radius:10px;background:rgba(244,63,94,.11);color:#fecdd3;font-size:10px;font-weight:850;padding:6px 9px;cursor:pointer}
 .st-cal-hero{display:grid;gap:8px;border-color:rgba(34,211,238,.18);background:linear-gradient(135deg,rgba(34,211,238,.14),rgba(168,85,247,.1))}
 .st-cal-date{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
 .st-cal-date strong{font-size:24px;line-height:1;color:#fff}
@@ -1757,15 +1768,15 @@ var __webpack_exports__ = __webpack_require__("./src/催眠APP前端/index.tsx")
   const ADD_ROLE_FORM_FIELDS = ["roleName", "aliases", "summary", "relation", "appearance", "personality", "extra"];
   const STATIC_SCAN_EXAMPLE_FALLBACKS = [
     {
-      title: "教师身份",
-      note: "临时测试示例2",
-      roleName: "白鸟凛",
-      aliases: "白鸟老师, 凛老师",
-      summary: "{{user}}在教学楼办公室门口看到并锁定的年轻女教师。她身形高挑，穿深色修身西装外套与白衬衫，手里抱着教案和点名册。",
-      relation: "学校教师；与{{user}}存在课堂/校园管理关系，初始保持师生距离。",
-      appearance: "黑色长发低束，细框眼镜，妆容干净，步态克制，身上有淡淡墨水和香水味。",
-      personality: "理性、负责、观察力强，面对异常会先保持礼貌警惕；对规则、秩序和职业身份很敏感。",
-      extra: "保持教师身份、校园场景和谨慎态度；不要直接跳过扫描/锁定与AI建档判断。"
+      title: "阴郁同学",
+      note: "已填写示例",
+      roleName: "白枢暗子",
+      aliases: "暗子, 白枢同学, 灵异女, 体育健将",
+      summary: "{{user}}在同班教室或走廊里看到并锁定的阴郁系同班女学生。她平时沉默寡言、神经兮兮，听说喜欢灵异学，对鬼怪和怪谈异常感兴趣。",
+      relation: "同班同学；她平时几乎不主动社交，只会在灵异、鬼怪、都市传说等话题被触发时突然打开话匣子。",
+      appearance: "日常打扮刻意朴素阴沉，刘海和宽松校服遮住大半气质，看起来瘦弱不起眼；但只要认真整理发型、妆容和衣装，会显出比爱丽莎还要精致的美人感。身体实际肌肉饱满，有四块腹肌，运动能力很强却完全不像外表。",
+      personality: "阴郁、神经质、沉默寡言，对灵异学和鬼怪极端兴奋；一旦打开话匣子会变成惹人烦的话痨。体育成绩优秀，是夏美之外的第二大体育健将，但本人对体育完全不感兴趣。",
+      extra: "AI建档时保留：同班同学、阴郁灵异爱好者、沉默寡言但话痨反差、打扮后精致美人、隐藏运动天赋和四块腹肌、对体育无兴趣。"
     },
     {
       title: "异世界杀手",
@@ -1803,6 +1814,7 @@ var __webpack_exports__ = __webpack_require__("./src/催眠APP前端/index.tsx")
 
   function shouldUseScanExampleFallback(example, index) {
     if (!example || typeof example !== "object" || Array.isArray(example)) return false;
+    if (index === 0 && String(example.note || "").trim() === "临时测试示例2") return true;
     if (index === 1) {
       const text = SCAN_EXAMPLE_FIELDS.map((key) => String(example[key] || "")).join("\n");
       return String(example.roleName || "").trim() === "千杀百花" && !text.includes("勇者") && !text.includes("英雄");
@@ -1896,7 +1908,7 @@ var __webpack_exports__ = __webpack_require__("./src/催眠APP前端/index.tsx")
         '<section class="st-add-role-card">' +
           '<h3>扫描目标</h3>' +
           '<div class="st-add-role-grid">' +
-            '<label class="st-add-role-field"><span>角色名（可选）</span><input name="roleName" autocomplete="off" placeholder="例如：白鸟凛；留空由 AI 随机"></label>' +
+            '<label class="st-add-role-field"><span>角色名（可选）</span><input name="roleName" autocomplete="off" placeholder="例如：白枢暗子；留空由 AI 随机"></label>' +
             '<label class="st-add-role-field"><span>别名 / 关键词</span><input name="aliases" autocomplete="off" placeholder="用逗号分隔，可留空"></label>' +
             '<label class="st-add-role-field"><span>目标定位 / 身体（必填）</span><textarea name="summary" placeholder="{{user}}看见并锁定的目标：她的身体、姿态、服装、所在场景、显著特征"></textarea></label>' +
             '<label class="st-add-role-field"><span>与主角关系</span><textarea name="relation" placeholder="可留空，由 AI 按场景随机"></textarea></label>' +
@@ -3366,23 +3378,23 @@ var __webpack_exports__ = __webpack_require__("./src/催眠APP前端/index.tsx")
     world: {
       title: "区域地图",
       nodes: [
-        { id: "school", label: "私立斋明学园", kind: "world", x: 50, y: 45 },
-        { id: "saionji-company", label: "西园寺企业", kind: "world", x: 77, y: 23 },
-        { id: "saionji-home", label: "西园寺的家", kind: "home", x: 78, y: 70 },
-        { id: "miyuki-home", label: "深雪的家", kind: "home", x: 23, y: 70 },
-        { id: "natsumi-home", label: "夏美的家", kind: "home", x: 22, y: 25 }
+        { id: "school", label: "私立斋明学园", kind: "world", x: 50, y: 45, info: "东京近郊的老牌私立升学高中，前千金女校，今年正式改为男女混校。{{user}}目前主要活动的舞台。" },
+        { id: "saionji-company", label: "西园寺企业", kind: "world", x: 77, y: 23, info: "西园寺财团相关企业据点，象征爱丽莎家族的财富、人脉和社会影响力。" },
+        { id: "saionji-home", label: "西园寺的家", kind: "home", x: 78, y: 70, info: "西园寺爱丽莎的家。豪宅、佣人和严格家族秩序构成她日常生活的背景。" },
+        { id: "miyuki-home", label: "深雪的家", kind: "home", x: 23, y: 70, info: "月咏深雪的住处。安静、整洁、书卷气重，适合处理学习、班务和私人阅读情节。" },
+        { id: "natsumi-home", label: "夏美的家", kind: "home", x: 22, y: 25, info: "犬冢夏美的家。生活气息更强，和运动、饮食、训练后的休息场景容易连接。" }
       ],
       edges: [["school", "saionji-company"], ["school", "saionji-home"], ["school", "miyuki-home"], ["school", "natsumi-home"]]
     },
     school: {
       title: "学校地图",
       nodes: [
-        { id: "classroom", label: "教室", kind: "school", x: 50, y: 28 },
-        { id: "corridor", label: "走廊", kind: "school", x: 50, y: 50 },
-        { id: "library", label: "图书馆", kind: "school", x: 23, y: 42 },
-        { id: "principal", label: "校长室", kind: "school", x: 24, y: 68 },
-        { id: "pool", label: "游泳池", kind: "school", x: 77, y: 33 },
-        { id: "field", label: "操场", kind: "school", x: 76, y: 66 }
+        { id: "classroom", label: "教室", kind: "school", x: 50, y: 28, info: "二年级教室。日常上课、课间人际、视线交错和班级中心关系最容易发生的地点。" },
+        { id: "corridor", label: "走廊", kind: "school", x: 50, y: 50, info: "连接教室、社团与各专用教室的公共空间。人来人往，适合短暂偶遇和擦肩而过。" },
+        { id: "library", label: "图书馆", kind: "school", x: 23, y: 42, info: "安静的阅读与自习空间。深雪常会出现，也适合调查资料、传闻和灵异记录。" },
+        { id: "principal", label: "校长室", kind: "school", x: 24, y: 68, info: "校方管理层所在地点。校规、处分、学校声望和重大事件容易在这里交汇。" },
+        { id: "pool", label: "游泳池", kind: "school", x: 77, y: 33, info: "体育（水泳）相关场地。视线、换装、体能差异和季节活动很容易在这里展开。" },
+        { id: "field", label: "操场", kind: "school", x: 76, y: 66, info: "田径与户外体育场地。夏美的主场，也是白枢暗子隐藏运动能力可能暴露的地方。" }
       ],
       edges: [["corridor", "classroom"], ["corridor", "library"], ["corridor", "principal"], ["corridor", "pool"], ["corridor", "field"], ["pool", "field"]]
     }
@@ -3400,6 +3412,10 @@ var __webpack_exports__ = __webpack_require__("./src/催眠APP前端/index.tsx")
     return "hypnoos.static-map." + scope + ".v1:" + graphScopeKey();
   }
 
+  function graphCurrentStorageKey(scope) {
+    return "hypnoos.static-map.current." + scope + ".v1:" + graphScopeKey();
+  }
+
   function cloneGraph(value) {
     try {
       return JSON.parse(JSON.stringify(value));
@@ -3410,6 +3426,7 @@ var __webpack_exports__ = __webpack_require__("./src/催眠APP前端/index.tsx")
 
   function normalizeGraphGraph(raw, scope) {
     const fallback = STATIC_GRAPH_DEFAULTS[scope] || STATIC_GRAPH_DEFAULTS.world;
+    const fallbackById = new Map((fallback.nodes || []).map((node) => [String(node.id), node]));
     const source = raw && typeof raw === "object" ? raw : fallback;
     const nodes = Array.isArray(source.nodes) ? source.nodes : fallback.nodes;
     const normalizedNodes = nodes
@@ -3418,6 +3435,7 @@ var __webpack_exports__ = __webpack_require__("./src/催眠APP前端/index.tsx")
         id: String(node.id || node.label || ("node-" + index)),
         label: String(node.label || node.name || node.id || ("地点" + (index + 1))),
         kind: String(node.kind || node.type || (scope === "school" ? "school" : "world")),
+        info: String(node.info || node.description || node.desc || fallbackById.get(String(node.id))?.info || "暂无地点信息。"),
         x: Math.max(7, Math.min(93, Number(node.x ?? node.left ?? 50))),
         y: Math.max(9, Math.min(91, Number(node.y ?? node.top ?? 50)))
       }));
@@ -3438,6 +3456,43 @@ var __webpack_exports__ = __webpack_require__("./src/催眠APP前端/index.tsx")
     try {
       localStorage.setItem(graphStorageKey(scope), JSON.stringify(normalizeGraphGraph(graph, scope)));
     } catch {}
+  }
+
+  function defaultGraphNodeIds(scope) {
+    const fallback = STATIC_GRAPH_DEFAULTS[scope] || STATIC_GRAPH_DEFAULTS.world;
+    return new Set((fallback.nodes || []).map((node) => String(node.id)));
+  }
+
+  function currentGraphNodeId(scope, graph) {
+    try {
+      const stored = localStorage.getItem(graphCurrentStorageKey(scope));
+      if (stored && graph.nodes.some((node) => node.id === stored)) return stored;
+    } catch {}
+    return graph.nodes[0]?.id || "";
+  }
+
+  function setCurrentGraphNode(scope, nodeId) {
+    try {
+      localStorage.setItem(graphCurrentStorageKey(scope), String(nodeId || ""));
+    } catch {}
+  }
+
+  function deleteStaticGraphNode(scope, nodeId) {
+    const ids = defaultGraphNodeIds(scope);
+    if (ids.has(String(nodeId))) return false;
+    const graph = loadStaticGraph(scope);
+    const next = {
+      ...graph,
+      nodes: graph.nodes.filter((node) => node.id !== nodeId),
+      edges: graph.edges.filter(([from, to]) => from !== nodeId && to !== nodeId)
+    };
+    saveStaticGraph(scope, next);
+    try {
+      if (localStorage.getItem(graphCurrentStorageKey(scope)) === nodeId) {
+        localStorage.removeItem(graphCurrentStorageKey(scope));
+      }
+    } catch {}
+    return true;
   }
 
   function parseStaticGraphUpdateText(text) {
@@ -3495,6 +3550,9 @@ var __webpack_exports__ = __webpack_require__("./src/催眠APP前端/index.tsx")
 
   function renderStaticGraphCard(scope) {
     const graph = loadStaticGraph(scope);
+    const currentId = currentGraphNodeId(scope, graph);
+    const currentNode = graph.nodes.find((node) => node.id === currentId) || graph.nodes[0] || null;
+    const deletable = Boolean(currentNode) && !defaultGraphNodeIds(scope).has(currentNode.id);
     const nodeById = new Map(graph.nodes.map((node) => [node.id, node]));
     const lines = graph.edges.map(([from, to]) => {
       const a = nodeById.get(from);
@@ -3503,13 +3561,21 @@ var __webpack_exports__ = __webpack_require__("./src/催眠APP前端/index.tsx")
       return '<line class="st-graph-line ' + escapeAttr(scope) + '" x1="' + a.x + '%" y1="' + a.y + '%" x2="' + b.x + '%" y2="' + b.y + '%"></line>';
     }).join("");
     const nodes = graph.nodes.map((node) => (
-      '<button type="button" class="st-graph-node ' + escapeAttr(node.kind) + '" style="left:' + node.x + '%;top:' + node.y + '%" title="' + escapeAttr(node.label) + '">' +
+      '<button type="button" class="st-graph-node ' + escapeAttr(node.kind) + (node.id === currentId ? " is-current" : "") + '" data-graph-node="' + escapeAttr(node.id) + '" data-graph-scope="' + escapeAttr(scope) + '" style="left:' + node.x + '%;top:' + node.y + '%" title="' + escapeAttr(node.label) + '">' +
         '<strong>' + escapeHtml(node.label) + '</strong><small>' + escapeHtml(node.kind === "home" ? "住处" : node.kind === "school" ? "校内" : "地点") + '</small>' +
       '</button>'
     )).join("");
+    const info = currentNode
+      ? '<div class="st-graph-info">' +
+          '<div class="st-graph-info-head"><strong>' + escapeHtml(currentNode.label) + '</strong><small>当前地点</small></div>' +
+          '<p>' + escapeHtml(currentNode.info || "暂无地点信息。") + '</p>' +
+          (deletable ? '<button class="st-graph-delete" type="button" data-graph-action="delete-node" data-graph-scope="' + escapeAttr(scope) + '" data-graph-node-id="' + escapeAttr(currentNode.id) + '">删除本地地点</button>' : "") +
+        '</div>'
+      : '<div class="st-graph-info"><p>暂无地点信息。</p></div>';
     return '<section class="st-lite-card st-graph-card">' +
-      '<div class="st-graph-head"><strong>' + escapeHtml(graph.title) + '</strong><span>' + graph.nodes.length + ' 地点 / ' + graph.edges.length + ' 连接</span></div>' +
+      '<div class="st-graph-head"><strong>' + escapeHtml(graph.title) + '</strong><span>' + graph.nodes.length + ' 地点</span></div>' +
       '<div class="st-graph-canvas"><svg viewBox="0 0 100 100" preserveAspectRatio="none">' + lines + '</svg>' + nodes + '</div>' +
+      info +
       '<div class="st-graph-tools"><button class="st-graph-tool" type="button" data-graph-action="reset" data-graph-scope="' + escapeAttr(scope) + '">恢复默认</button><button class="st-graph-tool" type="button" data-graph-action="sync" data-graph-scope="' + escapeAttr(scope) + '">读取更新</button></div>' +
     '</section>';
   }
@@ -3520,13 +3586,32 @@ var __webpack_exports__ = __webpack_require__("./src/催眠APP前端/index.tsx")
     return rules && typeof rules === "object" && !Array.isArray(rules) ? rules : {};
   }
 
+  function schoolRuleRequirementState() {
+    const system = getSystemState();
+    const roles = getStatsRoles();
+    const tier = String(system["催眠APP订阅等级"] || "").trim().toUpperCase();
+    const alisaFavor = Number(roles?.["西园寺爱丽莎"]?.["好感度"] ?? 0);
+    const rules = getSchoolRules();
+    return {
+      vip5: /VIPs*5/.test(tier),
+      alisaFavor: Number.isFinite(alisaFavor) ? alisaFavor : 0,
+      count: Object.keys(rules).length
+    };
+  }
+
   function renderSchoolRulesCard() {
     const rules = getSchoolRules();
     const entries = Object.entries(rules);
+    const requirement = schoolRuleRequirementState();
+    const blockedReasons = [];
+    if (!requirement.vip5) blockedReasons.push("需要VIP5");
+    if (requirement.alisaFavor < 100) blockedReasons.push("西园寺爱丽莎好感度至少100");
+    if (requirement.count >= 3) blockedReasons.push("校规最多3条");
+    const canSubmit = blockedReasons.length === 0;
     const list = entries.length
       ? entries.map(([name, value]) => {
           const text = typeof value === "object" && value !== null ? (value["内容"] || value["效果"] || JSON.stringify(value)) : value;
-          return '<article class="st-rule-item"><strong>' + escapeHtml(name) + '</strong><p>' + escapeHtml(text) + '</p></article>';
+          return '<article class="st-rule-item"><strong>' + escapeHtml(name) + '</strong><p>' + escapeHtml(text) + '</p><button class="st-rule-delete" type="button" data-school-rule-delete="' + escapeAttr(name) + '">删除校规</button></article>';
         }).join("")
       : '<p class="st-rule-empty">暂无校规</p>';
     return '<section class="st-lite-card st-graph-card">' +
@@ -3535,16 +3620,26 @@ var __webpack_exports__ = __webpack_require__("./src/催眠APP前端/index.tsx")
     '</section>' +
     '<section class="st-lite-card st-rule-form">' +
       '<textarea class="st-rule-input" data-school-rule-input placeholder="输入想制定的校规"></textarea>' +
-      '<div class="st-rule-cost"><span>¥1,000,000</span><span>MC能量 10000</span><span>MC点 10000</span></div>' +
-      '<button class="st-rule-button" type="button" data-school-rule-submit>申请立校规</button>' +
+      '<div class="st-rule-cost is-single"><span>当前MC点 500000</span></div>' +
+      '<p class="st-rule-state">要求：VIP5；西园寺爱丽莎好感度≥100；一次发布一条；最多3条。当前：' + escapeHtml((requirement.vip5 ? "VIP5" : "非VIP5") + " / 爱丽莎好感度 " + requirement.alisaFavor + " / " + requirement.count + "条") + '</p>' +
+      '<button class="st-rule-button" type="button" data-school-rule-submit' + (canSubmit ? "" : " disabled") + '>' + (canSubmit ? "申请立校规" : blockedReasons.join(" / ")) + '</button>' +
     '</section>';
   }
 
   function bindGraphPageActions(page) {
+    page.querySelectorAll("[data-graph-node]").forEach((button) => {
+      button.addEventListener("click", () => {
+        setCurrentGraphNode(button.getAttribute("data-graph-scope") || "world", button.getAttribute("data-graph-node") || "");
+        if (page.classList.contains("st-school-app")) renderSchoolPage(page);
+        else renderMapPage(page);
+      });
+    });
     page.querySelectorAll("[data-graph-action]").forEach((button) => {
       button.addEventListener("click", () => {
         const scope = button.getAttribute("data-graph-scope") || "world";
-        if (button.getAttribute("data-graph-action") === "reset") resetStaticGraph(scope);
+        const action = button.getAttribute("data-graph-action");
+        if (action === "reset") resetStaticGraph(scope);
+        else if (action === "delete-node") deleteStaticGraphNode(scope, button.getAttribute("data-graph-node-id") || "");
         else syncStaticGraphUpdatesFromChat();
         if (page.classList.contains("st-school-app")) renderSchoolPage(page);
         else renderMapPage(page);
@@ -3558,14 +3653,23 @@ var __webpack_exports__ = __webpack_require__("./src/催眠APP前端/index.tsx")
         来源: "学校",
         操作: "申请立校规",
         校规内容: ruleText,
+        前置条件: "催眠APP订阅等级=VIP5；西园寺爱丽莎好感度>=100；现有校规少于3条；本次只发布一条。",
         固定代价: {
-          持有零花钱: "1000000日元",
-          MC能量: 10000,
-          当前MC点: 10000
+          当前MC点: 500000
         },
-        AI执行规范: "余额全部足够时扣除三项代价并在/校规中新增；任一不足则失败，不扣费不生效。"
+        AI执行规范: "全部前置条件满足且当前MC点足够时扣除500000当前MC点并在/校规中新增；任一条件不满足则失败，不扣费不生效。"
       });
       input.value = "";
+    });
+    page.querySelectorAll("[data-school-rule-delete]").forEach((button) => {
+      button.addEventListener("click", () => {
+        appendAppOperation({
+          来源: "学校",
+          操作: "删除校规",
+          校规名: button.getAttribute("data-school-rule-delete") || "",
+          AI执行规范: "从/校规中删除对应校规；删除不返还任何当前MC点或其他资源。"
+        });
+      });
     });
   }
 
@@ -3692,7 +3796,7 @@ var __webpack_exports__ = __webpack_require__("./src/催眠APP前端/index.tsx")
       ? ["成就", "名称", "目标", "角色"]
       : String(item?.action || "").includes("任务")
         ? ["任务", "名称", "数量", "目标", "角色"]
-        : ["校规内容", "功能", "命令", "目标", "角色", "角色名", "名称", "等级", "数量"];
+        : ["校规内容", "校规名", "功能", "命令", "目标", "角色", "角色名", "名称", "等级", "数量"];
     for (const key of keys) {
       const value = readField(key);
       if (value) return value.length > 18 ? value.slice(0, 18) + "..." : value;

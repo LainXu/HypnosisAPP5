@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const PORT = Number(process.env.PORT || 5173);
-const WORKSPACE_CARD_PNG = join(ROOT, "public/cards/hypnosis-app-local-white.png");
+const WORKSPACE_CARD_PNG = join(ROOT, "public/cards/hypnosis-app.png");
 const WORKSPACE_CARD_JSON = join(ROOT, "public/cards/hypnosis-app-workbench-current.json");
 const MAX_POST_BYTES = 32 * 1024 * 1024;
 const PNG_SIGNATURE = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
@@ -76,7 +76,7 @@ async function handleWorkbenchPost(request, response, pathname) {
       return true;
     }
     await writeFile(WORKSPACE_CARD_PNG, body);
-    sendJson(response, 200, { ok: true, path: "public/cards/hypnosis-app-local-white.png", size: body.length });
+    sendJson(response, 200, { ok: true, path: "public/cards/hypnosis-app.png", size: body.length });
     return true;
   }
 

@@ -10,7 +10,7 @@ import {
   parseCharacterCardFromUrl
 } from "./card-parser.js";
 
-const SAMPLE_CARD_URL = "./public/cards/hypnosis-app-local-white.png";
+const SAMPLE_CARD_URL = "./public/cards/hypnosis-app.png";
 const LOCAL_FRONTEND_URL = "/public/frontends/hypnosis-app/index.html";
 const WORKSPACE_PNG_SAVE_URL = "/__workbench/save-card-png";
 const WORKSPACE_JSON_SAVE_URL = "/__workbench/save-card-json";
@@ -27,15 +27,15 @@ const SCAN_EXAMPLE_FIELDS = ["title", "note", "roleName", "aliases", "summary", 
 const WORKSPACE_FILE_SAVE_DELAY_MS = 700;
 const DEFAULT_SCAN_EXAMPLES = [
   {
-    title: "教师身份",
-    note: "临时测试示例2",
-    roleName: "白鸟凛",
-    aliases: "白鸟老师, 凛老师",
-    summary: "{{user}}在教学楼办公室门口看到并锁定的年轻女教师。她身形高挑，穿深色修身西装外套与白衬衫，手里抱着教案和点名册。",
-    relation: "学校教师；与{{user}}存在课堂/校园管理关系，初始保持师生距离。",
-    appearance: "黑色长发低束，细框眼镜，妆容干净，步态克制，身上有淡淡墨水和香水味。",
-    personality: "理性、负责、观察力强，面对异常会先保持礼貌警惕；对规则、秩序和职业身份很敏感。",
-    extra: "保持教师身份、校园场景和谨慎态度；不要直接跳过扫描/锁定与AI建档判断。"
+    title: "阴郁同学",
+    note: "已填写示例",
+    roleName: "白枢暗子",
+    aliases: "暗子, 白枢同学, 灵异女, 体育健将",
+    summary: "{{user}}在同班教室或走廊里看到并锁定的阴郁系同班女学生。她平时沉默寡言、神经兮兮，听说喜欢灵异学，对鬼怪和怪谈异常感兴趣。",
+    relation: "同班同学；她平时几乎不主动社交，只会在灵异、鬼怪、都市传说等话题被触发时突然打开话匣子。",
+    appearance: "日常打扮刻意朴素阴沉，刘海和宽松校服遮住大半气质，看起来瘦弱不起眼；但只要认真整理发型、妆容和衣装，会显出比爱丽莎还要精致的美人感。身体实际肌肉饱满，有四块腹肌，运动能力很强却完全不像外表。",
+    personality: "阴郁、神经质、沉默寡言，对灵异学和鬼怪极端兴奋；一旦打开话匣子会变成惹人烦的话痨。体育成绩优秀，是夏美之外的第二大体育健将，但本人对体育完全不感兴趣。",
+    extra: "AI建档时保留：同班同学、阴郁灵异爱好者、沉默寡言但话痨反差、打扮后精致美人、隐藏运动天赋和四块腹肌、对体育无兴趣。"
   },
   {
     title: "异世界杀手",
@@ -1144,8 +1144,8 @@ function renderScanExamples() {
         <div class="form-grid">
           ${scanExampleField(state.selectedScanExample, "title", selected.title, "卡片标题", { placeholder: "例如：教师身份" })}
           ${scanExampleField(state.selectedScanExample, "note", selected.note, "副标题", { placeholder: "例如：已填写示例 / 预留空白" })}
-          ${scanExampleField(state.selectedScanExample, "roleName", selected.roleName, "角色名", { placeholder: "例如：白鸟凛" })}
-          ${scanExampleField(state.selectedScanExample, "aliases", selected.aliases, "关键词 / 别名", { placeholder: "白鸟老师, 凛老师" })}
+          ${scanExampleField(state.selectedScanExample, "roleName", selected.roleName, "角色名", { placeholder: "例如：白枢暗子" })}
+          ${scanExampleField(state.selectedScanExample, "aliases", selected.aliases, "关键词 / 别名", { placeholder: "暗子, 白枢同学" })}
           ${scanExampleField(state.selectedScanExample, "summary", selected.summary, "目标定位 / 身体", { textarea: true, rows: 5, wide: true, placeholder: "{{user}}看到并锁定的目标：她的身体、姿态、服装、所在场景、显著特征" })}
           ${scanExampleField(state.selectedScanExample, "relation", selected.relation, "与主角关系", { textarea: true, rows: 4, wide: true })}
           ${scanExampleField(state.selectedScanExample, "appearance", selected.appearance, "外貌", { textarea: true, rows: 4, wide: true })}
