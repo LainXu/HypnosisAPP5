@@ -3624,9 +3624,13 @@ function injectInternalMchanApp(html, staticSeed) {
 .st-help-author-card p{margin:6px 0 0;color:rgba(226,232,240,.78);font-size:12px;line-height:1.5}
 .st-author-credit-line{margin-top:8px;padding-top:7px;border-top:1px solid rgba(255,255,255,.08);color:rgba(125,211,252,.78)!important;font-size:10px!important;font-weight:800!important;line-height:1.3!important}
 .st-home-course-strip{margin-top:8px;display:inline-flex;max-width:100%;align-items:center;gap:7px;border:1px solid rgba(255,255,255,.12);border-radius:999px;background:rgba(2,6,23,.34);backdrop-filter:blur(12px);box-shadow:0 10px 22px rgba(0,0,0,.16);padding:5px 9px;color:rgba(241,245,249,.9);font-size:11px;line-height:1.2}
+.st-home-course-strip.is-clock-side{position:absolute;margin:0;display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto auto;column-gap:8px;row-gap:2px;align-items:center;min-width:148px;border-color:rgba(255,255,255,.16);border-radius:18px;background:linear-gradient(135deg,rgba(15,23,42,.54),rgba(30,41,59,.34));box-shadow:0 14px 30px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.07);padding:9px 11px;transform:translateY(-50%)}
 .st-home-course-strip strong{font-size:12px;color:#fff;white-space:nowrap}
 .st-home-course-strip span{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(203,213,225,.82)}
 .st-home-course-dot{width:6px;height:6px;border-radius:999px;background:#67e8f9;box-shadow:0 0 12px rgba(103,232,249,.8);flex:0 0 auto}
+.st-home-course-strip.is-clock-side .st-home-course-dot{grid-row:1/3;width:7px;height:7px}
+.st-home-course-strip.is-clock-side strong{font-size:14px;line-height:1.15}
+.st-home-course-strip.is-clock-side span{font-size:11px;line-height:1.25}
 .st-home-hypnosis-island{position:absolute;top:17px;left:50%;z-index:40;display:inline-flex;min-width:88px;max-width:min(54%,280px);height:27px;transform:translateX(-50%);align-items:center;justify-content:center;gap:7px;border:1px solid rgba(216,180,254,.22);border-radius:999px;background:rgba(2,6,23,.78);backdrop-filter:blur(14px);box-shadow:0 12px 26px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.06);padding:0 10px;color:rgba(245,243,255,.94);font-size:11px;line-height:1.2;pointer-events:none}
 .st-home-hypnosis-island.is-idle{width:88px;padding:0;background:rgba(2,6,23,.78)}
 .st-home-hypnosis-island.is-idle>*{display:none!important}
@@ -5232,6 +5236,43 @@ function injectInternalMchanApp(html, staticSeed) {
     return { weekday, title: slot.title, detail: slot.detail };
   }
 
+  function findHomeClockElement(header, timeText) {
+    const normalized = String(timeText || "").trim();
+    if (!normalized) return null;
+    const candidates = Array.from(header.querySelectorAll("div,span,p,h1,h2,strong"))
+      .filter((element) => element.textContent?.trim() === normalized);
+    if (!candidates.length) return null;
+    candidates.sort((a, b) => {
+      const fontDelta = parseFloat(getComputedStyle(b).fontSize || "0") - parseFloat(getComputedStyle(a).fontSize || "0");
+      if (Math.abs(fontDelta) > 0.5) return fontDelta;
+      return b.getBoundingClientRect().height - a.getBoundingClientRect().height;
+    });
+    return candidates[0] || null;
+  }
+
+  function positionHomeCourseStrip(header, strip) {
+    const system = getSystemState();
+    const clock = findHomeClockElement(header, system["当前时间"] || "12:00");
+    if (!clock) {
+      strip.classList.remove("is-clock-side");
+      strip.removeAttribute("style");
+      return;
+    }
+    header.style.position = header.style.position || "relative";
+    const headerRect = header.getBoundingClientRect();
+    const clockRect = clock.getBoundingClientRect();
+    const available = Math.floor(headerRect.right - clockRect.right - 18);
+    if (available < 124) {
+      strip.classList.remove("is-clock-side");
+      strip.removeAttribute("style");
+      return;
+    }
+    strip.classList.add("is-clock-side");
+    strip.style.left = Math.round(clockRect.right - headerRect.left + 14) + "px";
+    strip.style.top = Math.round(clockRect.top - headerRect.top + clockRect.height * 0.55) + "px";
+    strip.style.maxWidth = Math.min(220, available) + "px";
+  }
+
   function specialDateLabel(item) {
     const from = item.from ?? item.d;
     const to = item.to ?? item.d;
@@ -6365,6 +6406,7 @@ function injectInternalMchanApp(html, staticSeed) {
       strip.className = "st-home-course-strip";
       header.appendChild(strip);
     }
+    positionHomeCourseStrip(header, strip);
     if (strip.dataset.signature === signature) return;
     strip.dataset.signature = signature;
     strip.innerHTML = '<i class="st-home-course-dot"></i><strong>' + escapeHtml(info.weekday) + '</strong><span>' + escapeHtml(info.title + (info.detail ? " · " + info.detail : "")) + '</span>';
