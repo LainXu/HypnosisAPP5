@@ -2536,6 +2536,33 @@ function injectInternalMchanApp(html, staticSeed) {
   const DEFAULT_THREADS = ${defaultThreads};
   const DEFAULT_ROLE_NAMES = ${defaultRoleNames};
   const DEFAULT_ROLE_PROFILES = ${defaultRoleProfiles};
+  function stDefaultAssetBase() {
+    try {
+      const pathname = decodeURIComponent(String(window.location?.pathname || ""));
+      if (pathname.includes("/public/frontends/hypnosis-app/") || pathname.includes("/dist/催眠APP前端/")) {
+        return new URL("assets/", window.location.href).href;
+      }
+    } catch {}
+    return "/public/frontends/hypnosis-app/assets/";
+  }
+  const ST_ASSET_BASE = window.__ST_HYPNOOS_ASSET_BASE__ || stDefaultAssetBase();
+  function stAssetUrl(path) {
+    const value = String(path || "");
+    if (/^(?:https?:|data:|blob:)/i.test(value)) return value;
+    return ST_ASSET_BASE.replace(/\\/?$/, "/") + value.replace(/^\\/+/, "");
+  }
+  const ST_APP_ICONS = {
+    scanRole: stAssetUrl("app-icons/scan-role.png"),
+    profile: stAssetUrl("app-icons/profile.png"),
+    timetable: stAssetUrl("app-icons/timetable.png"),
+    map: stAssetUrl("app-icons/map.png"),
+    school: stAssetUrl("app-icons/school.png")
+  };
+  const ST_DEFAULT_PROFILE_PHOTOS = {
+    "西园寺爱丽莎": stAssetUrl("profiles/saionji-alisa.png"),
+    "月咏深雪": stAssetUrl("profiles/tsukuyomi-miyuki.png"),
+    "犬冢夏美": stAssetUrl("profiles/inuzuka-natsumi.png")
+  };
   const BOARD_NAMES = DEFAULT_BOARDS.map((board) => board.name);
   const BOARD_ID_BY_NAME = Object.fromEntries(DEFAULT_BOARDS.map((board) => [board.name, board.id]));
   const BOARD_NAME_BY_ID = Object.fromEntries(DEFAULT_BOARDS.map((board) => [board.id, board.name]));
@@ -3167,6 +3194,9 @@ function injectInternalMchanApp(html, staticSeed) {
 .st-home-course-strip strong{font-size:12px;color:#fff;white-space:nowrap}
 .st-home-course-strip span{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(203,213,225,.82)}
 .st-home-course-dot{width:6px;height:6px;border-radius:999px;background:#67e8f9;box-shadow:0 0 12px rgba(103,232,249,.8);flex:0 0 auto}
+.st-custom-icon-box{background:transparent!important;box-shadow:none!important;overflow:visible!important}
+.st-custom-icon-box svg{display:none!important}
+.st-custom-app-icon{width:100%;height:100%;display:block;object-fit:contain;border-radius:inherit;filter:drop-shadow(0 10px 18px rgba(0,0,0,.22))}
 #st-operation-workspace{box-sizing:border-box;width:100%;max-width:680px;min-height:0;margin:0;display:grid;grid-template-columns:minmax(320px,420px) minmax(150px,1fr);gap:8px;align-items:start;justify-content:start;padding:4px 0 4px 4px}
 #st-operation-workspace>#app{min-width:0;width:100%}
 #st-operation-workspace>#app>div:first-child{justify-content:flex-start!important;align-items:flex-start!important;padding:0!important}
@@ -4506,6 +4536,16 @@ function injectInternalMchanApp(html, staticSeed) {
     if (label) label.textContent = text;
   }
 
+  function setHomeTileIcon(tile, src, alt) {
+    if (!tile || !src || tile.dataset.stCustomIcon === src) return;
+    const iconElement = tile.querySelector("svg, img");
+    const iconBox = iconElement?.parentElement || tile.firstElementChild;
+    if (!iconBox) return;
+    iconBox.classList.add("st-custom-icon-box");
+    iconBox.innerHTML = '<img class="st-custom-app-icon" alt="' + escapeAttr(alt || "") + '" src="' + escapeAttr(src) + '">';
+    tile.dataset.stCustomIcon = src;
+  }
+
   const ST_WEEKDAY_NAMES = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"];
   const ST_WEEKDAY_INDEX = { "星期日": 0, "星期天": 0, "星期一": 1, "星期二": 2, "星期三": 3, "星期四": 4, "星期五": 5, "星期六": 6 };
   const ST_SCHOOL_MONTH_ORDER = [4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3];
@@ -4918,7 +4958,7 @@ function injectInternalMchanApp(html, staticSeed) {
     const profile = roleProfileData(roleName, roleData);
     const source = effectScalar(profile["照片"]).trim();
     if (source && !["无", "空", "未记录"].includes(source)) return source;
-    return localProfilePhoto(roleName);
+    return localProfilePhoto(roleName) || ST_DEFAULT_PROFILE_PHOTOS[roleName] || "";
   }
 
   function profileFieldText(profile, roleName, field) {
@@ -4981,13 +5021,7 @@ function injectInternalMchanApp(html, staticSeed) {
   }
 
   function bindPersonProfileControls(page) {
-    page.querySelectorAll("[data-profile-action]").forEach((button) => {
-      button.addEventListener("click", (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        runPersonProfileAction(page, button.dataset.profileAction);
-      });
-    });
+    page.dataset.profileControlsBound = "delegated";
   }
 
   function personProfileSignature(page) {
@@ -5604,6 +5638,7 @@ function injectInternalMchanApp(html, staticSeed) {
     tile.dataset.stMchanInternalPatched = "";
     tile.setAttribute("aria-label", "打开扫描角色");
     replaceExactTextInTile(tile, "催眠APP", "扫描角色");
+    setHomeTileIcon(tile, ST_APP_ICONS.scanRole, "扫描角色");
     tile.querySelectorAll("[id]").forEach((node) => node.removeAttribute("id"));
     tile.addEventListener("click", (event) => {
       event.preventDefault();
@@ -5628,6 +5663,7 @@ function injectInternalMchanApp(html, staticSeed) {
     tile.setAttribute("aria-label", "打开人物档案");
     replaceExactTextInTile(tile, "扫描角色", "人物档案");
     replaceExactTextInTile(tile, "催眠APP", "人物档案");
+    setHomeTileIcon(tile, ST_APP_ICONS.profile, "人物档案");
     tile.querySelectorAll("[id]").forEach((node) => node.removeAttribute("id"));
     tile.addEventListener("click", (event) => {
       event.preventDefault();
@@ -5660,6 +5696,7 @@ function injectInternalMchanApp(html, staticSeed) {
     tile.dataset.stLiteCalendarPatched = "";
     tile.setAttribute("aria-label", "打开课程表");
     replaceExactTextInTile(tile, "日历", "课程表");
+    setHomeTileIcon(tile, ST_APP_ICONS.timetable, "课程表");
     tile.querySelectorAll("[id]").forEach((node) => node.removeAttribute("id"));
     tile.addEventListener("click", (event) => {
       event.preventDefault();
@@ -5683,6 +5720,7 @@ function injectInternalMchanApp(html, staticSeed) {
       mapTile.removeAttribute("data-st-mchan-internal-patched");
       mapTile.setAttribute("aria-label", "打开地图");
       setHomeTileLabel(mapTile, "地图");
+      setHomeTileIcon(mapTile, ST_APP_ICONS.map, "地图");
       mapTile.querySelectorAll("[id]").forEach((node) => node.removeAttribute("id"));
       mapTile.addEventListener("click", (event) => {
         event.preventDefault();
@@ -5698,6 +5736,7 @@ function injectInternalMchanApp(html, staticSeed) {
     schoolTile.removeAttribute("data-st-map-tile");
     schoolTile.setAttribute("aria-label", "打开学校");
     setHomeTileLabel(schoolTile, "学校");
+    setHomeTileIcon(schoolTile, ST_APP_ICONS.school, "学校");
     schoolTile.querySelectorAll("[id]").forEach((node) => node.removeAttribute("id"));
     schoolTile.addEventListener("click", (event) => {
       event.preventDefault();
@@ -5932,11 +5971,13 @@ if (__stLocalPreview) {
 
 function prepareSillyTavernLoadHtml(html, origin = DEFAULT_ST_LOAD_ORIGIN) {
   const vendorBase = origin.replace(/\/$/, "") + "/public/vendor/";
+  const assetBase = origin.replace(/\/$/, "") + "/public/frontends/hypnosis-app/assets/";
   return String(html || "")
     .replaceAll(LOCAL_VENDOR.zod, vendorBase + "zod.mjs")
     .replaceAll(LOCAL_VENDOR.lodash, vendorBase + "lodash.mjs")
     .replaceAll(LOCAL_VENDOR.jquery, vendorBase + "jquery.mjs")
-    .replaceAll(LOCAL_VENDOR.scheduler, vendorBase + "scheduler.mjs");
+    .replaceAll(LOCAL_VENDOR.scheduler, vendorBase + "scheduler.mjs")
+    .replaceAll('"/public/frontends/hypnosis-app/assets/"', JSON.stringify(assetBase));
 }
 
 function splitExportBlock(source) {

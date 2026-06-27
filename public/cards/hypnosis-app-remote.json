@@ -121,7 +121,7 @@
           "id": "748c6c9a-e2ba-473b-b4b7-4024387b5dcf",
           "scriptName": "前端",
           "findRegex": "<\\s*StatusPlaceHolderImpl\\s*\\/>",
-          "replaceString": "```\n<body>\n<script>\n$('body').load('https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@62e15067fc3f9a135b9788787577c5742cb4fc83/dist/%E5%82%AC%E7%9C%A0APP%E5%89%8D%E7%AB%AF/index.html')\n</script>\n</body>\n```",
+          "replaceString": "```\n<body>\n<script>\nwindow.__ST_HYPNOOS_ASSET_BASE__ = 'https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@54d77d3249849fe5700993d92167d2dd4e2d443c/dist/%E5%82%AC%E7%9C%A0APP%E5%89%8D%E7%AB%AF/assets/';\n$('body').load('https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@54d77d3249849fe5700993d92167d2dd4e2d443c/dist/%E5%82%AC%E7%9C%A0APP%E5%89%8D%E7%AB%AF/index.html')\n</script>\n</body>\n```",
           "trimStrings": [],
           "placement": [
             2
@@ -156,7 +156,7 @@
           "id": "fe9113dc-f89b-4e42-8187-986861e67ab3",
           "scriptName": "测试用",
           "findRegex": "<\\s*StatusPlaceHolderImpl\\s*\\/>",
-          "replaceString": "```\n<body>\n<script>\n$('body').load('https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@62e15067fc3f9a135b9788787577c5742cb4fc83/dist/%E5%82%AC%E7%9C%A0APP%E5%89%8D%E7%AB%AF/index.html')\n</script>\n</body>\n```",
+          "replaceString": "```\n<body>\n<script>\nwindow.__ST_HYPNOOS_ASSET_BASE__ = 'https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@54d77d3249849fe5700993d92167d2dd4e2d443c/dist/%E5%82%AC%E7%9C%A0APP%E5%89%8D%E7%AB%AF/assets/';\n$('body').load('https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@54d77d3249849fe5700993d92167d2dd4e2d443c/dist/%E5%82%AC%E7%9C%A0APP%E5%89%8D%E7%AB%AF/index.html')\n</script>\n</body>\n```",
           "trimStrings": [],
           "placement": [
             2
@@ -173,7 +173,7 @@
           "id": "53757492-5ce3-4ad7-ad1a-334c41088542",
           "scriptName": "主仓库",
           "findRegex": "<\\s*StatusPlaceHolderImpl\\s*\\/>",
-          "replaceString": "```\n<body>\n<script>\n$('body').load('https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@62e15067fc3f9a135b9788787577c5742cb4fc83/dist/%E5%82%AC%E7%9C%A0APP%E5%89%8D%E7%AB%AF/index.html')\n</script>\n</body>\n```",
+          "replaceString": "```\n<body>\n<script>\nwindow.__ST_HYPNOOS_ASSET_BASE__ = 'https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@54d77d3249849fe5700993d92167d2dd4e2d443c/dist/%E5%82%AC%E7%9C%A0APP%E5%89%8D%E7%AB%AF/assets/';\n$('body').load('https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@54d77d3249849fe5700993d92167d2dd4e2d443c/dist/%E5%82%AC%E7%9C%A0APP%E5%89%8D%E7%AB%AF/index.html')\n</script>\n</body>\n```",
           "trimStrings": [],
           "placement": [
             2
@@ -208,7 +208,7 @@
           "id": "4f95726c-735e-4601-a240-c2470f5e23bc",
           "scriptName": "匿名版测试",
           "findRegex": "/\\<匿名版>([\\s\\S]*?)\\</匿名版>/s",
-          "replaceString": "```\n<body>\n  <script>\n    $('body').load('https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@62e15067fc3f9a135b9788787577c5742cb4fc83/dist/%E5%82%AC%E7%9C%A0APP%E5%89%8D%E7%AB%AF/index.html')\n  </script>\n</body>\n```",
+          "replaceString": "```\n<body>\n<script>\nwindow.__ST_HYPNOOS_ASSET_BASE__ = 'https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@54d77d3249849fe5700993d92167d2dd4e2d443c/dist/%E5%82%AC%E7%9C%A0APP%E5%89%8D%E7%AB%AF/assets/';\n$('body').load('https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@54d77d3249849fe5700993d92167d2dd4e2d443c/dist/%E5%82%AC%E7%9C%A0APP%E5%89%8D%E7%AB%AF/index.html')\n</script>\n</body>\n```",
           "trimStrings": [],
           "placement": [
             2
@@ -371,12 +371,18 @@
         "frontendMutation": "read-only",
         "legacyWorldbookAndRegexPreserved": true,
         "updatedAt": "2026-06-26T22:28:40.256Z",
-        "mchanMode": "static-readonly"
+        "mchanMode": "static-readonly",
+        "localFrontendUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@54d77d3249849fe5700993d92167d2dd4e2d443c/dist/%E5%82%AC%E7%9C%A0APP%E5%89%8D%E7%AB%AF/index.html",
+        "remoteFrontendUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@54d77d3249849fe5700993d92167d2dd4e2d443c/dist/%E5%82%AC%E7%9C%A0APP%E5%89%8D%E7%AB%AF/index.html",
+        "sillyTavernLoadUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@54d77d3249849fe5700993d92167d2dd4e2d443c/dist/%E5%82%AC%E7%9C%A0APP%E5%89%8D%E7%AB%AF/index.html",
+        "remoteRepository": "LainXu/HypnosisAPP5-dist",
+        "remoteCommit": "54d77d3249849fe5700993d92167d2dd4e2d443c",
+        "remoteAssetBase": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@54d77d3249849fe5700993d92167d2dd4e2d443c/dist/%E5%82%AC%E7%9C%A0APP%E5%89%8D%E7%AB%AF/assets/"
       },
       "hypnoos": {
-        "localFrontendUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@62e15067fc3f9a135b9788787577c5742cb4fc83/dist/%E5%82%AC%E7%9C%A0APP%E5%89%8D%E7%AB%AF/index.html",
-        "remoteFrontendUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@62e15067fc3f9a135b9788787577c5742cb4fc83/dist/%E5%82%AC%E7%9C%A0APP%E5%89%8D%E7%AB%AF/index.html",
-        "sillyTavernLoadUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@62e15067fc3f9a135b9788787577c5742cb4fc83/dist/%E5%82%AC%E7%9C%A0APP%E5%89%8D%E7%AB%AF/index.html",
+        "localFrontendUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@54d77d3249849fe5700993d92167d2dd4e2d443c/dist/%E5%82%AC%E7%9C%A0APP%E5%89%8D%E7%AB%AF/index.html",
+        "remoteFrontendUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@54d77d3249849fe5700993d92167d2dd4e2d443c/dist/%E5%82%AC%E7%9C%A0APP%E5%89%8D%E7%AB%AF/index.html",
+        "sillyTavernLoadUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@54d77d3249849fe5700993d92167d2dd4e2d443c/dist/%E5%82%AC%E7%9C%A0APP%E5%89%8D%E7%AB%AF/index.html",
         "frontendMode": "remote",
         "remoteCommit": "62e15067fc3f9a135b9788787577c5742cb4fc83",
         "remoteRepository": "LainXu/HypnosisAPP5-dist"
@@ -2114,12 +2120,12 @@
   "create_date": "2026-05-29T12:42:31.655Z",
   "workbench": {
     "updatedAt": "2026-06-26T17:27:57.687Z",
-    "localFrontendUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@62e15067fc3f9a135b9788787577c5742cb4fc83/dist/%E5%82%AC%E7%9C%A0APP%E5%89%8D%E7%AB%AF/index.html",
+    "localFrontendUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@54d77d3249849fe5700993d92167d2dd4e2d443c/dist/%E5%82%AC%E7%9C%A0APP%E5%89%8D%E7%AB%AF/index.html",
     "lastExportedPng": "public/cards/hypnosis-app-local-white.png",
     "exportedAt": "2026-06-26T17:27:57.692Z",
     "frontendLoader": "remote-cdn-inline",
-    "sillyTavernLoadUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@62e15067fc3f9a135b9788787577c5742cb4fc83/dist/%E5%82%AC%E7%9C%A0APP%E5%89%8D%E7%AB%AF/index.html",
-    "remoteFrontendUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@62e15067fc3f9a135b9788787577c5742cb4fc83/dist/%E5%82%AC%E7%9C%A0APP%E5%89%8D%E7%AB%AF/index.html",
+    "sillyTavernLoadUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@54d77d3249849fe5700993d92167d2dd4e2d443c/dist/%E5%82%AC%E7%9C%A0APP%E5%89%8D%E7%AB%AF/index.html",
+    "remoteFrontendUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@54d77d3249849fe5700993d92167d2dd4e2d443c/dist/%E5%82%AC%E7%9C%A0APP%E5%89%8D%E7%AB%AF/index.html",
     "remoteCommit": "62e15067fc3f9a135b9788787577c5742cb4fc83",
     "remoteRepository": "LainXu/HypnosisAPP5-dist"
   }
