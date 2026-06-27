@@ -1288,7 +1288,7 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
         setIsTransitioning(true);
         setTimeout(() => {
             setIsTransitioning(false);
-        }, 1800);
+        }, 3200);
     };
 `
   );
@@ -2877,12 +2877,18 @@ function injectInternalMchanApp(html, staticSeed) {
     if (/^(?:https?:|data:|blob:)/i.test(value)) return value;
     return ST_ASSET_BASE.replace(/\\/?$/, "/") + value.replace(/^\\/+/, "");
   }
+  function stInlineAppIcon(bg, body) {
+    return '<svg class="st-custom-app-icon" viewBox="0 0 72 72" role="img" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">' +
+      '<rect width="72" height="72" rx="17" fill="' + bg + '"/>' +
+      '<g fill="none" stroke="white" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round">' + body + '</g>' +
+    '</svg>';
+  }
   const ST_APP_ICONS = {
-    scanRole: stAssetUrl("app-icons/scan-role.png"),
-    profile: stAssetUrl("app-icons/profile.png"),
-    timetable: stAssetUrl("app-icons/timetable.png"),
-    map: stAssetUrl("app-icons/map.png"),
-    school: stAssetUrl("app-icons/school.png")
+    scanRole: stInlineAppIcon("#a855f7", '<path d="M18 23v-5h5"/><path d="M49 18h5v5"/><path d="M54 49v5h-5"/><path d="M23 54h-5v-5"/><path d="M16 36s7-11 20-11 20 11 20 11-7 11-20 11-20-11-20-11Z"/><circle cx="36" cy="36" r="6"/>'),
+    profile: stInlineAppIcon("#0f766e", '<rect x="19" y="15" width="34" height="42" rx="4"/><circle cx="36" cy="29" r="6"/><path d="M25 46c3-7 19-7 22 0"/><path d="M25 53h22"/>'),
+    timetable: stInlineAppIcon("#2563eb", '<rect x="17" y="18" width="38" height="38" rx="5"/><path d="M17 29h38"/><path d="M27 15v8"/><path d="M45 15v8"/><path d="M27 39h18"/><path d="M27 48h11"/>'),
+    map: stInlineAppIcon("#10b981", '<path d="M18 51V22l13-5 13 5 10-4v29l-10 4-13-5-13 5Z"/><path d="M31 17v29"/><path d="M44 22v29"/><circle cx="36" cy="34" r="3"/>'),
+    school: stInlineAppIcon("#475569", '<path d="M15 32l21-12 21 12"/><path d="M20 32v22h32V32"/><path d="M29 54V39h14v15"/><path d="M27 32h18"/><path d="M36 20v-6"/>')
   };
   const ST_DEFAULT_PROFILE_PHOTOS = {
     "西园寺爱丽莎": stAssetUrl("profiles/saionji-alisa.png"),
@@ -3539,9 +3545,13 @@ function injectInternalMchanApp(html, staticSeed) {
 .st-home-course-strip strong{font-size:12px;color:#fff;white-space:nowrap}
 .st-home-course-strip span{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(203,213,225,.82)}
 .st-home-course-dot{width:6px;height:6px;border-radius:999px;background:#67e8f9;box-shadow:0 0 12px rgba(103,232,249,.8);flex:0 0 auto}
+.st-home-hypnosis-island{margin-top:7px;display:inline-flex;max-width:100%;align-items:center;gap:7px;border:1px solid rgba(216,180,254,.22);border-radius:999px;background:rgba(2,6,23,.64);backdrop-filter:blur(14px);box-shadow:0 12px 26px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.06);padding:5px 10px;color:rgba(245,243,255,.94);font-size:11px;line-height:1.2}
+.st-home-hypnosis-island svg{width:14px;height:14px;color:#f0abfc;filter:drop-shadow(0 0 8px rgba(240,171,252,.55));flex:0 0 auto}
+.st-home-hypnosis-island strong{font-size:12px;color:#fff;white-space:nowrap}
+.st-home-hypnosis-island span{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(226,232,240,.76)}
 .st-custom-icon-box{background:transparent!important;box-shadow:none!important;overflow:visible!important}
-.st-custom-icon-box svg{display:none!important}
-.st-custom-app-icon{width:100%;height:100%;display:block;object-fit:contain;border-radius:inherit;filter:drop-shadow(0 10px 18px rgba(0,0,0,.22))}
+.st-custom-icon-box>svg:not(.st-custom-app-icon){display:none!important}
+.st-custom-app-icon{width:100%;height:100%;display:block;border-radius:inherit;filter:drop-shadow(0 10px 18px rgba(0,0,0,.22))}
 #st-operation-workspace{box-sizing:border-box;width:100%;max-width:680px;min-height:0;margin:0;display:grid;grid-template-columns:minmax(320px,420px) minmax(150px,1fr);gap:8px;align-items:start;justify-content:start;padding:4px 0 4px 4px}
 #st-operation-workspace>#app{min-width:0;width:100%}
 #st-operation-workspace>#app>div:first-child{justify-content:flex-start!important;align-items:flex-start!important;padding:0!important}
@@ -3908,12 +3918,12 @@ function injectInternalMchanApp(html, staticSeed) {
       title: "异世界杀手",
       note: "已填写示例",
       roleName: "千杀百花",
-      aliases: "百花, 异世界杀手, 千杀",
-      summary: "{{user}}在她确认主角很弱、准备离开前扫描并锁定的异世界杀手。她来自中世纪剑与魔法异世界，身形小巧可爱，带着轻便暗杀装备和异界旅者的气息。",
-      relation: "她误会{{user}}是把她传送来的元凶，短暂敌视和试探；确认{{user}}很弱后决定离开，在离开前被手机扫描。",
+      aliases: "百花, 异世界杀手, 千杀, 勇者小队成员",
+      summary: "{{user}}在她确认主角很弱、准备离开前扫描并锁定的异世界杀手。她来自中世纪剑与魔法异世界，身形小巧可爱，曾是拯救异世界人类的原勇者小队成员与英雄之一。",
+      relation: "她误会{{user}}是把她传送来的元凶，短暂敌视和试探；确认{{user}}很弱后决定离开，在离开前被手机扫描。她曾与勇者并肩拯救异世界人类，对勇者抱有倾慕却无法理解这种情感，只会在勇者面前出现少见的羞涩和迟疑。",
       appearance: "小巧可爱的少女体型，动作轻盈隐蔽，衣装带有中世纪剑与魔法世界的皮革护具、短刃和旅行痕迹。",
-      personality: "不善言辞，戒备心强，行动比语言更直接；作为杀手习惯先观察威胁，确认无害后迅速撤离。",
-      extra: "保持异世界来客、杀手身份、误会与离开前被扫描的时间点；AI建档时可补全她的世界观常识、战斗经验和对现代环境的不适应。"
+      personality: "不善言辞，戒备心强，行动比语言更直接；作为杀手习惯先观察威胁，确认无害后迅速撤离。她是英雄却不擅长表达荣耀感，对勇者的倾慕会被她误认为战友信赖或战斗习惯。",
+      extra: "保持异世界来客、原勇者小队成员、拯救异世界人类的英雄、杀手身份、对勇者倾慕但不理解恋爱情感、勇者面前会羞涩、误会与离开前被扫描的时间点；AI建档时可补全她的世界观常识、战斗经验和对现代环境的不适应。"
     },
     {
       title: "作弊模式",
@@ -4915,13 +4925,18 @@ function injectInternalMchanApp(html, staticSeed) {
   }
 
   function setHomeTileIcon(tile, src, alt) {
-    if (!tile || !src || tile.dataset.stCustomIcon === src) return;
+    if (!tile || !src) return;
+    const source = String(src || "");
+    const signature = String(alt || "") + ":" + source.length + ":" + source.slice(-64);
+    if (tile.dataset.stCustomIcon === signature) return;
     const iconElement = tile.querySelector("svg, img");
     const iconBox = iconElement?.parentElement || tile.firstElementChild;
     if (!iconBox) return;
     iconBox.classList.add("st-custom-icon-box");
-    iconBox.innerHTML = '<img class="st-custom-app-icon" alt="' + escapeAttr(alt || "") + '" src="' + escapeAttr(src) + '">';
-    tile.dataset.stCustomIcon = src;
+    iconBox.innerHTML = source.trim().startsWith("<svg")
+      ? source
+      : '<img class="st-custom-app-icon" alt="' + escapeAttr(alt || "") + '" src="' + escapeAttr(source) + '">';
+    tile.dataset.stCustomIcon = signature;
   }
 
   const ST_WEEKDAY_NAMES = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"];
@@ -5545,6 +5560,7 @@ function injectInternalMchanApp(html, staticSeed) {
       locations: [
         { id: "classroom", label: "教室", info: "二年级教室。日常上课、课间人际、视线交错和班级中心关系最容易发生的地点。" },
         { id: "corridor", label: "走廊", info: "连接教室、社团与各专用教室的公共空间。人来人往，适合短暂偶遇和擦肩而过。" },
+        { id: "old-school-building", label: "旧校舍", info: "破败、阴暗、少有人去的旧建筑。传闻、躲藏、无人目击的偶遇和灵异气氛都容易在这里聚集。" },
         { id: "library", label: "图书馆", info: "安静的阅读与自习空间。深雪常会出现，也适合调查资料、传闻和灵异记录。" },
         { id: "principal", label: "校长室", info: "校方管理层所在地点。校规、处分、学校声望和重大事件容易在这里交汇。" },
         { id: "pool", label: "游泳池", info: "体育（水泳）相关场地。视线、换装、体能差异和季节活动很容易在这里展开。" },
@@ -5609,6 +5625,18 @@ function injectInternalMchanApp(html, staticSeed) {
     try {
       localStorage.setItem(graphStorageKey(scope), JSON.stringify(normalizeGraphGraph(graph, scope)));
     } catch {}
+  }
+
+  function mergeDefaultStaticGraphLocations(graph, scope) {
+    const fallback = STATIC_GRAPH_DEFAULTS[scope] || STATIC_GRAPH_DEFAULTS.world;
+    const defaults = fallback.locations || [];
+    const existing = new Set((graph.locations || []).map((location) => String(location.id || location.label || "")));
+    const additions = defaults.filter((location) => {
+      const id = String(location.id || location.label || "");
+      return id && !existing.has(id);
+    });
+    if (!additions.length) return graph;
+    return { ...graph, locations: graph.locations.concat(additions.map((location) => ({ ...location }))) };
   }
 
   function defaultGraphNodeIds(scope) {
@@ -5726,7 +5754,12 @@ function injectInternalMchanApp(html, staticSeed) {
     syncStaticGraphUpdatesFromChat();
     try {
       const stored = JSON.parse(localStorage.getItem(graphStorageKey(scope)) || "null");
-      if (stored) return normalizeGraphGraph(stored, scope);
+      if (stored) {
+        const graph = normalizeGraphGraph(stored, scope);
+        const merged = mergeDefaultStaticGraphLocations(graph, scope);
+        if (merged.locations.length !== graph.locations.length) saveStaticGraph(scope, merged);
+        return merged;
+      }
     } catch {}
     const graph = normalizeGraphGraph(cloneGraph(STATIC_GRAPH_DEFAULTS[scope]), scope);
     saveStaticGraph(scope, graph);
@@ -6221,6 +6254,43 @@ function injectInternalMchanApp(html, staticSeed) {
     return panel;
   }
 
+  function isMeaningfulHomeTempEffect(value) {
+    if (value === null || value === undefined || value === false) return false;
+    if (Array.isArray(value)) return value.some(isMeaningfulHomeTempEffect);
+    if (isPlainObject(value)) return Object.keys(value).length > 0 && Object.values(value).some(isMeaningfulHomeTempEffect);
+    const text = String(value).trim();
+    return Boolean(text && !/^(无|暂无|none|null|undefined|\\{\\}|\\[\\])$/i.test(text));
+  }
+
+  function homeTempEffectTitle(value) {
+    if (!isMeaningfulHomeTempEffect(value)) return "";
+    if (Array.isArray(value)) {
+      return value.map(homeTempEffectTitle).find(Boolean) || "临时效果";
+    }
+    if (isPlainObject(value)) {
+      const direct = effectScalar(value["名称"] ?? value["效果名"] ?? value["标题"] ?? value["效果"] ?? value["描述"]);
+      if (direct) return direct;
+      const first = Object.entries(value).find(([, item]) => isMeaningfulHomeTempEffect(item));
+      if (!first) return "临时效果";
+      return first[0] || homeTempEffectTitle(first[1]) || "临时效果";
+    }
+    return String(value).trim().slice(0, 18);
+  }
+
+  function activeHomeHypnosisInfo() {
+    const roles = getStatsRoles();
+    for (const [roleName, roleData] of Object.entries(roles)) {
+      if (!isPlainObject(roleData)) continue;
+      const temp = roleData["临时催眠效果"];
+      if (!isMeaningfulHomeTempEffect(temp)) continue;
+      return {
+        roleName,
+        title: homeTempEffectTitle(temp)
+      };
+    }
+    return null;
+  }
+
   function patchHomeCourseStatus(root) {
     if (!root) return;
     if (!looksLikePhoneHome(root)) return;
@@ -6237,6 +6307,28 @@ function injectInternalMchanApp(html, staticSeed) {
     if (strip.dataset.signature === signature) return;
     strip.dataset.signature = signature;
     strip.innerHTML = '<i class="st-home-course-dot"></i><strong>' + escapeHtml(info.weekday) + '</strong><span>' + escapeHtml(info.title + (info.detail ? " · " + info.detail : "")) + '</span>';
+  }
+
+  function patchHomeHypnosisIsland(root) {
+    if (!root) return;
+    if (!looksLikePhoneHome(root)) return;
+    const header = getHomeHeader(root);
+    if (!header) return;
+    const info = activeHomeHypnosisInfo();
+    let island = header.querySelector(":scope > .st-home-hypnosis-island");
+    if (!info) {
+      island?.remove();
+      return;
+    }
+    const signature = info.roleName + "|" + info.title;
+    if (!island) {
+      island = document.createElement("div");
+      island.className = "st-home-hypnosis-island";
+      header.appendChild(island);
+    }
+    if (island.dataset.signature === signature) return;
+    island.dataset.signature = signature;
+    island.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg><strong>催眠中</strong><span>' + escapeHtml(info.roleName + (info.title ? " · " + info.title : "")) + '</span>';
   }
 
   function patchAddRoleTile() {
@@ -6363,6 +6455,7 @@ function injectInternalMchanApp(html, staticSeed) {
   function patchHomeTile() {
     const root = findPhoneRoot(document.body);
     patchHomeCourseStatus(root);
+    patchHomeHypnosisIsland(root);
     removeHomeOperationConfirm(root);
     ensureOperationSidePanel();
     patchCalendarAndTimetableTiles();
