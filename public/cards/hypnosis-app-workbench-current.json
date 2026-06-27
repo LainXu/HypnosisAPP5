@@ -388,7 +388,7 @@
         "variableAuthority": "ai",
         "frontendMutation": "read-only",
         "legacyWorldbookAndRegexPreserved": true,
-        "updatedAt": "2026-06-27T13:48:03.379Z",
+        "updatedAt": "2026-06-27T14:00:56.119Z",
         "mchanMode": "static-readonly",
         "lastExportedPng": "public/cards/hypnosis-app.png",
         "sillyTavernLoadUrl": "http://127.0.0.1:5173/public/frontends/hypnosis-app/st-load-inline.html",
@@ -396,9 +396,9 @@
         "frontendMode": "local",
         "frontendUrl": "http://127.0.0.1:5173/public/frontends/hypnosis-app/st-load-inline.html",
         "assetBase": "http://127.0.0.1:5173/public/frontends/hypnosis-app/assets/",
-        "remoteFrontendUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@d1f5dd7363410cf39f3e7ec64fcb28f88dd884e1/dist/webview/index.html",
-        "remoteAssetBase": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@d1f5dd7363410cf39f3e7ec64fcb28f88dd884e1/dist/webview/assets/",
-        "remoteCommit": "d1f5dd7363410cf39f3e7ec64fcb28f88dd884e1",
+        "remoteFrontendUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@ead3438e02376e551597db264e0c32f616d793e3/dist/webview/index.html",
+        "remoteAssetBase": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@ead3438e02376e551597db264e0c32f616d793e3/dist/webview/assets/",
+        "remoteCommit": "ead3438e02376e551597db264e0c32f616d793e3",
         "frontendLoader": "jquery-load-local-inline-classic"
       }
     },
@@ -2290,7 +2290,7 @@
   },
   "create_date": "2026-05-29T12:42:31.655Z",
   "workbench": {
-    "updatedAt": "2026-06-27T13:48:03.379Z",
+    "updatedAt": "2026-06-27T14:00:56.119Z",
     "localFrontendUrl": "http://127.0.0.1:5173/public/frontends/hypnosis-app/index.html",
     "lastExportedPng": "public/cards/hypnosis-app.png",
     "exportedAt": "2026-06-26T17:27:57.692Z",
@@ -2299,8 +2299,8 @@
     "frontendMode": "local",
     "frontendUrl": "http://127.0.0.1:5173/public/frontends/hypnosis-app/st-load-inline.html",
     "assetBase": "http://127.0.0.1:5173/public/frontends/hypnosis-app/assets/",
-    "remoteFrontendUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@d1f5dd7363410cf39f3e7ec64fcb28f88dd884e1/dist/webview/index.html",
-    "remoteAssetBase": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@d1f5dd7363410cf39f3e7ec64fcb28f88dd884e1/dist/webview/assets/",
-    "remoteCommit": "d1f5dd7363410cf39f3e7ec64fcb28f88dd884e1"
+    "remoteFrontendUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@ead3438e02376e551597db264e0c32f616d793e3/dist/webview/index.html",
+    "remoteAssetBase": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@ead3438e02376e551597db264e0c32f616d793e3/dist/webview/assets/",
+    "remoteCommit": "ead3438e02376e551597db264e0c32f616d793e3"
   }
 }

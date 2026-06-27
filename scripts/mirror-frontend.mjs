@@ -5239,7 +5239,7 @@ function injectInternalMchanApp(html, staticSeed) {
           label: String(location.label || location.name || location["地点"] || location.title || id || ("地点" + (index + 1))),
           info: String(location.info || location.description || location.desc || location["描述"] || fallbackById.get(id)?.info || "暂无地点信息。")
         };
-      }));
+      });
     return {
       title: String(source.title || fallback.title || (scope === "school" ? "学校地图" : "地图")),
       locations
