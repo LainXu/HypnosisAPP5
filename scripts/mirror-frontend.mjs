@@ -1210,7 +1210,7 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
     const [features, setFeatures] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)([]);
     const [subscription, setSubscription] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(null);
     const [collapsedTiers, setCollapsedTiers] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(initialDraft.collapsedTiers || { VIP2: true, VIP3: true, VIP4: true, VIP5: true, VIP6: true });
-    const [globalNote, setGlobalNote] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(String(initialDraft.globalNote || ''));
+    const [showStatusPanel, setShowStatusPanel] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(false);
     const [notice, setNotice] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)('');
     const [isFlashing, setIsFlashing] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(false);
     const [timeLeft, setTimeLeft] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(0);
@@ -1285,8 +1285,8 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
                 userExtraValue: feature.userExtraValue || '',
             };
         }
-        writeCustomHypnosisDraft({ features: featureDrafts, globalNote, collapsedTiers });
-    }, [collapsedTiers, features, globalNote]);
+        writeCustomHypnosisDraft({ features: featureDrafts, collapsedTiers });
+    }, [collapsedTiers, features]);
     const updateFeature = (id, patch) => {
         setFeatures(current => current.map(feature => feature.id === id ? { ...feature, ...patch } : feature));
     };
@@ -1339,7 +1339,6 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
         recordOperationIntent({
             来源: '催眠APP',
             操作: timeLeft > 0 ? '追加催眠' : '启动催眠',
-            全局备注: globalNote || '无',
             功能列表: featureDetails,
             MC能量消耗: String(selectedCost.energy) + '点',
             当前MC点消耗: String(selectedCost.points) + '点',
@@ -1359,11 +1358,11 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
         });
         setNotice('取消催眠请求已暂存');
     };
-    const renderNumberInput = (label, value, onChange, suffix, disabled = false) => jsxs('label', { className: 'min-w-0 rounded-2xl border border-white/10 bg-black/30 px-3 py-2', children: [
-            jsx('span', { className: 'block text-xs font-bold text-white/50', children: label }),
+    const renderNumberInput = (label, value, onChange, suffix, disabled = false) => jsxs('label', { className: 'min-w-0 rounded-xl border border-white/10 bg-black/50 px-3 py-2 shadow-inner shadow-black/40', children: [
+            jsx('span', { className: 'block text-[11px] font-bold text-white/40', children: label }),
             jsxs('div', { className: 'mt-1 flex items-center gap-2', children: [
-                    jsx('input', { type: 'number', min: '1', value, disabled, onChange: event => onChange(event.target.value), className: 'w-full bg-transparent text-lg font-black text-white outline-none disabled:text-white/40' }),
-                    jsx('span', { className: 'shrink-0 text-sm font-bold text-white/45', children: suffix }),
+                    jsx('input', { type: 'number', min: '1', value, disabled, onChange: event => onChange(event.target.value), className: 'w-full bg-transparent text-base font-black text-white outline-none disabled:text-white/40' }),
+                    jsx('span', { className: 'shrink-0 text-xs font-bold text-white/40', children: suffix }),
                 ] }),
         ] });
     const renderFeatureCard = (feature) => {
@@ -1378,24 +1377,25 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
             }
             updateFeature(feature.id, { isEnabled: !feature.isEnabled });
         };
-        return jsxs('article', { className: 'rounded-3xl border p-4 transition ' + (enabled ? 'border-fuchsia-400/70 bg-fuchsia-950/20 shadow-[0_0_24px_rgba(236,72,153,0.18)]' : 'border-white/10 bg-black/25'), children: [
+        return jsxs('article', { className: 'relative overflow-hidden rounded-[22px] border p-4 transition ' + (enabled ? 'border-pink-400/70 bg-slate-950/95 shadow-[0_0_22px_rgba(236,72,153,0.16)]' : 'border-white/10 bg-slate-950/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]'), children: [
+                jsx('div', { className: 'pointer-events-none absolute inset-y-0 left-0 w-1 ' + (enabled ? 'bg-gradient-to-b from-fuchsia-300 to-pink-500' : 'bg-white/10') }),
                 jsxs('div', { className: 'flex items-start justify-between gap-3', children: [
                         jsxs('div', { className: 'min-w-0', children: [
-                                jsx('h3', { className: 'text-xl font-black leading-tight text-white', children: feature.title }),
-                                jsx('p', { className: 'mt-1 text-sm font-bold text-white/50', children: cost.currencyLabel + ': ' + String(cost.amount) + '点' }),
+                                jsx('h3', { className: 'text-lg font-black leading-tight text-white tracking-wide', children: feature.title }),
+                                jsx('p', { className: 'mt-1 text-xs font-bold text-pink-200/55', children: cost.currencyLabel + ' · ' + String(cost.amount) + '点' }),
                             ] }),
-                        jsx('button', { type: 'button', onClick: toggle, className: 'relative h-10 w-20 shrink-0 rounded-full p-1 transition ' + (enabled ? 'bg-fuchsia-500' : available ? 'bg-slate-700' : 'bg-slate-800 opacity-70'), title: available ? '切换启用' : '等级未解锁', children: jsx('span', { className: 'block h-8 w-8 rounded-full bg-white transition ' + (enabled ? 'translate-x-10' : '') }) }),
+                        jsx('button', { type: 'button', onClick: toggle, className: 'relative h-9 w-[68px] shrink-0 rounded-full p-1 transition ' + (enabled ? 'bg-gradient-to-r from-fuchsia-500 to-pink-500' : available ? 'bg-[#2b3040]' : 'bg-[#1a1d28] opacity-70'), title: available ? '切换启用' : '等级未解锁', children: jsx('span', { className: 'block h-7 w-7 rounded-full bg-white shadow transition ' + (enabled ? 'translate-x-[32px]' : '') }) }),
                     ] }),
-                jsx('p', { className: 'mt-4 border-t border-white/10 pt-4 text-sm font-semibold leading-relaxed text-white/72', children: feature.description }),
-                jsx('textarea', { value: feature.userNote || '', onChange: event => updateFeature(feature.id, { userNote: event.target.value }), placeholder: '补充这条指令的目标、方式或限制...', className: 'mt-4 h-20 w-full resize-none rounded-2xl border border-white/10 bg-black/35 p-3 text-sm font-semibold text-white outline-none placeholder:text-white/30 focus:border-fuchsia-400/70' }),
+                jsx('p', { className: 'mt-3 border-t border-white/10 pt-3 text-sm font-semibold leading-relaxed text-white/70', children: feature.description }),
+                jsx('textarea', { value: feature.userNote || '', onChange: event => updateFeature(feature.id, { userNote: event.target.value }), placeholder: '目标、方式或限制...', className: 'mt-3 h-16 w-full resize-none rounded-2xl border border-white/10 bg-black/50 p-3 text-sm font-semibold text-white outline-none placeholder:text-white/25 focus:border-pink-400/70' }),
                 jsxs('div', { className: 'mt-3 grid grid-cols-2 gap-2', children: [
-                        cost.usesPeople ? renderNumberInput('人数', feature.userNumber || '1', value => updateFeature(feature.id, { userNumber: value }), '人') : jsx('div', { className: 'rounded-2xl border border-white/10 bg-black/20 px-3 py-3 text-sm font-bold text-white/45', children: '不按人数计费' }),
-                        cost.usesTime ? renderNumberInput('时间', feature.userMinutes || '10', value => updateFeature(feature.id, { userMinutes: value }), '分钟') : jsx('div', { className: 'rounded-2xl border border-white/10 bg-black/20 px-3 py-3 text-sm font-bold text-white/45', children: '不按时间计费' }),
+                        cost.usesPeople ? renderNumberInput('人数', feature.userNumber || '1', value => updateFeature(feature.id, { userNumber: value }), '人') : jsx('div', { className: 'rounded-xl border border-white/10 bg-black/40 px-3 py-3 text-xs font-bold text-white/40', children: '不按人数计费' }),
+                        cost.usesTime ? renderNumberInput('时间', feature.userMinutes || '10', value => updateFeature(feature.id, { userMinutes: value }), '分钟') : jsx('div', { className: 'rounded-xl border border-white/10 bg-black/40 px-3 py-3 text-xs font-bold text-white/40', children: '不按时间计费' }),
                         extraConfig ? renderNumberInput(extraConfig.label, feature.userExtraValue || String(extraConfig.defaultValue), value => updateFeature(feature.id, { userExtraValue: value }), extraConfig.unit) : null,
                     ] }),
-                jsxs('div', { className: 'mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-white/10 bg-black/30 px-3 py-2', children: [
-                        jsx('span', { className: 'text-xs font-bold text-white/45', children: '计费' }),
-                        jsx('span', { className: 'text-sm font-black text-yellow-300', children: cost.currencyLabel + ' ' + String(cost.amount) + '点' }),
+                jsxs('div', { className: 'mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-pink-300/10 bg-black/45 px-3 py-2', children: [
+                        jsx('span', { className: 'text-[11px] font-bold text-white/40', children: '计费规则' }),
+                        jsx('span', { className: 'text-sm font-black text-[#ffd84d]', children: cost.currencyLabel + ' ' + String(cost.amount) + '点' }),
                     ] }),
             ] }, feature.id);
     };
@@ -1406,26 +1406,76 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
         const available = isTierAvailable(tierConfig.tier);
         const collapsed = Boolean(collapsedTiers[tierConfig.tier]);
         const enabledCount = tierFeatures.filter(feature => feature.isEnabled && available).length;
-        return jsxs('section', { className: 'overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04]', children: [
+        return jsxs('section', { className: 'overflow-hidden rounded-[24px] border border-white/10 bg-slate-950/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]', children: [
                 jsxs('button', { type: 'button', onClick: () => setCollapsedTiers(current => ({ ...current, [tierConfig.tier]: !collapsed })), className: 'flex w-full items-center justify-between gap-3 px-4 py-4 text-left', children: [
                         jsxs('div', { className: 'min-w-0', children: [
                                 jsx('div', { className: 'text-lg font-black text-white', children: tierConfig.label }),
-                                jsx('div', { className: 'mt-1 text-xs font-bold text-white/45', children: (available ? '可用' : '需要解锁') + ' · ' + String(enabledCount) + '/' + String(tierFeatures.length) + ' 已启用' }),
+                                jsx('div', { className: 'mt-1 text-xs font-bold text-white/40', children: (available ? '可用' : '状态面板解锁') + ' · ' + String(enabledCount) + '/' + String(tierFeatures.length) + ' 已启用' }),
                             ] }),
                         jsxs('div', { className: 'flex shrink-0 items-center gap-2', children: [
-                                !available && jsx('span', { className: 'rounded-full bg-slate-800 px-3 py-1 text-xs font-bold text-white/55', children: '未解锁' }),
+                                !available && jsx('span', { className: 'rounded-full border border-white/10 bg-black/45 px-3 py-1 text-xs font-bold text-white/45', children: '锁定' }),
                                 jsx('span', { className: 'text-xl font-black text-white/55', children: collapsed ? '⌄' : '⌃' }),
                             ] }),
                     ] }),
-                !available && !collapsed ? jsx('div', { className: 'px-4 pb-4', children: jsx('button', { type: 'button', onClick: event => { event.stopPropagation(); requestTierUnlock(tierConfig); }, className: 'w-full rounded-2xl bg-gradient-to-r from-violet-500 to-fuchsia-500 px-4 py-3 text-sm font-black text-white', children: '请求解锁 ' + tierConfig.label }) }) : null,
                 !collapsed ? jsx('div', { className: 'space-y-3 border-t border-white/10 p-4', children: tierFeatures.map(renderFeatureCard) }) : null,
             ] }, tierConfig.tier);
     };
-    return jsxs('div', { className: 'relative flex h-full w-full flex-col overflow-hidden bg-black text-white', children: [
-            jsx(VortexBackground, { speed: isFlashing ? 'animate-spin' : 'spin-slow' }),
-            jsxs('header', { className: 'relative z-10 flex shrink-0 items-center justify-between border-b border-white/10 bg-slate-950/70 px-4 py-4 backdrop-blur', children: [
+    const renderStatusPanel = () => !showStatusPanel ? null : jsxs('div', { className: 'absolute inset-0 z-40 bg-black/75', children: [
+            jsx('button', { type: 'button', 'aria-label': '关闭状态面板', onClick: () => setShowStatusPanel(false), className: 'absolute inset-0 h-full w-full cursor-default' }),
+            jsxs('aside', { className: 'absolute bottom-3 left-3 right-3 max-h-[82%] overflow-hidden rounded-[28px] border border-pink-300/20 bg-slate-950 text-white shadow-[0_18px_48px_rgba(0,0,0,0.65),0_0_34px_rgba(217,70,239,0.14)]', children: [
+                    jsxs('div', { className: 'flex items-center justify-between border-b border-white/10 px-4 py-4', children: [
+                            jsxs('div', { children: [
+                                    jsx('div', { className: 'text-xs font-black uppercase tracking-[0.24em] text-pink-300', children: 'SYSTEM STATUS' }),
+                                    jsx('div', { className: 'mt-1 text-lg font-black text-white', children: '资源与订阅' }),
+                                ] }),
+                            jsx('button', { type: 'button', onClick: () => setShowStatusPanel(false), className: 'grid h-10 w-10 place-items-center rounded-2xl border border-white/10 bg-white/5 text-xl font-black text-white/70', children: '×' }),
+                        ] }),
+                    jsxs('div', { className: 'max-h-[calc(82vh-96px)] overflow-y-auto p-4 no-scrollbar', children: [
+                            jsxs('section', { className: 'rounded-[24px] border border-pink-300/20 bg-black/40 p-4', children: [
+                                    jsxs('div', { className: 'flex items-end justify-between gap-4', children: [
+                                            jsxs('div', { className: 'min-w-0 flex-1', children: [
+                                                    jsx('div', { className: 'text-xs font-black uppercase tracking-[0.24em] text-pink-300', children: 'MC ENERGY' }),
+                                                    jsxs('div', { className: 'mt-2 flex items-center gap-3', children: [
+                                                            jsx('div', { className: 'h-2 flex-1 overflow-hidden rounded-full bg-white/10', children: jsx('div', { className: 'h-full rounded-full bg-gradient-to-r from-violet-500 to-pink-500', style: { width: Math.max(0, Math.min(100, Number(userData?.mcEnergy || 0) / Math.max(1, Number(userData?.mcEnergyMax || 1)) * 100)) + '%' } }) }),
+                                                            jsx('span', { className: 'shrink-0 text-lg font-black text-white/70', children: String(userData?.mcEnergy ?? 0) + ' / ' + String(userData?.mcEnergyMax ?? 0) }),
+                                                        ] }),
+                                                    jsx('div', { className: 'mt-2 text-xs font-bold text-white/40', children: '当前等级：' + getTierLabel(subscriptionTier) }),
+                                                ] }),
+                                            jsxs('div', { className: 'rounded-2xl border border-white/10 bg-[#07070d] px-4 py-3 text-right', children: [
+                                                    jsx('div', { className: 'text-xs font-bold text-white/40', children: '资金' }),
+                                                    jsx('div', { className: 'text-2xl font-black text-[#ffd84d]', children: formatMoney(userData?.money ?? 0) }),
+                                                ] }),
+                                        ] }),
+                                    jsxs('div', { className: 'mt-4 grid grid-cols-3 gap-2 text-center', children: [
+                                            jsxs('div', { className: 'rounded-2xl bg-black/50 p-3', children: [jsx('div', { className: 'text-[11px] font-bold text-white/40', children: '累计消耗' }), jsx('div', { className: 'mt-1 text-xl font-black text-white', children: String(userData?.totalConsumedMc ?? 0) })] }),
+                                            jsxs('div', { className: 'rounded-2xl bg-black/50 p-3', children: [jsx('div', { className: 'text-[11px] font-bold text-white/40', children: '可疑度' }), jsx('div', { className: 'mt-1 text-xl font-black text-emerald-300', children: String(userData?.suspicion ?? 0) + '%' })] }),
+                                            jsxs('div', { className: 'rounded-2xl bg-black/50 p-3', children: [jsx('div', { className: 'text-[11px] font-bold text-white/40', children: '本次预计' }), jsx('div', { className: 'mt-1 text-sm font-black ' + (resourceWarning ? 'text-rose-300' : 'text-pink-200'), children: '能量' + selectedCost.energy + ' / 点' + selectedCost.points })] }),
+                                        ] }),
+                                ] }),
+                            jsxs('section', { className: 'mt-4 rounded-[24px] border border-white/10 bg-black/28 p-4', children: [
+                                    jsx('div', { className: 'mb-3 text-sm font-black text-white/80', children: 'VIP 解锁' }),
+                                    jsx('div', { className: 'space-y-2', children: _types__WEBPACK_IMPORTED_MODULE_3__.VIP_LEVELS.map(tierConfig => {
+                                            const available = isTierAvailable(tierConfig.tier);
+                                            const current = normalizeTierValue(tierConfig.tier) === subscriptionTier;
+                                            return jsxs('div', { className: 'flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[#06060a]/82 px-3 py-3', children: [
+                                                    jsxs('div', { className: 'min-w-0', children: [
+                                                            jsx('div', { className: 'text-sm font-black text-white', children: tierConfig.label }),
+                                                            jsx('div', { className: 'mt-1 text-[11px] font-bold text-white/40', children: '阈值 ' + String(tierConfig.unlockThreshold ?? 0) + ' MC点' }),
+                                                        ] }),
+                                                    available ? jsx('span', { className: 'shrink-0 rounded-full border border-emerald-300/20 bg-emerald-400/10 px-3 py-1 text-xs font-black text-emerald-200', children: current ? '当前' : '可用' }) : jsx('button', { type: 'button', onClick: () => requestTierUnlock(tierConfig), className: 'shrink-0 rounded-full bg-gradient-to-r from-violet-500 to-pink-500 px-3 py-1.5 text-xs font-black text-white', children: '请求' }),
+                                                ] }, tierConfig.tier);
+                                        }) }),
+                                ] }),
+                        ] }),
+                ] }),
+        ] });
+    return jsxs('div', { className: 'relative flex h-full w-full flex-col overflow-hidden bg-black text-white', style: { background: 'linear-gradient(180deg,#080916 0%,#04050b 48%,#020205 100%)' }, children: [
+            jsx('div', { className: 'absolute inset-0 opacity-[0.08]', children: jsx(VortexBackground, { speed: isFlashing ? 'animate-spin' : 'spin-slow' }) }),
+            jsx('div', { className: 'pointer-events-none absolute inset-0', style: { background: 'rgba(3,4,10,0.94)' } }),
+            jsx('div', { className: 'pointer-events-none absolute inset-0', style: { background: 'radial-gradient(circle at top,rgba(20,18,36,0.58) 0%,rgba(7,8,20,0.78) 42%,rgba(2,2,5,1) 100%)' } }),
+            jsxs('header', { className: 'relative z-10 flex shrink-0 items-center justify-between border-b border-white/10 bg-slate-950/95 px-4 py-4 backdrop-blur', children: [
                     jsxs('div', { className: 'flex items-center gap-3', children: [
-                            jsx('button', { type: 'button', onClick: onExit, className: 'flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-3xl text-white/80', children: '‹' }),
+                            jsx('button', { type: 'button', onClick: onExit, className: 'flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-3xl text-white/80 shadow-inner shadow-white/5', children: '‹' }),
                             jsxs('div', { children: [
                                     jsxs('div', { className: 'flex items-center gap-2 text-xl font-black', children: [
                                             jsx(HypnoLogoSVG, { size: 28, className: 'text-fuchsia-300' }),
@@ -1434,45 +1484,40 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
                                     jsx('div', { className: 'mt-1 text-xs font-bold text-white/45', children: '指令只暂存，变量由AI结算' }),
                                 ] }),
                         ] }),
-                    jsxs('div', { className: 'text-right', children: [
-                            jsx('div', { className: 'text-xl font-black text-white', children: String(userData?.mcPoints ?? 0) }),
-                            jsx('div', { className: 'text-xs font-bold text-white/45', children: '当前MC点' }),
+                    jsxs('button', { type: 'button', onClick: () => setShowStatusPanel(true), className: 'rounded-2xl border border-pink-300/20 bg-white/5 px-3 py-2 text-right shadow-[0_0_18px_rgba(217,70,239,0.08)]', children: [
+                            jsx('div', { className: 'text-lg font-black text-white', children: String(userData?.mcEnergy ?? 0) + '/' + String(userData?.mcEnergyMax ?? 0) }),
+                            jsx('div', { className: 'text-[11px] font-bold text-pink-200/60', children: '状态 / VIP' }),
                         ] }),
                 ] }),
             jsx(ActiveSessionView, { timeLeft, sessionEndVirtualMinutes, sessionEndAtMs, sessionSummary, onStop: stopSession }),
             jsxs('main', { className: 'relative z-10 flex-1 overflow-y-auto p-4 pb-28 no-scrollbar', children: [
-                    jsxs('section', { className: 'rounded-3xl border border-white/10 bg-slate-950/70 p-4 shadow-lg', children: [
-                            jsxs('div', { className: 'flex items-center justify-between gap-4', children: [
-                                    jsxs('div', { className: 'min-w-0 flex-1', children: [
-                                            jsx('div', { className: 'text-xs font-black uppercase tracking-widest text-pink-300', children: 'MC ENERGY' }),
-                                            jsxs('div', { className: 'mt-1 flex items-center gap-2', children: [
-                                                    jsx('div', { className: 'h-2 flex-1 overflow-hidden rounded-full bg-white/10', children: jsx('div', { className: 'h-full rounded-full bg-gradient-to-r from-violet-500 to-pink-500', style: { width: Math.max(0, Math.min(100, Number(userData?.mcEnergy || 0) / Math.max(1, Number(userData?.mcEnergyMax || 1)) * 100)) + '%' } }) }),
-                                                    jsx('span', { className: 'shrink-0 text-sm font-bold text-white/60', children: String(userData?.mcEnergy ?? 0) + ' / ' + String(userData?.mcEnergyMax ?? 0) }),
-                                                ] }),
-                                            jsx('div', { className: 'mt-2 text-xs font-bold text-white/40', children: '等级：' + getTierLabel(subscriptionTier) }),
+                    jsxs('section', { className: 'rounded-[24px] border border-white/10 bg-slate-950/90 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_18px_42px_rgba(0,0,0,0.30)]', children: [
+                            jsxs('div', { className: 'flex items-center justify-between gap-3', children: [
+                                    jsxs('div', { className: 'min-w-0', children: [
+                                            jsx('div', { className: 'text-xs font-black uppercase tracking-[0.24em] text-fuchsia-200/70', children: 'COMMAND DECK' }),
+                                            jsx('div', { className: 'mt-1 text-lg font-black text-white', children: '选择催眠指令' }),
                                         ] }),
-                                    jsxs('div', { className: 'rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-right', children: [
-                                            jsx('div', { className: 'text-xs font-bold text-white/45', children: '资金' }),
-                                            jsx('div', { className: 'text-lg font-black text-yellow-300', children: formatMoney(userData?.money ?? 0) }),
+                                    jsxs('button', { type: 'button', onClick: () => setShowStatusPanel(true), className: 'shrink-0 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-right', children: [
+                                            jsx('div', { className: 'text-sm font-black text-white', children: '状态' }),
+                                            jsx('div', { className: 'text-[11px] font-bold text-white/40', children: getTierLabel(subscriptionTier) }),
                                         ] }),
                                 ] }),
-                            jsxs('div', { className: 'mt-4 grid grid-cols-3 gap-2 text-center', children: [
-                                    jsxs('div', { className: 'rounded-2xl bg-black/25 p-3', children: [jsx('div', { className: 'text-xs font-bold text-white/45', children: '累计消耗' }), jsx('div', { className: 'mt-1 text-lg font-black text-white', children: String(userData?.totalConsumedMc ?? 0) })] }),
-                                    jsxs('div', { className: 'rounded-2xl bg-black/25 p-3', children: [jsx('div', { className: 'text-xs font-bold text-white/45', children: '可疑度' }), jsx('div', { className: 'mt-1 text-lg font-black text-emerald-300', children: String(userData?.suspicion ?? 0) + '%' })] }),
-                                    jsxs('div', { className: 'rounded-2xl bg-black/25 p-3', children: [jsx('div', { className: 'text-xs font-bold text-white/45', children: '本次预计' }), jsx('div', { className: 'mt-1 text-sm font-black ' + (resourceWarning ? 'text-rose-300' : 'text-fuchsia-200'), children: '能量' + selectedCost.energy + ' / 点' + selectedCost.points })] }),
+                            jsxs('div', { className: 'mt-4 flex flex-wrap gap-2 text-xs font-black', children: [
+                                    jsx('span', { className: 'rounded-full border border-white/10 bg-black/30 px-3 py-1.5 text-white/60', children: '已启用 ' + String(selectedFeatures.length) + ' 条' }),
+                                    jsx('span', { className: 'rounded-full border border-white/10 bg-black/30 px-3 py-1.5 ' + (resourceWarning ? 'text-rose-300' : 'text-fuchsia-100/70'), children: '预计：MC能量 ' + selectedCost.energy + '点 / 当前MC点 ' + selectedCost.points + '点' }),
                                 ] }),
                         ] }),
-                    jsx('textarea', { value: globalNote, onChange: event => setGlobalNote(event.target.value), placeholder: '全局备注：目标、场景、限制或本次催眠方向...', className: 'mt-4 h-20 w-full resize-none rounded-3xl border border-white/10 bg-black/35 p-4 text-sm font-semibold text-white outline-none placeholder:text-white/35 focus:border-fuchsia-400/70' }),
                     jsx('div', { className: 'mt-4 space-y-4', children: _types__WEBPACK_IMPORTED_MODULE_3__.VIP_LEVELS.map(renderTierSection) }),
                 ] }),
-            jsxs('footer', { className: 'relative z-20 shrink-0 border-t border-white/10 bg-slate-950/95 p-4 pb-7 shadow-[0_-12px_32px_rgba(0,0,0,0.45)]', children: [
+            jsxs('footer', { className: 'relative z-20 shrink-0 border-t border-white/10 bg-slate-950/95 p-4 pb-7 shadow-[0_-12px_32px_rgba(0,0,0,0.55)] backdrop-blur', children: [
                     jsxs('div', { className: 'mb-3 flex items-center justify-between gap-3 text-sm font-bold', children: [
-                            jsx('span', { className: resourceWarning ? 'text-rose-300' : 'text-white/55', children: resourceWarning ? '预计余额不足，AI结算时失败' : '预计消耗已按启用指令计算' }),
+                            jsx('span', { className: resourceWarning ? 'text-rose-300' : 'text-white/50', children: resourceWarning ? '预计余额不足，AI结算时失败' : '预计消耗已按启用指令计算' }),
                             jsx('span', { className: 'text-white/80', children: 'MC能量 ' + selectedCost.energy + '点 / 当前MC点 ' + selectedCost.points + '点' }),
                         ] }),
-                    jsx('button', { type: 'button', onClick: startHypnosis, disabled: !selectedFeatures.length, className: 'mx-auto flex h-14 w-[78%] max-w-sm items-center justify-center rounded-2xl bg-gradient-to-r from-violet-500 via-fuchsia-500 to-pink-500 text-lg font-black text-white shadow-lg disabled:cursor-not-allowed disabled:from-slate-700 disabled:to-slate-700 disabled:text-white/40', children: '⚡ 启动催眠' }),
+                    jsx('button', { type: 'button', onClick: startHypnosis, disabled: !selectedFeatures.length, className: 'mx-auto flex h-14 w-[72%] max-w-xs items-center justify-center rounded-2xl bg-gradient-to-r from-violet-500 via-fuchsia-500 to-pink-500 text-lg font-black text-white shadow-[0_0_26px_rgba(236,72,153,0.28)] disabled:cursor-not-allowed disabled:from-[#1f2330] disabled:to-[#1f2330] disabled:text-white/35', children: '⚡ 启动催眠' }),
                     notice ? jsx('div', { className: 'mt-3 text-center text-xs font-bold text-fuchsia-100/75', children: notice }) : null,
                 ] }),
+            renderStatusPanel(),
         ] });
 };
 `;
