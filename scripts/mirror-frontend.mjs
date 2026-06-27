@@ -3107,13 +3107,17 @@ function injectInternalMchanApp(html, staticSeed) {
 .st-graph-head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
 .st-graph-head strong{font-size:15px;color:#fff}
 .st-graph-head span{font-size:10px;color:rgba(203,213,225,.5);font-weight:800}
+.st-location-current{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;border:1px solid rgba(34,211,238,.2);border-radius:15px;background:linear-gradient(135deg,rgba(34,211,238,.12),rgba(168,85,247,.08));padding:10px}
+.st-location-current span{color:rgba(203,213,225,.58);font-size:10px;font-weight:850}
+.st-location-current strong{color:#f8fafc;font-size:13px;line-height:1.35;text-align:right}
 .st-location-list{display:grid;gap:8px}
-.st-location-item{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:stretch;border:1px solid rgba(255,255,255,.09);border-radius:15px;background:rgba(2,6,23,.34);padding:8px}
+.st-location-item{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center;border:1px solid rgba(255,255,255,.09);border-radius:15px;background:rgba(2,6,23,.34);padding:8px}
 .st-location-item.is-current{border-color:rgba(34,211,238,.45);background:linear-gradient(135deg,rgba(34,211,238,.14),rgba(168,85,247,.1))}
-.st-location-main{border:0;background:transparent;color:inherit;text-align:left;padding:0;cursor:pointer;min-width:0}
+.st-location-main{color:inherit;text-align:left;min-width:0}
 .st-location-main strong{display:flex;align-items:center;gap:6px;font-size:14px;color:#f8fafc;line-height:1.25}
-.st-location-main small{font-size:9px;color:rgba(125,211,252,.72);font-weight:850}
+.st-location-main small{font-size:9px;color:rgba(125,211,252,.72);font-weight:850;white-space:nowrap}
 .st-location-main p{margin:5px 0 0;color:rgba(226,232,240,.72);font-size:12px;line-height:1.5;white-space:pre-wrap}
+.st-location-suggest{align-self:center;border:1px solid rgba(34,211,238,.24);border-radius:11px;background:rgba(14,165,233,.1);color:#bae6fd;font-size:11px;font-weight:850;padding:7px 9px;cursor:pointer;white-space:nowrap}
 .st-graph-info{display:grid;gap:8px;border:1px solid rgba(255,255,255,.09);border-radius:15px;background:rgba(2,6,23,.34);padding:10px}
 .st-graph-info-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .st-graph-info-head strong{font-size:14px;color:#f8fafc;line-height:1.25}
@@ -5204,10 +5208,6 @@ function injectInternalMchanApp(html, staticSeed) {
     return "hypnoos.static-map." + scope + ".v1:" + graphScopeKey();
   }
 
-  function graphCurrentStorageKey(scope) {
-    return "hypnoos.static-map.current." + scope + ".v1:" + graphScopeKey();
-  }
-
   function graphUpdateSeenStorageKey() {
     return "hypnoos.static-map.update-seen.v1:" + graphScopeKey();
   }
@@ -5259,18 +5259,17 @@ function injectInternalMchanApp(html, staticSeed) {
     return new Set((fallback.locations || []).map((location) => String(location.id)));
   }
 
-  function currentGraphNodeId(scope, graph) {
-    try {
-      const stored = localStorage.getItem(graphCurrentStorageKey(scope));
-      if (stored && graph.locations.some((location) => location.id === stored)) return stored;
-    } catch {}
-    return graph.locations[0]?.id || "";
+  function getCurrentStoryLocation() {
+    const system = getSystemState();
+    return String(system["当前地点"] || system["当前位置"] || "").trim();
   }
 
-  function setCurrentGraphNode(scope, nodeId) {
-    try {
-      localStorage.setItem(graphCurrentStorageKey(scope), String(nodeId || ""));
-    } catch {}
+  function isGraphLocationCurrent(location, currentLocation) {
+    const current = String(currentLocation || "").trim();
+    if (!current || !location) return false;
+    const id = String(location.id || "").trim();
+    const label = String(location.label || "").trim();
+    return Boolean((label && current.includes(label)) || (id && current === id));
   }
 
   function deleteStaticGraphNode(scope, nodeId) {
@@ -5282,11 +5281,6 @@ function injectInternalMchanApp(html, staticSeed) {
       locations: graph.locations.filter((location) => location.id !== nodeId)
     };
     saveStaticGraph(scope, next);
-    try {
-      if (localStorage.getItem(graphCurrentStorageKey(scope)) === nodeId) {
-        localStorage.removeItem(graphCurrentStorageKey(scope));
-      }
-    } catch {}
     return true;
   }
 
@@ -5397,8 +5391,8 @@ function injectInternalMchanApp(html, staticSeed) {
     return base || "new-place";
   }
 
-  function renderGraphAddLocationCard(scope, graph, currentNode) {
-    const target = currentNode || graph.locations[0] || null;
+  function renderGraphAddLocationCard(scope, graph) {
+    const currentLocation = getCurrentStoryLocation() || "未知";
     const title = scope === "school" ? "新增校内地点" : "新增区域地点";
     const tag = scope === "school" ? "<学校地图更新>" : "<地图更新>";
     return '<section class="st-lite-card st-graph-add" data-graph-add-scope="' + escapeAttr(scope) + '">' +
@@ -5407,33 +5401,35 @@ function injectInternalMchanApp(html, staticSeed) {
         '<input data-graph-add-name autocomplete="off" placeholder="地点名">' +
         '<textarea data-graph-add-info placeholder="地点说明、用途、相关角色或剧情倾向"></textarea>' +
       '</div>' +
-      '<p class="st-graph-add-hint">提交后只会加入本轮APP操作；AI需要输出完整 ' + escapeHtml(tag) + ' 地点列表 JSON，前端再写入本地。当前地点：' + escapeHtml(target?.label || "无") + '。</p>' +
-      '<button type="button" data-graph-add-submit data-graph-scope="' + escapeAttr(scope) + '" data-graph-current="' + escapeAttr(target?.id || "") + '">请求新增地点</button>' +
+      '<p class="st-graph-add-hint">提交后只会加入本轮APP操作；AI需要输出完整 ' + escapeHtml(tag) + ' 地点列表 JSON，前端再写入本地。当前地点变量：' + escapeHtml(currentLocation) + '。</p>' +
+      '<button type="button" data-graph-add-submit data-graph-scope="' + escapeAttr(scope) + '">请求新增地点</button>' +
     '</section>';
   }
 
   function renderStaticGraphCard(scope) {
     const graph = loadStaticGraph(scope);
-    const currentId = currentGraphNodeId(scope, graph);
-    const currentNode = graph.locations.find((location) => location.id === currentId) || graph.locations[0] || null;
+    const currentLocation = getCurrentStoryLocation();
     const locations = graph.locations.length
       ? graph.locations.map((location) => {
           const deletable = !defaultGraphNodeIds(scope).has(location.id);
-          return '<article class="st-location-item' + (location.id === currentId ? " is-current" : "") + '">' +
-            '<button type="button" class="st-location-main" data-graph-location="' + escapeAttr(location.id) + '" data-graph-scope="' + escapeAttr(scope) + '">' +
-              '<strong>' + escapeHtml(location.label) + (location.id === currentId ? '<small>当前</small>' : "") + '</strong>' +
+          const isCurrent = isGraphLocationCurrent(location, currentLocation);
+          return '<article class="st-location-item' + (isCurrent ? " is-current" : "") + '">' +
+            '<div class="st-location-main">' +
+              '<strong>' + escapeHtml(location.label) + (isCurrent ? '<small>变量当前</small>' : "") + '</strong>' +
               '<p>' + escapeHtml(location.info || "暂无地点信息。") + '</p>' +
-            '</button>' +
+            '</div>' +
+            '<button type="button" class="st-location-suggest" data-graph-suggest-location="' + escapeAttr(location.id) + '" data-graph-scope="' + escapeAttr(scope) + '">建议设为地点</button>' +
             (deletable ? '<button class="st-graph-delete" type="button" data-graph-action="delete-node" data-graph-scope="' + escapeAttr(scope) + '" data-graph-node-id="' + escapeAttr(location.id) + '">删除</button>' : "") +
           '</article>';
         }).join("")
       : '<div class="st-graph-info"><p>暂无地点信息。</p></div>';
     return '<section class="st-lite-card st-graph-card">' +
       '<div class="st-graph-head"><strong>' + escapeHtml(graph.title) + '</strong><span>' + graph.locations.length + ' 地点</span></div>' +
+      '<div class="st-location-current"><span>当前地点变量</span><strong>' + escapeHtml(currentLocation || "未记录") + '</strong></div>' +
       '<div class="st-location-list">' + locations + '</div>' +
       '<div class="st-graph-tools"><button class="st-graph-tool" type="button" data-graph-action="reset" data-graph-scope="' + escapeAttr(scope) + '">恢复默认</button><button class="st-graph-tool" type="button" data-graph-action="sync" data-graph-scope="' + escapeAttr(scope) + '">读取更新</button></div>' +
     '</section>' +
-    renderGraphAddLocationCard(scope, graph, currentNode);
+    renderGraphAddLocationCard(scope, graph);
   }
 
   function getSchoolRules() {
@@ -5493,8 +5489,7 @@ function injectInternalMchanApp(html, staticSeed) {
         const infoText = String(infoInput?.value || "").trim();
         if (!name && !infoText) return;
         const graph = loadStaticGraph(scope);
-        const currentId = button.getAttribute("data-graph-current") || currentGraphNodeId(scope, graph);
-        const currentNode = graph.locations.find((location) => location.id === currentId) || graph.locations[0] || null;
+        const currentLocation = getCurrentStoryLocation() || "未知";
         const tag = scope === "school" ? "学校地图更新" : "地图更新";
         appendAppOperation({
           来源: scope === "school" ? "学校地图" : "地图",
@@ -5504,7 +5499,7 @@ function injectInternalMchanApp(html, staticSeed) {
             名称: name || "由AI按剧情命名",
             信息: infoText || "由AI按当前剧情补全",
             建议ID: graphSuggestedNodeId(name),
-            当前地点: currentNode ? currentNode.label : "无"
+            当前地点变量: currentLocation
           },
           当前完整地点列表JSON: JSON.stringify({ title: graph.title, locations: graph.locations }),
           AI执行规范: "若地点成立，输出完整<" + tag + ">JSON</" + tag + ">，不是增量；只保留locations地点列表，不要输出边关系、坐标或连线。每项使用id、name、description。"
@@ -5513,11 +5508,24 @@ function injectInternalMchanApp(html, staticSeed) {
         if (infoInput) infoInput.value = "";
       });
     });
-    page.querySelectorAll("[data-graph-location]").forEach((button) => {
+    page.querySelectorAll("[data-graph-suggest-location]").forEach((button) => {
       button.addEventListener("click", () => {
-        setCurrentGraphNode(button.getAttribute("data-graph-scope") || "world", button.getAttribute("data-graph-location") || "");
-        if (page.classList.contains("st-school-app")) renderSchoolPage(page);
-        else renderMapPage(page);
+        const scope = button.getAttribute("data-graph-scope") || "world";
+        const graph = loadStaticGraph(scope);
+        const id = button.getAttribute("data-graph-suggest-location") || "";
+        const location = graph.locations.find((item) => item.id === id);
+        if (!location) return;
+        appendAppOperation({
+          来源: scope === "school" ? "学校地图" : "地图",
+          操作: "建议剧情地点",
+          当前地点变量: getCurrentStoryLocation() || "未知",
+          建议地点: {
+            名称: location.label,
+            描述: location.info || "暂无地点信息。",
+            地图类型: graph.title
+          },
+          AI执行规范: "这只是用户希望剧情地点设在这里的建议；前端不能直接改当前地点。AI应按剧情、时间和移动条件判断是否成立，成立时更新/系统/当前地点，并同步当前事件、当前日程或当前/待上课程；不合理时可拒绝或延后。"
+        });
       });
     });
     page.querySelectorAll("[data-graph-action]").forEach((button) => {
@@ -6065,6 +6073,7 @@ const __stDefaultVariables = () => ({
     "当前日程": "午休",
     "当前/待上课程": "无",
     "当前事件": "午休",
+    "当前地点": "私立斋明学园 / 教室",
     "hypnoos": {}
   },
   "角色": __stDefaultRoles()
