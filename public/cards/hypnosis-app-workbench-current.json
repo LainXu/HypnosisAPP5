@@ -392,7 +392,14 @@
         "mchanMode": "static-readonly",
         "lastExportedPng": "public/cards/hypnosis-app.png",
         "sillyTavernLoadUrl": "http://127.0.0.1:5173/public/frontends/hypnosis-app/st-load-inline.html",
-        "localFrontendUrl": "http://127.0.0.1:5173/public/frontends/hypnosis-app/index.html"
+        "localFrontendUrl": "http://127.0.0.1:5173/public/frontends/hypnosis-app/index.html",
+        "frontendMode": "local",
+        "frontendUrl": "http://127.0.0.1:5173/public/frontends/hypnosis-app/st-load-inline.html",
+        "assetBase": "http://127.0.0.1:5173/public/frontends/hypnosis-app/assets/",
+        "remoteFrontendUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@a1149403617f41b3f47f383d52acb9810ecd5dfa/dist/webview/index.html",
+        "remoteAssetBase": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@a1149403617f41b3f47f383d52acb9810ecd5dfa/dist/webview/assets/",
+        "remoteCommit": "a1149403617f41b3f47f383d52acb9810ecd5dfa",
+        "frontendLoader": "jquery-load-local-inline-classic"
       }
     },
     "group_only_greetings": [],
@@ -2288,6 +2295,12 @@
     "lastExportedPng": "public/cards/hypnosis-app.png",
     "exportedAt": "2026-06-26T17:27:57.692Z",
     "frontendLoader": "jquery-load-local-inline-classic",
-    "sillyTavernLoadUrl": "http://127.0.0.1:5173/public/frontends/hypnosis-app/st-load-inline.html"
+    "sillyTavernLoadUrl": "http://127.0.0.1:5173/public/frontends/hypnosis-app/st-load-inline.html",
+    "frontendMode": "local",
+    "frontendUrl": "http://127.0.0.1:5173/public/frontends/hypnosis-app/st-load-inline.html",
+    "assetBase": "http://127.0.0.1:5173/public/frontends/hypnosis-app/assets/",
+    "remoteFrontendUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@a1149403617f41b3f47f383d52acb9810ecd5dfa/dist/webview/index.html",
+    "remoteAssetBase": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@a1149403617f41b3f47f383d52acb9810ecd5dfa/dist/webview/assets/",
+    "remoteCommit": "a1149403617f41b3f47f383d52acb9810ecd5dfa"
   }
 }
