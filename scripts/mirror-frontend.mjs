@@ -1552,6 +1552,7 @@ function scoreStatDataCandidate(value) {
     let score = 0;
     const system = value['系统'];
     const roles = value['角色'];
+    const achievements = value['成就'];
     const tasks = value['任务'];
     if (isPlainVariableObject(system)) {
         score += 20;
@@ -1569,6 +1570,8 @@ function scoreStatDataCandidate(value) {
     }
     if (isPlainVariableObject(roles))
         score += 30 + Object.keys(roles).length * 5;
+    if (isPlainVariableObject(achievements))
+        score += 4 + Object.keys(achievements).length;
     if (isPlainVariableObject(tasks))
         score += 8 + Object.keys(tasks).length;
     return score;
@@ -1692,6 +1695,7 @@ function getVariableSnapshotsSync() {
             candidate['系统']?.['MC能量'] ?? candidate['系统']?.['_MC能量'] ?? '',
             candidate['系统']?.['当前MC点'] ?? candidate['系统']?.['MC点'] ?? '',
             Object.keys(candidate['角色'] ?? {}).join(','),
+            Object.keys(candidate['成就'] ?? {}).join(','),
             Object.keys(candidate['任务'] ?? {}).join(','),
         ].join('\\u0001');
         if (seen.has(key))
@@ -1706,8 +1710,8 @@ function getLatestVariablesSync() {
 function getLatestChatVariables() {
     return normalizeChatVariables(getLatestVariablesSync());
 }
-const FRONTEND_REWARD_STATE_VERSION = 1;
-let frontendRewardStateLastSyncAt = 0;
+const FRONTEND_REWARD_STATE_VERSION = 2;
+let frontendRewardVariableSyncSignature = '';
 function frontendRewardStateScope() {
     try {
         const chatId = globalThis.SillyTavern?.getCurrentChatId?.();
@@ -1729,10 +1733,10 @@ function frontendRewardStateScope() {
     return 'global';
 }
 function frontendRewardStateKey() {
-    return \`hypnoos.frontend-rewards.v1:\${frontendRewardStateScope()}\`;
+    return 'hypnoos.frontend-rewards.v1:' + frontendRewardStateScope();
 }
 function normalizeFrontendRewardState(input) {
-    const base = { version: FRONTEND_REWARD_STATE_VERSION, achievements: {}, achievementNames: {}, quests: {}, questNames: {} };
+    const base = { version: FRONTEND_REWARD_STATE_VERSION, achievements: {}, achievementNames: {}, quests: {}, questNames: {}, dynamicAchievements: {}, dynamicQuests: {} };
     if (!input || typeof input !== 'object')
         return base;
     for (const key of ['achievements', 'achievementNames', 'quests', 'questNames']) {
@@ -1742,6 +1746,17 @@ function normalizeFrontendRewardState(input) {
         for (const [id, value] of Object.entries(source)) {
             if (value)
                 base[key][String(id)] = true;
+        }
+    }
+    for (const [key, normalizer] of Object.entries({ dynamicAchievements: normalizeStoredAchievementRecord, dynamicQuests: normalizeStoredQuestRecord })) {
+        const source = input[key];
+        if (!source || typeof source !== 'object')
+            continue;
+        for (const [id, value] of Object.entries(source)) {
+            const record = normalizer(value, id);
+            const recordId = String(record.id ?? id ?? '').trim();
+            if (recordId)
+                base[key][recordId] = record;
         }
     }
     return base;
@@ -1762,31 +1777,65 @@ function readFrontendRewardStateRaw() {
         return normalizeFrontendRewardState(null);
     }
 }
-function markFrontendRewardState(patch) {
-    const state = readFrontendRewardStateRaw();
-    const addValues = (bucket, values) => {
-        if (!Array.isArray(values))
-            return;
-        for (const value of values) {
-            const key = String(value ?? '').trim();
-            if (key)
-                bucket[key] = true;
-        }
+function firstNonEmptyText(...values) {
+    for (const value of values) {
+        const text = String(value ?? '').trim();
+        if (text)
+            return text;
+    }
+    return '';
+}
+function toRewardNumber(value) {
+    const number = Number(value);
+    return Number.isFinite(number) ? number : 0;
+}
+function normalizeStoredAchievementRecord(value, fallbackKey = '') {
+    const raw = isPlainVariableObject(value) ? value : {};
+    const title = firstNonEmptyText(raw.成就, raw.名称, raw.title, raw.name, fallbackKey);
+    const id = firstNonEmptyText(raw.成就ID, raw.id, raw.ID, title, fallbackKey);
+    return {
+        id,
+        title,
+        description: firstNonEmptyText(raw.条件, raw.完成条件, raw.description, raw.desc),
+        rewardMcPoints: toRewardNumber(raw.奖励MC点 ?? raw.奖励 ?? raw.rewardMcPoints),
+        isClaimed: true,
+        source: 'variable',
     };
-    addValues(state.achievements, patch?.claimedAchievements);
-    addValues(state.achievements, patch?.claimedAchievementIds);
-    addValues(state.achievements, patch?.achievementIds);
-    addValues(state.achievementNames, patch?.claimedAchievementNames);
-    addValues(state.achievementNames, patch?.achievementNames);
-    addValues(state.achievementNames, patch?.claimedAchievementsByName);
-    addValues(state.quests, patch?.claimedStaticTasks);
-    addValues(state.quests, patch?.claimedTaskIds);
-    addValues(state.quests, patch?.questIds);
-    addValues(state.questNames, patch?.claimedStaticTaskNames);
-    addValues(state.questNames, patch?.claimedTaskNames);
-    addValues(state.questNames, patch?.questNames);
-    addValues(state.questNames, patch?.claimedTasksByName);
-    writeFrontendRewardState(state);
+}
+function normalizeStoredQuestRecord(value, fallbackKey = '') {
+    const raw = isPlainVariableObject(value) ? value : {};
+    const title = firstNonEmptyText(raw.任务, raw.名称, raw.title, raw.name, fallbackKey);
+    const id = firstNonEmptyText(raw.任务ID, raw.id, raw.ID, title, fallbackKey);
+    return {
+        id,
+        title,
+        description: firstNonEmptyText(raw.完成条件, raw.条件, raw.description, raw.desc),
+        rewardMcPoints: toRewardNumber(raw.奖励MC点 ?? raw.奖励 ?? raw.rewardMcPoints),
+        status: 'COMPLETED',
+        source: 'variable',
+    };
+}
+function markStoredAchievement(state, record) {
+    const normalized = normalizeStoredAchievementRecord(record, record?.key);
+    if (normalized.id)
+        state.achievements[normalized.id] = true;
+    if (normalized.title) {
+        state.achievements[normalized.title] = true;
+        state.achievementNames[normalized.title] = true;
+    }
+    if (normalized.id)
+        state.dynamicAchievements[normalized.id] = normalized;
+}
+function markStoredQuest(state, record) {
+    const normalized = normalizeStoredQuestRecord(record, record?.key);
+    if (normalized.id)
+        state.quests[normalized.id] = true;
+    if (normalized.title) {
+        state.quests[normalized.title] = true;
+        state.questNames[normalized.title] = true;
+    }
+    if (normalized.id)
+        state.dynamicQuests[normalized.id] = normalized;
 }
 function isFrontendAchievementClaimed(state, achievement) {
     const id = String(achievement?.id ?? '').trim();
@@ -1798,113 +1847,115 @@ function isFrontendQuestClaimed(state, quest) {
     const title = String(quest?.title ?? quest?.name ?? '').trim();
     return Boolean((id && state.quests[id]) || (title && (state.quests[title] || state.questNames[title])));
 }
-function frontendStateMessageBody(message) {
-    if (typeof message === 'string')
-        return message;
-    if (!message || typeof message !== 'object')
+function isCompletedFrontendRewardRecord(value) {
+    if (value === true)
+        return true;
+    if (!isPlainVariableObject(value))
+        return false;
+    const done = value.已完成 ?? value.completed ?? value.isCompleted ?? value.status ?? value.状态;
+    if (done === true)
+        return true;
+    const text = String(done ?? '').trim().toUpperCase();
+    return ['已完成', '完成', 'COMPLETED', 'CLAIMED', '已领取'].includes(text);
+}
+function collectCompletedFrontendRewardVariables(variables) {
+    const achievements = [];
+    const quests = [];
+    const achievementVars = variables['成就'];
+    if (isPlainVariableObject(achievementVars)) {
+        for (const [key, value] of Object.entries(achievementVars)) {
+            if (isCompletedFrontendRewardRecord(value))
+                achievements.push({ key, value });
+        }
+    }
+    const taskVars = variables['任务'];
+    if (isPlainVariableObject(taskVars)) {
+        for (const [key, value] of Object.entries(taskVars)) {
+            if (isCompletedFrontendRewardRecord(value))
+                quests.push({ key, value });
+        }
+    }
+    return { achievements, quests };
+}
+function frontendRewardVariableSignature(records) {
+    if (records.achievements.length === 0 && records.quests.length === 0)
         return '';
-    return String(message.message ?? message.mes ?? message.text ?? message.content ?? message.raw ?? '');
-}
-function parseFrontendStateUpdateText(text) {
-    const source = String(text || '');
-    if (!source.includes('<前端状态更新>'))
-        return 0;
-    let applied = 0;
-    for (const match of source.matchAll(/<前端状态更新>([\\s\\S]*?)<\\/前端状态更新>/g)) {
-        try {
-            const patch = JSON.parse(String(match[1] || '').trim());
-            markFrontendRewardState(patch);
-            applied += 1;
-        }
-        catch {
-            // ignore malformed AI helper block
-        }
-    }
-    return applied;
-}
-function readSeenFrontendStateUpdateKeys() {
-    try {
-        const parsed = JSON.parse(localStorage.getItem(frontendRewardStateKey() + ':seen') || '[]');
-        if (Array.isArray(parsed))
-            return new Set(parsed.map(String));
-    }
-    catch {
-        // ignore
-    }
-    return new Set();
-}
-function writeSeenFrontendStateUpdateKeys(keys) {
-    try {
-        localStorage.setItem(frontendRewardStateKey() + ':seen', JSON.stringify(Array.from(keys).slice(-120)));
-    }
-    catch {
-        // ignore
-    }
-}
-function pushFrontendStateMessages(target, source, label) {
-    if (!Array.isArray(source))
-        return;
-    const recent = source.length > 80 ? source.slice(-80) : source;
-    const offset = source.length - recent.length;
-    recent.forEach((message, index) => {
-        const body = frontendStateMessageBody(message);
-        if (!body.includes('<前端状态更新>'))
-            return;
-        const id = message && typeof message === 'object'
-            ? (message.message_id ?? message.mesid ?? message.id ?? offset + index)
-            : offset + index;
-        target.push({ key: label + ':' + String(id) + ':' + body.length, body });
+    return JSON.stringify({
+        achievements: records.achievements.map(item => [item.key, normalizeStoredAchievementRecord(item.value, item.key)]),
+        quests: records.quests.map(item => [item.key, normalizeStoredQuestRecord(item.value, item.key)]),
     });
 }
-function syncFrontendRewardStateFromChat() {
-    const now = Date.now();
-    if (now - frontendRewardStateLastSyncAt < 800)
+function isLatestFrontendRewardLayer() {
+    const current = getCurrentMessageIdSafe();
+    if (current === null)
+        return true;
+    const latest = getLatestMessageIdSafe();
+    return latest === null || String(current) === String(latest);
+}
+function clearCompletedFrontendRewardVariables(records) {
+    const achievementKeys = records.achievements.map(item => item.key);
+    const questKeys = records.quests.map(item => item.key);
+    if (achievementKeys.length === 0 && questKeys.length === 0)
         return;
-    frontendRewardStateLastSyncAt = now;
-    const messages = [];
     try {
-        if (typeof getCurrentMessageId === 'function' && typeof getChatMessages === 'function') {
-            const current = getChatMessages(getCurrentMessageId());
-            pushFrontendStateMessages(messages, Array.isArray(current) ? current : [current], 'current');
+        updateVariablesWith(vars => {
+            const root = isPlainVariableObject(vars?.stat_data) ? vars.stat_data : vars;
+            if (!isPlainVariableObject(root))
+                return vars;
+            if (isPlainVariableObject(root['成就'])) {
+                for (const key of achievementKeys)
+                    delete root['成就'][key];
+            }
+            if (isPlainVariableObject(root['任务'])) {
+                for (const key of questKeys)
+                    delete root['任务'][key];
+            }
+            if (isPlainVariableObject(vars?.stat_data))
+                vars.stat_data = root;
+            return vars;
+        }, CHAT_OPTION);
+    }
+    catch (err) {
+        console.warn('[HypnoOS] 清理已同步任务/成就变量失败', err);
+    }
+}
+function syncFrontendRewardStateFromVariables() {
+    if (!isLatestFrontendRewardLayer())
+        return;
+    const variables = getLatestVariablesSync();
+    if (!isPlainVariableObject(variables))
+        return;
+    const records = collectCompletedFrontendRewardVariables(variables);
+    const signature = frontendRewardVariableSignature(records);
+    if (!signature)
+        return;
+    const alreadySyncedInMemory = signature === frontendRewardVariableSyncSignature;
+    let alreadySyncedInStorage = false;
+    try {
+        alreadySyncedInStorage = localStorage.getItem(frontendRewardStateKey() + ':variable-sync') === signature;
+    }
+    catch {
+        // ignore
+    }
+    frontendRewardVariableSyncSignature = signature;
+    if (!alreadySyncedInMemory && !alreadySyncedInStorage) {
+        const state = readFrontendRewardStateRaw();
+        for (const item of records.achievements)
+            markStoredAchievement(state, { ...item.value, key: item.key });
+        for (const item of records.quests)
+            markStoredQuest(state, { ...item.value, key: item.key });
+        writeFrontendRewardState(state);
+        try {
+            localStorage.setItem(frontendRewardStateKey() + ':variable-sync', signature);
+        }
+        catch {
+            // ignore
         }
     }
-    catch {
-        // ignore
-    }
-    try {
-        if (typeof getChatMessages === 'function')
-            pushFrontendStateMessages(messages, getChatMessages(-1) || [], 'latest');
-    }
-    catch {
-        // ignore
-    }
-    try {
-        const context = globalThis.SillyTavern?.getContext?.() || (typeof getContext === 'function' ? getContext() : null);
-        pushFrontendStateMessages(messages, context?.chat || [], 'context');
-    }
-    catch {
-        // ignore
-    }
-    try {
-        pushFrontendStateMessages(messages, Array.isArray(globalThis.chat) ? globalThis.chat : [], 'window');
-    }
-    catch {
-        // ignore
-    }
-    const seen = readSeenFrontendStateUpdateKeys();
-    let changed = false;
-    for (const message of messages) {
-        if (seen.has(message.key))
-            continue;
-        if (parseFrontendStateUpdateText(message.body) > 0)
-            changed = true;
-        seen.add(message.key);
-    }
-    if (changed)
-        writeSeenFrontendStateUpdateKeys(seen);
+    clearCompletedFrontendRewardVariables(records);
 }
 function readFrontendRewardState() {
-    syncFrontendRewardStateFromChat();
+    syncFrontendRewardStateFromVariables();
     return readFrontendRewardStateRaw();
 }`
   );
@@ -2236,10 +2287,27 @@ function chooseUserResourcesFromSystems(systems) {
         const frontendState = readFrontendRewardState();
         const dynamic = await buildRoleBasedAchievements(store);
         const all = [...STATIC_ACHIEVEMENTS, ...dynamic];
-        return all.map(a => ({
+        const known = new Set();
+        const mapped = all.map(a => {
+            const id = String(a.id ?? '').trim();
+            const title = String(a.title ?? a.name ?? '').trim();
+            if (id)
+                known.add(id);
+            if (title)
+                known.add(title);
+            return ({
             ...a,
             isClaimed: Boolean(store.achievements[a.id] ?? false) || isFrontendAchievementClaimed(frontendState, a),
-        }));
+        });
+        });
+        const storedDynamic = Object.values(frontendState.dynamicAchievements ?? {})
+            .filter(a => {
+                const id = String(a?.id ?? '').trim();
+                const title = String(a?.title ?? a?.name ?? '').trim();
+                return (id || title) && !known.has(id) && !known.has(title);
+            })
+            .map(a => ({ ...a, isClaimed: true }));
+        return [...mapped, ...storedDynamic];
     },`
   );
   output = output.replace(
@@ -2283,25 +2351,27 @@ function chooseUserResourcesFromSystems(systems) {
         const claimed = store.quests ?? {};
         const tasks = (await _mvuBridge__WEBPACK_IMPORTED_MODULE_3__.MvuBridge.getTasks().catch(() => null)) ?? {};
         const seenTaskNames = new Set();
-        const quests = QUEST_DATABASE.flatMap(q => {
-            if (claimed[q.id] === 'CLAIMED' || isFrontendQuestClaimed(frontendState, q))
-                return [];
+        const seenQuestKeys = new Set();
+        const quests = QUEST_DATABASE.map(q => {
+            seenQuestKeys.add(String(q.id ?? '').trim());
+            seenQuestKeys.add(String(q.name ?? '').trim());
             const taskState = tasks[q.name];
             if (taskState && typeof taskState === 'object')
                 seenTaskNames.add(q.name);
             const completed = Boolean(taskState && typeof taskState === 'object' && taskState.已完成 === true);
             const active = Boolean(taskState && typeof taskState === 'object' && typeof taskState.已完成 === 'boolean');
-            return [{
+            const claimedDone = claimed[q.id] === 'CLAIMED' || isFrontendQuestClaimed(frontendState, q);
+            return {
                 id: q.id,
                 title: q.name,
                 description: q.condition,
                 rewardMcPoints: q.rewardMcPoints,
-                status: completed
+                status: claimedDone || completed
                     ? 'COMPLETED'
                     : active
                         ? 'ACTIVE'
                         : 'AVAILABLE',
-            }];
+            };
         });
         for (const [name, taskState] of Object.entries(tasks)) {
             if (seenTaskNames.has(name))
@@ -2315,6 +2385,19 @@ function chooseUserResourcesFromSystems(systems) {
                 rewardMcPoints: Number(taskState.奖励MC点 ?? taskState.奖励 ?? taskState.rewardMcPoints ?? 0) || 0,
                 status: taskState.已完成 === true ? 'COMPLETED' : 'ACTIVE',
             });
+            seenQuestKeys.add(\`dynamic:\${name}\`);
+            seenQuestKeys.add(String(name));
+        }
+        for (const quest of Object.values(frontendState.dynamicQuests ?? {})) {
+            const id = String(quest?.id ?? '').trim();
+            const title = String(quest?.title ?? quest?.name ?? '').trim();
+            if (!(id || title) || seenQuestKeys.has(id) || seenQuestKeys.has(title))
+                continue;
+            quests.push({ ...quest, status: 'COMPLETED' });
+            if (id)
+                seenQuestKeys.add(id);
+            if (title)
+                seenQuestKeys.add(title);
         }
         const order = { COMPLETED: 0, ACTIVE: 1, AVAILABLE: 2, CLAIMED: 3 };
         quests.sort((a, b) => order[a.status] - order[b.status]);
