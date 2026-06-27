@@ -624,6 +624,19 @@ function patchAchievementAppModule(code) {
     const [newQuestBias, setNewQuestBias] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)('');
     const refreshTimerRef = (0,react__WEBPACK_IMPORTED_MODULE_1__.useRef)(null);`
   );
+  output = output.replace(
+    `        requestRefresh();
+        let stops = [];`,
+    `        requestRefresh();
+        const rewardStateListener = () => requestRefresh();
+        window.addEventListener("HYPNOOS_REWARD_STATE_CHANGED", rewardStateListener);
+        let stops = [];`
+  );
+  output = output.replace(
+    `            stops.forEach(s => s.stop());`,
+    `            window.removeEventListener("HYPNOOS_REWARD_STATE_CHANGED", rewardStateListener);
+            stops.forEach(s => s.stop());`
+  );
   output = replaceBetween(
     output,
     "    // --- Handlers ---",
@@ -667,7 +680,6 @@ function patchAchievementAppModule(code) {
                 input.textContent = next;
             input.dispatchEvent(new Event('input', { bubbles: true }));
             input.dispatchEvent(new Event('change', { bubbles: true }));
-            input.focus?.();
             return true;
         }
         console.info('[HypnoOS] 已记录APP操作', block);
@@ -789,7 +801,9 @@ function patchAchievementAppModule(code) {
 	    const remainingQuestSlots = Math.max(0, 3 - activeQuestCount);
 	    const visibleQuests = quests.filter(q => {
 	        if (questFilter === 'ACTIVE')
-	            return q.status === 'ACTIVE' || q.status === 'COMPLETED';
+	            return q.status === 'ACTIVE';
+	        if (questFilter === 'DONE')
+	            return q.status === 'CLAIMED' || q.status === 'COMPLETED';
 	        return q.status === 'AVAILABLE';
 	    });
 	`
@@ -808,10 +822,6 @@ function patchAchievementAppModule(code) {
   output = output.replace(
     `!loading && activeTab === 'QUESTS' && ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "space-y-3 animate-fade-in", children: [`,
     `!loading && activeTab === 'QUESTS' && ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "space-y-3 animate-fade-in", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "rounded-2xl border border-white/10 bg-white/5 px-3 py-2 flex items-center justify-between gap-2", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("span", { className: "text-[11px] text-white/60", children: "任务筛选" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("select", { value: questFilter, onChange: e => setQuestFilter(e.target.value), className: "bg-slate-950/80 border border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("option", { value: "UNFINISHED", children: "未完成" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("option", { value: "ACTIVE", children: "已接任务" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("option", { value: "DONE", children: "已完成任务" })] })] }),`
-  );
-  output = output.replace(
-    `(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("option", { value: "DONE", children: "已完成任务" })`,
-    ``
   );
   output = output.replace(
     `children: "根据当前上下文剧情，让 AI 新增若干未完成任务。前端只记录意图，不直接改变量。"`,
@@ -912,8 +922,20 @@ else {
         if (currentApp !== _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.HOME)
             return;`,
     `    (0,react__WEBPACK_IMPORTED_MODULE_1__.useEffect)(() => {
-        const timer = window.setInterval(() => void refreshUserData(), 1500);
-        return () => window.clearInterval(timer);
+        const refreshNow = () => void refreshUserData();
+        const refreshWhenVisible = () => {
+            if (!document.hidden)
+                refreshNow();
+        };
+        refreshNow();
+        window.addEventListener("focus", refreshNow);
+        document.addEventListener("visibilitychange", refreshWhenVisible);
+        window.addEventListener("HYPNOOS_OPERATION_QUEUE_CHANGED", refreshNow);
+        return () => {
+            window.removeEventListener("focus", refreshNow);
+            document.removeEventListener("visibilitychange", refreshWhenVisible);
+            window.removeEventListener("HYPNOOS_OPERATION_QUEUE_CHANGED", refreshNow);
+        };
     }, []);
     (0,react__WEBPACK_IMPORTED_MODULE_1__.useEffect)(() => {
         void refreshUserData();
@@ -944,8 +966,20 @@ function patchAppRootModule(code) {
         if (currentApp !== _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.HOME)
             return;`,
     `    (0,react__WEBPACK_IMPORTED_MODULE_1__.useEffect)(() => {
-        const timer = window.setInterval(() => void refreshUserData(), 1500);
-        return () => window.clearInterval(timer);
+        const refreshNow = () => void refreshUserData();
+        const refreshWhenVisible = () => {
+            if (!document.hidden)
+                refreshNow();
+        };
+        refreshNow();
+        window.addEventListener("focus", refreshNow);
+        document.addEventListener("visibilitychange", refreshWhenVisible);
+        window.addEventListener("HYPNOOS_OPERATION_QUEUE_CHANGED", refreshNow);
+        return () => {
+            window.removeEventListener("focus", refreshNow);
+            document.removeEventListener("visibilitychange", refreshWhenVisible);
+            window.removeEventListener("HYPNOOS_OPERATION_QUEUE_CHANGED", refreshNow);
+        };
     }, []);
     (0,react__WEBPACK_IMPORTED_MODULE_1__.useEffect)(() => {
         void refreshUserData();
@@ -1938,15 +1972,21 @@ function syncFrontendRewardStateFromVariables() {
         // ignore
     }
     frontendRewardVariableSyncSignature = signature;
-    if (!alreadySyncedInMemory && !alreadySyncedInStorage) {
-        const state = readFrontendRewardStateRaw();
-        for (const item of records.achievements)
-            markStoredAchievement(state, { ...item.value, key: item.key });
-        for (const item of records.quests)
-            markStoredQuest(state, { ...item.value, key: item.key });
-        writeFrontendRewardState(state);
+    const state = readFrontendRewardStateRaw();
+    for (const item of records.achievements)
+        markStoredAchievement(state, { ...item.value, key: item.key });
+    for (const item of records.quests)
+        markStoredQuest(state, { ...item.value, key: item.key });
+    writeFrontendRewardState(state);
+    try {
+        localStorage.setItem(frontendRewardStateKey() + ':variable-sync', signature);
+    }
+    catch {
+        // ignore
+    }
+    if (!alreadySyncedInMemory || !alreadySyncedInStorage) {
         try {
-            localStorage.setItem(frontendRewardStateKey() + ':variable-sync', signature);
+            window.dispatchEvent(new CustomEvent('HYPNOOS_REWARD_STATE_CHANGED', { detail: { signature } }));
         }
         catch {
             // ignore
@@ -2367,7 +2407,7 @@ function chooseUserResourcesFromSystems(systems) {
                 description: q.condition,
                 rewardMcPoints: q.rewardMcPoints,
                 status: claimedDone || completed
-                    ? 'COMPLETED'
+                    ? 'CLAIMED'
                     : active
                         ? 'ACTIVE'
                         : 'AVAILABLE',
@@ -2383,7 +2423,7 @@ function chooseUserResourcesFromSystems(systems) {
                 title: name,
                 description: String(taskState.完成条件 ?? ''),
                 rewardMcPoints: Number(taskState.奖励MC点 ?? taskState.奖励 ?? taskState.rewardMcPoints ?? 0) || 0,
-                status: taskState.已完成 === true ? 'COMPLETED' : 'ACTIVE',
+                status: taskState.已完成 === true ? 'CLAIMED' : 'ACTIVE',
             });
             seenQuestKeys.add(\`dynamic:\${name}\`);
             seenQuestKeys.add(String(name));
@@ -2393,13 +2433,13 @@ function chooseUserResourcesFromSystems(systems) {
             const title = String(quest?.title ?? quest?.name ?? '').trim();
             if (!(id || title) || seenQuestKeys.has(id) || seenQuestKeys.has(title))
                 continue;
-            quests.push({ ...quest, status: 'COMPLETED' });
+            quests.push({ ...quest, status: 'CLAIMED' });
             if (id)
                 seenQuestKeys.add(id);
             if (title)
                 seenQuestKeys.add(title);
         }
-        const order = { COMPLETED: 0, ACTIVE: 1, AVAILABLE: 2, CLAIMED: 3 };
+        const order = { ACTIVE: 0, AVAILABLE: 1, CLAIMED: 2, COMPLETED: 2 };
         quests.sort((a, b) => order[a.status] - order[b.status]);
         return quests;
     },`
@@ -2902,12 +2942,16 @@ function upgradeInternalMchanApp(html) {
   function boot() {
     ensurePhoneDarkThemeStyle();
     refreshPhoneVariableViews();
-    window.setInterval(refreshPhoneVariableViews, 1500);
-    window.addEventListener("HYPNOOS_OPERATION_QUEUE_CHANGED", refreshPhoneVariableViews);
+    const scheduleRefresh = () => window.requestAnimationFrame(refreshPhoneVariableViews);
+    window.addEventListener("HYPNOOS_OPERATION_QUEUE_CHANGED", scheduleRefresh);
+    window.addEventListener("focus", scheduleRefresh);
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) scheduleRefresh();
+    });
     try {
       if (typeof eventOn === "function" && window.Mvu?.events) {
-        eventOn(window.Mvu.events.VARIABLE_INITIALIZED, refreshPhoneVariableViews);
-        eventOn(window.Mvu.events.VARIABLE_UPDATE_ENDED, refreshPhoneVariableViews);
+        eventOn(window.Mvu.events.VARIABLE_INITIALIZED, scheduleRefresh);
+        eventOn(window.Mvu.events.VARIABLE_UPDATE_ENDED, scheduleRefresh);
       }
     } catch {}
   }`
@@ -3512,10 +3556,9 @@ function injectInternalMchanApp(html, staticSeed) {
 .st-lite-card{border:1px solid rgba(255,255,255,.1);border-radius:16px;background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.035));box-shadow:0 14px 30px rgba(0,0,0,.2);padding:12px}
 .st-todo-card{min-height:220px;display:grid;place-items:center;text-align:center}
 .st-todo-card strong{font-size:34px;letter-spacing:.12em;color:#f8fafc}
-.st-graph-tabs,.st-graph-tools{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.st-graph-tab,.st-graph-tool,.st-rule-button{border:1px solid rgba(255,255,255,.1);border-radius:13px;background:rgba(255,255,255,.055);color:rgba(226,232,240,.78);font-size:12px;font-weight:850;padding:9px 10px;cursor:pointer}
+.st-graph-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.st-graph-tab,.st-rule-button{border:1px solid rgba(255,255,255,.1);border-radius:13px;background:rgba(255,255,255,.055);color:rgba(226,232,240,.78);font-size:12px;font-weight:850;padding:9px 10px;cursor:pointer}
 .st-graph-tab.active,.st-rule-button{border-color:rgba(34,211,238,.36);background:linear-gradient(135deg,rgba(34,211,238,.18),rgba(168,85,247,.15));color:#f8fafc}
-.st-graph-tool{color:#a5f3fc}
 .st-graph-card{display:grid;gap:10px}
 .st-graph-head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
 .st-graph-head strong{font-size:15px;color:#fff}
@@ -3631,7 +3674,8 @@ function injectInternalMchanApp(html, staticSeed) {
 .st-home-course-strip.is-clock-side .st-home-course-dot{grid-row:1/3;width:7px;height:7px}
 .st-home-course-strip.is-clock-side strong{font-size:14px;line-height:1.15}
 .st-home-course-strip.is-clock-side span{font-size:11px;line-height:1.25}
-.st-home-hypnosis-island{position:absolute;top:17px;left:50%;z-index:40;display:inline-flex;min-width:88px;max-width:min(54%,280px);height:27px;transform:translateX(-50%);align-items:center;justify-content:center;gap:7px;border:1px solid rgba(216,180,254,.22);border-radius:999px;background:rgba(2,6,23,.78);backdrop-filter:blur(14px);box-shadow:0 12px 26px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.06);padding:0 10px;color:rgba(245,243,255,.94);font-size:11px;line-height:1.2;pointer-events:none}
+.st-home-author-status{font-size:12px!important;font-weight:900!important;letter-spacing:0!important;white-space:nowrap!important;line-height:1.1!important}
+.st-home-hypnosis-island{position:absolute;top:6px;left:50%;z-index:40;display:inline-flex;min-width:88px;max-width:min(54%,280px);height:27px;transform:translateX(-50%);align-items:center;justify-content:center;gap:7px;border:1px solid rgba(216,180,254,.22);border-radius:999px;background:rgba(2,6,23,.78);backdrop-filter:blur(14px);box-shadow:0 12px 26px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.06);padding:0 10px;color:rgba(245,243,255,.94);font-size:11px;line-height:1.2;pointer-events:none}
 .st-home-hypnosis-island.is-idle{width:88px;padding:0;background:rgba(2,6,23,.78)}
 .st-home-hypnosis-island.is-idle>*{display:none!important}
 .st-home-hypnosis-island svg{width:14px;height:14px;color:#f0abfc;filter:drop-shadow(0 0 8px rgba(240,171,252,.55));flex:0 0 auto}
@@ -5261,14 +5305,19 @@ function injectInternalMchanApp(html, staticSeed) {
     header.style.position = header.style.position || "relative";
     const headerRect = header.getBoundingClientRect();
     const clockRect = clock.getBoundingClientRect();
-    const available = Math.floor(headerRect.right - clockRect.right - 18);
+    const clockStyle = getComputedStyle(clock);
+    const fontSize = parseFloat(clockStyle.fontSize || "0") || 72;
+    const timeText = String(system["当前时间"] || "12:00").trim();
+    const estimatedTextWidth = Math.ceil(fontSize * Math.max(4, timeText.length) * 0.58);
+    const clockTextRight = Math.min(clockRect.right, clockRect.left + estimatedTextWidth + 8);
+    const available = Math.floor(headerRect.right - clockTextRight - 18);
     if (available < 124) {
       strip.classList.remove("is-clock-side");
       strip.removeAttribute("style");
       return;
     }
     strip.classList.add("is-clock-side");
-    strip.style.left = Math.round(clockRect.right - headerRect.left + 14) + "px";
+    strip.style.left = Math.round(clockTextRight - headerRect.left + 14) + "px";
     strip.style.top = Math.round(clockRect.top - headerRect.top + clockRect.height * 0.55) + "px";
     strip.style.maxWidth = Math.min(220, available) + "px";
   }
@@ -5891,12 +5940,6 @@ function injectInternalMchanApp(html, staticSeed) {
     return graph;
   }
 
-  function resetStaticGraph(scope) {
-    const graph = normalizeGraphGraph(cloneGraph(STATIC_GRAPH_DEFAULTS[scope]), scope);
-    saveStaticGraph(scope, graph);
-    return graph;
-  }
-
   function graphSuggestedNodeId(name) {
     const base = String(name || "")
       .trim()
@@ -5942,7 +5985,6 @@ function injectInternalMchanApp(html, staticSeed) {
       '<div class="st-graph-head"><strong>' + escapeHtml(graph.title) + '</strong><span>' + graph.locations.length + ' 地点</span></div>' +
       '<div class="st-location-current"><span>当前地点变量</span><strong>' + escapeHtml(currentLocation || "未记录") + '</strong></div>' +
       '<div class="st-location-list">' + locations + '</div>' +
-      '<div class="st-graph-tools"><button class="st-graph-tool" type="button" data-graph-action="reset" data-graph-scope="' + escapeAttr(scope) + '">恢复默认</button><button class="st-graph-tool" type="button" data-graph-action="sync" data-graph-scope="' + escapeAttr(scope) + '">读取更新</button></div>' +
     '</section>' +
     renderGraphAddLocationCard(scope, graph);
   }
@@ -6059,9 +6101,7 @@ function injectInternalMchanApp(html, staticSeed) {
       button.addEventListener("click", () => {
         const scope = button.getAttribute("data-graph-scope") || "world";
         const action = button.getAttribute("data-graph-action");
-        if (action === "reset") resetStaticGraph(scope);
-        else if (action === "delete-node") deleteStaticGraphNode(scope, button.getAttribute("data-graph-node-id") || "");
-        else syncStaticGraphUpdatesFromChat();
+        if (action === "delete-node") deleteStaticGraphNode(scope, button.getAttribute("data-graph-node-id") || "");
         if (page.classList.contains("st-school-app")) renderSchoolPage(page);
         else renderMapPage(page);
       });
@@ -6174,6 +6214,35 @@ function injectInternalMchanApp(html, staticSeed) {
 
   function getHomeHeader(root) {
     return root?.querySelector?.('[class*="px-6"][class*="mb-8"]') || root?.firstElementChild?.firstElementChild || null;
+  }
+
+  const ST_HOME_AUTHOR_STATUS = "原卡作者Ramiel";
+
+  function patchHomeAuthorStatus(root) {
+    if (!root || !looksLikePhoneHome(root)) return;
+    const existing = root.querySelector(".st-home-author-status");
+    if (existing?.textContent === ST_HOME_AUTHOR_STATUS) return;
+    const rootRect = root.getBoundingClientRect();
+    const candidates = Array.from(root.querySelectorAll("span,div,time")).filter((element) => {
+      if (element.closest(".st-mchan-internal-app,.st-add-role-app,.st-calendar-lite-app,.st-timetable-app,.st-profile-app,.st-map-app,.st-school-app")) return false;
+      const text = element.textContent?.trim() || "";
+      if (!element.classList?.contains("st-home-author-status") && !/^\\d{1,2}:\\d{2}$/.test(text)) return false;
+      if (element.children.length > 0) return false;
+      const rect = element.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return false;
+      const top = rect.top - rootRect.top;
+      const left = rect.left - rootRect.left;
+      const fontSize = Number.parseFloat(getComputedStyle(element).fontSize) || 0;
+      return top >= 0 && top < 72 && left >= 0 && left < 130 && fontSize <= 28;
+    });
+    const target = candidates.sort((a, b) => {
+      const ar = a.getBoundingClientRect();
+      const br = b.getBoundingClientRect();
+      return (ar.top - br.top) || (ar.left - br.left);
+    })[0];
+    if (!target) return;
+    target.textContent = ST_HOME_AUTHOR_STATUS;
+    target.classList.add("st-home-author-status");
   }
 
   function pendingOperationCount() {
@@ -6561,6 +6630,7 @@ function injectInternalMchanApp(html, staticSeed) {
 
   function patchHomeTile() {
     const root = findPhoneRoot(document.body);
+    patchHomeAuthorStatus(root);
     patchHomeCourseStatus(root);
     patchHomeHypnosisIsland(root);
     removeHomeOperationConfirm(root);
@@ -6627,13 +6697,16 @@ function injectInternalMchanApp(html, staticSeed) {
         refreshPhoneVariableViews();
       });
     };
-    window.setInterval(refreshPhoneVariableViews, 1500);
     try {
       const appRoot = document.getElementById("app") || document.body;
       const observer = new MutationObserver(schedulePhoneVariableRefresh);
       observer.observe(appRoot, { childList: true, subtree: true });
     } catch {}
-    window.addEventListener("HYPNOOS_OPERATION_QUEUE_CHANGED", refreshPhoneVariableViews);
+    window.addEventListener("HYPNOOS_OPERATION_QUEUE_CHANGED", schedulePhoneVariableRefresh);
+    window.addEventListener("focus", schedulePhoneVariableRefresh);
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) schedulePhoneVariableRefresh();
+    });
     try {
       if (typeof eventOn === "function" && window.Mvu?.events) {
         eventOn(window.Mvu.events.VARIABLE_INITIALIZED, refreshPhoneVariableViews);
