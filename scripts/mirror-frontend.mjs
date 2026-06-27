@@ -151,12 +151,14 @@ function prepareFrontendHtml(html, baseUrl, options = {}) {
   const charset = /<meta[^>]+charset=/i.test(String(html || "")) ? "" : `<meta charset="utf-8">`;
   const bootGuard = `<style id="st-hypnoos-boot-style">
 html.st-hypnoos-booting body{background:#05070f}
-html.st-hypnoos-booting #app{opacity:0!important}
+html.st-hypnoos-booting #app{opacity:0!important;visibility:hidden!important;pointer-events:none!important}
+html.st-hypnoos-booting body::before{content:"";position:fixed;inset:0;z-index:2147483646;background:#05070f}
+html.st-hypnoos-booting.st-hypnoos-boot-failed body::after{content:"前端加载失败，请刷新或检查控制台错误";position:fixed;left:50%;top:50%;z-index:2147483647;transform:translate(-50%,-50%);max-width:min(320px,calc(100vw - 40px));border:1px solid rgba(244,114,182,.35);border-radius:16px;background:rgba(15,23,42,.96);box-shadow:0 20px 50px rgba(0,0,0,.45);padding:14px 16px;color:#f8fafc;font:600 13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;text-align:center}
 </style><script>
 document.documentElement.classList.add("st-hypnoos-booting");
 window.__ST_HYPNOOS_PATCH_READY__ = false;
 window.setTimeout(() => {
-  if (!window.__ST_HYPNOOS_PATCH_READY__) document.documentElement.classList.remove("st-hypnoos-booting");
+  if (!window.__ST_HYPNOOS_PATCH_READY__) document.documentElement.classList.add("st-hypnoos-boot-failed");
 }, 6000);
 </script>`;
   const shim = `<script>
@@ -5989,6 +5991,7 @@ function injectInternalMchanApp(html, staticSeed) {
 
   function releaseBootGuard() {
     window.__ST_HYPNOOS_PATCH_READY__ = true;
+    document.documentElement.classList.remove("st-hypnoos-boot-failed");
     document.documentElement.classList.remove("st-hypnoos-booting");
   }
 
