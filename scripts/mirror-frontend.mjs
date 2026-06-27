@@ -1025,6 +1025,11 @@ const SUBSCRIPTION_TIER_CONFIGS = [
 ];
 const COMMAND_TIER_CONFIGS = [{ tier: 'TRIAL', label: '试用区', price: 0 }, ...SUBSCRIPTION_TIER_CONFIGS];
 const DEFAULT_COLLAPSED_TIERS = { VIP1: true, VIP2: true, VIP3: true, VIP4: true, VIP5: true };
+const RESOURCE_EXCHANGE_OPTIONS = [
+    { id: 'money_to_energy', title: '补充MC能量', rule: '100円 = 1点MC能量', spendResource: '资金', spendPerUnit: 100, gainResource: 'MC能量', gainPerUnit: 1, gainUnit: '点', note: '补充后不能超过MC能量上限。' },
+    { id: 'money_to_points', title: '购买当前MC点', rule: '1000円 = 1点当前MC点', spendResource: '资金', spendPerUnit: 1000, gainResource: '当前MC点', gainPerUnit: 1, gainUnit: '点', note: '购买后只增加当前MC点。' },
+    { id: 'points_to_energy_max', title: '提升MC能量上限', rule: '1当前MC点 = 1点MC能量上限', spendResource: '当前MC点', spendPerUnit: 1, gainResource: 'MC能量上限', gainPerUnit: 1, gainUnit: '点', note: '消耗的当前MC点计入累计消耗MC点。' },
+];
 const PEOPLELESS_FEATURE_IDS = new Set(['vip4_closed_space_common_sense', 'vip5_open_space_common_sense']);
 const TIMELESS_FEATURE_IDS = new Set(['vip1_temp_sensitivity', 'vip1_estrus', 'vip1_memory_erase']);
 const SPECIAL_VALUE_FEATURES = {
@@ -1124,6 +1129,10 @@ const summarizeCosts = (features) => features.reduce((sum, feature) => {
         sum.energy += cost.amount;
     return sum;
 }, { energy: 0, points: 0 });
+const getExchangeSpendText = (option, quantity) => option.spendResource === '资金'
+    ? formatMoney(option.spendPerUnit * quantity)
+    : String(option.spendPerUnit * quantity) + '点';
+const getExchangeGainText = (option, quantity) => '+' + String(option.gainPerUnit * quantity) + option.gainUnit;
 const operationAppendFallback = async (payload) => {
     const selectors = ['#send_textarea', 'textarea#send_textarea', 'textarea[name="send_textarea"]', 'textarea[data-testid="send-textarea"]'];
     const text = '<本轮APP操作>\\n<催眠APP>\\n- 启动催眠｜内容=' + JSON.stringify(payload) + '\\n</催眠APP>\\n</本轮APP操作>';
@@ -1211,6 +1220,7 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
     const [subscription, setSubscription] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(null);
     const [collapsedTiers, setCollapsedTiers] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)({ ...DEFAULT_COLLAPSED_TIERS, ...(initialDraft.collapsedTiers || {}) });
     const [expandedFeatures, setExpandedFeatures] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(initialDraft.expandedFeatures || {});
+    const [exchangeQty, setExchangeQty] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(initialDraft.exchangeQty || {});
     const [showStatusPanel, setShowStatusPanel] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(false);
     const [notice, setNotice] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)('');
     const [isFlashing, setIsFlashing] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(false);
@@ -1286,8 +1296,8 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
                 userExtraValue: feature.userExtraValue || '',
             };
         }
-        writeCustomHypnosisDraft({ features: featureDrafts, collapsedTiers, expandedFeatures });
-    }, [collapsedTiers, expandedFeatures, features]);
+        writeCustomHypnosisDraft({ features: featureDrafts, collapsedTiers, expandedFeatures, exchangeQty });
+    }, [collapsedTiers, exchangeQty, expandedFeatures, features]);
     const updateFeature = (id, patch) => {
         setFeatures(current => current.map(feature => feature.id === id ? { ...feature, ...patch } : feature));
     };
@@ -1299,7 +1309,22 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
     };
     const selectedFeatures = (0,react__WEBPACK_IMPORTED_MODULE_1__.useMemo)(() => features.filter(feature => feature.isEnabled && isTierAvailable(feature.tier)), [features, subscriptionRank]);
     const selectedCost = (0,react__WEBPACK_IMPORTED_MODULE_1__.useMemo)(() => summarizeCosts(selectedFeatures), [selectedFeatures]);
-    const resourceWarning = selectedCost.energy > Number(userData?.mcEnergy || 0) || selectedCost.points > Number(userData?.mcPoints || 0);
+    const requestResourceExchange = (option) => {
+        const quantity = parsePositiveInt(exchangeQty[option.id] || '1', 1);
+        recordOperationIntent({
+            来源: '催眠APP',
+            操作: '资源兑换',
+            项目: option.title,
+            数量: String(quantity) + option.gainUnit,
+            兑换规则: option.rule,
+            消耗资源: option.spendResource + ' ' + getExchangeSpendText(option, quantity),
+            获得资源: option.gainResource + ' ' + getExchangeGainText(option, quantity),
+            结算提示: '余额不足则兑换失败；只兑换资源，不自动使用兑换后的资源。',
+            备注: option.note,
+        });
+        setExchangeQty(current => ({ ...current, [option.id]: String(quantity) }));
+        setNotice('已暂存' + option.title + '请求');
+    };
     const requestTierUnlock = (tierConfig) => {
         recordOperationIntent({
             来源: '催眠APP',
@@ -1459,7 +1484,40 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
                                                     jsx('div', { className: 'text-2xl font-black text-yellow-300', children: formatMoney(userData?.money ?? 0) }),
                                                 ] }),
                                         ] }),
-                                    jsx('div', { className: 'mt-3 text-xs font-bold text-white/40', children: '订阅请求只会进入本轮操作，余额和变量由AI结算。' }),
+                                    jsx('div', { className: 'mt-3 grid grid-cols-3 gap-2', children: [
+                                            { label: '当前MC点', value: String(userData?.mcPoints ?? 0) },
+                                            { label: '累计消耗', value: String(userData?.totalConsumedMc ?? 0) },
+                                            { label: '可疑度', value: String(userData?.suspicion ?? 0) },
+                                        ].map(item => jsxs('div', { className: 'rounded-2xl border border-white/10 bg-white/5 px-2 py-2 text-center', children: [
+                                                jsx('div', { className: 'text-[10px] font-bold text-white/35', children: item.label }),
+                                                jsx('div', { className: 'mt-1 text-sm font-black text-white/85', children: item.value }),
+                                            ] }, item.label)) }),
+                                    jsx('div', { className: 'mt-3 text-xs font-bold text-white/40', children: '订阅和兑换请求只会进入本轮操作，余额和变量由AI结算。' }),
+                                ] }),
+                            jsxs('section', { className: 'mt-4 rounded-3xl border border-cyan-300/15 bg-cyan-950/10 p-4', children: [
+                                    jsxs('div', { className: 'mb-3 flex items-center justify-between gap-3', children: [
+                                            jsx('div', { className: 'text-lg font-black text-white', children: '资源兑换' }),
+                                            jsx('div', { className: 'rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1 text-xs font-black text-cyan-100', children: '按数量暂存' }),
+                                        ] }),
+                                    jsx('div', { className: 'space-y-2', children: RESOURCE_EXCHANGE_OPTIONS.map(option => {
+                                            const quantity = parsePositiveInt(exchangeQty[option.id] || '1', 1);
+                                            return jsxs('div', { className: 'rounded-2xl border border-white/10 bg-slate-950/80 p-3', children: [
+                                                    jsxs('div', { className: 'flex items-start justify-between gap-3', children: [
+                                                            jsxs('div', { className: 'min-w-0', children: [
+                                                                    jsx('div', { className: 'text-base font-black text-white', children: option.title }),
+                                                                    jsx('div', { className: 'mt-1 text-xs font-bold text-white/45', children: option.rule }),
+                                                                ] }),
+                                                            jsxs('div', { className: 'shrink-0 text-right text-xs font-black text-cyan-100/80', children: [
+                                                                    jsx('div', { children: getExchangeSpendText(option, quantity) }),
+                                                                    jsx('div', { className: 'text-emerald-200', children: option.gainResource + ' ' + getExchangeGainText(option, quantity) }),
+                                                                ] }),
+                                                        ] }),
+                                                    jsxs('div', { className: 'mt-3 grid grid-cols-[1fr_auto] gap-2', children: [
+                                                            jsx('input', { type: 'number', inputMode: 'numeric', min: '1', value: exchangeQty[option.id] ?? '1', onChange: event => setExchangeQty(current => ({ ...current, [option.id]: event.target.value })), onBlur: () => setExchangeQty(current => ({ ...current, [option.id]: String(parsePositiveInt(current[option.id] || '1', 1)) })), className: 'min-w-0 rounded-xl border border-white/10 bg-black/45 px-3 py-2 text-sm font-black text-white outline-none focus:border-cyan-300/60' }),
+                                                            jsx('button', { type: 'button', onClick: () => requestResourceExchange(option), className: 'rounded-xl bg-gradient-to-r from-cyan-500 to-sky-500 px-4 py-2 text-sm font-black text-white shadow-lg shadow-cyan-950/30', children: '暂存' }),
+                                                        ] }),
+                                                ] }, option.id);
+                                        }) }),
                                 ] }),
                             jsxs('section', { className: 'mt-4 rounded-3xl border border-white/10 bg-black/30 p-4', children: [
                                     jsxs('div', { className: 'mb-3 flex items-center justify-between gap-3', children: [
@@ -1510,16 +1568,13 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
                                             jsx('div', { className: 'mt-1 text-xs font-bold text-white/40', children: '从右侧边缘拉开订阅/VIP侧栏' }),
                                         ] }),
                                 ] }),
-                            jsxs('div', { className: 'mt-4 flex flex-wrap gap-2 text-xs font-black', children: [
-                                    jsx('span', { className: 'rounded-full border border-white/10 bg-black/30 px-3 py-1.5 text-white/60', children: '已启用 ' + String(selectedFeatures.length) + ' 条' }),
-                                    jsx('span', { className: 'rounded-full border border-white/10 bg-black/30 px-3 py-1.5 ' + (resourceWarning ? 'text-rose-300' : 'text-fuchsia-100/70'), children: '预计：MC能量 ' + selectedCost.energy + '点 / 当前MC点 ' + selectedCost.points + '点' }),
-                                ] }),
+                            jsx('div', { className: 'mt-4 flex flex-wrap gap-2 text-xs font-black', children: jsx('span', { className: 'rounded-full border border-white/10 bg-black/30 px-3 py-1.5 text-white/60', children: '已启用 ' + String(selectedFeatures.length) + ' 条' }) }),
                         ] }),
                     jsx('div', { className: 'mt-4 space-y-4', children: COMMAND_TIER_CONFIGS.map(renderTierSection) }),
                 ] }),
             jsxs('footer', { className: 'relative z-20 shrink-0 border-t border-white/10 bg-slate-950/95 p-4 pb-7 shadow-2xl shadow-black backdrop-blur', children: [
-                    jsx('div', { className: 'mb-3 text-center text-xs font-black ' + (resourceWarning ? 'text-rose-300' : 'text-white/45'), children: resourceWarning ? '预计余额不足，AI结算时失败' : '预计消耗：MC能量 ' + selectedCost.energy + '点' }),
-                    jsx('button', { type: 'button', onClick: startHypnosis, disabled: !selectedFeatures.length, className: 'mx-auto flex h-12 w-56 items-center justify-center rounded-full text-base font-black text-white shadow-lg transition disabled:cursor-not-allowed disabled:text-white/35', style: { background: selectedFeatures.length ? 'linear-gradient(90deg,#8b5cf6 0%,#ec4899 100%)' : '#1e293b', boxShadow: selectedFeatures.length ? '0 12px 28px rgba(236,72,153,0.25)' : 'none' }, children: '⚡ 启动催眠' }),
+                    jsx('div', { className: 'mb-3 text-center text-xs font-black text-white/45', children: '预计消耗：MC能量 ' + selectedCost.energy + '点' }),
+                    jsx('button', { type: 'button', onClick: startHypnosis, disabled: !selectedFeatures.length, className: 'mx-auto flex h-12 w-56 items-center justify-center rounded-full text-base font-black text-white shadow-lg transition disabled:cursor-not-allowed disabled:text-white/35', style: { background: selectedFeatures.length ? 'linear-gradient(90deg,#8b5cf6 0%,#ec4899 100%)' : '#1e293b', boxShadow: selectedFeatures.length ? '0 12px 28px rgba(236,72,153,0.25)' : 'none' }, children: '启动催眠' }),
                     notice ? jsx('div', { className: 'mt-3 text-center text-xs font-bold text-fuchsia-100/75', children: notice }) : null,
                 ] }),
             renderStatusHandle(),
