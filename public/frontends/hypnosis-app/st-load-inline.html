@@ -1329,14 +1329,13 @@ var __webpack_exports__ = __webpack_require__("./src/催眠APP前端/index.tsx")
 .st-location-current span{color:rgba(203,213,225,.58);font-size:10px;font-weight:850}
 .st-location-current strong{color:#f8fafc;font-size:13px;line-height:1.35;text-align:right}
 .st-location-list{display:grid;gap:8px}
-.st-location-item{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;gap:8px;align-items:center;border:1px solid rgba(255,255,255,.09);border-radius:15px;background:rgba(2,6,23,.34);padding:8px}
+.st-location-item{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center;border:1px solid rgba(255,255,255,.09);border-radius:15px;background:rgba(2,6,23,.34);padding:8px}
 .st-location-item.is-current{border-color:rgba(34,211,238,.45);background:linear-gradient(135deg,rgba(34,211,238,.14),rgba(168,85,247,.1))}
 .st-location-main{color:inherit;text-align:left;min-width:0}
 .st-location-main strong{display:flex;align-items:center;gap:6px;font-size:14px;color:#f8fafc;line-height:1.25}
 .st-location-main small{font-size:9px;color:rgba(125,211,252,.72);font-weight:850;white-space:nowrap}
 .st-location-main p{margin:5px 0 0;color:rgba(226,232,240,.72);font-size:12px;line-height:1.5;white-space:pre-wrap}
-.st-location-suggest,.st-location-update{align-self:center;border:1px solid rgba(34,211,238,.24);border-radius:11px;background:rgba(14,165,233,.1);color:#bae6fd;font-size:11px;font-weight:850;padding:7px 9px;cursor:pointer;white-space:nowrap}
-.st-location-update{border-color:rgba(168,85,247,.28);background:rgba(168,85,247,.12);color:#e9d5ff}
+.st-location-suggest{align-self:center;border:1px solid rgba(34,211,238,.24);border-radius:11px;background:rgba(14,165,233,.1);color:#bae6fd;font-size:11px;font-weight:850;padding:7px 9px;cursor:pointer;white-space:nowrap}
 .st-graph-info{display:grid;gap:8px;border:1px solid rgba(255,255,255,.09);border-radius:15px;background:rgba(2,6,23,.34);padding:10px}
 .st-graph-info-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .st-graph-info-head strong{font-size:14px;color:#f8fafc;line-height:1.25}
@@ -3697,7 +3696,6 @@ var __webpack_exports__ = __webpack_require__("./src/催眠APP前端/index.tsx")
               '<p>' + escapeHtml(location.info || "暂无地点信息。") + '</p>' +
             '</div>' +
             '<button type="button" class="st-location-suggest" data-graph-suggest-location="' + escapeAttr(location.id) + '" data-graph-scope="' + escapeAttr(scope) + '">建议设为地点</button>' +
-            '<button type="button" class="st-location-update" data-graph-update-location="' + escapeAttr(location.id) + '" data-graph-scope="' + escapeAttr(scope) + '">更新描述</button>' +
             (deletable ? '<button class="st-graph-delete" type="button" data-graph-action="delete-node" data-graph-scope="' + escapeAttr(scope) + '" data-graph-node-id="' + escapeAttr(location.id) + '">删除</button>' : "") +
           '</article>';
         }).join("")
@@ -3816,28 +3814,6 @@ var __webpack_exports__ = __webpack_require__("./src/催眠APP前端/index.tsx")
             地图类型: graph.title
           },
           AI执行规范: "这只是用户希望剧情地点设在这里的建议；前端不能直接改当前地点。AI应按剧情、时间和移动条件判断是否成立，成立时更新/系统/当前地点，并同步当前事件、当前日程或当前/待上课程；不合理时可拒绝或延后。"
-        });
-      });
-    });
-    page.querySelectorAll("[data-graph-update-location]").forEach((button) => {
-      button.addEventListener("click", () => {
-        const scope = button.getAttribute("data-graph-scope") || "world";
-        const graph = loadStaticGraph(scope);
-        const id = button.getAttribute("data-graph-update-location") || "";
-        const location = graph.locations.find((item) => item.id === id);
-        if (!location) return;
-        const tag = scope === "school" ? "学校地图更新" : "地图更新";
-        appendAppOperation({
-          来源: scope === "school" ? "学校地图" : "地图",
-          操作: "请求更新地点描述",
-          地图类型: graph.title + "（地点列表）",
-          目标地点: {
-            名称: location.label,
-            当前描述: location.info || "暂无地点信息。",
-            当前地点变量: getCurrentStoryLocation() || "未知"
-          },
-          当前完整地点列表JSON: JSON.stringify({ title: graph.title, locations: graph.locations }),
-          AI执行规范: "若剧情中该地点的结构、用途、状态、归属或可进入条件发生变化，输出完整<" + tag + ">JSON</" + tag + ">；不是增量。只修改需要变化的description，保留其他地点，不输出边关系、坐标或连线。"
         });
       });
     });
