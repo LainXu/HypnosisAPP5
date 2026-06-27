@@ -497,7 +497,7 @@ function patchBundledHypnosisApp(html) {
       "            // “角色状态可视化(vip1_stats)”购买/订阅成功一次后永久解锁，用于主屏幕显示“身体检测”APP。\\n            purchases: { ...store.purchases, vip1_stats: true },",
       "            purchases: { ...store.purchases },"
     );
-  outputHtml = patchEvalModuleSources(outputHtml, (code) => patchAppEntryModule(patchAppRootModule(patchMvuBridgeModule(patchHypnosisDataServiceModule(patchHypnosisAppModule(patchHypnosisSendModule(patchAchievementAppModule(code))))))));
+  outputHtml = patchEvalModuleSources(outputHtml, (code) => patchAppEntryModule(patchAppRootModule(patchMvuBridgeModule(patchHypnosisDataServiceModule(patchHypnosisAppModule(patchHypnosisSendModule(patchHypnosisTypesModule(patchAchievementAppModule(code)))))))));
   return outputHtml;
 }
 
@@ -1015,7 +1015,16 @@ function rebuildHypnosisAppModule(code) {
   if (start < 0 || end <= start) return code;
   const replacement = `// --- Custom Hypnosis App (rebuilt local page) ---
 const CUSTOM_HYPNOSIS_DRAFT_KEY = 'hypnoos.hypnosis-app.rebuild.v1';
-const TIER_ORDER = { TRIAL: 0, VIP1: 1, VIP2: 2, VIP3: 3, VIP4: 4, VIP5: 5, VIP6: 6 };
+const TIER_ORDER = { TRIAL: 0, VIP1: 1, VIP2: 2, VIP3: 3, VIP4: 4, VIP5: 5 };
+const SUBSCRIPTION_TIER_CONFIGS = [
+    { tier: 'VIP1', label: 'VIP 1（基础）', price: 3000 },
+    { tier: 'VIP2', label: 'VIP 2（进阶）', price: 6000 },
+    { tier: 'VIP3', label: 'VIP 3（高阶）', price: 10000 },
+    { tier: 'VIP4', label: 'VIP 4（深度）', price: 20000 },
+    { tier: 'VIP5', label: 'VIP 5', price: 40000 },
+];
+const COMMAND_TIER_CONFIGS = [{ tier: 'TRIAL', label: '试用区', price: 0 }, ...SUBSCRIPTION_TIER_CONFIGS];
+const DEFAULT_COLLAPSED_TIERS = { VIP1: true, VIP2: true, VIP3: true, VIP4: true, VIP5: true };
 const PEOPLELESS_FEATURE_IDS = new Set(['vip4_closed_space_common_sense', 'vip5_open_space_common_sense']);
 const TIMELESS_FEATURE_IDS = new Set(['vip1_temp_sensitivity', 'vip1_estrus', 'vip1_memory_erase']);
 const SPECIAL_VALUE_FEATURES = {
@@ -1042,24 +1051,15 @@ const parsePositiveInt = (value, fallback = 1) => Math.max(1, Math.floor(parsePo
 const formatMoney = (value) => '¥' + Math.max(0, Number(value) || 0).toLocaleString();
 const normalizeTierValue = (value) => {
     const text = String(value || '').toUpperCase().replace(/\\s+/g, '');
-    if (text.includes('VIP6'))
-        return 'VIP6';
-    if (text.includes('VIP5'))
-        return 'VIP5';
-    if (text.includes('VIP4'))
-        return 'VIP4';
-    if (text.includes('VIP3'))
-        return 'VIP3';
-    if (text.includes('VIP2'))
-        return 'VIP2';
-    if (text.includes('VIP1'))
-        return 'VIP1';
+    const match = text.match(/VIP([1-9])/);
+    if (match)
+        return 'VIP' + Math.min(5, Number(match[1]));
     return 'TRIAL';
 };
 const getTierRank = (tier) => TIER_ORDER[normalizeTierValue(tier)] ?? 0;
 const getTierLabel = (tier) => {
     const normalized = normalizeTierValue(tier);
-    const config = _types__WEBPACK_IMPORTED_MODULE_3__.VIP_LEVELS.find(item => item.tier === normalized);
+    const config = COMMAND_TIER_CONFIGS.find(item => item.tier === normalized);
     return config?.label || normalized;
 };
 const readCustomHypnosisDraft = () => {
@@ -1209,7 +1209,7 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
     const initialDraft = (0,react__WEBPACK_IMPORTED_MODULE_1__.useMemo)(() => readCustomHypnosisDraft(), []);
     const [features, setFeatures] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)([]);
     const [subscription, setSubscription] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(null);
-    const [collapsedTiers, setCollapsedTiers] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(initialDraft.collapsedTiers || { VIP2: true, VIP3: true, VIP4: true, VIP5: true, VIP6: true });
+    const [collapsedTiers, setCollapsedTiers] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)({ ...DEFAULT_COLLAPSED_TIERS, ...(initialDraft.collapsedTiers || {}) });
     const [expandedFeatures, setExpandedFeatures] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(initialDraft.expandedFeatures || {});
     const [showStatusPanel, setShowStatusPanel] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(false);
     const [notice, setNotice] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)('');
@@ -1295,23 +1295,22 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
         const normalized = normalizeTierValue(tier);
         if (normalized === 'TRIAL')
             return true;
-        const config = _types__WEBPACK_IMPORTED_MODULE_3__.VIP_LEVELS.find(item => item.tier === normalized);
-        const threshold = Number(config?.unlockThreshold ?? Infinity);
-        return subscriptionRank >= getTierRank(normalized) || Number(userData?.totalConsumedMc || 0) >= threshold;
+        return subscriptionRank >= getTierRank(normalized);
     };
-    const selectedFeatures = (0,react__WEBPACK_IMPORTED_MODULE_1__.useMemo)(() => features.filter(feature => feature.isEnabled && isTierAvailable(feature.tier)), [features, subscriptionRank, userData?.totalConsumedMc]);
+    const selectedFeatures = (0,react__WEBPACK_IMPORTED_MODULE_1__.useMemo)(() => features.filter(feature => feature.isEnabled && isTierAvailable(feature.tier)), [features, subscriptionRank]);
     const selectedCost = (0,react__WEBPACK_IMPORTED_MODULE_1__.useMemo)(() => summarizeCosts(selectedFeatures), [selectedFeatures]);
     const resourceWarning = selectedCost.energy > Number(userData?.mcEnergy || 0) || selectedCost.points > Number(userData?.mcPoints || 0);
     const requestTierUnlock = (tierConfig) => {
         recordOperationIntent({
             来源: '催眠APP',
-            操作: '解锁VIP等级',
+            操作: '订阅VIP等级',
             等级: tierConfig.label,
-            当前累计消耗MC点: String(userData?.totalConsumedMc ?? 0) + '点',
-            解锁阈值: String(tierConfig.unlockThreshold ?? 0) + '点',
-            说明: '只请求解锁或订阅该等级；解锁后对应VIP功能可直接启用，本次不会自动使用任何具体催眠指令。',
+            每周价格: formatMoney(tierConfig.price || 0),
+            订阅周期: '一周',
+            当前订阅等级: getTierLabel(subscriptionTier),
+            说明: '只请求AI按周订阅该VIP等级；订阅成功后该等级及更低等级功能可启用，本次不会自动使用任何具体催眠指令。',
         });
-        setNotice('已暂存' + tierConfig.label + '解锁请求');
+        setNotice('已暂存' + tierConfig.label + '订阅请求');
     };
     const startHypnosis = () => {
         if (!selectedFeatures.length) {
@@ -1387,8 +1386,8 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
                         jsxs('button', { type: 'button', onClick: expand, className: 'min-w-0 flex-1 text-left focus:outline-none', children: [
                                 jsx('h3', { className: 'truncate text-base font-black leading-tight text-white tracking-wide', children: feature.title }),
                                 jsxs('div', { className: 'mt-1 flex max-w-full items-center gap-1.5 overflow-hidden whitespace-nowrap text-xs font-bold', children: [
-                                        jsx('span', { className: 'rounded-full bg-black/40 px-2 py-0.5 text-pink-200/70', children: cost.currencyLabel + ' ' + String(cost.amount) + '点' }),
-                                        billingTags.map(tag => jsx('span', { className: 'rounded-full bg-white/5 px-2 py-0.5 text-white/40', children: tag }, tag)),
+                                        jsx('span', { className: 'rounded-full bg-black/40 px-2 py-0.5 text-pink-200/70', children: cost.currencyLabel + ' ' + String(cost.amount) + '点' }, 'cost'),
+                                        ...billingTags.map(tag => jsx('span', { className: 'rounded-full bg-white/5 px-2 py-0.5 text-white/40', children: tag }, tag)),
                                     ] }),
                             ] }),
                         jsx('button', { type: 'button', onClick: toggle, className: 'relative h-8 w-16 shrink-0 rounded-full p-1 transition opacity-90', style: { background: enabled ? 'linear-gradient(90deg,#a855f7,#ec4899)' : available ? '#334155' : '#1e293b' }, title: available ? '切换启用' : '等级未解锁', children: jsx('span', { className: 'block h-6 w-6 rounded-full bg-white shadow transition', style: { transform: enabled ? 'translateX(32px)' : 'translateX(0)' } }) }),
@@ -1421,10 +1420,10 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
                 jsxs('button', { type: 'button', onClick: () => setCollapsedTiers(current => ({ ...current, [tierConfig.tier]: !collapsed })), className: 'flex w-full items-center justify-between gap-3 bg-white/5 px-4 py-3 pl-5 text-left', children: [
                         jsxs('div', { className: 'min-w-0', children: [
                                 jsx('div', { className: 'text-lg font-black text-white', children: tierConfig.label }),
-                                jsx('div', { className: 'mt-1 text-xs font-bold text-white/40', children: (available ? '可用' : '状态面板解锁') + ' · ' + String(enabledCount) + '/' + String(tierFeatures.length) + ' 已启用' }),
+                                jsx('div', { className: 'mt-1 text-xs font-bold text-white/40', children: (available ? '已订阅' : '未订阅') + ' · ' + String(enabledCount) + '/' + String(tierFeatures.length) + ' 已启用' }),
                             ] }),
                         jsxs('div', { className: 'flex shrink-0 items-center gap-2', children: [
-                                !available && jsx('span', { className: 'rounded-full border border-white/10 bg-black/45 px-3 py-1 text-xs font-bold text-white/45', children: '锁定' }),
+                                !available && jsx('span', { className: 'rounded-full border border-white/10 bg-black/45 px-3 py-1 text-xs font-bold text-white/45', children: '未订阅' }),
                                 jsx('span', { className: 'text-xl font-black text-white/55', children: collapsed ? '⌄' : '⌃' }),
                             ] }),
                     ] }),
@@ -1435,53 +1434,46 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
             jsx('span', { className: 'text-xl leading-none', children: '‹' }),
             jsx('span', { className: 'text-xs uppercase tracking-wider', children: 'VIP' }),
         ] });
-    const renderStatusPanel = () => jsxs('div', { className: 'absolute inset-0 z-40', style: { pointerEvents: showStatusPanel ? 'auto' : 'none', background: showStatusPanel ? 'rgba(0,0,0,0.55)' : 'rgba(0,0,0,0)', transition: 'background 260ms ease' }, children: [
-            jsx('button', { type: 'button', 'aria-label': '关闭状态面板', onClick: () => setShowStatusPanel(false), className: 'absolute inset-0 h-full w-full cursor-default' }),
-            jsxs('aside', { className: 'absolute bottom-0 right-0 top-0 flex w-4/5 max-w-sm flex-col overflow-hidden rounded-l-3xl border-l border-pink-300/20 bg-slate-950 text-white shadow-2xl shadow-black', style: { transform: showStatusPanel ? 'translateX(0)' : 'translateX(100%)', transition: 'transform 280ms cubic-bezier(0.22,1,0.36,1)' }, children: [
-                    jsxs('div', { className: 'flex items-center justify-between border-b border-white/10 px-4 py-4', children: [
-                            jsxs('div', { children: [
-                                    jsx('div', { className: 'text-xs font-black uppercase tracking-widest text-pink-300', children: 'SYSTEM STATUS' }),
-                                    jsx('div', { className: 'mt-1 text-lg font-black text-white', children: '资源与订阅' }),
-                                    jsx('div', { className: 'mt-1 text-xs font-bold text-white/45', children: '在这里查看余额、解锁VIP；回到列表后启用具体命令。' }),
+    const renderStatusPanel = () => jsxs('div', { className: 'absolute inset-0 z-40 overflow-hidden', style: { pointerEvents: showStatusPanel ? 'auto' : 'none', background: showStatusPanel ? 'rgba(0,0,0,0.75)' : 'rgba(0,0,0,0)', transition: 'background 240ms ease' }, children: [
+            jsxs('aside', { className: 'absolute inset-0 flex flex-col overflow-hidden bg-slate-950 text-white shadow-2xl shadow-black', style: { transform: showStatusPanel ? 'translateX(0)' : 'translateX(100%)', transition: 'transform 280ms cubic-bezier(0.22,1,0.36,1)' }, children: [
+                    jsxs('div', { className: 'flex shrink-0 items-center justify-between border-b border-white/10 px-5 py-5', children: [
+                            jsxs('div', { className: 'min-w-0', children: [
+                                    jsx('div', { className: 'text-xs font-black uppercase tracking-widest text-pink-300', children: 'VIP SUBSCRIPTION' }),
+                                    jsx('div', { className: 'mt-1 text-2xl font-black text-white', children: '订阅与资源' }),
+                                    jsx('div', { className: 'mt-1 text-xs font-bold text-white/45', children: '当前订阅：' + getTierLabel(subscriptionTier) }),
                                 ] }),
-                            jsx('button', { type: 'button', onClick: () => setShowStatusPanel(false), className: 'grid h-10 w-10 place-items-center rounded-2xl border border-white/10 bg-white/5 text-xl font-black text-white/70', children: '×' }),
+                            jsx('button', { type: 'button', onClick: () => setShowStatusPanel(false), className: 'grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-white/10 bg-white/5 text-2xl font-black text-white/75', children: '×' }),
                         ] }),
-                    jsxs('div', { className: 'flex-1 overflow-y-auto p-4 no-scrollbar', children: [
-                            jsxs('section', { className: 'rounded-3xl border border-pink-300/20 bg-black/40 p-4', children: [
-                                    jsxs('div', { className: 'flex items-end justify-between gap-4', children: [
+                    jsxs('div', { className: 'flex-1 overflow-y-auto p-5 no-scrollbar', children: [
+                            jsxs('section', { className: 'rounded-3xl border border-pink-300/20 bg-black/45 p-4 shadow-inner shadow-white/5', children: [
+                                    jsxs('div', { className: 'flex items-center justify-between gap-4', children: [
                                             jsxs('div', { className: 'min-w-0 flex-1', children: [
-                                                    jsx('div', { className: 'text-xs font-black uppercase tracking-widest text-pink-300', children: 'MC ENERGY' }),
-                                                    jsxs('div', { className: 'mt-2 flex items-center gap-3', children: [
+                                                    jsx('div', { className: 'text-xs font-black text-white/45', children: 'MC能量' }),
+                                                    jsxs('div', { className: 'mt-1 flex items-center gap-3', children: [
                                                             jsx('div', { className: 'h-2 flex-1 overflow-hidden rounded-full bg-white/10', children: jsx('div', { className: 'h-full rounded-full bg-gradient-to-r from-violet-500 to-pink-500', style: { width: Math.max(0, Math.min(100, Number(userData?.mcEnergy || 0) / Math.max(1, Number(userData?.mcEnergyMax || 1)) * 100)) + '%' } }) }),
-                                                            jsx('span', { className: 'shrink-0 text-lg font-black text-white/70', children: String(userData?.mcEnergy ?? 0) + ' / ' + String(userData?.mcEnergyMax ?? 0) }),
+                                                            jsx('span', { className: 'shrink-0 text-base font-black text-white/80', children: String(userData?.mcEnergy ?? 0) + '/' + String(userData?.mcEnergyMax ?? 0) }),
                                                         ] }),
-                                                    jsx('div', { className: 'mt-2 text-xs font-bold text-white/40', children: '当前等级：' + getTierLabel(subscriptionTier) }),
                                                 ] }),
-                                            jsxs('div', { className: 'rounded-2xl border border-white/10 bg-black/50 px-4 py-3 text-right', children: [
+                                            jsxs('div', { className: 'shrink-0 rounded-2xl border border-yellow-300/10 bg-black/50 px-4 py-3 text-right', children: [
                                                     jsx('div', { className: 'text-xs font-bold text-white/40', children: '资金' }),
                                                     jsx('div', { className: 'text-2xl font-black text-yellow-300', children: formatMoney(userData?.money ?? 0) }),
                                                 ] }),
                                         ] }),
-                                    jsxs('div', { className: 'mt-4 grid grid-cols-3 gap-2 text-center', children: [
-                                            jsxs('div', { className: 'rounded-2xl bg-black/50 p-3', children: [jsx('div', { className: 'text-[11px] font-bold text-white/40', children: '累计消耗' }), jsx('div', { className: 'mt-1 text-xl font-black text-white', children: String(userData?.totalConsumedMc ?? 0) })] }),
-                                            jsxs('div', { className: 'rounded-2xl bg-black/50 p-3', children: [jsx('div', { className: 'text-[11px] font-bold text-white/40', children: '可疑度' }), jsx('div', { className: 'mt-1 text-xl font-black text-emerald-300', children: String(userData?.suspicion ?? 0) + '%' })] }),
-                                            jsxs('div', { className: 'rounded-2xl bg-black/50 p-3', children: [jsx('div', { className: 'text-[11px] font-bold text-white/40', children: '本次预计' }), jsx('div', { className: 'mt-1 text-sm font-black ' + (resourceWarning ? 'text-rose-300' : 'text-pink-200'), children: '能量' + selectedCost.energy + ' / 点' + selectedCost.points })] }),
-                                        ] }),
+                                    jsx('div', { className: 'mt-3 text-xs font-bold text-white/40', children: '订阅请求只会进入本轮操作，余额和变量由AI结算。' }),
                                 ] }),
                             jsxs('section', { className: 'mt-4 rounded-3xl border border-white/10 bg-black/30 p-4', children: [
                                     jsxs('div', { className: 'mb-3 flex items-center justify-between gap-3', children: [
-                                            jsx('div', { className: 'text-sm font-black text-white/80', children: 'VIP 解锁' }),
-                                            jsx('div', { className: 'rounded-full border border-pink-300/20 bg-pink-300/10 px-2 py-1 text-xs font-black text-pink-100', children: '点“请求”加入本轮操作' }),
+                                            jsx('div', { className: 'text-lg font-black text-white', children: '按周订阅' }),
+                                            jsx('div', { className: 'rounded-full border border-pink-300/20 bg-pink-300/10 px-3 py-1 text-xs font-black text-pink-100', children: '一周有效' }),
                                         ] }),
-                                    jsx('div', { className: 'space-y-2', children: _types__WEBPACK_IMPORTED_MODULE_3__.VIP_LEVELS.map(tierConfig => {
-                                            const available = isTierAvailable(tierConfig.tier);
-                                            const current = normalizeTierValue(tierConfig.tier) === subscriptionTier;
-                                            return jsxs('div', { className: 'flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-black/40 px-3 py-3', children: [
+                                    jsx('div', { className: 'space-y-2', children: SUBSCRIPTION_TIER_CONFIGS.map(tierConfig => {
+                                            const enabled = subscriptionRank >= getTierRank(tierConfig.tier);
+                                            return jsxs('div', { className: 'flex items-center justify-between gap-3 rounded-2xl border px-3 py-3 ' + (enabled ? 'border-emerald-300/20 bg-emerald-400/10' : 'border-white/10 bg-slate-950/80'), children: [
                                                     jsxs('div', { className: 'min-w-0', children: [
-                                                            jsx('div', { className: 'text-sm font-black text-white', children: tierConfig.label }),
-                                                            jsx('div', { className: 'mt-1 text-[11px] font-bold text-white/40', children: '阈值 ' + String(tierConfig.unlockThreshold ?? 0) + ' MC点' }),
+                                                            jsx('div', { className: 'truncate text-base font-black text-white', children: tierConfig.label }),
+                                                            jsx('div', { className: 'mt-1 text-xs font-bold text-yellow-200/80', children: formatMoney(tierConfig.price) + ' / 周' }),
                                                         ] }),
-                                                    available ? jsx('span', { className: 'shrink-0 rounded-full border border-emerald-300/20 bg-emerald-400/10 px-3 py-1 text-xs font-black text-emerald-200', children: current ? '当前' : '可用' }) : jsx('button', { type: 'button', onClick: () => requestTierUnlock(tierConfig), className: 'shrink-0 rounded-full bg-gradient-to-r from-violet-500 to-pink-500 px-3 py-1.5 text-xs font-black text-white', children: '请求' }),
+                                                    enabled ? jsx('span', { className: 'shrink-0 rounded-full border border-emerald-300/20 bg-emerald-400/15 px-3 py-1 text-xs font-black text-emerald-200', children: '已启用' }) : jsx('button', { type: 'button', onClick: () => requestTierUnlock(tierConfig), className: 'shrink-0 rounded-full bg-gradient-to-r from-violet-500 to-pink-500 px-4 py-2 text-sm font-black text-white shadow-lg shadow-pink-950/30', children: '订阅' }),
                                                 ] }, tierConfig.tier);
                                         }) }),
                                 ] }),
@@ -1523,14 +1515,11 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
                                     jsx('span', { className: 'rounded-full border border-white/10 bg-black/30 px-3 py-1.5 ' + (resourceWarning ? 'text-rose-300' : 'text-fuchsia-100/70'), children: '预计：MC能量 ' + selectedCost.energy + '点 / 当前MC点 ' + selectedCost.points + '点' }),
                                 ] }),
                         ] }),
-                    jsx('div', { className: 'mt-4 space-y-4', children: _types__WEBPACK_IMPORTED_MODULE_3__.VIP_LEVELS.map(renderTierSection) }),
+                    jsx('div', { className: 'mt-4 space-y-4', children: COMMAND_TIER_CONFIGS.map(renderTierSection) }),
                 ] }),
             jsxs('footer', { className: 'relative z-20 shrink-0 border-t border-white/10 bg-slate-950/95 p-4 pb-7 shadow-2xl shadow-black backdrop-blur', children: [
-                    jsxs('div', { className: 'mb-3 flex items-center justify-between gap-3 text-sm font-bold', children: [
-                            jsx('span', { className: resourceWarning ? 'text-rose-300' : 'text-white/50', children: resourceWarning ? '预计余额不足，AI结算时失败' : '预计消耗已按启用指令计算' }),
-                            jsx('span', { className: 'text-white/80', children: 'MC能量 ' + selectedCost.energy + '点 / 当前MC点 ' + selectedCost.points + '点' }),
-                        ] }),
-                    jsx('button', { type: 'button', onClick: startHypnosis, disabled: !selectedFeatures.length, className: 'mx-auto flex h-14 w-3/4 max-w-xs items-center justify-center rounded-2xl bg-gradient-to-r from-violet-500 via-fuchsia-500 to-pink-500 text-lg font-black text-white shadow-lg shadow-pink-950/30 disabled:cursor-not-allowed disabled:from-slate-800 disabled:to-slate-800 disabled:text-white/40', children: '⚡ 启动催眠' }),
+                    jsx('div', { className: 'mb-3 text-center text-xs font-black ' + (resourceWarning ? 'text-rose-300' : 'text-white/45'), children: resourceWarning ? '预计余额不足，AI结算时失败' : '预计消耗：MC能量 ' + selectedCost.energy + '点' }),
+                    jsx('button', { type: 'button', onClick: startHypnosis, disabled: !selectedFeatures.length, className: 'mx-auto flex h-12 w-56 items-center justify-center rounded-full text-base font-black text-white shadow-lg transition disabled:cursor-not-allowed disabled:text-white/35', style: { background: selectedFeatures.length ? 'linear-gradient(90deg,#8b5cf6 0%,#ec4899 100%)' : '#1e293b', boxShadow: selectedFeatures.length ? '0 12px 28px rgba(236,72,153,0.25)' : 'none' }, children: '⚡ 启动催眠' }),
                     notice ? jsx('div', { className: 'mt-3 text-center text-xs font-bold text-fuchsia-100/75', children: notice }) : null,
                 ] }),
             renderStatusHandle(),
@@ -1547,9 +1536,17 @@ function patchHypnosisAppModule(code) {
   return rebuildHypnosisAppModule(code);
 }
 
+function patchHypnosisTypesModule(code) {
+  if (!code.includes("const VIP_LEVELS") || !code.includes('AppMode["HYPNOSIS"]')) return code;
+  return code
+    .replace("    { tier: 'VIP5', unlockThreshold: 1000, label: 'VIP 5 (永久)' },", "    { tier: 'VIP5', unlockThreshold: 0, label: 'VIP 5' },")
+    .replace(/\n    \{ tier: 'VIP6', unlockThreshold: 2500, label: 'VIP 6 \(完全控制\)' \},/g, "");
+}
+
 function patchHypnosisDataServiceModule(code) {
   if (!code.includes("getSessionEnd: async") || !code.includes("STORE_SCHEMA")) return code;
   let output = code;
+  output = output.replace("    VIP6: 1000,\n", "");
   output = output.replace(
     "    sessionEndAtMs: zod__WEBPACK_IMPORTED_MODULE_0__.z.coerce.number().optional(),",
     `    sessionEndAtMs: zod__WEBPACK_IMPORTED_MODULE_0__.z.coerce.number().optional(),
