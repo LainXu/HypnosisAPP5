@@ -687,6 +687,7 @@ function patchAchievementAppModule(code) {
         recordOperationIntent({
             来源: '成就和任务',
             操作: '领取成就',
+            成就ID: ach.id,
             成就: ach.title,
             条件: ach.description,
             奖励: \`当前MC点 +\${ach.rewardMcPoints}点\`,
@@ -696,6 +697,7 @@ function patchAchievementAppModule(code) {
         recordOperationIntent({
             来源: '成就和任务',
             操作: '接取任务',
+            任务ID: quest.id,
             任务: quest.title,
             条件: quest.description,
             奖励: \`当前MC点 +\${quest.rewardMcPoints}点\`,
@@ -705,6 +707,7 @@ function patchAchievementAppModule(code) {
         recordOperationIntent({
             来源: '成就和任务',
             操作: '取消任务',
+            任务ID: quest.id,
             任务: quest.title,
             条件: quest.description,
         });
@@ -1277,7 +1280,7 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
         });
         recordOperationIntent({
             来源: '催眠APP',
-            操作: timeLeft > 0 ? '追加催眠' : '启动催眠',
+            操作: isAppendingHypnosis ? '追加催眠' : '启动催眠',
             功能列表: featureDetails,
             当前MC能量消耗: String(totalEnergyCost) + '点',
             结算提示: '涉及花费的功能必须先检查余额；余额不足的功能失败，后续同批次受影响操作也失败，不能贷款或擅自兑换资金。',
@@ -1302,6 +1305,10 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
   output = output.replace(
     "        return Math.min(999, parsed);",
     "        return parsed;"
+  );
+  output = output.replace(
+    "    const missingPoints = Math.max(0, totalPointsCost - userData.mcPoints);",
+    "    const missingPoints = Math.max(0, totalPointsCost - userData.mcPoints);\n    const isAppendingHypnosis = Boolean(timeLeft > 0 || userData.activeTemporaryHypnosis);"
   );
   output = replaceBetween(
     output,
@@ -1389,7 +1396,7 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
     )
     .replace(
       /children: \[\(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__\.jsx\)\(lucide_react__WEBPACK_IMPORTED_MODULE_\d+__\["default"\], \{ size: 18, fill: "currentColor" \}\), missingEnergy > 0 \? '能量不足' : missingPoints > 0 \? '点数不足' : '启动催眠'\]/,
-      "children: [timeLeft > 0 ? '追加催眠' : '启动催眠']"
+      "children: [isAppendingHypnosis ? '追加催眠' : '启动催眠']"
     )
     .replace(
       /\(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__\.jsxs\)\("span", \{ children: \["\\u5F53\\u524D\\u53EF\\u7528: ", Math\.floor\(userData\.mcEnergy\), " MC", totalPointsCost > 0 \? `, \$\{userData\.mcPoints\} PT` : ''\] \}\)/,
@@ -1401,14 +1408,14 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
     );
   output = output.replace(
     "(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)(lucide_react__WEBPACK_IMPORTED_MODULE_16__[\"default\"], { size: 18, fill: \"currentColor\" }), missingEnergy > 0 ? '能量不足' : missingPoints > 0 ? '点数不足' : '启动催眠'",
-    "timeLeft > 0 ? '追加催眠' : '启动催眠'"
+    "isAppendingHypnosis ? '追加催眠' : '启动催眠'"
   );
   output = output.replace(
     `                 \${hasSessionFeaturesEnabled
                                     ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:shadow-pink-500/25 active:scale-95'
                                     : 'bg-gray-700 text-gray-400 cursor-not-allowed'}`,
     `                 \${hasSessionFeaturesEnabled
-                                    ? timeLeft > 0
+                                    ? isAppendingHypnosis
                                         ? 'bg-gradient-to-r from-cyan-500 to-sky-500 hover:shadow-cyan-500/25 active:scale-95'
                                         : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:shadow-pink-500/25 active:scale-95'
                                     : 'bg-gray-700 text-gray-400 cursor-not-allowed'}`
@@ -1429,6 +1436,64 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
     .replace(
       'className: "flex items-center bg-gray-800 rounded-lg px-3 py-2 border border-white/5"',
       'className: "hidden"'
+    );
+  output = output
+    .replace(
+      "    const [features, setFeatures] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)([]);",
+      `    const [features, setFeatures] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)([]);
+    const [collapsedTiers, setCollapsedTiers] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(() => new Set(_types__WEBPACK_IMPORTED_MODULE_3__.VIP_LEVELS.map(t => t.tier)));
+    const toggleTierCollapsed = (tier) => {
+        setCollapsedTiers(prev => {
+            const next = new Set(prev);
+            if (next.has(tier))
+                next.delete(tier);
+            else
+                next.add(tier);
+            return next;
+        });
+    };`
+    )
+    .replace(
+      `        const progressPercent = tierConfig.unlockThreshold === 0
+            ? 100
+            : Math.min(100, (userData.totalConsumedMc / tierConfig.unlockThreshold) * 100);`,
+      `        const progressPercent = tierConfig.unlockThreshold === 0
+            ? 100
+            : Math.min(100, (userData.totalConsumedMc / tierConfig.unlockThreshold) * 100);
+        const isCollapsed = collapsedTiers.has(tierConfig.tier);
+        const enabledCount = tierFeatures.filter(feature => feature.isEnabled && canUseEnabledFeature(feature)).length;`
+    )
+    .replace(
+      'className: "mb-6 relative"',
+      'className: "mb-5 relative rounded-[1.75rem] border-2 border-pink-400/25 bg-gradient-to-br from-white/[0.08] via-fuchsia-950/20 to-black/30 shadow-[0_0_0_1px_rgba(255,255,255,0.04),0_18px_40px_rgba(0,0,0,0.38)] overflow-hidden"'
+    )
+    .replace(
+      '(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "flex justify-between items-center mb-2 px-1", children:',
+      '(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("button", { type: "button", onClick: () => toggleTierCollapsed(tierConfig.tier), className: "w-full flex justify-between items-center gap-3 px-4 py-4 bg-white/[0.04] border-b-2 border-pink-300/15 text-left active:bg-white/[0.07]", children:'
+    )
+    .replace(
+      '(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("h3", { className: "text-pink-300 font-bold text-sm tracking-wider uppercase", children: tierConfig.label })',
+      '(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "min-w-0", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("h3", { className: "truncate text-xl font-black tracking-wide text-white", children: tierConfig.label }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "mt-1 text-[11px] font-semibold text-pink-100/55", children: [tierFeatures.length, " 条指令 · 已启用 ", enabledCount, " 条"] })] })'
+    )
+    .replace(
+      'isLocked && ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("span", { className: "text-xs text-gray-400 bg-gray-800 px-2 py-0.5 rounded-full", children: ["需要消耗 ", tierConfig.unlockThreshold, " 点"] }))',
+      '(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "shrink-0 flex items-center gap-2", children: [isLocked && ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("span", { className: "text-[11px] text-gray-300 bg-gray-800/80 px-2 py-1 rounded-full", children: ["需要消耗 ", tierConfig.unlockThreshold, " 点"] })), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)(isCollapsed ? lucide_react__WEBPACK_IMPORTED_MODULE_11__["default"] : lucide_react__WEBPACK_IMPORTED_MODULE_12__["default"], { size: 22, className: "text-pink-100/70" })] })'
+    )
+    .replace(
+      'isLocked && ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "absolute inset-0 z-10 bg-hypno-dark/60 backdrop-blur-sm rounded-xl border border-white/5 flex flex-col items-center justify-center text-center p-4"',
+      'isLocked && !isCollapsed && ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "absolute inset-x-3 bottom-3 top-[76px] z-10 bg-hypno-dark/60 backdrop-blur-sm rounded-2xl border border-white/5 flex flex-col items-center justify-center text-center p-4"'
+    )
+    .replace(
+      'className: `space-y-3 ${isLocked ?',
+      "className: `space-y-3 px-3 pb-3 pt-3 ${isCollapsed ? 'hidden' : ''} ${isLocked ?"
+    )
+    .replace(
+      'bg-white/5 border rounded-xl overflow-hidden transition-all duration-300',
+      'bg-black/25 border rounded-2xl overflow-hidden transition-all duration-300'
+    )
+    .replace(
+      "? 'border-pink-500/50 bg-pink-500/10 shadow-[0_0_15px_rgba(236,72,153,0.1)]'",
+      "? 'border-pink-400/60 bg-pink-500/[0.12] ring-1 ring-pink-400/20 shadow-[0_0_16px_rgba(236,72,153,0.14)]'"
     );
   return output;
 }
@@ -1459,6 +1524,27 @@ function patchHypnosisDataServiceModule(code) {
     `const CHAT_OPTION = { type: 'chat' };
 function isPlainVariableObject(value) {
     return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+function isMeaningfulHypnosisEffect(value) {
+    if (value === null || value === undefined || value === false)
+        return false;
+    if (Array.isArray(value))
+        return value.some(isMeaningfulHypnosisEffect);
+    if (isPlainVariableObject(value))
+        return Object.keys(value).length > 0 && Object.values(value).some(isMeaningfulHypnosisEffect);
+    const text = String(value).trim();
+    return Boolean(text && !/^(无|暂无|none|null|undefined|\\{\\}|\\[\\])$/i.test(text));
+}
+function hasActiveTemporaryHypnosisEffect(roles) {
+    if (!isPlainVariableObject(roles))
+        return false;
+    for (const role of Object.values(roles)) {
+        if (!isPlainVariableObject(role))
+            continue;
+        if (isMeaningfulHypnosisEffect(role['临时催眠效果']))
+            return true;
+    }
+    return false;
 }
 function scoreStatDataCandidate(value) {
     if (!isPlainVariableObject(value))
@@ -1619,6 +1705,207 @@ function getLatestVariablesSync() {
 }
 function getLatestChatVariables() {
     return normalizeChatVariables(getLatestVariablesSync());
+}
+const FRONTEND_REWARD_STATE_VERSION = 1;
+let frontendRewardStateLastSyncAt = 0;
+function frontendRewardStateScope() {
+    try {
+        const chatId = globalThis.SillyTavern?.getCurrentChatId?.();
+        if (chatId !== undefined && chatId !== null && String(chatId).trim())
+            return String(chatId).trim();
+    }
+    catch {
+        // ignore
+    }
+    try {
+        const context = typeof getContext === 'function' ? getContext() : null;
+        const chatId = context?.chatId ?? context?.chat?.id ?? context?.characterId ?? context?.name2;
+        if (chatId !== undefined && chatId !== null && String(chatId).trim())
+            return String(chatId).trim();
+    }
+    catch {
+        // ignore
+    }
+    return 'global';
+}
+function frontendRewardStateKey() {
+    return \`hypnoos.frontend-rewards.v1:\${frontendRewardStateScope()}\`;
+}
+function normalizeFrontendRewardState(input) {
+    const base = { version: FRONTEND_REWARD_STATE_VERSION, achievements: {}, achievementNames: {}, quests: {}, questNames: {} };
+    if (!input || typeof input !== 'object')
+        return base;
+    for (const key of ['achievements', 'achievementNames', 'quests', 'questNames']) {
+        const source = input[key];
+        if (!source || typeof source !== 'object')
+            continue;
+        for (const [id, value] of Object.entries(source)) {
+            if (value)
+                base[key][String(id)] = true;
+        }
+    }
+    return base;
+}
+function writeFrontendRewardState(state) {
+    try {
+        localStorage.setItem(frontendRewardStateKey(), JSON.stringify(normalizeFrontendRewardState(state)));
+    }
+    catch {
+        // ignore storage quota/private mode
+    }
+}
+function readFrontendRewardStateRaw() {
+    try {
+        return normalizeFrontendRewardState(JSON.parse(localStorage.getItem(frontendRewardStateKey()) || 'null'));
+    }
+    catch {
+        return normalizeFrontendRewardState(null);
+    }
+}
+function markFrontendRewardState(patch) {
+    const state = readFrontendRewardStateRaw();
+    const addValues = (bucket, values) => {
+        if (!Array.isArray(values))
+            return;
+        for (const value of values) {
+            const key = String(value ?? '').trim();
+            if (key)
+                bucket[key] = true;
+        }
+    };
+    addValues(state.achievements, patch?.claimedAchievements);
+    addValues(state.achievements, patch?.claimedAchievementIds);
+    addValues(state.achievements, patch?.achievementIds);
+    addValues(state.achievementNames, patch?.claimedAchievementNames);
+    addValues(state.achievementNames, patch?.achievementNames);
+    addValues(state.achievementNames, patch?.claimedAchievementsByName);
+    addValues(state.quests, patch?.claimedStaticTasks);
+    addValues(state.quests, patch?.claimedTaskIds);
+    addValues(state.quests, patch?.questIds);
+    addValues(state.questNames, patch?.claimedStaticTaskNames);
+    addValues(state.questNames, patch?.claimedTaskNames);
+    addValues(state.questNames, patch?.questNames);
+    addValues(state.questNames, patch?.claimedTasksByName);
+    writeFrontendRewardState(state);
+}
+function isFrontendAchievementClaimed(state, achievement) {
+    const id = String(achievement?.id ?? '').trim();
+    const title = String(achievement?.title ?? achievement?.name ?? '').trim();
+    return Boolean((id && state.achievements[id]) || (title && (state.achievements[title] || state.achievementNames[title])));
+}
+function isFrontendQuestClaimed(state, quest) {
+    const id = String(quest?.id ?? '').trim();
+    const title = String(quest?.title ?? quest?.name ?? '').trim();
+    return Boolean((id && state.quests[id]) || (title && (state.quests[title] || state.questNames[title])));
+}
+function frontendStateMessageBody(message) {
+    if (typeof message === 'string')
+        return message;
+    if (!message || typeof message !== 'object')
+        return '';
+    return String(message.message ?? message.mes ?? message.text ?? message.content ?? message.raw ?? '');
+}
+function parseFrontendStateUpdateText(text) {
+    const source = String(text || '');
+    if (!source.includes('<前端状态更新>'))
+        return 0;
+    let applied = 0;
+    for (const match of source.matchAll(/<前端状态更新>([\\s\\S]*?)<\\/前端状态更新>/g)) {
+        try {
+            const patch = JSON.parse(String(match[1] || '').trim());
+            markFrontendRewardState(patch);
+            applied += 1;
+        }
+        catch {
+            // ignore malformed AI helper block
+        }
+    }
+    return applied;
+}
+function readSeenFrontendStateUpdateKeys() {
+    try {
+        const parsed = JSON.parse(localStorage.getItem(frontendRewardStateKey() + ':seen') || '[]');
+        if (Array.isArray(parsed))
+            return new Set(parsed.map(String));
+    }
+    catch {
+        // ignore
+    }
+    return new Set();
+}
+function writeSeenFrontendStateUpdateKeys(keys) {
+    try {
+        localStorage.setItem(frontendRewardStateKey() + ':seen', JSON.stringify(Array.from(keys).slice(-120)));
+    }
+    catch {
+        // ignore
+    }
+}
+function pushFrontendStateMessages(target, source, label) {
+    if (!Array.isArray(source))
+        return;
+    const recent = source.length > 80 ? source.slice(-80) : source;
+    const offset = source.length - recent.length;
+    recent.forEach((message, index) => {
+        const body = frontendStateMessageBody(message);
+        if (!body.includes('<前端状态更新>'))
+            return;
+        const id = message && typeof message === 'object'
+            ? (message.message_id ?? message.mesid ?? message.id ?? offset + index)
+            : offset + index;
+        target.push({ key: label + ':' + String(id) + ':' + body.length, body });
+    });
+}
+function syncFrontendRewardStateFromChat() {
+    const now = Date.now();
+    if (now - frontendRewardStateLastSyncAt < 800)
+        return;
+    frontendRewardStateLastSyncAt = now;
+    const messages = [];
+    try {
+        if (typeof getCurrentMessageId === 'function' && typeof getChatMessages === 'function') {
+            const current = getChatMessages(getCurrentMessageId());
+            pushFrontendStateMessages(messages, Array.isArray(current) ? current : [current], 'current');
+        }
+    }
+    catch {
+        // ignore
+    }
+    try {
+        if (typeof getChatMessages === 'function')
+            pushFrontendStateMessages(messages, getChatMessages(-1) || [], 'latest');
+    }
+    catch {
+        // ignore
+    }
+    try {
+        const context = globalThis.SillyTavern?.getContext?.() || (typeof getContext === 'function' ? getContext() : null);
+        pushFrontendStateMessages(messages, context?.chat || [], 'context');
+    }
+    catch {
+        // ignore
+    }
+    try {
+        pushFrontendStateMessages(messages, Array.isArray(globalThis.chat) ? globalThis.chat : [], 'window');
+    }
+    catch {
+        // ignore
+    }
+    const seen = readSeenFrontendStateUpdateKeys();
+    let changed = false;
+    for (const message of messages) {
+        if (seen.has(message.key))
+            continue;
+        if (parseFrontendStateUpdateText(message.body) > 0)
+            changed = true;
+        seen.add(message.key);
+    }
+    if (changed)
+        writeSeenFrontendStateUpdateKeys(seen);
+}
+function readFrontendRewardState() {
+    syncFrontendRewardStateFromChat();
+    return readFrontendRewardStateRaw();
 }`
   );
   output = output.replace(
@@ -1790,10 +2077,20 @@ function chooseUserResourcesFromSystems(systems) {
     },`,
     `    getUserData: async () => {
         const systems = [];
+        let activeTemporaryHypnosis = false;
+        let hasRoleSnapshot = false;
         try {
-            for (const snapshot of getVariableSnapshotsSync()) {
+            const snapshots = getVariableSnapshotsSync();
+            const currentSnapshot = pickBestVariableSnapshot(snapshots);
+            if (isPlainVariableObject(currentSnapshot?.角色)) {
+                hasRoleSnapshot = true;
+                activeTemporaryHypnosis = hasActiveTemporaryHypnosisEffect(currentSnapshot.角色);
+            }
+            for (const snapshot of snapshots) {
                 if (isPlainVariableObject(snapshot?.系统))
                     systems.push(snapshot.系统);
+                if (isPlainVariableObject(snapshot?.角色))
+                    hasRoleSnapshot = true;
             }
         }
         catch (err) {
@@ -1807,8 +2104,16 @@ function chooseUserResourcesFromSystems(systems) {
         catch (err) {
             console.warn('[HypnoOS] 读取 MVU 系统变量失败，使用可用资源', err);
         }
+        if (!hasRoleSnapshot) {
+            try {
+                activeTemporaryHypnosis = hasActiveTemporaryHypnosisEffect(await _mvuBridge__WEBPACK_IMPORTED_MODULE_3__.MvuBridge.getRoles());
+            }
+            catch (err) {
+                console.warn('[HypnoOS] 读取 MVU 角色临时催眠效果失败，使用聊天快照', err);
+            }
+        }
         const user = chooseUserResourcesFromSystems(systems);
-        return user ?? DEFAULT_USER_DATA;
+        return { ...(user ?? DEFAULT_USER_DATA), activeTemporaryHypnosis };
     },
     getSystemClock: async () => {
         const systems = [];
@@ -1920,6 +2225,24 @@ function chooseUserResourcesFromSystems(systems) {
             isPurchased: true,`
   );
   output = output.replace(
+    `    getAchievements: async () => {
+        const { store } = normalizeChatVariables(getVariables(CHAT_OPTION));
+        const dynamic = await buildRoleBasedAchievements(store);
+        const all = [...STATIC_ACHIEVEMENTS, ...dynamic];
+        return all.map(a => ({ ...a, isClaimed: store.achievements[a.id] ?? false }));
+    },`,
+    `    getAchievements: async () => {
+        const { store } = normalizeChatVariables(getVariables(CHAT_OPTION));
+        const frontendState = readFrontendRewardState();
+        const dynamic = await buildRoleBasedAchievements(store);
+        const all = [...STATIC_ACHIEVEMENTS, ...dynamic];
+        return all.map(a => ({
+            ...a,
+            isClaimed: Boolean(store.achievements[a.id] ?? false) || isFrontendAchievementClaimed(frontendState, a),
+        }));
+    },`
+  );
+  output = output.replace(
     `    getQuests: async () => {
         const { store } = normalizeChatVariables(getVariables(CHAT_OPTION));
         const claimed = store.quests ?? {};
@@ -1956,11 +2279,12 @@ function chooseUserResourcesFromSystems(systems) {
     },`,
     `    getQuests: async () => {
         const { store } = normalizeChatVariables(getVariables(CHAT_OPTION));
+        const frontendState = readFrontendRewardState();
         const claimed = store.quests ?? {};
         const tasks = (await _mvuBridge__WEBPACK_IMPORTED_MODULE_3__.MvuBridge.getTasks().catch(() => null)) ?? {};
         const seenTaskNames = new Set();
         const quests = QUEST_DATABASE.flatMap(q => {
-            if (claimed[q.id] === 'CLAIMED')
+            if (claimed[q.id] === 'CLAIMED' || isFrontendQuestClaimed(frontendState, q))
                 return [];
             const taskState = tasks[q.name];
             if (taskState && typeof taskState === 'object')
@@ -3111,13 +3435,14 @@ function injectInternalMchanApp(html, staticSeed) {
 .st-location-current span{color:rgba(203,213,225,.58);font-size:10px;font-weight:850}
 .st-location-current strong{color:#f8fafc;font-size:13px;line-height:1.35;text-align:right}
 .st-location-list{display:grid;gap:8px}
-.st-location-item{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center;border:1px solid rgba(255,255,255,.09);border-radius:15px;background:rgba(2,6,23,.34);padding:8px}
+.st-location-item{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;gap:8px;align-items:center;border:1px solid rgba(255,255,255,.09);border-radius:15px;background:rgba(2,6,23,.34);padding:8px}
 .st-location-item.is-current{border-color:rgba(34,211,238,.45);background:linear-gradient(135deg,rgba(34,211,238,.14),rgba(168,85,247,.1))}
 .st-location-main{color:inherit;text-align:left;min-width:0}
 .st-location-main strong{display:flex;align-items:center;gap:6px;font-size:14px;color:#f8fafc;line-height:1.25}
 .st-location-main small{font-size:9px;color:rgba(125,211,252,.72);font-weight:850;white-space:nowrap}
 .st-location-main p{margin:5px 0 0;color:rgba(226,232,240,.72);font-size:12px;line-height:1.5;white-space:pre-wrap}
-.st-location-suggest{align-self:center;border:1px solid rgba(34,211,238,.24);border-radius:11px;background:rgba(14,165,233,.1);color:#bae6fd;font-size:11px;font-weight:850;padding:7px 9px;cursor:pointer;white-space:nowrap}
+.st-location-suggest,.st-location-update{align-self:center;border:1px solid rgba(34,211,238,.24);border-radius:11px;background:rgba(14,165,233,.1);color:#bae6fd;font-size:11px;font-weight:850;padding:7px 9px;cursor:pointer;white-space:nowrap}
+.st-location-update{border-color:rgba(168,85,247,.28);background:rgba(168,85,247,.12);color:#e9d5ff}
 .st-graph-info{display:grid;gap:8px;border:1px solid rgba(255,255,255,.09);border-radius:15px;background:rgba(2,6,23,.34);padding:10px}
 .st-graph-info-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .st-graph-info-head strong{font-size:14px;color:#f8fafc;line-height:1.25}
@@ -3361,7 +3686,10 @@ function injectInternalMchanApp(html, staticSeed) {
 [data-st-phone-app="stats"] .st-effect-empty{padding:14px 12px;color:rgba(203,213,225,.58);font-size:12px}
 [data-st-phone-app="stats"] .st-effect-list{display:grid;gap:8px;padding:10px}
 [data-st-phone-app="stats"] .st-effect-item{border:1px solid rgba(255,255,255,.08);border-radius:13px;background:rgba(2,6,23,.28);padding:10px}
-[data-st-phone-app="stats"] .st-effect-item strong{display:block;color:rgba(248,250,252,.94);font-size:12px;line-height:1.35}
+[data-st-phone-app="stats"] .st-effect-item-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+[data-st-phone-app="stats"] .st-effect-item strong{display:block;min-width:0;color:rgba(248,250,252,.94);font-size:12px;line-height:1.35;overflow:hidden;text-overflow:ellipsis}
+[data-st-phone-app="stats"] .st-effect-delete{flex:0 0 auto;border:1px solid rgba(244,63,94,.28)!important;border-radius:999px!important;background:rgba(244,63,94,.1)!important;color:#fecdd3!important;height:24px;padding:0 8px!important;font-size:10px;font-weight:850;white-space:nowrap;box-shadow:none!important}
+[data-st-phone-app="stats"] .st-effect-delete:active{transform:scale(.96)}
 [data-st-phone-app="stats"] .st-effect-item p{margin:5px 0 0;color:rgba(226,232,240,.72);font-size:11px;line-height:1.5;white-space:pre-wrap}
 [data-st-phone-app="stats"] .st-effect-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 [data-st-phone-app="stats"] .st-effect-meta span{border:1px solid rgba(255,255,255,.08);border-radius:999px;background:rgba(255,255,255,.055);color:rgba(226,232,240,.7);padding:3px 7px;font-size:10px;line-height:1.2}
@@ -4338,10 +4666,25 @@ function injectInternalMchanApp(html, staticSeed) {
     return "";
   }
 
+  function requestDeleteHypnosisEffect(roleName, effectType, effectKey, effectTitle) {
+    if (!roleName || !effectType || !effectKey) return;
+    appendAppOperation({
+      来源: "身体检测",
+      操作: "删除催眠效果",
+      角色名: roleName,
+      效果类型: effectType,
+      效果键名: effectKey,
+      效果名称: effectTitle || effectKey,
+      目标变量路径: "/角色/" + roleName + "/" + effectType + "/" + effectKey,
+      AI执行规范: "只在剧情与变量允许时删除这个角色指定类型下的单个效果；成功用remove删除目标路径。不要顺手改其他效果、敏感度、次数、校规或资源；失败时在正文说明原因。"
+    });
+  }
+
   function normalizeEffectEntry(name, value, index) {
     const fallbackTitle = name || "效果 " + (index + 1);
     if (!isPlainObject(value)) {
       return {
+        key: name || String(index),
         title: fallbackTitle,
         description: effectScalar(value) || "已记录",
         meta: []
@@ -4365,6 +4708,7 @@ function injectInternalMchanApp(html, staticSeed) {
       if (text) meta.push([key, text]);
     }
     return {
+      key: name || title || String(index),
       title,
       description: description || (meta.length ? "" : "已记录"),
       meta
@@ -4384,10 +4728,10 @@ function injectInternalMchanApp(html, staticSeed) {
       return entries.map(([name, item], index) => normalizeEffectEntry(name, item, index));
     }
     const text = effectScalar(value);
-    return text ? [{ title: "效果", description: text, meta: [] }] : [];
+    return text ? [{ key: "效果", title: "效果", description: text, meta: [] }] : [];
   }
 
-  function renderEffectCard(label, value, variant) {
+  function renderEffectCard(roleName, label, value, variant) {
     const entries = normalizeEffectEntries(value);
     const emptyText = label.includes("临时") ? "暂无临时效果" : "暂无永久效果";
     const body = entries.length
@@ -4395,7 +4739,8 @@ function injectInternalMchanApp(html, staticSeed) {
           const meta = entry.meta.length
             ? '<div class="st-effect-meta">' + entry.meta.map(([key, text]) => '<span>' + escapeHtml(key) + '：' + escapeHtml(text) + '</span>').join("") + '</div>'
             : "";
-          return '<article class="st-effect-item"><strong>' + escapeHtml(entry.title) + '</strong>' +
+          return '<article class="st-effect-item"><div class="st-effect-item-head"><strong>' + escapeHtml(entry.title) + '</strong>' +
+            '<button type="button" class="st-effect-delete" data-effect-delete="true" data-effect-role="' + escapeAttr(roleName) + '" data-effect-type="' + escapeAttr(label) + '" data-effect-key="' + escapeAttr(entry.key || entry.title) + '" data-effect-title="' + escapeAttr(entry.title) + '">删除</button></div>' +
             (entry.description ? '<p>' + escapeHtml(entry.description) + '</p>' : '') +
             meta + '</article>';
         }).join("") + '</div>'
@@ -4487,8 +4832,20 @@ function injectInternalMchanApp(html, staticSeed) {
     const signature = selected + "\\u0002" + safeSignature(temp) + "\\u0002" + safeSignature(permanent);
     if (panel.dataset.signature === signature) return;
     panel.dataset.signature = signature;
-    panel.innerHTML = renderEffectCard("临时催眠效果", temp, "is-temporary") +
-      renderEffectCard("永久催眠效果", permanent, "is-permanent");
+    panel.innerHTML = renderEffectCard(selected, "临时催眠效果", temp, "is-temporary") +
+      renderEffectCard(selected, "永久催眠效果", permanent, "is-permanent");
+    panel.querySelectorAll("[data-effect-delete]").forEach((button) => {
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        requestDeleteHypnosisEffect(
+          button.getAttribute("data-effect-role") || selected,
+          button.getAttribute("data-effect-type") || "",
+          button.getAttribute("data-effect-key") || "",
+          button.getAttribute("data-effect-title") || ""
+        );
+      });
+    });
   }
 
   function safeSignature(value) {
@@ -5419,6 +5776,7 @@ function injectInternalMchanApp(html, staticSeed) {
               '<p>' + escapeHtml(location.info || "暂无地点信息。") + '</p>' +
             '</div>' +
             '<button type="button" class="st-location-suggest" data-graph-suggest-location="' + escapeAttr(location.id) + '" data-graph-scope="' + escapeAttr(scope) + '">建议设为地点</button>' +
+            '<button type="button" class="st-location-update" data-graph-update-location="' + escapeAttr(location.id) + '" data-graph-scope="' + escapeAttr(scope) + '">更新描述</button>' +
             (deletable ? '<button class="st-graph-delete" type="button" data-graph-action="delete-node" data-graph-scope="' + escapeAttr(scope) + '" data-graph-node-id="' + escapeAttr(location.id) + '">删除</button>' : "") +
           '</article>';
         }).join("")
@@ -5449,6 +5807,18 @@ function injectInternalMchanApp(html, staticSeed) {
       alisaFavor: Number.isFinite(alisaFavor) ? alisaFavor : 0,
       count: Object.keys(rules).length
     };
+  }
+
+  function hasPendingSchoolRuleRequest() {
+    try {
+      const pending = window.__ST_GET_PENDING_OPERATION_INPUT_LOG__?.() || [];
+      return pending.some((entry) => {
+        const payload = entry?.payload ?? entry;
+        return payload && typeof payload === "object" && payload["来源"] === "学校" && payload["操作"] === "申请立校规";
+      });
+    } catch {
+      return false;
+    }
   }
 
   function renderSchoolRulesCard() {
@@ -5528,6 +5898,28 @@ function injectInternalMchanApp(html, staticSeed) {
         });
       });
     });
+    page.querySelectorAll("[data-graph-update-location]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const scope = button.getAttribute("data-graph-scope") || "world";
+        const graph = loadStaticGraph(scope);
+        const id = button.getAttribute("data-graph-update-location") || "";
+        const location = graph.locations.find((item) => item.id === id);
+        if (!location) return;
+        const tag = scope === "school" ? "学校地图更新" : "地图更新";
+        appendAppOperation({
+          来源: scope === "school" ? "学校地图" : "地图",
+          操作: "请求更新地点描述",
+          地图类型: graph.title + "（地点列表）",
+          目标地点: {
+            名称: location.label,
+            当前描述: location.info || "暂无地点信息。",
+            当前地点变量: getCurrentStoryLocation() || "未知"
+          },
+          当前完整地点列表JSON: JSON.stringify({ title: graph.title, locations: graph.locations }),
+          AI执行规范: "若剧情中该地点的结构、用途、状态、归属或可进入条件发生变化，输出完整<" + tag + ">JSON</" + tag + ">；不是增量。只修改需要变化的description，保留其他地点，不输出边关系、坐标或连线。"
+        });
+      });
+    });
     page.querySelectorAll("[data-graph-action]").forEach((button) => {
       button.addEventListener("click", () => {
         const scope = button.getAttribute("data-graph-scope") || "world";
@@ -5541,8 +5933,19 @@ function injectInternalMchanApp(html, staticSeed) {
     });
     page.querySelector("[data-school-rule-submit]")?.addEventListener("click", () => {
       const input = page.querySelector("[data-school-rule-input]");
+      const button = page.querySelector("[data-school-rule-submit]");
       const ruleText = String(input?.value || "").trim();
       if (!ruleText) return;
+      if (hasPendingSchoolRuleRequest()) {
+        if (button) {
+          const original = button.textContent;
+          button.textContent = "已有校规申请暂存";
+          window.setTimeout(() => {
+            button.textContent = original || "申请立校规";
+          }, 1400);
+        }
+        return;
+      }
       appendAppOperation({
         来源: "学校",
         操作: "申请立校规",
