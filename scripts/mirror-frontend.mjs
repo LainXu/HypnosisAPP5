@@ -1200,7 +1200,7 @@ const ActiveSessionView = ({ timeLeft, sessionEndVirtualMinutes, sessionEndAtMs,
                         ] }),
                     jsxs('div', { className: 'flex shrink-0 items-center gap-2', children: [
                             jsx('span', { className: 'rounded-full bg-black/30 px-3 py-1 text-sm font-black text-fuchsia-100', children: formatClockSeconds(remaining) }),
-                            jsx('button', { type: 'button', onClick: onStop, className: 'rounded-full border border-white/15 px-3 py-1 text-xs font-bold text-white/70', children: '取消' }),
+                            jsx('button', { type: 'button', onClick: onStop, className: 'rounded-full border border-white/20 px-3 py-1 text-xs font-bold text-white/70', children: '取消' }),
                         ] }),
                 ] }),
         ] });
@@ -1386,8 +1386,8 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
                 jsxs('div', { className: 'relative flex items-center gap-2 px-3 py-3 pl-4', children: [
                         jsxs('button', { type: 'button', onClick: expand, className: 'min-w-0 flex-1 text-left focus:outline-none', children: [
                                 jsx('h3', { className: 'truncate text-base font-black leading-tight text-white tracking-wide', children: feature.title }),
-                                jsxs('div', { className: 'mt-1 flex flex-wrap items-center gap-1.5 text-[11px] font-bold', children: [
-                                        jsx('span', { className: 'rounded-full bg-black/35 px-2 py-0.5 text-pink-200/70', children: cost.currencyLabel + ' ' + String(cost.amount) + '点' }),
+                                jsxs('div', { className: 'mt-1 flex max-w-full items-center gap-1.5 overflow-hidden whitespace-nowrap text-xs font-bold', children: [
+                                        jsx('span', { className: 'rounded-full bg-black/40 px-2 py-0.5 text-pink-200/70', children: cost.currencyLabel + ' ' + String(cost.amount) + '点' }),
                                         billingTags.map(tag => jsx('span', { className: 'rounded-full bg-white/5 px-2 py-0.5 text-white/40', children: tag }, tag)),
                                     ] }),
                             ] }),
@@ -1396,7 +1396,7 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
                     ] }),
                 expanded ? jsxs('div', { className: 'border-t border-white/10 px-3 py-3 pl-4', children: [
                         jsx('p', { className: 'text-sm font-semibold leading-relaxed text-white/70', children: feature.description }),
-                        jsx('textarea', { value: feature.userNote || '', onChange: event => updateFeature(feature.id, { userNote: event.target.value }), placeholder: '目标、方式或限制...', className: 'mt-3 h-14 w-full resize-none rounded-xl border border-white/10 bg-black/50 p-3 text-sm font-semibold text-white outline-none placeholder:text-white/25 focus:border-pink-400/70' }),
+                        jsx('textarea', { value: feature.userNote || '', onChange: event => updateFeature(feature.id, { userNote: event.target.value }), placeholder: '目标、方式或限制...', className: 'mt-3 h-14 w-full resize-none rounded-xl border border-white/10 bg-black/50 p-3 text-sm font-semibold text-white outline-none placeholder:text-white/30 focus:border-pink-400/70' }),
                         jsxs('div', { className: 'mt-2 grid grid-cols-2 gap-2', children: [
                                 cost.usesPeople ? renderNumberInput('人数', feature.userNumber || '1', value => updateFeature(feature.id, { userNumber: value }), '人') : jsx('div', { className: 'rounded-xl border border-white/10 bg-black/40 px-3 py-3 text-xs font-bold text-white/40', children: '不按人数计费' }),
                                 cost.usesTime ? renderNumberInput('时间', feature.userMinutes || '10', value => updateFeature(feature.id, { userMinutes: value }), '分钟') : jsx('div', { className: 'rounded-xl border border-white/10 bg-black/40 px-3 py-3 text-xs font-bold text-white/40', children: '不按时间计费' }),
@@ -1416,8 +1416,9 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
         const available = isTierAvailable(tierConfig.tier);
         const collapsed = Boolean(collapsedTiers[tierConfig.tier]);
         const enabledCount = tierFeatures.filter(feature => feature.isEnabled && available).length;
-        return jsxs('section', { className: 'overflow-hidden rounded-3xl border border-white/10 bg-slate-950/90 shadow-inner shadow-white/5', children: [
-                jsxs('button', { type: 'button', onClick: () => setCollapsedTiers(current => ({ ...current, [tierConfig.tier]: !collapsed })), className: 'flex w-full items-center justify-between gap-3 px-4 py-3 text-left', children: [
+        return jsxs('section', { className: 'relative overflow-hidden rounded-3xl border bg-slate-950/90 shadow-inner shadow-white/5 ' + (available ? 'border-cyan-300/20' : 'border-white/10'), children: [
+                jsx('div', { className: 'pointer-events-none absolute inset-y-0 left-0 w-1 ' + (available ? 'bg-cyan-300/60' : 'bg-white/10') }),
+                jsxs('button', { type: 'button', onClick: () => setCollapsedTiers(current => ({ ...current, [tierConfig.tier]: !collapsed })), className: 'flex w-full items-center justify-between gap-3 bg-white/5 px-4 py-3 pl-5 text-left', children: [
                         jsxs('div', { className: 'min-w-0', children: [
                                 jsx('div', { className: 'text-lg font-black text-white', children: tierConfig.label }),
                                 jsx('div', { className: 'mt-1 text-xs font-bold text-white/40', children: (available ? '可用' : '状态面板解锁') + ' · ' + String(enabledCount) + '/' + String(tierFeatures.length) + ' 已启用' }),
@@ -1430,9 +1431,13 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
                 !collapsed ? jsx('div', { className: 'space-y-2 border-t border-white/10 p-3', children: tierFeatures.map(renderFeatureCard) }) : null,
             ] }, tierConfig.tier);
     };
-    const renderStatusPanel = () => !showStatusPanel ? null : jsxs('div', { className: 'absolute inset-0 z-40 bg-black/55', children: [
+    const renderStatusHandle = () => jsx('button', { type: 'button', 'aria-label': '打开资源与订阅侧栏', onClick: () => setShowStatusPanel(true), className: 'absolute right-0 z-30 flex items-center gap-1 rounded-l-2xl border border-r-0 border-pink-300/20 bg-pink-300/10 px-2 py-3 text-xs font-black text-pink-100 shadow-lg shadow-black/30', style: { top: '116px' }, children: [
+            jsx('span', { className: 'text-xl leading-none', children: '‹' }),
+            jsx('span', { className: 'text-xs uppercase tracking-wider', children: 'VIP' }),
+        ] });
+    const renderStatusPanel = () => jsxs('div', { className: 'absolute inset-0 z-40', style: { pointerEvents: showStatusPanel ? 'auto' : 'none', background: showStatusPanel ? 'rgba(0,0,0,0.55)' : 'rgba(0,0,0,0)', transition: 'background 260ms ease' }, children: [
             jsx('button', { type: 'button', 'aria-label': '关闭状态面板', onClick: () => setShowStatusPanel(false), className: 'absolute inset-0 h-full w-full cursor-default' }),
-            jsxs('aside', { className: 'absolute bottom-0 right-0 top-0 flex w-4/5 max-w-sm flex-col overflow-hidden rounded-l-3xl border-l border-pink-300/20 bg-slate-950 text-white shadow-2xl shadow-black', children: [
+            jsxs('aside', { className: 'absolute bottom-0 right-0 top-0 flex w-4/5 max-w-sm flex-col overflow-hidden rounded-l-3xl border-l border-pink-300/20 bg-slate-950 text-white shadow-2xl shadow-black', style: { transform: showStatusPanel ? 'translateX(0)' : 'translateX(100%)', transition: 'transform 280ms cubic-bezier(0.22,1,0.36,1)' }, children: [
                     jsxs('div', { className: 'flex items-center justify-between border-b border-white/10 px-4 py-4', children: [
                             jsxs('div', { children: [
                                     jsx('div', { className: 'text-xs font-black uppercase tracking-widest text-pink-300', children: 'SYSTEM STATUS' }),
@@ -1466,7 +1471,7 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
                             jsxs('section', { className: 'mt-4 rounded-3xl border border-white/10 bg-black/30 p-4', children: [
                                     jsxs('div', { className: 'mb-3 flex items-center justify-between gap-3', children: [
                                             jsx('div', { className: 'text-sm font-black text-white/80', children: 'VIP 解锁' }),
-                                            jsx('div', { className: 'rounded-full border border-pink-300/20 bg-pink-300/10 px-2 py-1 text-[10px] font-black text-pink-100', children: '点“请求”加入本轮操作' }),
+                                            jsx('div', { className: 'rounded-full border border-pink-300/20 bg-pink-300/10 px-2 py-1 text-xs font-black text-pink-100', children: '点“请求”加入本轮操作' }),
                                         ] }),
                                     jsx('div', { className: 'space-y-2', children: _types__WEBPACK_IMPORTED_MODULE_3__.VIP_LEVELS.map(tierConfig => {
                                             const available = isTierAvailable(tierConfig.tier);
@@ -1506,14 +1511,11 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
             jsx(ActiveSessionView, { timeLeft, sessionEndVirtualMinutes, sessionEndAtMs, sessionSummary, onStop: stopSession }),
             jsxs('main', { className: 'relative z-10 flex-1 overflow-y-auto p-4 pb-28 no-scrollbar', children: [
                     jsxs('section', { className: 'rounded-3xl border border-white/10 bg-slate-950/90 p-4 shadow-inner shadow-white/5', children: [
-                            jsxs('div', { className: 'flex items-center justify-between gap-3', children: [
+                            jsxs('div', { className: 'flex items-start justify-between gap-3', children: [
                                     jsxs('div', { className: 'min-w-0', children: [
                                             jsx('div', { className: 'text-xs font-black uppercase tracking-widest text-fuchsia-200/70', children: 'COMMAND DECK' }),
                                             jsx('div', { className: 'mt-1 text-lg font-black text-white', children: '选择催眠指令' }),
-                                        ] }),
-                                    jsxs('button', { type: 'button', onClick: () => setShowStatusPanel(true), className: 'shrink-0 rounded-2xl border border-pink-300/20 bg-pink-300/10 px-3 py-2 text-right', children: [
-                                            jsx('div', { className: 'text-sm font-black text-white', children: '订阅/VIP' }),
-                                            jsx('div', { className: 'text-[11px] font-bold text-pink-100/70', children: '点此解锁' }),
+                                            jsx('div', { className: 'mt-1 text-xs font-bold text-white/40', children: '从右侧边缘拉开订阅/VIP侧栏' }),
                                         ] }),
                                 ] }),
                             jsxs('div', { className: 'mt-4 flex flex-wrap gap-2 text-xs font-black', children: [
@@ -1528,9 +1530,10 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
                             jsx('span', { className: resourceWarning ? 'text-rose-300' : 'text-white/50', children: resourceWarning ? '预计余额不足，AI结算时失败' : '预计消耗已按启用指令计算' }),
                             jsx('span', { className: 'text-white/80', children: 'MC能量 ' + selectedCost.energy + '点 / 当前MC点 ' + selectedCost.points + '点' }),
                         ] }),
-                    jsx('button', { type: 'button', onClick: startHypnosis, disabled: !selectedFeatures.length, className: 'mx-auto flex h-14 w-3/4 max-w-xs items-center justify-center rounded-2xl bg-gradient-to-r from-violet-500 via-fuchsia-500 to-pink-500 text-lg font-black text-white shadow-lg shadow-pink-950/30 disabled:cursor-not-allowed disabled:from-slate-800 disabled:to-slate-800 disabled:text-white/35', children: '⚡ 启动催眠' }),
+                    jsx('button', { type: 'button', onClick: startHypnosis, disabled: !selectedFeatures.length, className: 'mx-auto flex h-14 w-3/4 max-w-xs items-center justify-center rounded-2xl bg-gradient-to-r from-violet-500 via-fuchsia-500 to-pink-500 text-lg font-black text-white shadow-lg shadow-pink-950/30 disabled:cursor-not-allowed disabled:from-slate-800 disabled:to-slate-800 disabled:text-white/40', children: '⚡ 启动催眠' }),
                     notice ? jsx('div', { className: 'mt-3 text-center text-xs font-bold text-fuchsia-100/75', children: notice }) : null,
                 ] }),
+            renderStatusHandle(),
             renderStatusPanel(),
         ] });
 };
