@@ -3105,17 +3105,13 @@ function injectInternalMchanApp(html, staticSeed) {
 .st-graph-head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
 .st-graph-head strong{font-size:15px;color:#fff}
 .st-graph-head span{font-size:10px;color:rgba(203,213,225,.5);font-weight:800}
-.st-graph-canvas{position:relative;min-height:330px;border:1px solid rgba(34,211,238,.13);border-radius:16px;background:radial-gradient(circle at 18% 12%,rgba(34,211,238,.16),transparent 28%),radial-gradient(circle at 80% 76%,rgba(236,72,153,.12),transparent 30%),rgba(2,6,23,.38);overflow:hidden}
-.st-graph-canvas svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-.st-graph-line{stroke:rgba(125,211,252,.35);stroke-width:2;stroke-linecap:round}
-.st-graph-line.school{stroke:rgba(251,191,36,.34)}
-.st-graph-node{position:absolute;transform:translate(-50%,-50%);max-width:110px;min-width:74px;border:1px solid rgba(255,255,255,.12);border-radius:16px;background:rgba(15,23,42,.82);box-shadow:0 12px 24px rgba(0,0,0,.26),inset 0 1px 0 rgba(255,255,255,.06);padding:9px 8px;text-align:center}
-.st-graph-node.is-current{border-color:rgba(244,114,182,.68);box-shadow:0 0 0 1px rgba(244,114,182,.22),0 14px 30px rgba(190,24,93,.25),inset 0 1px 0 rgba(255,255,255,.08)}
-.st-graph-node strong{display:block;font-size:12px;color:#f8fafc;line-height:1.25;word-break:keep-all}
-.st-graph-node small{display:block;margin-top:3px;font-size:9px;color:rgba(203,213,225,.5);line-height:1.2}
-.st-graph-node.world{border-color:rgba(34,211,238,.36);background:linear-gradient(135deg,rgba(8,47,73,.78),rgba(49,46,129,.62))}
-.st-graph-node.home{border-color:rgba(236,72,153,.26)}
-.st-graph-node.school{border-color:rgba(251,191,36,.32)}
+.st-location-list{display:grid;gap:8px}
+.st-location-item{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:stretch;border:1px solid rgba(255,255,255,.09);border-radius:15px;background:rgba(2,6,23,.34);padding:8px}
+.st-location-item.is-current{border-color:rgba(34,211,238,.45);background:linear-gradient(135deg,rgba(34,211,238,.14),rgba(168,85,247,.1))}
+.st-location-main{border:0;background:transparent;color:inherit;text-align:left;padding:0;cursor:pointer;min-width:0}
+.st-location-main strong{display:flex;align-items:center;gap:6px;font-size:14px;color:#f8fafc;line-height:1.25}
+.st-location-main small{font-size:9px;color:rgba(125,211,252,.72);font-weight:850}
+.st-location-main p{margin:5px 0 0;color:rgba(226,232,240,.72);font-size:12px;line-height:1.5;white-space:pre-wrap}
 .st-graph-info{display:grid;gap:8px;border:1px solid rgba(255,255,255,.09);border-radius:15px;background:rgba(2,6,23,.34);padding:10px}
 .st-graph-info-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .st-graph-info-head strong{font-size:14px;color:#f8fafc;line-height:1.25}
@@ -5173,26 +5169,24 @@ function injectInternalMchanApp(html, staticSeed) {
   const STATIC_GRAPH_DEFAULTS = {
     world: {
       title: "区域地图",
-      nodes: [
-        { id: "school", label: "私立斋明学园", kind: "world", x: 50, y: 45, info: "东京近郊的老牌私立升学高中，前千金女校，今年正式改为男女混校。{{user}}目前主要活动的舞台。" },
-        { id: "saionji-company", label: "西园寺企业", kind: "world", x: 77, y: 23, info: "西园寺财团相关企业据点，象征爱丽莎家族的财富、人脉和社会影响力。" },
-        { id: "saionji-home", label: "西园寺的家", kind: "home", x: 78, y: 70, info: "西园寺爱丽莎的家。豪宅、佣人和严格家族秩序构成她日常生活的背景。" },
-        { id: "miyuki-home", label: "深雪的家", kind: "home", x: 23, y: 70, info: "月咏深雪的住处。安静、整洁、书卷气重，适合处理学习、班务和私人阅读情节。" },
-        { id: "natsumi-home", label: "夏美的家", kind: "home", x: 22, y: 25, info: "犬冢夏美的家。生活气息更强，和运动、饮食、训练后的休息场景容易连接。" }
-      ],
-      edges: [["school", "saionji-company"], ["school", "saionji-home"], ["school", "miyuki-home"], ["school", "natsumi-home"]]
+      locations: [
+        { id: "school", label: "私立斋明学园", info: "东京近郊的老牌私立升学高中，前千金女校，今年正式改为男女混校。{{user}}目前主要活动的舞台。" },
+        { id: "saionji-company", label: "西园寺企业", info: "西园寺财团相关企业据点，象征爱丽莎家族的财富、人脉和社会影响力。" },
+        { id: "saionji-home", label: "西园寺的家", info: "西园寺爱丽莎的家。豪宅、佣人和严格家族秩序构成她日常生活的背景。" },
+        { id: "miyuki-home", label: "深雪的家", info: "月咏深雪的住处。安静、整洁、书卷气重，适合处理学习、班务和私人阅读情节。" },
+        { id: "natsumi-home", label: "夏美的家", info: "犬冢夏美的家。生活气息更强，和运动、饮食、训练后的休息场景容易连接。" }
+      ]
     },
     school: {
       title: "学校地图",
-      nodes: [
-        { id: "classroom", label: "教室", kind: "school", x: 50, y: 28, info: "二年级教室。日常上课、课间人际、视线交错和班级中心关系最容易发生的地点。" },
-        { id: "corridor", label: "走廊", kind: "school", x: 50, y: 50, info: "连接教室、社团与各专用教室的公共空间。人来人往，适合短暂偶遇和擦肩而过。" },
-        { id: "library", label: "图书馆", kind: "school", x: 23, y: 42, info: "安静的阅读与自习空间。深雪常会出现，也适合调查资料、传闻和灵异记录。" },
-        { id: "principal", label: "校长室", kind: "school", x: 24, y: 68, info: "校方管理层所在地点。校规、处分、学校声望和重大事件容易在这里交汇。" },
-        { id: "pool", label: "游泳池", kind: "school", x: 77, y: 33, info: "体育（水泳）相关场地。视线、换装、体能差异和季节活动很容易在这里展开。" },
-        { id: "field", label: "操场", kind: "school", x: 76, y: 66, info: "田径与户外体育场地。夏美的主场，也是白枢暗子隐藏运动能力可能暴露的地方。" }
-      ],
-      edges: [["corridor", "classroom"], ["corridor", "library"], ["corridor", "principal"], ["corridor", "pool"], ["corridor", "field"], ["pool", "field"]]
+      locations: [
+        { id: "classroom", label: "教室", info: "二年级教室。日常上课、课间人际、视线交错和班级中心关系最容易发生的地点。" },
+        { id: "corridor", label: "走廊", info: "连接教室、社团与各专用教室的公共空间。人来人往，适合短暂偶遇和擦肩而过。" },
+        { id: "library", label: "图书馆", info: "安静的阅读与自习空间。深雪常会出现，也适合调查资料、传闻和灵异记录。" },
+        { id: "principal", label: "校长室", info: "校方管理层所在地点。校规、处分、学校声望和重大事件容易在这里交汇。" },
+        { id: "pool", label: "游泳池", info: "体育（水泳）相关场地。视线、换装、体能差异和季节活动很容易在这里展开。" },
+        { id: "field", label: "操场", info: "田径与户外体育场地。夏美的主场，也是白枢暗子隐藏运动能力可能暴露的地方。" }
+      ]
     }
   };
 
@@ -5220,35 +5214,35 @@ function injectInternalMchanApp(html, staticSeed) {
     try {
       return JSON.parse(JSON.stringify(value));
     } catch {
-      return { nodes: [], edges: [] };
+      return { locations: [] };
     }
   }
 
   function normalizeGraphGraph(raw, scope) {
     const fallback = STATIC_GRAPH_DEFAULTS[scope] || STATIC_GRAPH_DEFAULTS.world;
-    const fallbackById = new Map((fallback.nodes || []).map((node) => [String(node.id), node]));
+    const fallbackLocations = fallback.locations || fallback.nodes || [];
+    const fallbackById = new Map(fallbackLocations.map((location) => [String(location.id), location]));
     const source = raw && typeof raw === "object" ? raw : fallback;
-    const nodes = Array.isArray(source.nodes) ? source.nodes : fallback.nodes;
-    const normalizedNodes = nodes
-      .filter((node) => node && typeof node === "object" && String(node.id || node.label || "").trim())
-      .map((node, index) => ({
-        id: String(node.id || node.label || ("node-" + index)),
-        label: String(node.label || node.name || node.id || ("地点" + (index + 1))),
-        kind: String(node.kind || node.type || (scope === "school" ? "school" : "world")),
-        info: String(node.info || node.description || node.desc || fallbackById.get(String(node.id))?.info || "暂无地点信息。"),
-        x: Math.max(7, Math.min(93, Number(node.x ?? node.left ?? 50))),
-        y: Math.max(9, Math.min(91, Number(node.y ?? node.top ?? 50)))
+    const sourceLocations = Array.isArray(source.locations)
+      ? source.locations
+      : Array.isArray(source.places)
+        ? source.places
+        : Array.isArray(source.nodes)
+          ? source.nodes
+          : fallbackLocations;
+    const locations = sourceLocations
+      .filter((location) => location && typeof location === "object" && String(location.id || location.label || location.name || location["地点"] || "").trim())
+      .map((location, index) => {
+        const id = String(location.id || location.key || location.label || location.name || location["地点"] || ("place-" + index));
+        return {
+          id,
+          label: String(location.label || location.name || location["地点"] || location.title || id || ("地点" + (index + 1))),
+          info: String(location.info || location.description || location.desc || location["描述"] || fallbackById.get(id)?.info || "暂无地点信息。")
+        };
       }));
-    const ids = new Set(normalizedNodes.map((node) => node.id));
-    const rawEdges = Array.isArray(source.edges) ? source.edges : fallback.edges;
-    const edges = rawEdges
-      .map((edge) => Array.isArray(edge) ? edge : [edge?.from, edge?.to])
-      .filter(([from, to]) => ids.has(String(from)) && ids.has(String(to)))
-      .map(([from, to]) => [String(from), String(to)]);
     return {
       title: String(source.title || fallback.title || (scope === "school" ? "学校地图" : "地图")),
-      nodes: normalizedNodes,
-      edges
+      locations
     };
   }
 
@@ -5260,15 +5254,15 @@ function injectInternalMchanApp(html, staticSeed) {
 
   function defaultGraphNodeIds(scope) {
     const fallback = STATIC_GRAPH_DEFAULTS[scope] || STATIC_GRAPH_DEFAULTS.world;
-    return new Set((fallback.nodes || []).map((node) => String(node.id)));
+    return new Set((fallback.locations || []).map((location) => String(location.id)));
   }
 
   function currentGraphNodeId(scope, graph) {
     try {
       const stored = localStorage.getItem(graphCurrentStorageKey(scope));
-      if (stored && graph.nodes.some((node) => node.id === stored)) return stored;
+      if (stored && graph.locations.some((location) => location.id === stored)) return stored;
     } catch {}
-    return graph.nodes[0]?.id || "";
+    return graph.locations[0]?.id || "";
   }
 
   function setCurrentGraphNode(scope, nodeId) {
@@ -5283,8 +5277,7 @@ function injectInternalMchanApp(html, staticSeed) {
     const graph = loadStaticGraph(scope);
     const next = {
       ...graph,
-      nodes: graph.nodes.filter((node) => node.id !== nodeId),
-      edges: graph.edges.filter(([from, to]) => from !== nodeId && to !== nodeId)
+      locations: graph.locations.filter((location) => location.id !== nodeId)
     };
     saveStaticGraph(scope, next);
     try {
@@ -5403,7 +5396,7 @@ function injectInternalMchanApp(html, staticSeed) {
   }
 
   function renderGraphAddLocationCard(scope, graph, currentNode) {
-    const target = currentNode || graph.nodes[0] || null;
+    const target = currentNode || graph.locations[0] || null;
     const title = scope === "school" ? "新增校内地点" : "新增区域地点";
     const tag = scope === "school" ? "<学校地图更新>" : "<地图更新>";
     return '<section class="st-lite-card st-graph-add" data-graph-add-scope="' + escapeAttr(scope) + '">' +
@@ -5412,7 +5405,7 @@ function injectInternalMchanApp(html, staticSeed) {
         '<input data-graph-add-name autocomplete="off" placeholder="地点名">' +
         '<textarea data-graph-add-info placeholder="地点说明、用途、相关角色或剧情倾向"></textarea>' +
       '</div>' +
-      '<p class="st-graph-add-hint">提交后只会加入本轮APP操作；AI需要输出完整 ' + escapeHtml(tag) + ' JSON，前端再写入本地地图。默认连接当前地点：' + escapeHtml(target?.label || "无") + '。</p>' +
+      '<p class="st-graph-add-hint">提交后只会加入本轮APP操作；AI需要输出完整 ' + escapeHtml(tag) + ' 地点列表 JSON，前端再写入本地。当前地点：' + escapeHtml(target?.label || "无") + '。</p>' +
       '<button type="button" data-graph-add-submit data-graph-scope="' + escapeAttr(scope) + '" data-graph-current="' + escapeAttr(target?.id || "") + '">请求新增地点</button>' +
     '</section>';
   }
@@ -5420,31 +5413,22 @@ function injectInternalMchanApp(html, staticSeed) {
   function renderStaticGraphCard(scope) {
     const graph = loadStaticGraph(scope);
     const currentId = currentGraphNodeId(scope, graph);
-    const currentNode = graph.nodes.find((node) => node.id === currentId) || graph.nodes[0] || null;
-    const deletable = Boolean(currentNode) && !defaultGraphNodeIds(scope).has(currentNode.id);
-    const nodeById = new Map(graph.nodes.map((node) => [node.id, node]));
-    const lines = graph.edges.map(([from, to]) => {
-      const a = nodeById.get(from);
-      const b = nodeById.get(to);
-      if (!a || !b) return "";
-      return '<line class="st-graph-line ' + escapeAttr(scope) + '" x1="' + a.x + '%" y1="' + a.y + '%" x2="' + b.x + '%" y2="' + b.y + '%"></line>';
-    }).join("");
-    const nodes = graph.nodes.map((node) => (
-      '<button type="button" class="st-graph-node ' + escapeAttr(node.kind) + (node.id === currentId ? " is-current" : "") + '" data-graph-node="' + escapeAttr(node.id) + '" data-graph-scope="' + escapeAttr(scope) + '" style="left:' + node.x + '%;top:' + node.y + '%" title="' + escapeAttr(node.label) + '">' +
-        '<strong>' + escapeHtml(node.label) + '</strong><small>' + escapeHtml(node.kind === "home" ? "住处" : node.kind === "school" ? "校内" : "地点") + '</small>' +
-      '</button>'
-    )).join("");
-    const info = currentNode
-      ? '<div class="st-graph-info">' +
-          '<div class="st-graph-info-head"><strong>' + escapeHtml(currentNode.label) + '</strong><small>当前地点</small></div>' +
-          '<p>' + escapeHtml(currentNode.info || "暂无地点信息。") + '</p>' +
-          (deletable ? '<button class="st-graph-delete" type="button" data-graph-action="delete-node" data-graph-scope="' + escapeAttr(scope) + '" data-graph-node-id="' + escapeAttr(currentNode.id) + '">删除本地地点</button>' : "") +
-        '</div>'
+    const currentNode = graph.locations.find((location) => location.id === currentId) || graph.locations[0] || null;
+    const locations = graph.locations.length
+      ? graph.locations.map((location) => {
+          const deletable = !defaultGraphNodeIds(scope).has(location.id);
+          return '<article class="st-location-item' + (location.id === currentId ? " is-current" : "") + '">' +
+            '<button type="button" class="st-location-main" data-graph-location="' + escapeAttr(location.id) + '" data-graph-scope="' + escapeAttr(scope) + '">' +
+              '<strong>' + escapeHtml(location.label) + (location.id === currentId ? '<small>当前</small>' : "") + '</strong>' +
+              '<p>' + escapeHtml(location.info || "暂无地点信息。") + '</p>' +
+            '</button>' +
+            (deletable ? '<button class="st-graph-delete" type="button" data-graph-action="delete-node" data-graph-scope="' + escapeAttr(scope) + '" data-graph-node-id="' + escapeAttr(location.id) + '">删除</button>' : "") +
+          '</article>';
+        }).join("")
       : '<div class="st-graph-info"><p>暂无地点信息。</p></div>';
     return '<section class="st-lite-card st-graph-card">' +
-      '<div class="st-graph-head"><strong>' + escapeHtml(graph.title) + '</strong><span>' + graph.nodes.length + ' 地点</span></div>' +
-      '<div class="st-graph-canvas"><svg viewBox="0 0 100 100" preserveAspectRatio="none">' + lines + '</svg>' + nodes + '</div>' +
-      info +
+      '<div class="st-graph-head"><strong>' + escapeHtml(graph.title) + '</strong><span>' + graph.locations.length + ' 地点</span></div>' +
+      '<div class="st-location-list">' + locations + '</div>' +
       '<div class="st-graph-tools"><button class="st-graph-tool" type="button" data-graph-action="reset" data-graph-scope="' + escapeAttr(scope) + '">恢复默认</button><button class="st-graph-tool" type="button" data-graph-action="sync" data-graph-scope="' + escapeAttr(scope) + '">读取更新</button></div>' +
     '</section>' +
     renderGraphAddLocationCard(scope, graph, currentNode);
@@ -5508,29 +5492,28 @@ function injectInternalMchanApp(html, staticSeed) {
         if (!name && !infoText) return;
         const graph = loadStaticGraph(scope);
         const currentId = button.getAttribute("data-graph-current") || currentGraphNodeId(scope, graph);
-        const currentNode = graph.nodes.find((node) => node.id === currentId) || graph.nodes[0] || null;
+        const currentNode = graph.locations.find((location) => location.id === currentId) || graph.locations[0] || null;
         const tag = scope === "school" ? "学校地图更新" : "地图更新";
         appendAppOperation({
           来源: scope === "school" ? "学校地图" : "地图",
           操作: "请求新增地点",
-          地图类型: graph.title,
+          地图类型: graph.title + "（地点列表）",
           新增地点: {
             名称: name || "由AI按剧情命名",
             信息: infoText || "由AI按当前剧情补全",
             建议ID: graphSuggestedNodeId(name),
-            默认连接到: currentNode ? currentNode.label : "由AI判断",
-            默认连接到ID: currentNode ? currentNode.id : ""
+            当前地点: currentNode ? currentNode.label : "无"
           },
-          当前完整图JSON: JSON.stringify(graph),
-          AI执行规范: "若地点成立，输出完整<" + tag + ">JSON</" + tag + ">，不是增量；保留原有节点/边，新增节点必须有id、label、kind、x、y、info，并添加合理连线。"
+          当前完整地点列表JSON: JSON.stringify({ title: graph.title, locations: graph.locations }),
+          AI执行规范: "若地点成立，输出完整<" + tag + ">JSON</" + tag + ">，不是增量；只保留locations地点列表，不要输出边关系、坐标或连线。每项使用id、name、description。"
         });
         if (nameInput) nameInput.value = "";
         if (infoInput) infoInput.value = "";
       });
     });
-    page.querySelectorAll("[data-graph-node]").forEach((button) => {
+    page.querySelectorAll("[data-graph-location]").forEach((button) => {
       button.addEventListener("click", () => {
-        setCurrentGraphNode(button.getAttribute("data-graph-scope") || "world", button.getAttribute("data-graph-node") || "");
+        setCurrentGraphNode(button.getAttribute("data-graph-scope") || "world", button.getAttribute("data-graph-location") || "");
         if (page.classList.contains("st-school-app")) renderSchoolPage(page);
         else renderMapPage(page);
       });
