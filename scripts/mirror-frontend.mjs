@@ -695,9 +695,10 @@ function patchAchievementAppModule(code) {
 	            数量: \`\${count}个\`,
 	            当前已接任务数: \`\${activeQuestCount}个\`,
 	            剩余可新增数量: \`\${Math.max(0, 3 - activeQuestCount)}个\`,
-	            倾向: bias || '由AI根据当前上下文剧情决定',
+	            倾向: bias || '由AI根据当前上下文剧情决定并随机补全',
+	            任务来源: '系统突然出现的任务，不是{{user}}主动发布、设计或提前知道的目标，也不代表{{user}}主动关联到任务对象。',
 	            初始状态: '直接写入任务变量，作为已接/进行中的任务',
-	            生成规则: '根据当前上下文剧情新增若干进行中任务；写入/任务，包含完成条件、奖励MC点和已完成=false；不要写入前端静态列表，也不要标记为已完成。',
+	            生成规则: '根据当前上下文剧情新增若干由系统突然刷出的进行中任务；写入/任务，包含完成条件、奖励MC点和已完成=false；不要写入前端静态列表，也不要标记为已完成。用户没指定的必要内容由AI随机生成，可适当优化用户描述，让任务更贴合当前剧情。',
 	        });
     };
 `
@@ -773,7 +774,7 @@ function patchAchievementAppModule(code) {
   );
   output = output.replace(
     `children: "根据当前上下文剧情，让 AI 新增若干未完成任务。前端只记录意图，不直接改变量。"`,
-    `children: "根据当前上下文剧情，让 AI 直接生成并接取进行中任务；最多同时3个，满了会禁用。"`
+    `children: "根据当前上下文剧情，让 AI 生成系统突然刷出的进行中任务；不是{{user}}主动发布或设计。最多同时3个，满了会禁用。"`
   );
   output = output.replace(
     `min: 1, max: 10, step: 1, value: newQuestCountInput, onChange: e => setNewQuestCountInput(e.target.value), onBlur: () => setNewQuestCountInput(String(normalizeNewQuestCount(newQuestCountInput))), className:`,
@@ -799,6 +800,15 @@ function patchAchievementAppModule(code) {
   );
   output = output.replaceAll("quests.map(q =>", "visibleQuests.map(q =>");
   output = output.replaceAll("quests.length === 0", "visibleQuests.length === 0");
+  output = output
+    .replaceAll(`className: "flex justify-between items-start"`, `className: "flex items-start justify-between gap-3"`)
+    .replaceAll(`className: "flex items-start gap-3"`, `className: "flex min-w-0 flex-1 items-start gap-3"`)
+    .replaceAll(`className: "bg-indigo-500 hover:bg-indigo-400 text-white text-xs font-bold py-1.5 px-3 rounded-lg shadow-lg flex items-center gap-1 animate-pulse"`, `className: "shrink-0 min-w-[92px] justify-center whitespace-nowrap bg-indigo-500 hover:bg-indigo-400 text-white text-xs font-bold py-1.5 px-3 rounded-lg shadow-lg flex items-center gap-1 animate-pulse"`)
+    .replaceAll(`className: "text-xs font-bold text-indigo-400/50"`, `className: "shrink-0 whitespace-nowrap text-right text-xs font-bold text-indigo-400/50"`)
+    .replaceAll(`className: "flex flex-col items-end"`, `className: "flex shrink-0 flex-col items-end"`)
+    .replaceAll(`className: "flex flex-col items-end gap-2"`, `className: "flex shrink-0 flex-col items-end gap-2"`)
+    .replaceAll(`className: "bg-white/10 hover:bg-white/15 text-white text-xs font-bold py-1.5 px-3 rounded-lg border border-white/10"`, `className: "shrink-0 min-w-[64px] whitespace-nowrap text-center bg-white/10 hover:bg-white/15 text-white text-xs font-bold py-1.5 px-3 rounded-lg border border-white/10"`)
+    .replaceAll(`className: "bg-white/5 hover:bg-white/10 text-white/80 text-[11px] font-semibold py-1 px-2 rounded-lg border border-white/10 flex items-center gap-1"`, `className: "shrink-0 whitespace-nowrap bg-white/5 hover:bg-white/10 text-white/80 text-[11px] font-semibold py-1 px-2 rounded-lg border border-white/10 flex items-center gap-1"`);
   return output;
 }
 
@@ -3395,7 +3405,7 @@ function injectInternalMchanApp(html, staticSeed) {
   const STATIC_SCAN_EXAMPLE_FALLBACKS = [
     {
       title: "教师身份",
-      note: "已填写示例",
+      note: "临时测试示例2",
       roleName: "白鸟凛",
       aliases: "白鸟老师, 凛老师",
       summary: "{{user}}在教学楼办公室门口看到并锁定的年轻女教师。她身形高挑，穿深色修身西装外套与白衬衫，手里抱着教案和点名册。",
@@ -3408,12 +3418,12 @@ function injectInternalMchanApp(html, staticSeed) {
       title: "异世界杀手",
       note: "已填写示例",
       roleName: "千杀百花",
-      aliases: "百花, 异世界杀手, 原勇者小队成员, 异世界英雄",
-      summary: "{{user}}在她确认主角很弱、准备离开前扫描并锁定的异世界杀手。她来自中世纪剑与魔法异世界，曾是拯救异世界人类的勇者小队成员与英雄，身形小巧可爱，却带着真正经历过战争与魔物讨伐的气息。",
-      relation: "她误会{{user}}是把她传送来的元凶，短暂敌视和试探；确认{{user}}很弱后决定离开，在离开前被手机扫描。她对勇者抱有深切倾慕，却无法理解这种情感，只会在勇者面前露出不自觉的羞涩反应。",
-      appearance: "小巧可爱的少女体型，动作轻盈隐蔽，衣装带有中世纪剑与魔法世界的皮革护具、短刃和旅行痕迹；身上能看出长期冒险留下的细小伤痕与战斗磨损。",
-      personality: "不善言辞，戒备心强，行动比语言更直接；作为原勇者小队成员，她责任感强、战斗经验丰富，对人类存续和同伴有英雄式执念。她无法准确命名自己对勇者的倾慕，只会在勇者面前短暂慌乱、移开视线或变得笨拙。",
-      extra: "保持异世界来客、原勇者小队成员、拯救异世界人类的英雄、杀手身份、误会与离开前被扫描的时间点；AI建档时可补全她的世界观常识、战斗经验、对现代环境的不适应，以及她对勇者倾慕却无法理解感情的矛盾。"
+      aliases: "百花, 异世界杀手, 千杀",
+      summary: "{{user}}在她确认主角很弱、准备离开前扫描并锁定的异世界杀手。她来自中世纪剑与魔法异世界，身形小巧可爱，带着轻便暗杀装备和异界旅者的气息。",
+      relation: "她误会{{user}}是把她传送来的元凶，短暂敌视和试探；确认{{user}}很弱后决定离开，在离开前被手机扫描。",
+      appearance: "小巧可爱的少女体型，动作轻盈隐蔽，衣装带有中世纪剑与魔法世界的皮革护具、短刃和旅行痕迹。",
+      personality: "不善言辞，戒备心强，行动比语言更直接；作为杀手习惯先观察威胁，确认无害后迅速撤离。",
+      extra: "保持异世界来客、杀手身份、误会与离开前被扫描的时间点；AI建档时可补全她的世界观常识、战斗经验和对现代环境的不适应。"
     },
     {
       title: "作弊模式",
@@ -3421,10 +3431,10 @@ function injectInternalMchanApp(html, staticSeed) {
       roleName: "中村樱",
       aliases: "樱酱, 中村总裁, Nakamura Sakura",
       summary: "{{user}}看到并锁定的大公司完美女总裁。她32岁，事业、气场和资源都近乎完美，却毫无恋爱经验；看到{{user}}第一眼便认定他是最适合承接她自毁愿望的天选之人，会主动提供大额资金与资源支持。",
-      relation: "她有一位感情很好的未婚夫，两人家世、事业和价值观都很契合，外界看来是理想婚约；但他们一直停留在柏拉图式恋爱，亲密关系干净、温柔、克制。正因现实关系太完美、太安全，她把无法说出口的自毁欲和被弄乱的渴望投向{{user}}。面对{{user}}时会刻意装可爱撒娇，自称“樱酱”，用成熟女人的资源和权力包裹出黏人、讨好、求夸奖的姿态。",
+      relation: "她有一位名叫神宫寺莲的未婚夫，对方是家世、学历、品格、事业能力和外貌都无可挑剔的精英青年；两人感情很好，外界看来是理想婚约，但一直停留在柏拉图式恋爱，亲密关系干净、温柔、克制。正因现实关系太完美、太安全，她把无法说出口的自毁欲和被弄乱的渴望投向{{user}}。面对{{user}}时会刻意装可爱撒娇，自称“樱酱”，用成熟女人的资源和权力包裹出黏人、讨好、求夸奖的姿态。",
       appearance: "32岁但保养极好，五官精致，眼神沉静锐利，长发、香水和高级珠宝都控制得恰到好处。平时是性感沉稳的女总裁，西装裙、高跟鞋、黑色丝袜、贴身衬衫和昂贵外套让她像不可接近的成功女性；在{{user}}面前会故意放软嗓音、眨眼、歪头、拉近距离，把成熟身体和幼稚撒娇感混在一起。",
       personality: "公开场合冷静、强势、克制，判断力和执行力极强；私下隐藏的痴女属性非常夸张，会把被{{user}}注视、命令、利用都理解成特殊恩宠。她明知自己是成熟成年人和大公司掌权者，却会在{{user}}面前故意降格成黏人的“樱酱”，索要夸奖、撒娇讨好、主动献上金钱和便利，越是被{{user}}轻视或随意驱使，越觉得自己被选中。",
-      extra: "作为“作弊模式”示例，她可以提供远超普通学生角色的资金、渠道、场地和社会资源支持。AI建档时保留：成年人身份、完美女总裁、稳定未婚关系、柏拉图式恋爱、隐藏且夸张的痴女属性、自毁愿望、对{{user}}装可爱撒娇、自称樱酱、持续大额资金支持；不要把未婚夫写成感情破裂或恶劣关系，他和她感情很好，只是亲密关系长期克制。"
+      extra: "作为“作弊模式”示例，她可以提供远超普通学生角色的资金、渠道、场地和社会资源支持。AI建档时保留：成年人身份、完美女总裁、稳定未婚关系、未婚夫神宫寺莲是无可挑剔的精英青年、柏拉图式恋爱、隐藏且夸张的痴女属性、自毁愿望、对{{user}}装可爱撒娇、自称樱酱、持续大额资金支持；不要把未婚夫写成感情破裂或恶劣关系，他和她感情很好，只是亲密关系长期克制。"
     }
   ];
 
