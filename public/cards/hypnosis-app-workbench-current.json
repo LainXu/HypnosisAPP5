@@ -29,7 +29,7 @@
     "extensions": {
       "talkativeness": "0.5",
       "fav": false,
-      "world": "催眠APP",
+      "world": "催眠APP（二改MVU）",
       "depth_prompt": {
         "prompt": "",
         "depth": 4,
@@ -2291,7 +2291,7 @@
           }
         }
       ],
-      "name": "催眠APP"
+      "name": "催眠APP（二改MVU）"
     }
   },
   "create_date": "2026-05-29T12:42:31.655Z",
