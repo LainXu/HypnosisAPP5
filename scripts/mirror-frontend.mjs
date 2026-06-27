@@ -28,10 +28,10 @@ const DEFAULT_PREVIEW_ROLES = {
 		      "身高": "168cm",
 		      "体重": "55kg",
 		      "三围": "B104 / W58 / H88（L罩杯）",
-		      "头发": "保养精致的金色双马尾，发量蓬松，在阳光下很有存在感。",
-		      "面部": "宝蓝色上挑猫眼，五官明艳，高傲时会露出习惯性的俯视神情。",
-		      "上衣": "私改制服衬衫与外套，胸前布料被夸张曲线撑紧，香水味很明显。",
-		      "下衣": "大腿中部短裙、黑色过膝袜和精心打理的鞋袜搭配。"
+		      "头发": "金色双马尾用昂贵发饰束起，发尾卷出柔软弧度，刘海刻意露出额头与耳侧小发卡，近看能闻到淡淡花果香。",
+		      "面部": "宝蓝色上挑猫眼、睫毛浓密，妆容精致但不显厚重；笑时像在审视别人，生气时下巴会微微抬高。",
+		      "上衣": "私改制服外套与贴身白衬衫，领口丝带端正，胸前布料被丰满曲线撑紧，袖口和胸针都带着大小姐式讲究。",
+		      "下衣": "高腰短裙停在大腿中段，裙褶整齐，黑色过膝袜包住修长双腿，皮鞋擦得发亮。"
 		    },
 		    "心理": "我当然是这个班级最耀眼的人，大家看着我也是理所当然。{{user}}那边没什么值得在意的，倒是阿宅今天会不会又露出那种慌张表情？",
 	    "阴蒂敏感度": 100,
@@ -61,10 +61,10 @@ const DEFAULT_PREVIEW_ROLES = {
 		      "身高": "165cm",
 		      "体重": "52kg",
 		      "三围": "B88 / W56 / H90",
-		      "头发": "黑色长发自然垂落，像瀑布一样顺滑，常轻轻撩到耳后。",
-		      "面部": "白皙端正的清楚系面孔，眼神温和但有距离感，表情管理无可挑剔。",
-		      "上衣": "制服扣到最上方，领结端正，怀里常抱着讲义或文库本。",
-		      "下衣": "及膝裙与黑色连裤袜，站姿端庄保守，带出安静的书卷气。"
+		      "头发": "黑色长发顺直垂到背中，发梢微微内扣，刘海整齐分开，耳侧碎发总被她无意识地撩到耳后。",
+		      "面部": "白皙端正的清楚系脸庞，深色眼睛安静温和，鼻梁秀气，嘴角常保持礼貌弧度，疲惫时眼下会有很淡阴影。",
+		      "上衣": "制服衬衫扣到最上方，深色领结系得规整，外套没有多余褶皱，怀里常抱着讲义、文库本或班级资料。",
+		      "下衣": "及膝百褶裙线条平整，黑色连裤袜包住纤细双腿，站姿端庄保守，整体带着安静的书卷气。"
 		    },
 		    "心理": "先把讲义和班务处理妥当，不要让课堂秩序乱掉。{{user}}看起来只是普通同学，我保持礼貌就好，没必要给出多余的私人距离。",
 	    "阴蒂敏感度": 100,
@@ -94,10 +94,10 @@ const DEFAULT_PREVIEW_ROLES = {
 		      "身高": "148cm",
 		      "体重": "40kg",
 		      "三围": "B72 / W52 / H76（A罩杯）",
-		      "头发": "黑色短发随意扎成低马尾，运动后常有些凌乱。",
-		      "面部": "小狗一样圆亮的眼睛，表情直率，笑起来露出活泼的虎牙感。",
-		      "上衣": "校服常穿得松散，领口和袖口带着运动后的热气。",
-		      "下衣": "短裙配运动感很强的腿部线条，跑跳动作轻快有力。"
+		      "头发": "黑色短发随意扎成低马尾，额前碎发总被汗水弄乱，发绳朴素，跑动时发尾会轻快地甩起来。",
+		      "面部": "圆亮的眼睛像小型犬一样直率，鼻尖和脸颊常带运动后的红，笑起来露出虎牙感，不高兴时表情也藏不住。",
+		      "上衣": "校服衬衫常穿得松散，领口微开，袖口挽起，外套经常系在腰间或搭在肩上，带着运动后的热气。",
+		      "下衣": "短裙下是紧实有力的腿线，常搭运动短袜或跑鞋，膝盖和小腿偶尔有训练留下的细小擦痕。"
 		    },
 		    "心理": "好饿，炒面面包要是又卖光我真的会生气。{{user}}在旁边的话顺手闹一下也没关系吧，反正他看起来挺耐拍的。",
 	    "阴蒂敏感度": 100,
@@ -2510,6 +2510,9 @@ function injectInternalMchanApp(html, staticSeed) {
   if (html.includes("__ST_INTERNAL_MCHAN_APP__")) return upgradeInternalMchanApp(html);
   const defaultBoards = jsonForInlineScript(staticSeed?.boards?.length ? staticSeed.boards : MCHAN_BOARD_DEFINITIONS);
   const defaultRoleNames = jsonForInlineScript(Object.keys(DEFAULT_PREVIEW_ROLES));
+  const defaultRoleProfiles = jsonForInlineScript(Object.fromEntries(
+    Object.entries(DEFAULT_PREVIEW_ROLES).map(([name, role]) => [name, role["档案"] || {}])
+  ));
   const defaultThreads = jsonForInlineScript(staticSeed?.threads?.length ? staticSeed.threads : [
     {
       id: "thread-mchan-static",
@@ -2532,6 +2535,7 @@ function injectInternalMchanApp(html, staticSeed) {
   const DEFAULT_BOARDS = ${defaultBoards};
   const DEFAULT_THREADS = ${defaultThreads};
   const DEFAULT_ROLE_NAMES = ${defaultRoleNames};
+  const DEFAULT_ROLE_PROFILES = ${defaultRoleProfiles};
   const BOARD_NAMES = DEFAULT_BOARDS.map((board) => board.name);
   const BOARD_ID_BY_NAME = Object.fromEntries(DEFAULT_BOARDS.map((board) => [board.name, board.id]));
   const BOARD_NAME_BY_ID = Object.fromEntries(DEFAULT_BOARDS.map((board) => [board.id, board.name]));
@@ -3055,6 +3059,7 @@ function injectInternalMchanApp(html, staticSeed) {
 .st-add-role-hint{border:1px solid rgba(34,211,238,.16);border-radius:14px;background:rgba(34,211,238,.075);padding:10px;color:rgba(226,232,240,.72);font-size:11px;line-height:1.55}
 .st-add-role-status{min-height:18px;color:#67e8f9;font-size:11px;line-height:1.5}
 .st-lite-app{position:absolute;inset:0;z-index:82;display:flex;flex-direction:column;background:radial-gradient(circle at 25% -10%,rgba(34,211,238,.14),transparent 35%),linear-gradient(180deg,#101426 0%,#080b14 58%,#05060b 100%);color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:0;overflow:hidden}
+.st-profile-app{z-index:150;background:#111827}
 .st-lite-app *{box-sizing:border-box}
 .st-lite-header{flex:0 0 auto;padding:42px 16px 14px;background:rgba(3,6,14,.56);display:flex;align-items:center;gap:12px;border-bottom:1px solid rgba(255,255,255,.08);box-shadow:0 12px 30px rgba(0,0,0,.22);backdrop-filter:blur(14px)}
 .st-lite-back{width:34px;height:34px;border:1px solid rgba(255,255,255,.1);border-radius:999px;background:rgba(255,255,255,.07);color:white;font-size:24px;line-height:1;display:grid;place-items:center;cursor:pointer}
@@ -3063,6 +3068,12 @@ function injectInternalMchanApp(html, staticSeed) {
 .st-lite-body{flex:1;min-height:0;overflow:auto;padding:12px;display:grid;align-content:start;gap:10px;scrollbar-width:none}
 .st-lite-body::-webkit-scrollbar{display:none}
 .st-lite-card{border:1px solid rgba(255,255,255,.1);border-radius:16px;background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.035));box-shadow:0 14px 30px rgba(0,0,0,.2);padding:12px}
+.st-todo-card{min-height:220px;display:grid;place-items:center;text-align:center}
+.st-todo-card strong{font-size:34px;letter-spacing:.12em;color:#f8fafc}
+.st-school-options{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.st-school-options article{border:1px solid rgba(34,211,238,.18);border-radius:14px;background:rgba(34,211,238,.07);padding:12px;color:#f8fafc}
+.st-school-options strong{display:block;font-size:14px;line-height:1.2}
+.st-school-options span{display:block;margin-top:4px;color:rgba(203,213,225,.58);font-size:11px}
 .st-cal-hero{display:grid;gap:8px;border-color:rgba(34,211,238,.18);background:linear-gradient(135deg,rgba(34,211,238,.14),rgba(168,85,247,.1))}
 .st-cal-date{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
 .st-cal-date strong{font-size:24px;line-height:1;color:#fff}
@@ -3277,30 +3288,35 @@ function injectInternalMchanApp(html, staticSeed) {
 [data-st-phone-app="stats"] .st-effect-item p{margin:5px 0 0;color:rgba(226,232,240,.72);font-size:11px;line-height:1.5;white-space:pre-wrap}
 [data-st-phone-app="stats"] .st-effect-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 [data-st-phone-app="stats"] .st-effect-meta span{border:1px solid rgba(255,255,255,.08);border-radius:999px;background:rgba(255,255,255,.055);color:rgba(226,232,240,.7);padding:3px 7px;font-size:10px;line-height:1.2}
-.st-person-stage{display:grid;grid-template-columns:34px minmax(0,1fr) 34px;align-items:center;gap:7px;min-height:0}
-.st-person-nav{width:34px;height:68px;border:1px solid rgba(255,255,255,.11);border-radius:16px;background:rgba(255,255,255,.06);color:#e0f2fe;font-size:30px;line-height:1;display:grid;place-items:center;cursor:pointer;box-shadow:0 12px 26px rgba(0,0,0,.18)}
-.st-person-nav:active{transform:scale(.97)}
-.st-person-card{min-width:0;border:1px solid rgba(34,211,238,.18);border-radius:20px;background:radial-gradient(circle at 50% 0%,rgba(34,211,238,.14),transparent 42%),linear-gradient(180deg,rgba(255,255,255,.085),rgba(255,255,255,.035));box-shadow:0 18px 36px rgba(0,0,0,.24);padding:12px;display:grid;gap:11px;overflow:hidden}
-.st-person-card.is-enter-left{animation:stPersonEnterLeft .22s ease-out}
-.st-person-card.is-enter-right{animation:stPersonEnterRight .22s ease-out}
+.st-profile-body{padding:8px;display:grid;place-items:center;background:radial-gradient(circle at 50% -10%,rgba(255,255,255,.16),transparent 34%),linear-gradient(180deg,#1f2937,#0f172a)}
+.st-person-paper{position:relative;width:min(100%,344px);height:100%;overflow:auto;border-radius:4px;background:#f7f1e5;color:#33291f;font-family:"Songti SC","STSong","Noto Serif SC",serif;box-shadow:0 18px 45px rgba(0,0,0,.42),inset 0 0 0 2px rgba(81,64,49,.7),inset 0 0 0 8px #f7f1e5,inset 0 0 0 9px rgba(81,64,49,.5);padding:29px 27px 22px;scrollbar-width:none}
+.st-person-paper::-webkit-scrollbar{display:none}
+.st-person-back,.st-person-paper-nav{position:absolute;z-index:4;border:1px solid rgba(81,64,49,.5);background:rgba(247,241,229,.92);color:#44362a;display:grid;place-items:center;cursor:pointer;box-shadow:0 2px 7px rgba(60,45,32,.18);pointer-events:auto}
+.st-person-back{top:18px;left:18px;width:28px;height:28px;border-radius:999px;font-size:23px;line-height:1}
+.st-person-photo-wrap{position:relative;z-index:1;width:65%;max-width:206px;margin:0 auto 11px}
+.st-person-paper-nav{top:50%;width:28px;height:54px;border-radius:999px;font-size:30px;line-height:1;transform:translateY(-50%)}
+.st-person-paper-nav[data-profile-action="prev"]{left:-33px}
+.st-person-paper-nav[data-profile-action="next"]{right:-33px}
+.st-person-back:active{transform:scale(.96)}
+.st-person-paper-nav:active{transform:translateY(-50%) scale(.96)}
+.st-person-paper-head{position:relative;z-index:1;text-align:center;margin:3px 0 9px}
+.st-person-paper-head small{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;width:70%;margin:0 auto 4px;color:rgba(68,54,42,.56);font-size:14px;line-height:1}
+.st-person-paper-head small::before,.st-person-paper-head small::after{content:"";height:1px;background:rgba(81,64,49,.42)}
+.st-person-paper-head h2{margin:0;color:#403126;font-size:34px;line-height:1.05;letter-spacing:.1em;font-weight:900;text-shadow:0 1px 0 rgba(255,255,255,.65)}
+.st-person-photo{width:100%;aspect-ratio:4/5;border:3px double rgba(81,64,49,.45);background:#eee8dc;overflow:hidden;display:grid;place-items:center;cursor:pointer;box-shadow:0 4px 12px rgba(80,64,48,.13)}
+.st-person-photo img{width:100%;height:100%;object-fit:cover;display:block}
+.st-person-photo-empty{width:100%;height:100%;display:grid;place-items:center;text-align:center;color:rgba(68,54,42,.42);font-size:12px;font-weight:900;letter-spacing:.1em;background:linear-gradient(135deg,rgba(255,255,255,.42),rgba(220,211,195,.45))}
+.st-person-lines{position:relative;z-index:1;display:grid;gap:0}
+.st-person-line{display:grid;grid-template-columns:76px minmax(0,1fr);gap:8px;align-items:start;min-height:29px;border-bottom:1px dashed rgba(81,64,49,.35);padding:5px 0}
+.st-person-line span{color:#33291f;font-size:15px;font-weight:900;letter-spacing:.12em;white-space:nowrap}
+.st-person-line strong{min-width:0;color:#30261d;font-size:15px;font-weight:650;line-height:1.36;white-space:pre-wrap;overflow-wrap:anywhere}
+.st-person-line.is-long strong{font-size:13px;line-height:1.42}
+.st-person-page-count{position:relative;z-index:1;margin-top:12px;text-align:center;color:rgba(68,54,42,.48);font-size:11px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-weight:800}
+.st-person-card.is-enter-left,.st-person-paper.is-enter-left{animation:stPersonEnterLeft .22s ease-out}
+.st-person-card.is-enter-right,.st-person-paper.is-enter-right{animation:stPersonEnterRight .22s ease-out}
 @keyframes stPersonEnterLeft{from{opacity:.55;transform:translateX(-18px)}to{opacity:1;transform:translateX(0)}}
 @keyframes stPersonEnterRight{from{opacity:.55;transform:translateX(18px)}to{opacity:1;transform:translateX(0)}}
-.st-person-photo{position:relative;aspect-ratio:4/5;border:1px solid rgba(255,255,255,.1);border-radius:18px;background:linear-gradient(145deg,rgba(15,23,42,.82),rgba(2,6,23,.72));overflow:hidden;display:grid;place-items:center;box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
-.st-person-photo img{width:100%;height:100%;object-fit:cover;display:block}
-.st-person-photo-empty{display:grid;place-items:center;gap:5px;color:rgba(203,213,225,.46);font-size:11px;font-weight:900;letter-spacing:.08em}
-.st-person-photo-empty::before{content:"";width:54px;height:54px;border-radius:18px;border:1px solid rgba(125,211,252,.28);background:linear-gradient(135deg,rgba(34,211,238,.12),rgba(168,85,247,.12));box-shadow:0 0 24px rgba(34,211,238,.08)}
-.st-person-photo-actions{position:absolute;left:8px;right:8px;bottom:8px;display:flex;gap:7px}
-.st-person-photo-actions button{flex:1;min-width:0;height:30px;border:1px solid rgba(255,255,255,.13);border-radius:11px;background:rgba(2,6,23,.64);color:#f8fafc;font-size:10px;font-weight:900;backdrop-filter:blur(10px);cursor:pointer}
-.st-person-photo-actions button[data-profile-action="clear-photo"]{color:#fecdd3}
-.st-person-title{display:flex;align-items:flex-end;justify-content:space-between;gap:8px}
-.st-person-title strong{min-width:0;color:#fff;font-size:18px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.st-person-title span{flex:0 0 auto;border:1px solid rgba(34,211,238,.22);border-radius:999px;background:rgba(34,211,238,.08);color:#a5f3fc;padding:5px 8px;font-size:10px;font-weight:900;white-space:nowrap}
-.st-person-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
-.st-person-field{min-width:0;border:1px solid rgba(255,255,255,.08);border-radius:13px;background:rgba(2,6,23,.3);padding:8px 9px;box-shadow:inset 0 1px 0 rgba(255,255,255,.03)}
-.st-person-field.is-wide{grid-column:1/-1}
-.st-person-field span{display:block;color:rgba(125,211,252,.76);font-size:10px;font-weight:850;line-height:1.15}
-.st-person-field strong{display:block;margin-top:5px;color:rgba(248,250,252,.9);font-size:12px;line-height:1.35;white-space:pre-wrap;overflow-wrap:anywhere}
-.st-person-empty{border:1px dashed rgba(255,255,255,.14);border-radius:18px;background:rgba(255,255,255,.04);padding:18px 12px;text-align:center;color:rgba(203,213,225,.62);font-size:12px;line-height:1.55}
+.st-person-empty{border:1px dashed rgba(81,64,49,.38);border-radius:10px;background:rgba(247,241,229,.9);padding:22px 14px;text-align:center;color:rgba(68,54,42,.64);font-size:13px;line-height:1.55}
 	\`;
     document.head.appendChild(style);
   }
@@ -3313,7 +3329,7 @@ function injectInternalMchanApp(html, staticSeed) {
   }
 
   function clearPhoneInternalOverlays(root) {
-    root?.querySelectorAll?.(".st-mchan-internal-app,.st-add-role-app,.st-calendar-lite-app,.st-timetable-app,.st-profile-app").forEach((element) => element.remove());
+    root?.querySelectorAll?.(".st-mchan-internal-app,.st-add-role-app,.st-calendar-lite-app,.st-timetable-app,.st-profile-app,.st-map-app,.st-school-app").forEach((element) => element.remove());
   }
 
   function ensureActiveThread(state) {
@@ -3720,6 +3736,8 @@ function injectInternalMchanApp(html, staticSeed) {
     if (root.querySelector(".st-calendar-lite-app")) return "calendar-lite";
     if (root.querySelector(".st-timetable-app")) return "timetable";
     if (root.querySelector(".st-profile-app")) return "profile";
+    if (root.querySelector(".st-map-app")) return "map";
+    if (root.querySelector(".st-school-app")) return "school";
     const text = root.innerText || "";
     const isHome = text.includes("催眠APP") && text.includes("成就和任务") && text.includes("MC匿名版");
     if (isHome) return "";
@@ -4126,8 +4144,9 @@ function injectInternalMchanApp(html, staticSeed) {
   }
 
   function roleProfileData(roleName, roleData) {
+    const defaultProfile = isPlainObject(DEFAULT_ROLE_PROFILES[roleName]) ? DEFAULT_ROLE_PROFILES[roleName] : {};
     const profile = isPlainObject(roleData?.["档案"]) ? roleData["档案"] : {};
-    return { "姓名": roleName || profile["姓名"] || "", ...profile };
+    return { "姓名": roleName || profile["姓名"] || defaultProfile["姓名"] || "", ...defaultProfile, ...profile };
   }
 
   function pickRoleMeta(roleName, roleData) {
@@ -4422,7 +4441,7 @@ function injectInternalMchanApp(html, staticSeed) {
 
   function findHomeTileByText(text) {
     const labels = Array.from(document.querySelectorAll("span,button,div"))
-      .filter((element) => !element.closest(".st-mchan-internal-app,.st-add-role-app,.st-calendar-lite-app,.st-timetable-app,.st-profile-app") && element.textContent?.trim() === text);
+      .filter((element) => !element.closest(".st-mchan-internal-app,.st-add-role-app,.st-calendar-lite-app,.st-timetable-app,.st-profile-app,.st-map-app,.st-school-app") && element.textContent?.trim() === text);
     for (const label of labels) {
       const tile = findTileFromLabel(label);
       if (tile) return tile;
@@ -4439,6 +4458,13 @@ function injectInternalMchanApp(html, staticSeed) {
       }
     }
     return false;
+  }
+
+  function setHomeTileLabel(tile, text) {
+    const labels = Array.from(tile.querySelectorAll("*"))
+      .filter((element) => element.children.length === 0 && element.textContent?.trim());
+    const label = labels[labels.length - 1];
+    if (label) label.textContent = text;
   }
 
   const ST_WEEKDAY_NAMES = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"];
@@ -4806,16 +4832,16 @@ function injectInternalMchanApp(html, staticSeed) {
   }
 
   const PERSON_PROFILE_FIELDS = [
-    { key: "姓名", label: "姓名" },
-    { key: "年龄", label: "年龄" },
-    { key: "社团/职业", label: "社团/职业", wide: true },
-    { key: "身高", label: "身高" },
-    { key: "体重", label: "体重" },
-    { key: "三围", label: "三围", wide: true },
-    { key: "头发", label: "头发", wide: true },
-    { key: "面部", label: "面部", wide: true },
-    { key: "上衣", label: "上衣", wide: true },
-    { key: "下衣", label: "下衣", wide: true }
+    { key: "姓名", label: "姓　名" },
+    { key: "年龄", label: "年　龄" },
+    { key: "社团/职业", label: "社　团" },
+    { key: "身高", label: "身　高" },
+    { key: "体重", label: "体　重" },
+    { key: "三围", label: "三　围" },
+    { key: "头发", label: "头　发", long: true },
+    { key: "面部", label: "面　部", long: true },
+    { key: "上衣", label: "上　衣", long: true },
+    { key: "下衣", label: "下　衣", long: true }
   ];
   const PROFILE_PHOTO_STORAGE_PREFIX = "hypnoos:profile-photo:v1";
 
@@ -4870,19 +4896,92 @@ function injectInternalMchanApp(html, staticSeed) {
     return ((Math.trunc(index) % count) + count) % count;
   }
 
+  function closePersonProfilePage(page) {
+    const root = page.parentElement;
+    if (root?.dataset?.stPhoneApp === "profile") delete root.dataset.stPhoneApp;
+    page.parentNode?.removeChild(page);
+  }
+
+  function turnPersonProfilePage(page, delta) {
+    const current = Number(page.dataset.profileIndex || 0);
+    page.dataset.profileIndex = String((Number.isFinite(current) ? current : 0) + delta);
+    renderPersonProfilePage(page, delta < 0 ? -1 : 1);
+  }
+
+  function runPersonProfileAction(page, action) {
+    if (action === "back") closePersonProfilePage(page);
+    if (action === "prev") turnPersonProfilePage(page, -1);
+    if (action === "next") turnPersonProfilePage(page, 1);
+    if (action === "upload-photo") page.querySelector("[data-profile-file]")?.click();
+  }
+
+  function bindPersonProfileEvents(page) {
+    if (page.dataset.profileBound === "true") return;
+    page.dataset.profileBound = "true";
+    page.addEventListener("click", (event) => {
+      const target = event.target?.closest?.("[data-profile-action]");
+      if (!target || !page.contains(target)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      runPersonProfileAction(page, target.dataset.profileAction);
+    });
+    page.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        turnPersonProfilePage(page, -1);
+      }
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+        turnPersonProfilePage(page, 1);
+      }
+      if ((event.key === "Enter" || event.key === " ") && event.target?.closest?.('[data-profile-action="upload-photo"]')) {
+        event.preventDefault();
+        page.querySelector("[data-profile-file]")?.click();
+      }
+    });
+  }
+
+  function bindPersonProfileControls(page) {
+    page.querySelectorAll("[data-profile-action]").forEach((button) => {
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        runPersonProfileAction(page, button.dataset.profileAction);
+      });
+    });
+  }
+
+  function personProfileSignature(page) {
+    const roles = getStatsRoles();
+    const roleNames = orderedProfileRoleNames(roles);
+    const index = normalizeProfileIndex(page, roleNames.length);
+    const roleName = roleNames[index] || "";
+    const roleData = isPlainObject(roles[roleName]) ? roles[roleName] : {};
+    return JSON.stringify({
+      index,
+      names: roleNames,
+      profile: roleProfileData(roleName, roleData),
+      photo: profilePhotoSource(roleName, roleData)
+    });
+  }
+
   function renderPersonProfilePage(page, direction = 0) {
+    bindPersonProfileEvents(page);
     const roles = getStatsRoles();
     const roleNames = orderedProfileRoleNames(roles);
     const index = normalizeProfileIndex(page, roleNames.length);
     page.dataset.profileIndex = String(index);
     if (!roleNames.length) {
+      page.dataset.profileSignature = personProfileSignature(page);
       page.innerHTML =
-        '<header class="st-lite-header">' +
-          '<button class="st-lite-back" data-profile-action="back" title="返回桌面">‹</button>' +
-          '<div class="st-lite-title"><strong>人物档案</strong><span>暂无角色变量</span></div>' +
-        '</header>' +
-        '<main class="st-lite-body"><section class="st-person-empty">没有可显示的角色档案。</section></main>';
-      page.querySelector('[data-profile-action="back"]')?.addEventListener("click", () => page.remove());
+        '<main class="st-lite-body st-profile-body">' +
+          '<section class="st-person-paper">' +
+            '<button class="st-person-back" type="button" data-profile-action="back" title="返回桌面">‹</button>' +
+            '<div class="st-person-paper-head"><small>NO DATA</small><h2>人物档案</h2></div>' +
+            '<section class="st-person-empty">没有可显示的角色档案。</section>' +
+          '</section>' +
+        '</main>';
+      bindPersonProfileControls(page);
       return;
     }
     const roleName = roleNames[index];
@@ -4891,51 +4990,31 @@ function injectInternalMchanApp(html, staticSeed) {
     const photo = profilePhotoSource(roleName, roleData);
     const animationClass = direction < 0 ? " is-enter-left" : direction > 0 ? " is-enter-right" : "";
     const fieldsHtml = PERSON_PROFILE_FIELDS.map((field) => (
-      '<article class="st-person-field ' + (field.wide ? "is-wide" : "") + '">' +
+      '<div class="st-person-line ' + (field.long ? "is-long" : "") + '">' +
         '<span>' + escapeHtml(field.label) + '</span>' +
         '<strong>' + escapeHtml(profileFieldText(profile, roleName, field)) + '</strong>' +
-      '</article>'
+      '</div>'
     )).join("");
     page.innerHTML =
-      '<header class="st-lite-header">' +
-        '<button class="st-lite-back" data-profile-action="back" title="返回桌面">‹</button>' +
-        '<div class="st-lite-title"><strong>人物档案</strong><span>' + escapeHtml(String(index + 1) + " / " + roleNames.length) + '</span></div>' +
-      '</header>' +
-      '<main class="st-lite-body">' +
-        '<section class="st-person-stage">' +
-          '<button class="st-person-nav" type="button" data-profile-action="prev" title="上一个">‹</button>' +
-          '<article class="st-person-card' + animationClass + '">' +
-            '<div class="st-person-photo">' +
-              (photo ? '<img alt="' + escapeAttr(roleName) + '" src="' + escapeAttr(photo) + '">' : '<div class="st-person-photo-empty">NO PHOTO</div>') +
-              '<div class="st-person-photo-actions">' +
-                '<button type="button" data-profile-action="upload-photo">上传照片</button>' +
-                '<button type="button" data-profile-action="clear-photo"' + (localProfilePhoto(roleName) ? "" : " disabled") + '>清除</button>' +
-              '</div>' +
-              '<input type="file" accept="image/*" data-profile-file hidden>' +
-            '</div>' +
-            '<div class="st-person-title"><strong>' + escapeHtml(profileFieldText(profile, roleName, { key: "姓名" })) + '</strong><span>' + escapeHtml(profileFieldText(profile, roleName, { key: "社团/职业" })) + '</span></div>' +
-            '<div class="st-person-grid">' + fieldsHtml + '</div>' +
-          '</article>' +
-          '<button class="st-person-nav" type="button" data-profile-action="next" title="下一个">›</button>' +
+      '<main class="st-lite-body st-profile-body">' +
+        '<section class="st-person-paper' + animationClass + '" aria-label="人物档案纸">' +
+          '<button class="st-person-back" type="button" data-profile-action="back" title="返回桌面">‹</button>' +
+          '<div class="st-person-paper-head"><small>✦</small><h2>人物档案</h2></div>' +
+          '<div class="st-person-photo-wrap">' +
+            '<button class="st-person-paper-nav" type="button" data-profile-action="prev" title="上一个">‹</button>' +
+            '<button class="st-person-photo" type="button" data-profile-action="upload-photo" title="点击更换照片">' +
+              (photo ? '<img alt="' + escapeAttr(roleName) + '" src="' + escapeAttr(photo) + '">' : '<div class="st-person-photo-empty">点击照片区域<br>更换图片</div>') +
+            '</button>' +
+            '<button class="st-person-paper-nav" type="button" data-profile-action="next" title="下一个">›</button>' +
+          '</div>' +
+          '<input type="file" accept="image/*" data-profile-file hidden>' +
+          '<section class="st-person-lines">' + fieldsHtml + '</section>' +
+          '<div class="st-person-page-count">' + escapeHtml(String(index + 1) + " / " + roleNames.length) + '</div>' +
         '</section>' +
       '</main>';
-    page.querySelector('[data-profile-action="back"]')?.addEventListener("click", () => page.remove());
-    page.querySelector('[data-profile-action="prev"]')?.addEventListener("click", () => {
-      page.dataset.profileIndex = String(index - 1);
-      renderPersonProfilePage(page, -1);
-    });
-    page.querySelector('[data-profile-action="next"]')?.addEventListener("click", () => {
-      page.dataset.profileIndex = String(index + 1);
-      renderPersonProfilePage(page, 1);
-    });
+    page.dataset.profileSignature = personProfileSignature(page);
+    bindPersonProfileControls(page);
     const fileInput = page.querySelector("[data-profile-file]");
-    page.querySelector('[data-profile-action="upload-photo"]')?.addEventListener("click", () => fileInput?.click());
-    page.querySelector('[data-profile-action="clear-photo"]')?.addEventListener("click", () => {
-      try {
-        localStorage.removeItem(profilePhotoStorageKey(roleName));
-      } catch {}
-      renderPersonProfilePage(page);
-    });
     fileInput?.addEventListener("change", () => {
       const file = fileInput.files?.[0];
       if (!file || !/^image\\//i.test(file.type || "")) return;
@@ -4966,7 +5045,9 @@ function injectInternalMchanApp(html, staticSeed) {
 
   function updateOpenPersonProfilePage() {
     const page = document.querySelector(".st-profile-app");
-    if (page) renderPersonProfilePage(page);
+    if (page && page.dataset.profileSignature !== personProfileSignature(page)) {
+      renderPersonProfilePage(page);
+    }
   }
 
   function openLiteCalendarPage(tile) {
@@ -4997,10 +5078,44 @@ function injectInternalMchanApp(html, staticSeed) {
     renderTimetablePage(page);
   }
 
+  function renderTodoPage(page, title, subtitle, schoolMode = false) {
+    page.innerHTML =
+      '<header class="st-lite-header">' +
+        '<button class="st-lite-back" data-lite-action="back" title="返回桌面">‹</button>' +
+        '<div class="st-lite-title"><strong>' + escapeHtml(title) + '</strong><span>' + escapeHtml(subtitle) + '</span></div>' +
+      '</header>' +
+      '<main class="st-lite-body">' +
+        (schoolMode ? '<section class="st-school-options">' +
+          '<article><strong>学校地图</strong><span>待续</span></article>' +
+          '<article><strong>校规</strong><span>待续</span></article>' +
+        '</section>' : '') +
+        '<section class="st-lite-card st-todo-card"><strong>待续</strong></section>' +
+      '</main>';
+    page.querySelector('[data-lite-action="back"]')?.addEventListener("click", () => {
+      const root = page.parentElement;
+      if (root?.dataset) delete root.dataset.stPhoneApp;
+      page.remove();
+    });
+  }
+
+  function openTodoPage(tile, appName, className, title, subtitle, schoolMode = false) {
+    ensureStyle();
+    ensurePhoneDarkThemeStyle();
+    const root = findPhoneRoot(tile);
+    root.dataset.stPhoneApp = appName;
+    root.style.position = root.style.position || "relative";
+    clearPhoneInternalOverlays(root);
+    const page = document.createElement("section");
+    page.className = "st-lite-app " + className;
+    page.setAttribute("aria-label", title);
+    root.appendChild(page);
+    renderTodoPage(page, title, subtitle, schoolMode);
+  }
+
   function looksLikePhoneHome(root) {
     const rootText = root?.innerText || "";
     return ["催眠APP", "日历", "帮助", "成就和任务", "库存", "MC匿名版"].every((label) => rootText.includes(label)) &&
-      !root.querySelector(".st-mchan-internal-app, .st-add-role-app, .st-calendar-lite-app, .st-timetable-app, .st-profile-app");
+      !root.querySelector(".st-mchan-internal-app, .st-add-role-app, .st-calendar-lite-app, .st-timetable-app, .st-profile-app, .st-map-app, .st-school-app");
   }
 
   function getHomeHeader(root) {
@@ -5283,6 +5398,44 @@ function injectInternalMchanApp(html, staticSeed) {
     calendarTile.insertAdjacentElement("afterend", tile);
   }
 
+  function patchMapAndSchoolTiles() {
+    const root = findPhoneRoot(document.body);
+    if (!root || !looksLikePhoneHome(root)) return;
+    const anchor = findHomeTileByText("MC匿名版") || findHomeTileByText("帮助");
+    if (!anchor?.parentElement) return;
+    const parent = anchor.parentElement;
+    let mapTile = parent.querySelector('[data-st-map-tile="true"]');
+    if (!mapTile) {
+      mapTile = anchor.cloneNode(true);
+      mapTile.dataset.stMapTile = "true";
+      mapTile.removeAttribute("data-st-mchan-internal-patched");
+      mapTile.setAttribute("aria-label", "打开地图");
+      setHomeTileLabel(mapTile, "地图");
+      mapTile.querySelectorAll("[id]").forEach((node) => node.removeAttribute("id"));
+      mapTile.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+        openTodoPage(mapTile, "map", "st-map-app", "地图", "区域信息");
+      }, true);
+      anchor.insertAdjacentElement("afterend", mapTile);
+    }
+    if (parent.querySelector('[data-st-school-tile="true"]')) return;
+    const schoolTile = mapTile.cloneNode(true);
+    schoolTile.dataset.stSchoolTile = "true";
+    schoolTile.removeAttribute("data-st-map-tile");
+    schoolTile.setAttribute("aria-label", "打开学校");
+    setHomeTileLabel(schoolTile, "学校");
+    schoolTile.querySelectorAll("[id]").forEach((node) => node.removeAttribute("id"));
+    schoolTile.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      openTodoPage(schoolTile, "school", "st-school-app", "学校", "学校地图与校规", true);
+    }, true);
+    mapTile.insertAdjacentElement("afterend", schoolTile);
+  }
+
   function patchHomeTile() {
     const root = findPhoneRoot(document.body);
     patchHomeCourseStatus(root);
@@ -5291,8 +5444,9 @@ function injectInternalMchanApp(html, staticSeed) {
     patchCalendarAndTimetableTiles();
     patchAddRoleTile();
     patchPersonProfileTile();
+    patchMapAndSchoolTiles();
     const labels = Array.from(document.querySelectorAll("span,button,div"))
-      .filter((element) => !element.closest(".st-mchan-internal-app,.st-add-role-app,.st-calendar-lite-app,.st-timetable-app,.st-profile-app") && element.textContent?.trim() === "MC匿名版");
+      .filter((element) => !element.closest(".st-mchan-internal-app,.st-add-role-app,.st-calendar-lite-app,.st-timetable-app,.st-profile-app,.st-map-app,.st-school-app") && element.textContent?.trim() === "MC匿名版");
     for (const label of labels) {
       const tile = findTileFromLabel(label);
       if (!tile || tile.dataset.stMchanInternalPatched === "true") continue;
@@ -5318,7 +5472,7 @@ function injectInternalMchanApp(html, staticSeed) {
     const phone = document.querySelector(".w-full.h-full.bg-black.overflow-hidden.relative");
     if (!phone) return false;
     if (phone.dataset?.stPhoneApp) return true;
-    if (document.querySelector('[data-st-add-role-tile="true"], [data-st-timetable-tile="true"], [data-st-profile-tile="true"], .st-role-picker, .st-mchan-internal-app, .st-add-role-app, .st-calendar-lite-app, .st-timetable-app, .st-profile-app')) return true;
+    if (document.querySelector('[data-st-add-role-tile="true"], [data-st-timetable-tile="true"], [data-st-profile-tile="true"], [data-st-map-tile="true"], [data-st-school-tile="true"], .st-role-picker, .st-mchan-internal-app, .st-add-role-app, .st-calendar-lite-app, .st-timetable-app, .st-profile-app, .st-map-app, .st-school-app')) return true;
     return false;
   }
 

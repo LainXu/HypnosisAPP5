@@ -121,7 +121,7 @@
           "id": "748c6c9a-e2ba-473b-b4b7-4024387b5dcf",
           "scriptName": "前端",
           "findRegex": "<\\s*StatusPlaceHolderImpl\\s*\\/>",
-          "replaceString": "```\n<body>\n<script>\n$('body').load('https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5@db7990593268ee0f0d97858546580ffed0c9c3c9/dist/%E5%82%AC%E7%9C%A0APP%E5%89%8D%E7%AB%AF/index.html')\n</script>\n</body>\n```",
+          "replaceString": "```\n<body>\n<script>\n$('body').load('https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5@2e61beecec0201580cd5b9ed4b2cf83f9b92f3f2/dist/%E5%82%AC%E7%9C%A0APP%E5%89%8D%E7%AB%AF/index.html')\n</script>\n</body>\n```",
           "trimStrings": [],
           "placement": [
             2
@@ -156,7 +156,7 @@
           "id": "fe9113dc-f89b-4e42-8187-986861e67ab3",
           "scriptName": "测试用",
           "findRegex": "<\\s*StatusPlaceHolderImpl\\s*\\/>",
-          "replaceString": "```\n<body>\n<script>\n$('body').load('https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5@db7990593268ee0f0d97858546580ffed0c9c3c9/dist/%E5%82%AC%E7%9C%A0APP%E5%89%8D%E7%AB%AF/index.html')\n</script>\n</body>\n```",
+          "replaceString": "```\n<body>\n<script>\n$('body').load('https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5@2e61beecec0201580cd5b9ed4b2cf83f9b92f3f2/dist/%E5%82%AC%E7%9C%A0APP%E5%89%8D%E7%AB%AF/index.html')\n</script>\n</body>\n```",
           "trimStrings": [],
           "placement": [
             2
@@ -173,7 +173,7 @@
           "id": "53757492-5ce3-4ad7-ad1a-334c41088542",
           "scriptName": "主仓库",
           "findRegex": "<\\s*StatusPlaceHolderImpl\\s*\\/>",
-          "replaceString": "```\n<body>\n<script>\n$('body').load('https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5@db7990593268ee0f0d97858546580ffed0c9c3c9/dist/%E5%82%AC%E7%9C%A0APP%E5%89%8D%E7%AB%AF/index.html')\n</script>\n</body>\n```",
+          "replaceString": "```\n<body>\n<script>\n$('body').load('https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5@2e61beecec0201580cd5b9ed4b2cf83f9b92f3f2/dist/%E5%82%AC%E7%9C%A0APP%E5%89%8D%E7%AB%AF/index.html')\n</script>\n</body>\n```",
           "trimStrings": [],
           "placement": [
             2
@@ -208,7 +208,7 @@
           "id": "4f95726c-735e-4601-a240-c2470f5e23bc",
           "scriptName": "匿名版测试",
           "findRegex": "/\\<匿名版>([\\s\\S]*?)\\</匿名版>/s",
-          "replaceString": "```\n<body>\n<script>\n$('body').load('https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5@db7990593268ee0f0d97858546580ffed0c9c3c9/dist/%E5%82%AC%E7%9C%A0APP%E5%89%8D%E7%AB%AF/index.html')\n</script>\n</body>\n```",
+          "replaceString": "```\n<body>\n<script>\n$('body').load('https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5@2e61beecec0201580cd5b9ed4b2cf83f9b92f3f2/dist/%E5%82%AC%E7%9C%A0APP%E5%89%8D%E7%AB%AF/index.html')\n</script>\n</body>\n```",
           "trimStrings": [],
           "placement": [
             2
@@ -321,7 +321,7 @@
             ]
           }
         },
-        "phoneStateUpdatedAt": "2026-06-26T19:43:15.012Z",
+        "phoneStateUpdatedAt": "2026-06-27T05:59:51.697Z",
         "scanExamples": [
           {
             "title": "教师身份",
@@ -357,7 +357,7 @@
             "extra": "作为“作弊模式”示例，她可以提供远超普通学生角色的资金、渠道、场地和社会资源支持。AI建档时保留：成年人身份、完美女总裁、稳定未婚关系、未婚夫神宫寺莲是无可挑剔的精英青年、柏拉图式恋爱、隐藏且夸张的痴女属性、自毁愿望、对{{user}}装可爱撒娇、自称樱酱、持续大额资金支持；不要把未婚夫写成感情破裂或恶劣关系，他和她感情很好，只是亲密关系长期克制。"
           }
         ],
-        "scanExamplesUpdatedAt": "2026-06-26T19:43:15.012Z",
+        "scanExamplesUpdatedAt": "2026-06-27T05:59:51.697Z",
         "frontendArchitecture": "phone-internal-modules",
         "modules": [
           "hypnosis-app",
@@ -374,12 +374,12 @@
         "mchanMode": "static-readonly"
       },
       "hypnoos": {
-        "localFrontendUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5@db7990593268ee0f0d97858546580ffed0c9c3c9/dist/%E5%82%AC%E7%9C%A0APP%E5%89%8D%E7%AB%AF/index.html",
-        "remoteFrontendUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5@db7990593268ee0f0d97858546580ffed0c9c3c9/dist/%E5%82%AC%E7%9C%A0APP%E5%89%8D%E7%AB%AF/index.html",
-        "sillyTavernLoadUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5@db7990593268ee0f0d97858546580ffed0c9c3c9/dist/%E5%82%AC%E7%9C%A0APP%E5%89%8D%E7%AB%AF/index.html",
+        "localFrontendUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5@2e61beecec0201580cd5b9ed4b2cf83f9b92f3f2/dist/%E5%82%AC%E7%9C%A0APP%E5%89%8D%E7%AB%AF/index.html",
+        "remoteFrontendUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5@2e61beecec0201580cd5b9ed4b2cf83f9b92f3f2/dist/%E5%82%AC%E7%9C%A0APP%E5%89%8D%E7%AB%AF/index.html",
+        "sillyTavernLoadUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5@2e61beecec0201580cd5b9ed4b2cf83f9b92f3f2/dist/%E5%82%AC%E7%9C%A0APP%E5%89%8D%E7%AB%AF/index.html",
         "frontendMode": "remote",
-        "remoteCommit": "db7990593268ee0f0d97858546580ffed0c9c3c9",
-        "remoteRepository": "https://github.com/LainXu/HypnosisAPP5"
+        "remoteCommit": "2e61beecec0201580cd5b9ed4b2cf83f9b92f3f2",
+        "remoteRepository": "LainXu/HypnosisAPP5"
       }
     },
     "group_only_greetings": [],
@@ -1380,7 +1380,7 @@
           "keys": [],
           "secondary_keys": [],
           "comment": "[initvar]变量初始化不需要开",
-          "content": "系统: \n  当前日期: 4月9日 星期三\n  当前时间: 12:00\n  当前日程: 午休\n  当前/待上课程: 无\n  当前事件: 午休\n  当前或下个事件: 4月10-14日, 社团招新周\n  学校声望: 0\n  催眠APP订阅等级: 试用期 \n  MC能量上限: 25\n  MC能量: 25\n  当前MC点: 0\n  累计消耗MC点: 0\n  主角可疑度: 0\n  持有零花钱: 6000\n  持有物品: \n    带催眠APP的手机:\n      描述: 你的手机, 上面不知道什么时候装了个催眠APP\n      数量: 1\n角色: \n  西园寺爱丽莎: \n    好感度: 0\n    警戒度: 0\n    服从度: 0\n    性欲: 0\n    快感值: 0\n    档案:\n      照片: \"\"\n      姓名: 西园寺爱丽莎\n      年龄: \"17\"\n      社团/职业: 归宅部 / 西园寺财团千金\n      身高: 168cm\n      体重: 55kg\n      三围: B104 / W58 / H88（L罩杯）\n      头发: 保养精致的金色双马尾，发量蓬松，在阳光下很有存在感。\n      面部: 宝蓝色上挑猫眼，五官明艳，高傲时会露出习惯性的俯视神情。\n      上衣: 私改制服衬衫与外套，胸前布料被夸张曲线撑紧，香水味很明显。\n      下衣: 大腿中部短裙、黑色过膝袜和精心打理的鞋袜搭配。\n    心理: 正沉浸在班级中心的优越感里，几乎没把{{user}}放进视野，注意力更多在阿宅和周围女生的反应上。\n    阴蒂敏感度: 100\n    小穴敏感度: 100\n    菊穴敏感度: 100\n    尿道敏感度: 100\n    乳头敏感度: 100\n    临时催眠效果: {} \n    永久催眠效果: {}\n    阴蒂高潮次数: 0\n    小穴高潮次数: 0\n    菊穴高潮次数: 0\n    尿道高潮次数: 0\n    乳头高潮次数: 0\n  月咏深雪: \n    好感度: 0\n    警戒度: 0\n    服从度: 0\n    性欲: 0\n    快感值: 0\n    档案:\n      照片: \"\"\n      姓名: 月咏深雪\n      年龄: \"17\"\n      社团/职业: 班级委员长 / 图书委员\n      身高: 165cm\n      体重: 52kg\n      三围: B88 / W56 / H90\n      头发: 黑色长发自然垂落，像瀑布一样顺滑，常轻轻撩到耳后。\n      面部: 白皙端正的清楚系面孔，眼神温和但有距离感，表情管理无可挑剔。\n      上衣: 制服扣到最上方，领结端正，怀里常抱着讲义或文库本。\n      下衣: 及膝裙与黑色连裤袜，站姿端庄保守，带出安静的书卷气。\n    心理: 正想着把讲义和班务处理妥当，对{{user}}保持礼貌但没有私人兴趣，只想让课堂秩序继续平稳。\n    阴蒂敏感度: 100\n    小穴敏感度: 100\n    菊穴敏感度: 150\n    尿道敏感度: 100\n    乳头敏感度: 100\n    临时催眠效果: {}\n    永久催眠效果: {}\n    阴蒂高潮次数: 0\n    小穴高潮次数: 0\n    菊穴高潮次数: 0\n    尿道高潮次数: 0\n    乳头高潮次数: 0\n  犬冢夏美: \n    好感度: 0\n    警戒度: 0\n    服从度: 0\n    性欲: 0\n    快感值: 0\n    档案:\n      照片: \"\"\n      姓名: 犬冢夏美\n      年龄: \"17\"\n      社团/职业: 田径部\n      身高: 148cm\n      体重: 40kg\n      三围: B72 / W52 / H76（A罩杯）\n      头发: 黑色短发随意扎成低马尾，运动后常有些凌乱。\n      面部: 小狗一样圆亮的眼睛，表情直率，笑起来露出活泼的虎牙感。\n      上衣: 校服常穿得松散，领口和袖口带着运动后的热气。\n      下衣: 短裙配运动感很强的腿部线条，跑跳动作轻快有力。\n    心理: 正惦记炒面面包和田径部训练，把{{user}}当成可以随手打闹的熟人，没太在意自己的距离感。\n    阴蒂敏感度: 100\n    小穴敏感度: 100\n    菊穴敏感度: 100\n    尿道敏感度: 100\n    乳头敏感度: 150\n    临时催眠效果: {} \n    永久催眠效果: {}\n    阴蒂高潮次数: 0\n    小穴高潮次数: 0\n    菊穴高潮次数: 0\n    尿道高潮次数: 0\n    乳头高潮次数: 0\n任务: {}",
+          "content": "系统: \n  当前日期: 4月9日 星期三\n  当前时间: 12:00\n  当前日程: 午休\n  当前/待上课程: 无\n  当前事件: 午休\n  当前或下个事件: 4月10-14日, 社团招新周\n  学校声望: 0\n  催眠APP订阅等级: 试用期 \n  MC能量上限: 25\n  MC能量: 25\n  当前MC点: 0\n  累计消耗MC点: 0\n  主角可疑度: 0\n  持有零花钱: 6000\n  持有物品: \n    带催眠APP的手机:\n      描述: 你的手机, 上面不知道什么时候装了个催眠APP\n      数量: 1\n角色: \n  西园寺爱丽莎: \n    好感度: 0\n    警戒度: 0\n    服从度: 0\n    性欲: 0\n    快感值: 0\n    档案:\n      照片: \"\"\n      姓名: 西园寺爱丽莎\n      年龄: \"17\"\n      社团/职业: 归宅部 / 西园寺财团千金\n      身高: 168cm\n      体重: 55kg\n      三围: B104 / W58 / H88（L罩杯）\n      头发: 金色双马尾用昂贵发饰束起，发尾卷出柔软弧度，刘海刻意露出额头与耳侧小发卡，近看能闻到淡淡花果香。\n      面部: 宝蓝色上挑猫眼、睫毛浓密，妆容精致但不显厚重；笑时像在审视别人，生气时下巴会微微抬高。\n      上衣: 私改制服外套与贴身白衬衫，领口丝带端正，胸前布料被丰满曲线撑紧，袖口和胸针都带着大小姐式讲究。\n      下衣: 高腰短裙停在大腿中段，裙褶整齐，黑色过膝袜包住修长双腿，皮鞋擦得发亮。\n    心理: 正沉浸在班级中心的优越感里，几乎没把{{user}}放进视野，注意力更多在阿宅和周围女生的反应上。\n    阴蒂敏感度: 100\n    小穴敏感度: 100\n    菊穴敏感度: 100\n    尿道敏感度: 100\n    乳头敏感度: 100\n    临时催眠效果: {} \n    永久催眠效果: {}\n    阴蒂高潮次数: 0\n    小穴高潮次数: 0\n    菊穴高潮次数: 0\n    尿道高潮次数: 0\n    乳头高潮次数: 0\n  月咏深雪: \n    好感度: 0\n    警戒度: 0\n    服从度: 0\n    性欲: 0\n    快感值: 0\n    档案:\n      照片: \"\"\n      姓名: 月咏深雪\n      年龄: \"17\"\n      社团/职业: 班级委员长 / 图书委员\n      身高: 165cm\n      体重: 52kg\n      三围: B88 / W56 / H90\n      头发: 黑色长发顺直垂到背中，发梢微微内扣，刘海整齐分开，耳侧碎发总被她无意识地撩到耳后。\n      面部: 白皙端正的清楚系脸庞，深色眼睛安静温和，鼻梁秀气，嘴角常保持礼貌弧度，疲惫时眼下会有很淡阴影。\n      上衣: 制服衬衫扣到最上方，深色领结系得规整，外套没有多余褶皱，怀里常抱着讲义、文库本或班级资料。\n      下衣: 及膝百褶裙线条平整，黑色连裤袜包住纤细双腿，站姿端庄保守，整体带着安静的书卷气。\n    心理: 正想着把讲义和班务处理妥当，对{{user}}保持礼貌但没有私人兴趣，只想让课堂秩序继续平稳。\n    阴蒂敏感度: 100\n    小穴敏感度: 100\n    菊穴敏感度: 150\n    尿道敏感度: 100\n    乳头敏感度: 100\n    临时催眠效果: {}\n    永久催眠效果: {}\n    阴蒂高潮次数: 0\n    小穴高潮次数: 0\n    菊穴高潮次数: 0\n    尿道高潮次数: 0\n    乳头高潮次数: 0\n  犬冢夏美: \n    好感度: 0\n    警戒度: 0\n    服从度: 0\n    性欲: 0\n    快感值: 0\n    档案:\n      照片: \"\"\n      姓名: 犬冢夏美\n      年龄: \"17\"\n      社团/职业: 田径部\n      身高: 148cm\n      体重: 40kg\n      三围: B72 / W52 / H76（A罩杯）\n      头发: 黑色短发随意扎成低马尾，额前碎发总被汗水弄乱，发绳朴素，跑动时发尾会轻快地甩起来。\n      面部: 圆亮的眼睛像小型犬一样直率，鼻尖和脸颊常带运动后的红，笑起来露出虎牙感，不高兴时表情也藏不住。\n      上衣: 校服衬衫常穿得松散，领口微开，袖口挽起，外套经常系在腰间或搭在肩上，带着运动后的热气。\n      下衣: 短裙下是紧实有力的腿线，常搭运动短袜或跑鞋，膝盖和小腿偶尔有训练留下的细小擦痕。\n    心理: 正惦记炒面面包和田径部训练，把{{user}}当成可以随手打闹的熟人，没太在意自己的距离感。\n    阴蒂敏感度: 100\n    小穴敏感度: 100\n    菊穴敏感度: 100\n    尿道敏感度: 100\n    乳头敏感度: 150\n    临时催眠效果: {} \n    永久催眠效果: {}\n    阴蒂高潮次数: 0\n    小穴高潮次数: 0\n    菊穴高潮次数: 0\n    尿道高潮次数: 0\n    乳头高潮次数: 0\n任务: {}",
           "constant": false,
           "selective": true,
           "insertion_order": 100,
@@ -1907,13 +1907,14 @@
   "create_date": "2026-05-29T12:42:31.655Z",
   "workbench": {
     "updatedAt": "2026-06-26T17:27:57.687Z",
-    "localFrontendUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5@db7990593268ee0f0d97858546580ffed0c9c3c9/dist/%E5%82%AC%E7%9C%A0APP%E5%89%8D%E7%AB%AF/index.html",
-    "lastExportedPng": "public/cards/hypnosis-app-local-white.png",
+    "localFrontendUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5@2e61beecec0201580cd5b9ed4b2cf83f9b92f3f2/dist/%E5%82%AC%E7%9C%A0APP%E5%89%8D%E7%AB%AF/index.html",
+    "lastExportedPng": "public/cards/hypnosis-app-remote.png",
     "exportedAt": "2026-06-26T17:27:57.692Z",
     "frontendLoader": "jquery-load-local-inline-classic",
-    "sillyTavernLoadUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5@db7990593268ee0f0d97858546580ffed0c9c3c9/dist/%E5%82%AC%E7%9C%A0APP%E5%89%8D%E7%AB%AF/index.html",
-    "remoteFrontendUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5@db7990593268ee0f0d97858546580ffed0c9c3c9/dist/%E5%82%AC%E7%9C%A0APP%E5%89%8D%E7%AB%AF/index.html",
+    "sillyTavernLoadUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5@2e61beecec0201580cd5b9ed4b2cf83f9b92f3f2/dist/%E5%82%AC%E7%9C%A0APP%E5%89%8D%E7%AB%AF/index.html",
+    "remoteFrontendUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5@2e61beecec0201580cd5b9ed4b2cf83f9b92f3f2/dist/%E5%82%AC%E7%9C%A0APP%E5%89%8D%E7%AB%AF/index.html",
     "frontendMode": "remote",
-    "remoteCommit": "db7990593268ee0f0d97858546580ffed0c9c3c9"
+    "remoteCommit": "2e61beecec0201580cd5b9ed4b2cf83f9b92f3f2",
+    "remoteRepository": "LainXu/HypnosisAPP5"
   }
 }
