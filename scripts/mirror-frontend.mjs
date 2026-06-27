@@ -535,7 +535,7 @@ function patchBundledHypnosisApp(html) {
       "            // “角色状态可视化(vip1_stats)”购买/订阅成功一次后永久解锁，用于主屏幕显示“身体检测”APP。\\n            purchases: { ...store.purchases, vip1_stats: true },",
       "            purchases: { ...store.purchases },"
     );
-  outputHtml = patchEvalModuleSources(outputHtml, (code) => patchAppEntryModule(patchAppRootModule(patchMvuBridgeModule(patchHypnosisDataServiceModule(patchHypnosisAppModule(patchHypnosisSendModule(patchHypnosisTypesModule(patchAchievementAppModule(code)))))))));
+  outputHtml = patchEvalModuleSources(outputHtml, (code) => patchStatusBarModule(patchAppEntryModule(patchAppRootModule(patchMvuBridgeModule(patchHypnosisDataServiceModule(patchHypnosisAppModule(patchHypnosisSendModule(patchHypnosisTypesModule(patchAchievementAppModule(code))))))))));
   return outputHtml;
 }
 
@@ -947,9 +947,97 @@ else {
   return output;
 }
 
+function patchStatusBarModule(code) {
+  if (!code.includes("const StatusBar =") || !code.includes("components/OS/StatusBar")) return code;
+  return code.replace(
+    `(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "w-20", children: timeText || new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false }) })`,
+    `(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "w-28 text-[11px] font-black whitespace-nowrap", children: timeText || new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false }) })`
+  );
+}
+
 function patchAppRootModule(code) {
   if (!code.includes("const App =") || !code.includes("DataService.getUserData")) return code;
   let output = code;
+  output = output.replace(
+    `    const [systemDateText, setSystemDateText] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(undefined);
+    const [localNow, setLocalNow] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(() => new Date());`,
+    `    const [systemDateText, setSystemDateText] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(undefined);
+    const [systemScheduleText, setSystemScheduleText] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(undefined);
+    const [localNow, setLocalNow] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(() => new Date());`
+  );
+  output = output.replace(
+    `                setSystemDateText(clock.dateText);
+                setBodyStatsUnlocked(unlocks.bodyStatsUnlocked);`,
+    `                setSystemDateText(clock.dateText);
+                setSystemScheduleText(clock.scheduleText);
+                setBodyStatsUnlocked(unlocks.bodyStatsUnlocked);`
+  );
+  output = output.replace(
+    `                setSystemDateText(clock.dateText);
+                setBodyStatsUnlocked(true);`,
+    `                setSystemDateText(clock.dateText);
+                setSystemScheduleText(clock.scheduleText);
+                setBodyStatsUnlocked(true);`
+  );
+  output = output.replaceAll(
+    `systemDateText: systemDateText, localNow: localNow`,
+    `systemDateText: systemDateText, systemScheduleText: systemScheduleText, localNow: localNow`
+  );
+  output = output.replace(
+    `(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)(_components_OS_StatusBar__WEBPACK_IMPORTED_MODULE_2__.StatusBar, { timeText: systemTimeText })`,
+    `(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)(_components_OS_StatusBar__WEBPACK_IMPORTED_MODULE_2__.StatusBar, { timeText: "原卡作者Ramiel" })`
+  );
+  output = output.replace(
+    `const HomeScreen = ({ onLaunchApp, bodyStatsUnlocked, systemTimeText, systemDateText, localNow, }) => {
+    const displayTime = systemTimeText || \`\${localNow.getHours()}:\${localNow.getMinutes().toString().padStart(2, '0')}\`;
+    const displayDate = systemDateText || localNow.toLocaleDateString('zh-CN', { weekday: 'long', month: 'long', day: 'numeric' });
+    const [notice, setNotice] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(null);`,
+    `const HomeScreen = ({ onLaunchApp, bodyStatsUnlocked, systemTimeText, systemDateText, systemScheduleText, localNow, }) => {
+    const displayTime = systemTimeText || \`\${localNow.getHours()}:\${localNow.getMinutes().toString().padStart(2, '0')}\`;
+    const displayDate = systemDateText || localNow.toLocaleDateString('zh-CN', { weekday: 'long', month: 'long', day: 'numeric' });
+    const displayWeekday = displayDate.match(/星期[一二三四五六日天]/)?.[0] || displayDate.match(/周[一二三四五六日天]/)?.[0] || '星期三';
+    const displaySchedule = systemScheduleText || '当前日程';
+    const makeLineIcon = (body) => ({ size = 28, className = '' }) => ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("svg", { viewBox: "0 0 24 24", width: size, height: size, className: className, fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round", dangerouslySetInnerHTML: { __html: body } }));
+    const ScanRoleIcon = makeLineIcon('<path d="M4 8V5h3"/><path d="M17 5h3v3"/><path d="M20 16v3h-3"/><path d="M7 19H4v-3"/><path d="M2.5 12s3.5-5.5 9.5-5.5S21.5 12 21.5 12s-3.5 5.5-9.5 5.5S2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/>');
+    const ProfileIcon = makeLineIcon('<rect x="6" y="3" width="12" height="18" rx="2"/><circle cx="12" cy="9" r="2.5"/><path d="M8.5 16c1.4-3 5.6-3 7 0"/>');
+    const TimetableIcon = makeLineIcon('<rect x="4" y="5" width="16" height="16" rx="2"/><path d="M4 10h16"/><path d="M8 3v4"/><path d="M16 3v4"/><path d="M8 14h8"/><path d="M8 18h5"/>');
+    const MapIcon = makeLineIcon('<path d="M4 18V6l5-2 6 2 5-2v14l-5 2-6-2-5 2Z"/><path d="M9 4v14"/><path d="M15 6v14"/>');
+    const SchoolIcon = makeLineIcon('<path d="M3 10l9-5 9 5"/><path d="M5 10v9h14v-9"/><path d="M10 19v-5h4v5"/><path d="M9 10h6"/>');
+    const [notice, setNotice] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(null);`
+  );
+  output = replaceBetween(
+    output,
+    "    const apps = [",
+    "    return ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)(\"div\", { className: \"relative h-full",
+    `    const openInternalApp = (name) => () => {
+        if (name === 'scan') window.__ST_OPEN_ADD_ROLE_APP__?.();
+        else if (name === 'profile') window.__ST_OPEN_PROFILE_APP__?.();
+        else if (name === 'calendar') window.__ST_OPEN_LITE_CALENDAR_APP__?.();
+        else if (name === 'timetable') window.__ST_OPEN_TIMETABLE_APP__?.();
+        else if (name === 'mchan') window.__ST_OPEN_MCHAN_APP__?.();
+        else if (name === 'map') window.__ST_OPEN_MAP_APP__?.();
+        else if (name === 'school') window.__ST_OPEN_SCHOOL_APP__?.();
+    };
+    const visibleApps = [
+        { id: 'hypno', name: '催眠APP', icon: _components_HypnosisApp__WEBPACK_IMPORTED_MODULE_3__.HypnoLogoSVG, color: 'bg-gradient-to-br from-purple-600 to-pink-600', mode: _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.HYPNOSIS, disabled: false },
+        { id: 'scan-role', name: '扫描角色', icon: ScanRoleIcon, color: 'bg-purple-500', mode: _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.HOME, disabled: false, action: openInternalApp('scan') },
+        { id: 'profile', name: '人物档案', icon: ProfileIcon, color: 'bg-teal-700', mode: _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.HOME, disabled: false, action: openInternalApp('profile') },
+        { id: 'stats', name: '身体检测', icon: lucide_react__WEBPACK_IMPORTED_MODULE_10__["default"], color: 'bg-blue-500', mode: _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.BODY_STATS, disabled: false },
+        { id: 'calendar', name: '日历', icon: lucide_react__WEBPACK_IMPORTED_MODULE_11__["default"], color: 'bg-white text-black', mode: _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.HOME, disabled: false, action: openInternalApp('calendar') },
+        { id: 'timetable', name: '课程表', icon: TimetableIcon, color: 'bg-blue-600', mode: _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.HOME, disabled: false, action: openInternalApp('timetable') },
+        { id: 'help', name: '帮助', icon: lucide_react__WEBPACK_IMPORTED_MODULE_9__["default"], color: 'bg-gray-500', mode: _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.HELP, disabled: false },
+        { id: 'achievements', name: '成就和任务', icon: lucide_react__WEBPACK_IMPORTED_MODULE_14__["default"], color: 'bg-gradient-to-br from-indigo-500 to-purple-600', mode: _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.ACHIEVEMENTS, disabled: false },
+        { id: 'inventory', name: '库存', icon: lucide_react__WEBPACK_IMPORTED_MODULE_13__["default"], color: 'bg-emerald-600', mode: _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.INVENTORY, disabled: false },
+        { id: 'mc-anon', name: 'MC匿名版', icon: lucide_react__WEBPACK_IMPORTED_MODULE_12__["default"], color: 'bg-blue-900', mode: _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.HOME, disabled: false, action: openInternalApp('mchan') },
+        { id: 'map', name: '地图', icon: MapIcon, color: 'bg-emerald-500', mode: _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.HOME, disabled: false, action: openInternalApp('map') },
+        { id: 'school', name: '学校', icon: SchoolIcon, color: 'bg-slate-600', mode: _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.HOME, disabled: false, action: openInternalApp('school') },
+    ];
+`
+  );
+  output = output.replace(
+    `(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "px-6 mb-8 text-white/90 drop-shadow-md", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "text-6xl font-thin tracking-tighter", children: displayTime }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "text-lg font-medium", children: displayDate })] })`,
+    `(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "px-6 mb-7 text-white/90 drop-shadow-md", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "grid grid-cols-[minmax(0,1fr)_minmax(126px,168px)] items-center gap-3", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "min-w-0", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "text-6xl font-thin tracking-tighter leading-none", children: displayTime }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "mt-2 text-lg font-medium", children: displayDate })] }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "rounded-2xl border border-white/15 bg-slate-950/35 px-3 py-2 shadow-xl backdrop-blur-md", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "flex items-center gap-2 text-sm font-black", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("i", { className: "h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_12px_rgba(103,232,249,.8)]" }), displayWeekday] }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "mt-1 truncate text-[11px] font-semibold text-slate-300", children: displaySchedule })] })] })] })`
+  );
   output = output.replace(
     /        void _services_dataService__WEBPACK_IMPORTED_MODULE_\d+__\.DataService\.updateResources\(data\);\n/,
     "        // UI state follows AI-written variables; frontend actions do not persist resource variables.\n"
@@ -1542,6 +1630,32 @@ function patchHypnosisTypesModule(code) {
 function patchHypnosisDataServiceModule(code) {
   if (!code.includes("getSessionEnd: async") || !code.includes("STORE_SCHEMA")) return code;
   let output = code;
+  output = output.replace(
+    `function getSystemClockFrom(system) {
+    const dateText = typeof system?.当前日期 === 'string' ? system.当前日期 : undefined;
+    const timeText = typeof system?.当前时间 === 'string' ? system.当前时间 : undefined;
+    return {
+        dateText,
+        timeText,
+        virtualMinutes: parseVirtualMinutesFrom(dateText, timeText),
+    };
+}`,
+    `function getSystemClockFrom(system) {
+    const dateText = typeof system?.当前日期 === 'string' ? system.当前日期 : undefined;
+    const timeText = typeof system?.当前时间 === 'string' ? system.当前时间 : undefined;
+    const scheduleText = typeof system?.['当前/待上课程'] === 'string' && system['当前/待上课程'].trim() && system['当前/待上课程'].trim() !== '无'
+        ? system['当前/待上课程']
+        : typeof system?.当前日程 === 'string'
+            ? system.当前日程
+            : undefined;
+    return {
+        dateText,
+        timeText,
+        scheduleText,
+        virtualMinutes: parseVirtualMinutesFrom(dateText, timeText),
+    };
+}`
+  );
   output = output.replace("    VIP6: 1000,\n", "");
   output = output.replace(
     "    sessionEndAtMs: zod__WEBPACK_IMPORTED_MODULE_0__.z.coerce.number().optional(),",
@@ -6206,6 +6320,14 @@ function injectInternalMchanApp(html, staticSeed) {
     else renderMapPage(page);
   }
 
+  window.__ST_OPEN_MCHAN_APP__ = () => openMchanPage();
+  window.__ST_OPEN_ADD_ROLE_APP__ = () => openAddRolePage();
+  window.__ST_OPEN_PROFILE_APP__ = () => openPersonProfilePage();
+  window.__ST_OPEN_LITE_CALENDAR_APP__ = () => openLiteCalendarPage();
+  window.__ST_OPEN_TIMETABLE_APP__ = () => openTimetablePage();
+  window.__ST_OPEN_MAP_APP__ = () => openTodoPage(null, "map", "st-map-app", "地图", "区域信息");
+  window.__ST_OPEN_SCHOOL_APP__ = () => openTodoPage(null, "school", "st-school-app", "学校", "学校地图与校规", true);
+
   function looksLikePhoneHome(root) {
     const rootText = root?.innerText || "";
     return ["催眠APP", "日历", "帮助", "成就和任务", "库存", "MC匿名版"].every((label) => rootText.includes(label)) &&
@@ -6635,10 +6757,6 @@ function injectInternalMchanApp(html, staticSeed) {
     patchHomeHypnosisIsland(root);
     removeHomeOperationConfirm(root);
     ensureOperationSidePanel();
-    patchCalendarAndTimetableTiles();
-    patchAddRoleTile();
-    patchPersonProfileTile();
-    patchMapAndSchoolTiles();
     const labels = Array.from(document.querySelectorAll("span,button,div"))
       .filter((element) => !element.closest(".st-mchan-internal-app,.st-add-role-app,.st-calendar-lite-app,.st-timetable-app,.st-profile-app,.st-map-app,.st-school-app") && element.textContent?.trim() === "MC匿名版");
     for (const label of labels) {
@@ -6666,6 +6784,7 @@ function injectInternalMchanApp(html, staticSeed) {
     const phone = document.querySelector(".w-full.h-full.bg-black.overflow-hidden.relative");
     if (!phone) return false;
     if (phone.dataset?.stPhoneApp) return true;
+    if (looksLikePhoneHome(phone)) return true;
     if (document.querySelector('[data-st-add-role-tile="true"], [data-st-timetable-tile="true"], [data-st-profile-tile="true"], [data-st-map-tile="true"], [data-st-school-tile="true"], .st-role-picker, .st-mchan-internal-app, .st-add-role-app, .st-calendar-lite-app, .st-timetable-app, .st-profile-app, .st-map-app, .st-school-app')) return true;
     return false;
   }
