@@ -1352,7 +1352,7 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
     )
     .replace(
       /children: \[\(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__\.jsx\)\(lucide_react__WEBPACK_IMPORTED_MODULE_\d+__\["default"\], \{ size: 18, fill: "currentColor" \}\), missingEnergy > 0 \? '能量不足' : missingPoints > 0 \? '点数不足' : '启动催眠'\]/,
-      "children: ['启动催眠']"
+      "children: [timeLeft > 0 ? '追加催眠' : '启动催眠']"
     )
     .replace(
       /\(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__\.jsxs\)\("span", \{ children: \["\\u5F53\\u524D\\u53EF\\u7528: ", Math\.floor\(userData\.mcEnergy\), " MC", totalPointsCost > 0 \? `, \$\{userData\.mcPoints\} PT` : ''\] \}\)/,
@@ -1364,7 +1364,17 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
     );
   output = output.replace(
     "(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)(lucide_react__WEBPACK_IMPORTED_MODULE_16__[\"default\"], { size: 18, fill: \"currentColor\" }), missingEnergy > 0 ? '能量不足' : missingPoints > 0 ? '点数不足' : '启动催眠'",
-    "'启动催眠'"
+    "timeLeft > 0 ? '追加催眠' : '启动催眠'"
+  );
+  output = output.replace(
+    `                 \${hasSessionFeaturesEnabled
+                                    ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:shadow-pink-500/25 active:scale-95'
+                                    : 'bg-gray-700 text-gray-400 cursor-not-allowed'}`,
+    `                 \${hasSessionFeaturesEnabled
+                                    ? timeLeft > 0
+                                        ? 'bg-gradient-to-r from-cyan-500 to-sky-500 hover:shadow-cyan-500/25 active:scale-95'
+                                        : 'bg-gradient-to-r from-purple-600 to-pink-600 hover:shadow-pink-500/25 active:scale-95'
+                                    : 'bg-gray-700 text-gray-400 cursor-not-allowed'}`
   );
   output = output
     .replace(
