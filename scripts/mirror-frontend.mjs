@@ -1009,64 +1009,12 @@ async function getMvuData() {
   return output;
 }
 
-function rebuildHypnosisAppModule(code) {
-  const start = code.indexOf("// --- Active Session View (Countdown) ---");
-  const end = code.indexOf("\n//# sourceURL=", start);
-  if (start < 0 || end <= start) return code;
-  const replacement = `// --- Custom Hypnosis App (rebuilt local page) ---
-const CUSTOM_HYPNOSIS_DRAFT_KEY = 'hypnoos.hypnosis-app.rebuild.v1';
-const TIER_ORDER = { TRIAL: 0, VIP1: 1, VIP2: 2, VIP3: 3, VIP4: 4, VIP5: 5 };
-const SUBSCRIPTION_TIER_CONFIGS = [
-    { tier: 'VIP1', label: 'VIP 1（基础）', price: 3000 },
-    { tier: 'VIP2', label: 'VIP 2（进阶）', price: 6000 },
-    { tier: 'VIP3', label: 'VIP 3（高阶）', price: 10000 },
-    { tier: 'VIP4', label: 'VIP 4（深度）', price: 20000 },
-    { tier: 'VIP5', label: 'VIP 5', price: 40000 },
-];
-const COMMAND_TIER_CONFIGS = [{ tier: 'TRIAL', label: '试用区', price: 0 }, ...SUBSCRIPTION_TIER_CONFIGS];
-const DEFAULT_COLLAPSED_TIERS = { VIP1: true, VIP2: true, VIP3: true, VIP4: true, VIP5: true };
-const RESOURCE_EXCHANGE_OPTIONS = [
-    { id: 'money_to_energy', title: '补充MC能量', rule: '100円 = 1点MC能量', spendResource: '资金', spendPerUnit: 100, gainResource: 'MC能量', gainPerUnit: 1, gainUnit: '点', note: '补充后不能超过MC能量上限。' },
-    { id: 'money_to_points', title: '购买当前MC点', rule: '1000円 = 1点当前MC点', spendResource: '资金', spendPerUnit: 1000, gainResource: '当前MC点', gainPerUnit: 1, gainUnit: '点', note: '购买后只增加当前MC点。' },
-    { id: 'points_to_energy_max', title: '提升MC能量上限', rule: '1当前MC点 = 1点MC能量上限', spendResource: '当前MC点', spendPerUnit: 1, gainResource: 'MC能量上限', gainPerUnit: 1, gainUnit: '点', note: '消耗的当前MC点计入累计消耗MC点。' },
-];
-const PEOPLELESS_FEATURE_IDS = new Set(['vip4_closed_space_common_sense', 'vip5_open_space_common_sense']);
-const TIMELESS_FEATURE_IDS = new Set(['vip1_temp_sensitivity', 'vip1_estrus', 'vip1_memory_erase']);
-const SPECIAL_VALUE_FEATURES = {
-    vip1_temp_sensitivity: { label: '敏感度增幅', unit: '点', defaultValue: 10 },
-    vip1_estrus: { label: '性欲增幅', unit: '点', defaultValue: 10 },
-    vip1_memory_erase: { label: '记忆时长', unit: '分钟', defaultValue: 5 },
-    vip2_pleasure: { label: '快感强度', unit: '级', defaultValue: 1 },
-};
-const jsx = react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx;
-const jsxs = react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs;
-const formatClockSeconds = (seconds) => {
-    const value = Math.max(0, Math.floor(Number(seconds) || 0));
-    const m = Math.floor(value / 60);
-    const s = value % 60;
-    return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
-};
-const parsePositiveNumber = (value, fallback = 1) => {
-    const next = Number(value);
-    if (!Number.isFinite(next) || next <= 0)
-        return fallback;
-    return next;
-};
-const parsePositiveInt = (value, fallback = 1) => Math.max(1, Math.floor(parsePositiveNumber(value, fallback)));
-const formatMoney = (value) => '¥' + Math.max(0, Number(value) || 0).toLocaleString();
-const normalizeTierValue = (value) => {
-    const text = String(value || '').toUpperCase().replace(/\\s+/g, '');
-    const match = text.match(/VIP([1-9])/);
-    if (match)
-        return 'VIP' + Math.min(5, Number(match[1]));
-    return 'TRIAL';
-};
-const getTierRank = (tier) => TIER_ORDER[normalizeTierValue(tier)] ?? 0;
-const getTierLabel = (tier) => {
-    const normalized = normalizeTierValue(tier);
-    const config = COMMAND_TIER_CONFIGS.find(item => item.tier === normalized);
-    return config?.label || normalized;
-};
+function patchHypnosisAppModule(code) {
+  if (!code.includes("const HypnosisApp") || !code.includes("buildHypnosisSendMessage")) return code;
+  let output = code;
+  output = output.replace(
+    "const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {",
+    `const CUSTOM_HYPNOSIS_DRAFT_KEY = 'hypnoos.hypnosis-app.original-ui.v1';
 const readCustomHypnosisDraft = () => {
     try {
         const raw = localStorage.getItem(CUSTOM_HYPNOSIS_DRAFT_KEY);
@@ -1086,203 +1034,53 @@ const writeCustomHypnosisDraft = (draft) => {
     catch {
     }
 };
-const featureUsesPeople = (feature) => !PEOPLELESS_FEATURE_IDS.has(feature.id);
-const featureUsesTime = (feature) => feature.costType !== 'ONE_TIME' && !TIMELESS_FEATURE_IDS.has(feature.id);
-const getFeatureExtraValue = (feature) => parsePositiveNumber(feature.userExtraValue ?? SPECIAL_VALUE_FEATURES[feature.id]?.defaultValue ?? 1, SPECIAL_VALUE_FEATURES[feature.id]?.defaultValue ?? 1);
-const calculateFeatureCost = (feature) => {
-    const people = parsePositiveInt(feature.userNumber ?? 1, 1);
-    const minutes = parsePositiveInt(feature.userMinutes ?? 10, 10);
-    const usesPeople = featureUsesPeople(feature);
-    const usesTime = featureUsesTime(feature);
-    const extra = getFeatureExtraValue(feature);
-    const base = Math.max(0, Number(feature.costValue) || 0);
-    let amount = base;
-    if (feature.id === 'vip1_temp_sensitivity')
-        amount = 2 * extra;
-    else if (feature.id === 'vip1_estrus')
-        amount = base * extra;
-    else if (feature.id === 'vip1_memory_erase')
-        amount = base * extra;
-    else if (feature.id === 'vip2_pleasure')
-        amount = base * extra * minutes;
-    else if (feature.costType !== 'ONE_TIME')
-        amount = base * minutes;
-    if (usesPeople)
-        amount *= people;
-    const currency = feature.costCurrency === 'MC_POINTS' ? 'MC_POINTS' : 'MC_ENERGY';
-    return {
-        amount: Math.max(0, Math.ceil(amount)),
-        currency,
-        currencyLabel: currency === 'MC_POINTS' ? '当前MC点' : 'MC能量',
-        people,
-        minutes,
-        usesPeople,
-        usesTime,
-        extra,
-    };
-};
-const summarizeCosts = (features) => features.reduce((sum, feature) => {
-    const cost = calculateFeatureCost(feature);
-    if (cost.currency === 'MC_POINTS')
-        sum.points += cost.amount;
-    else
-        sum.energy += cost.amount;
-    return sum;
-}, { energy: 0, points: 0 });
-const getExchangeSpendText = (option, quantity) => option.spendResource === '资金'
-    ? formatMoney(option.spendPerUnit * quantity)
-    : String(option.spendPerUnit * quantity) + '点';
-const getExchangeGainText = (option, quantity) => '+' + String(option.gainPerUnit * quantity) + option.gainUnit;
-const operationAppendFallback = async (payload) => {
-    const selectors = ['#send_textarea', 'textarea#send_textarea', 'textarea[name="send_textarea"]', 'textarea[data-testid="send-textarea"]'];
-    const text = '<本轮APP操作>\\n<催眠APP>\\n- 启动催眠｜内容=' + JSON.stringify(payload) + '\\n</催眠APP>\\n</本轮APP操作>';
-    const docs = [document, window.parent?.document].filter(Boolean);
-    for (const doc of docs) {
-        for (const selector of selectors) {
-            const input = doc.querySelector(selector);
-            if (!input)
-                continue;
-            const current = 'value' in input ? input.value : input.textContent;
-            const next = String(current || '').replace(/\\s*$/, '') + (current ? '\\n' : '') + text;
-            if ('value' in input)
-                input.value = next;
-            else
-                input.textContent = next;
-            input.dispatchEvent(new Event('input', { bubbles: true }));
-            input.dispatchEvent(new Event('change', { bubbles: true }));
-            return true;
-        }
-    }
-    return false;
-};
 const recordOperationIntent = (payload) => {
     const append = globalThis.__ST_APPEND_OPERATION_TO_INPUT__;
     if (typeof append === 'function') {
         void append(payload);
         return;
     }
-    void operationAppendFallback(payload);
-};
-const ActiveSessionView = ({ timeLeft, sessionEndVirtualMinutes, sessionEndAtMs, sessionSummary, onStop }) => {
-    const [remaining, setRemaining] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(timeLeft);
-    (0,react__WEBPACK_IMPORTED_MODULE_1__.useEffect)(() => {
-        let stopped = false;
-        const tick = async () => {
-            if (stopped)
-                return;
-            if (sessionEndVirtualMinutes !== null) {
-                const clock = await _services_dataService__WEBPACK_IMPORTED_MODULE_4__.DataService.getSystemClock().catch(() => null);
-                if (stopped)
-                    return;
-                if (clock?.virtualMinutes !== null && clock?.virtualMinutes !== undefined) {
-                    setRemaining(Math.max(0, Math.ceil((sessionEndVirtualMinutes - clock.virtualMinutes) * 60)));
-                    return;
-                }
-            }
-            if (sessionEndAtMs !== null) {
-                setRemaining(Math.max(0, Math.ceil((sessionEndAtMs - Date.now()) / 1000)));
-                return;
-            }
-            setRemaining(value => Math.max(0, value - 1));
-        };
-        void tick();
-        const timer = setInterval(() => void tick(), 1000);
-        return () => {
-            stopped = true;
-            clearInterval(timer);
-        };
-    }, [sessionEndAtMs, sessionEndVirtualMinutes, timeLeft]);
-    if (remaining <= 0)
-        return null;
-    const content = typeof sessionSummary === 'string'
-        ? sessionSummary
-        : Array.isArray(sessionSummary)
-            ? sessionSummary.join('、')
-            : sessionSummary && typeof sessionSummary === 'object'
-                ? Object.values(sessionSummary).filter(Boolean).slice(0, 3).join('、')
-                : '催眠进行中';
-    return jsxs('div', { className: 'relative z-10 mx-4 mt-3 rounded-2xl border border-fuchsia-400/30 bg-fuchsia-950/30 px-4 py-3 text-white shadow-lg', children: [
-            jsxs('div', { className: 'flex items-center justify-between gap-3', children: [
-                    jsxs('div', { className: 'min-w-0', children: [
-                            jsx('div', { className: 'text-xs font-bold uppercase tracking-widest text-fuchsia-200', children: '催眠中' }),
-                            jsx('div', { className: 'truncate text-sm text-white/80', children: content || '催眠进行中' }),
-                        ] }),
-                    jsxs('div', { className: 'flex shrink-0 items-center gap-2', children: [
-                            jsx('span', { className: 'rounded-full bg-black/30 px-3 py-1 text-sm font-black text-fuchsia-100', children: formatClockSeconds(remaining) }),
-                            jsx('button', { type: 'button', onClick: onStop, className: 'rounded-full border border-white/20 px-3 py-1 text-xs font-bold text-white/70', children: '取消' }),
-                        ] }),
-                ] }),
-        ] });
+    const text = typeof payload === 'string' ? payload : JSON.stringify(payload);
+    void _services_mvuBridge__WEBPACK_IMPORTED_MODULE_5__.MvuBridge.appendThisTurnAppOperationLog(text);
 };
 const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
-    const initialDraft = (0,react__WEBPACK_IMPORTED_MODULE_1__.useMemo)(() => readCustomHypnosisDraft(), []);
-    const [features, setFeatures] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)([]);
-    const [subscription, setSubscription] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(null);
-    const [collapsedTiers, setCollapsedTiers] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)({ ...DEFAULT_COLLAPSED_TIERS, ...(initialDraft.collapsedTiers || {}) });
-    const [expandedFeatures, setExpandedFeatures] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(initialDraft.expandedFeatures || {});
-    const [exchangeQty, setExchangeQty] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(initialDraft.exchangeQty || {});
-    const [showStatusPanel, setShowStatusPanel] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(false);
-    const [notice, setNotice] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)('');
-    const [isFlashing, setIsFlashing] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(false);
-    const [timeLeft, setTimeLeft] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(0);
-    const [sessionEndVirtualMinutes, setSessionEndVirtualMinutes] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(null);
-    const [sessionEndAtMs, setSessionEndAtMs] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(null);
-    const [sessionSummary, setSessionSummary] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(null);
-    const subscriptionTier = normalizeTierValue(subscription?.tier || subscription?.label || userData?.subscriptionTier || 'TRIAL');
-    const subscriptionRank = getTierRank(subscriptionTier);
-    const refreshSession = async () => {
-        const [sessionEnd, store] = await Promise.all([
-            _services_dataService__WEBPACK_IMPORTED_MODULE_4__.DataService.getSessionEnd().catch(() => ({ endVirtualMinutes: null, endAtMs: null })),
-            (_services_dataService__WEBPACK_IMPORTED_MODULE_4__.DataService.getStore ? _services_dataService__WEBPACK_IMPORTED_MODULE_4__.DataService.getStore() : Promise.resolve(null)).catch(() => null),
-        ]);
-        setSessionEndVirtualMinutes(sessionEnd.endVirtualMinutes ?? null);
-        setSessionEndAtMs(sessionEnd.endAtMs ?? null);
-        setSessionSummary(store?.sessionSummary ?? store?.activeSessionSummary ?? store?.sessionContent ?? null);
-        if (sessionEnd.endAtMs)
-            setTimeLeft(Math.max(0, Math.ceil((sessionEnd.endAtMs - Date.now()) / 1000)));
-        else if (!sessionEnd.endVirtualMinutes)
-            setTimeLeft(0);
-    };
-    (0,react__WEBPACK_IMPORTED_MODULE_1__.useEffect)(() => {
-        let stopped = false;
-        const load = async () => {
-            const [nextFeatures, nextSubscription] = await Promise.all([
-                _services_dataService__WEBPACK_IMPORTED_MODULE_4__.DataService.getFeatures(),
-                _services_dataService__WEBPACK_IMPORTED_MODULE_4__.DataService.getSubscription().catch(() => null),
-            ]);
-            if (stopped)
-                return;
-            const featureDrafts = initialDraft.features && typeof initialDraft.features === 'object' ? initialDraft.features : {};
-            setFeatures(nextFeatures
-                .filter(feature => feature.id !== 'vip1_stats')
-                .map(feature => {
+    const initialDraft = (0,react__WEBPACK_IMPORTED_MODULE_1__.useMemo)(() => readCustomHypnosisDraft(), []);`
+  );
+  output = output.replace(
+    "    const [quickSupplyQtyInput, setQuickSupplyQtyInput] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)('1');",
+    "    const [quickSupplyQtyInput, setQuickSupplyQtyInput] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(initialDraft.quickSupplyQtyInput || '1');"
+  );
+  output = output.replace(
+    "    const [durationInput, setDurationInput] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)('10'); // Minutes",
+    "    const [durationInput, setDurationInput] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(initialDraft.durationInput || '10'); // Minutes"
+  );
+  output = output.replace(
+    "        return Math.min(9999, minutes);",
+    "        return minutes;"
+  );
+  output = output.replace(
+    "    const [showLowEnergyModal, setShowLowEnergyModal] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(false);",
+    "    const showLowEnergyModal = false;\n    const setShowLowEnergyModal = () => {};"
+  );
+  output = output.replace(
+    "            setFeatures(nextFeatures);",
+    `            const featureDrafts = initialDraft.features && typeof initialDraft.features === 'object' ? initialDraft.features : {};
+            setFeatures(nextFeatures.map(feature => {
                 const draft = featureDrafts[feature.id] || {};
                 return {
                     ...feature,
                     isEnabled: Boolean(draft.isEnabled ?? feature.isEnabled ?? false),
                     userNote: String(draft.userNote ?? feature.userNote ?? ''),
-                    userNumber: String(draft.userNumber ?? feature.userNumber ?? 1),
-                    userMinutes: String(draft.userMinutes ?? feature.userMinutes ?? 10),
-                    userExtraValue: String(draft.userExtraValue ?? SPECIAL_VALUE_FEATURES[feature.id]?.defaultValue ?? 1),
-                    isPurchased: true,
+                    userNumber: typeof draft.userNumber === 'undefined' ? feature.userNumber : draft.userNumber,
                     purchaseRequired: false,
+                    purchasePricePoints: undefined,
+                    isPurchased: true,
                 };
-            }));
-            setSubscription(nextSubscription);
-            void refreshSession();
-        };
-        void load();
-        return () => {
-            stopped = true;
-        };
-    }, []);
-    (0,react__WEBPACK_IMPORTED_MODULE_1__.useEffect)(() => {
-        const timer = setInterval(() => {
-            void _services_dataService__WEBPACK_IMPORTED_MODULE_4__.DataService.getSubscription().then(setSubscription).catch(() => undefined);
-            void refreshSession();
-        }, 2500);
-        return () => clearInterval(timer);
-    }, []);
+            }));`
+  );
+  output = output.replace(
+    "    }, []);\n    (0,react__WEBPACK_IMPORTED_MODULE_1__.useEffect)(() => {\n        return () => {",
+    `    }, []);
     (0,react__WEBPACK_IMPORTED_MODULE_1__.useEffect)(() => {
         if (!features.length)
             return;
@@ -1291,310 +1089,234 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
             featureDrafts[feature.id] = {
                 isEnabled: Boolean(feature.isEnabled),
                 userNote: feature.userNote || '',
-                userNumber: feature.userNumber || '1',
-                userMinutes: feature.userMinutes || '10',
-                userExtraValue: feature.userExtraValue || '',
+                userNumber: feature.userNumber,
             };
         }
-        writeCustomHypnosisDraft({ features: featureDrafts, collapsedTiers, expandedFeatures, exchangeQty });
-    }, [collapsedTiers, exchangeQty, expandedFeatures, features]);
-    const updateFeature = (id, patch) => {
-        setFeatures(current => current.map(feature => feature.id === id ? { ...feature, ...patch } : feature));
-    };
-    const isTierAvailable = (tier) => {
-        const normalized = normalizeTierValue(tier);
-        if (normalized === 'TRIAL')
-            return true;
-        return subscriptionRank >= getTierRank(normalized);
-    };
-    const selectedFeatures = (0,react__WEBPACK_IMPORTED_MODULE_1__.useMemo)(() => features.filter(feature => feature.isEnabled && isTierAvailable(feature.tier)), [features, subscriptionRank]);
-    const selectedCost = (0,react__WEBPACK_IMPORTED_MODULE_1__.useMemo)(() => summarizeCosts(selectedFeatures), [selectedFeatures]);
-    const requestResourceExchange = (option) => {
-        const quantity = parsePositiveInt(exchangeQty[option.id] || '1', 1);
+        writeCustomHypnosisDraft({ features: featureDrafts, quickSupplyQtyInput, durationInput });
+    }, [durationInput, features, quickSupplyQtyInput]);
+    (0,react__WEBPACK_IMPORTED_MODULE_1__.useEffect)(() => {
+        return () => {`
+  );
+  output = output.replace(
+    "                const auto = await _services_dataService__WEBPACK_IMPORTED_MODULE_4__.DataService.maybeAutoRenewSubscription(clock.virtualMinutes);",
+    "                const auto = { renewed: false };"
+  );
+  output = replaceBetween(
+    output,
+    "    const toggleAutoRenew = async () => {",
+    "    const toggleFeature = (id) => {",
+    `    const toggleAutoRenew = async () => {
+        if (!subscription)
+            return;
         recordOperationIntent({
             来源: '催眠APP',
-            操作: '资源兑换',
-            项目: option.title,
-            数量: String(quantity) + option.gainUnit,
-            兑换规则: option.rule,
-            消耗资源: option.spendResource + ' ' + getExchangeSpendText(option, quantity),
-            获得资源: option.gainResource + ' ' + getExchangeGainText(option, quantity),
-            结算提示: '余额不足则兑换失败；只兑换资源，不自动使用兑换后的资源。',
-            备注: option.note,
+            操作: '切换自动续订',
+            当前等级: subscription.tier,
+            目标状态: subscription.autoRenew ? '关闭' : '开启',
+            结算提示: '只记录请求，是否更改订阅状态由AI更新变量。',
         });
-        setExchangeQty(current => ({ ...current, [option.id]: String(quantity) }));
-        setNotice('已暂存' + option.title + '请求');
+        setSubscriptionNotice('自动续订请求已暂存');
+        setTimeout(() => setSubscriptionNotice(null), 1500);
     };
-    const requestTierUnlock = (tierConfig) => {
+    const subscribeTier = async (tier) => {
+        const price = _services_dataService__WEBPACK_IMPORTED_MODULE_4__.SUBSCRIPTION_PRICES[tier] ?? 0;
         recordOperationIntent({
             来源: '催眠APP',
             操作: '订阅VIP等级',
-            等级: tierConfig.label,
-            每周价格: formatMoney(tierConfig.price || 0),
+            等级: tier,
+            每周价格: '¥' + price.toLocaleString(),
             订阅周期: '一周',
-            当前订阅等级: getTierLabel(subscriptionTier),
-            说明: '只请求AI按周订阅该VIP等级；订阅成功后该等级及更低等级功能可启用，本次不会自动使用任何具体催眠指令。',
+            当前订阅: remainingSubscriptionText,
+            结算提示: '余额不足则订阅失败；订阅成功后只解锁对应VIP及以下指令，不自动使用任何指令。',
         });
-        setNotice('已暂存' + tierConfig.label + '订阅请求');
+        setSubscriptionNotice('订阅请求已暂存');
+        setTimeout(() => setSubscriptionNotice(null), 1500);
     };
-    const startHypnosis = () => {
-        if (!selectedFeatures.length) {
-            setNotice('请先启用至少一条催眠指令');
+    const purchaseFeature = async (feature) => {
+        setSubscriptionNotice('具体指令随VIP订阅开放，无需单独购买');
+        setTimeout(() => setSubscriptionNotice(null), 1500);
+    };
+    const enableDebugMode = async () => {
+        setDebugEnabled(true);
+    };
+`
+  );
+  output = output
+    .replaceAll(
+      "            void _services_dataService__WEBPACK_IMPORTED_MODULE_4__.DataService.updateFeature(f.id, { isEnabled: false, userNote: '' });\n",
+      ""
+    )
+    .replaceAll(
+      "    void _services_dataService__WEBPACK_IMPORTED_MODULE_4__.DataService.updateFeature(id, {\n            isEnabled: nextEnabled,\n            ...(nextNumber === null ? null : { userNumber: nextNumber }),\n        });\n",
+      ""
+    )
+    .replaceAll(
+      "        void _services_dataService__WEBPACK_IMPORTED_MODULE_4__.DataService.updateFeature(id, { userNote: note });\n",
+      ""
+    )
+    .replaceAll(
+      "        void _services_dataService__WEBPACK_IMPORTED_MODULE_4__.DataService.updateFeature(id, { userNumber: value === null ? undefined : value });\n",
+      ""
+    );
+  output = replaceBetween(
+    output,
+    "    const handleStart = async () => {",
+    "    const handleStop = () => {",
+    `    const handleStart = async () => {
+        const enabledFeatures = features
+            .filter(f => f.isEnabled && f.id !== 'vip1_stats' && canUseEnabledFeature(f))
+            .map(f => f);
+        if (!enabledFeatures.length)
             return;
-        }
-        const featureDetails = selectedFeatures.map(feature => {
-            const cost = calculateFeatureCost(feature);
-            const extraConfig = SPECIAL_VALUE_FEATURES[feature.id];
-            const details = {
+        const featureDetails = enabledFeatures.map(feature => {
+            const cost = getFeatureCost(feature);
+            return {
                 功能: feature.title,
-                等级: getTierLabel(feature.tier),
+                等级: feature.tier,
                 说明: feature.description,
                 备注: feature.userNote || '无',
-                是否受人数影响: cost.usesPeople ? '是' : '否',
-                是否受时间影响: cost.usesTime ? '是' : '否',
-                人数: cost.usesPeople ? String(cost.people) + '人' : '不按人数计算',
-                时间: cost.usesTime ? String(cost.minutes) + '分钟' : '不按时间计算',
-                消耗类型: cost.currencyLabel,
-                预计消耗: String(cost.amount) + '点',
+                人数: typeof feature.userNumber === 'number' ? String(feature.userNumber) : '默认',
+                时间: String(duration) + '分钟',
+                消耗类型: feature.costCurrency === 'MC_POINTS' ? '当前MC点' : 'MC能量',
+                预计消耗: String(feature.costCurrency === 'MC_POINTS' ? cost.points : cost.energy) + '点',
             };
-            if (extraConfig)
-                details[extraConfig.label] = String(cost.extra) + extraConfig.unit;
-            return details;
         });
         recordOperationIntent({
             来源: '催眠APP',
             操作: timeLeft > 0 ? '追加催眠' : '启动催眠',
             功能列表: featureDetails,
-            MC能量消耗: String(selectedCost.energy) + '点',
-            当前MC点消耗: String(selectedCost.points) + '点',
-            预计消耗: 'MC能量' + selectedCost.energy + '点，当前MC点' + selectedCost.points + '点',
-            当前可用: { MC能量: String(userData?.mcEnergy ?? 0) + '点', 当前MC点: String(userData?.mcPoints ?? 0) + '点' },
+            MC能量消耗: String(totalEnergyCost) + '点',
+            当前MC点消耗: String(totalPointsCost) + '点',
             结算提示: '涉及花费的功能必须先检查余额；余额不足的功能失败，后续同批次受影响操作也失败，不能贷款或擅自兑换资金。',
         });
-        setIsFlashing(true);
-        setNotice('启动催眠请求已暂存到右侧列表');
-        window.setTimeout(() => setIsFlashing(false), 800);
+        setIsTransitioning(true);
+        setTimeout(() => {
+            setIsTransitioning(false);
+        }, 1800);
     };
-    const stopSession = () => {
-        recordOperationIntent({
+`
+  );
+  output = output.replace(
+    "        void _services_dataService__WEBPACK_IMPORTED_MODULE_4__.DataService.clearSessionEnd();\n        // Reset inputs\n        setFeatures(prev => prev.map(f => (f.id === 'vip1_stats' ? f : { ...f, isEnabled: false, userNote: '' })));\n        void _services_dataService__WEBPACK_IMPORTED_MODULE_4__.DataService.resetFeatures();\n        setGlobalNote('');",
+    `        recordOperationIntent({
             来源: '催眠APP',
             操作: '取消催眠',
             说明: '请求AI结束当前临时催眠状态；永久催眠效果不计入催眠中，也不应被取消。',
         });
-        setNotice('取消催眠请求已暂存');
+        setFeatures(prev => prev.map(f => (f.id === 'vip1_stats' ? f : { ...f, isEnabled: false, userNote: '' })));
+        setGlobalNote('');`
+  );
+  output = output.replace(
+    "        return Math.min(999, parsed);",
+    "        return parsed;"
+  );
+  output = replaceBetween(
+    output,
+    "    const purchaseEnergy = async (desiredAmount) => {",
+    "    // --- Render Helpers ---",
+    `    const purchaseEnergy = async (desiredAmount) => {
+        const amount = Math.max(1, Math.floor(Number(desiredAmount) || 1));
+        const actualAmount = amount;
+        const costMoney = 100 * actualAmount;
+        recordOperationIntent({
+            来源: '催眠APP',
+            操作: '资源兑换',
+            项目: '补充MC能量',
+            数量: String(actualAmount) + '点',
+            兑换规则: '100円 = 1点MC能量',
+            消耗资源: '资金 ¥' + costMoney.toLocaleString(),
+            获得资源: 'MC能量 +' + actualAmount + '点',
+            结算提示: '余额不足则兑换失败；只兑换资源，不自动使用兑换后的资源。',
+        });
+        setSubscriptionNotice('补充MC能量请求已暂存');
+        setTimeout(() => setSubscriptionNotice(null), 1500);
     };
-    const renderNumberInput = (label, value, onChange, suffix, disabled = false) => jsxs('label', { className: 'min-w-0 rounded-xl border border-white/10 bg-black/50 px-3 py-2 shadow-inner shadow-black/40', children: [
-            jsx('span', { className: 'block text-[11px] font-bold text-white/40', children: label }),
-            jsxs('div', { className: 'mt-1 flex items-center gap-2', children: [
-                    jsx('input', { type: 'number', min: '1', value, disabled, onChange: event => onChange(event.target.value), className: 'w-full bg-transparent text-base font-black text-white outline-none disabled:text-white/40' }),
-                    jsx('span', { className: 'shrink-0 text-xs font-bold text-white/40', children: suffix }),
-                ] }),
-        ] });
-    const renderFeatureCard = (feature) => {
-        const available = isTierAvailable(feature.tier);
-        const cost = calculateFeatureCost(feature);
-        const extraConfig = SPECIAL_VALUE_FEATURES[feature.id];
-        const enabled = Boolean(feature.isEnabled) && available;
-        const expanded = Boolean(expandedFeatures[feature.id]);
-        const expand = () => setExpandedFeatures(current => ({ ...current, [feature.id]: !expanded }));
-        const billingTags = [cost.usesPeople ? '按人数' : '不计人数', cost.usesTime ? '按时间' : '不计时间'];
-        const toggle = () => {
-            if (!available) {
-                setNotice(getTierLabel(feature.tier) + '需要先解锁');
-                return;
-            }
-            updateFeature(feature.id, { isEnabled: !feature.isEnabled });
-        };
-        return jsxs('article', { className: 'relative overflow-hidden rounded-2xl border transition ' + (enabled ? 'border-pink-400/70 bg-slate-950/95 shadow-lg shadow-pink-950/20' : 'border-white/10 bg-slate-950/90 shadow-inner shadow-white/5'), children: [
-                jsx('div', { className: 'pointer-events-none absolute inset-y-0 left-0 w-1 ' + (enabled ? 'bg-gradient-to-b from-fuchsia-300 to-pink-500' : 'bg-white/10') }),
-                jsxs('div', { className: 'relative flex items-center gap-2 px-3 py-3 pl-4', children: [
-                        jsxs('button', { type: 'button', onClick: expand, className: 'min-w-0 flex-1 text-left focus:outline-none', children: [
-                                jsx('h3', { className: 'truncate text-base font-black leading-tight text-white tracking-wide', children: feature.title }),
-                                jsxs('div', { className: 'mt-1 flex max-w-full items-center gap-1.5 overflow-hidden whitespace-nowrap text-xs font-bold', children: [
-                                        jsx('span', { className: 'rounded-full bg-black/40 px-2 py-0.5 text-pink-200/70', children: cost.currencyLabel + ' ' + String(cost.amount) + '点' }, 'cost'),
-                                        ...billingTags.map(tag => jsx('span', { className: 'rounded-full bg-white/5 px-2 py-0.5 text-white/40', children: tag }, tag)),
-                                    ] }),
-                            ] }),
-                        jsx('button', { type: 'button', onClick: toggle, className: 'relative h-8 w-16 shrink-0 rounded-full p-1 transition opacity-90', style: { background: enabled ? 'linear-gradient(90deg,#a855f7,#ec4899)' : available ? '#334155' : '#1e293b' }, title: available ? '切换启用' : '等级未解锁', children: jsx('span', { className: 'block h-6 w-6 rounded-full bg-white shadow transition', style: { transform: enabled ? 'translateX(32px)' : 'translateX(0)' } }) }),
-                        jsx('button', { type: 'button', onClick: expand, className: 'grid h-8 w-8 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/5 text-lg font-black text-white/55', title: expanded ? '收起详情' : '展开详情', children: expanded ? '⌃' : '⌄' }),
-                    ] }),
-                expanded ? jsxs('div', { className: 'border-t border-white/10 px-3 py-3 pl-4', children: [
-                        jsx('p', { className: 'text-sm font-semibold leading-relaxed text-white/70', children: feature.description }),
-                        jsx('textarea', { value: feature.userNote || '', onChange: event => updateFeature(feature.id, { userNote: event.target.value }), placeholder: '目标、方式或限制...', className: 'mt-3 h-14 w-full resize-none rounded-xl border border-white/10 bg-black/50 p-3 text-sm font-semibold text-white outline-none placeholder:text-white/30 focus:border-pink-400/70' }),
-                        jsxs('div', { className: 'mt-2 grid grid-cols-2 gap-2', children: [
-                                cost.usesPeople ? renderNumberInput('人数', feature.userNumber || '1', value => updateFeature(feature.id, { userNumber: value }), '人') : jsx('div', { className: 'rounded-xl border border-white/10 bg-black/40 px-3 py-3 text-xs font-bold text-white/40', children: '不按人数计费' }),
-                                cost.usesTime ? renderNumberInput('时间', feature.userMinutes || '10', value => updateFeature(feature.id, { userMinutes: value }), '分钟') : jsx('div', { className: 'rounded-xl border border-white/10 bg-black/40 px-3 py-3 text-xs font-bold text-white/40', children: '不按时间计费' }),
-                                extraConfig ? renderNumberInput(extraConfig.label, feature.userExtraValue || String(extraConfig.defaultValue), value => updateFeature(feature.id, { userExtraValue: value }), extraConfig.unit) : null,
-                            ] }),
-                        jsxs('div', { className: 'mt-2 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-pink-300/10 bg-black/45 px-3 py-2', children: [
-                                jsx('span', { className: 'text-[11px] font-bold text-white/40', children: '计费规则' }),
-                                jsx('span', { className: 'text-sm font-black text-yellow-300', children: cost.currencyLabel + ' ' + String(cost.amount) + '点' }),
-                            ] }),
-                    ] }) : null,
-            ] }, feature.id);
+    const purchaseMaxEnergy = async (desiredAmount) => {
+        const amount = Math.max(1, Math.floor(Number(desiredAmount) || 1));
+        recordOperationIntent({
+            来源: '催眠APP',
+            操作: '资源兑换',
+            项目: '提升MC能量上限',
+            数量: String(amount) + '点',
+            兑换规则: '1当前MC点 = 1点MC能量上限',
+            消耗资源: '当前MC点 ' + amount + '点',
+            获得资源: 'MC能量上限 +' + amount + '点',
+            结算提示: '余额不足则兑换失败；只兑换资源，不自动使用兑换后的资源。',
+        });
+        setSubscriptionNotice('提升上限请求已暂存');
+        setTimeout(() => setSubscriptionNotice(null), 1500);
     };
-    const renderTierSection = (tierConfig) => {
-        const tierFeatures = features.filter(feature => normalizeTierValue(feature.tier) === tierConfig.tier);
-        if (!tierFeatures.length)
-            return null;
-        const available = isTierAvailable(tierConfig.tier);
-        const collapsed = Boolean(collapsedTiers[tierConfig.tier]);
-        const enabledCount = tierFeatures.filter(feature => feature.isEnabled && available).length;
-        return jsxs('section', { className: 'relative overflow-hidden rounded-3xl border bg-slate-950/90 shadow-inner shadow-white/5 ' + (available ? 'border-cyan-300/20' : 'border-white/10'), children: [
-                jsx('div', { className: 'pointer-events-none absolute inset-y-0 left-0 w-1 ' + (available ? 'bg-cyan-300/60' : 'bg-white/10') }),
-                jsxs('button', { type: 'button', onClick: () => setCollapsedTiers(current => ({ ...current, [tierConfig.tier]: !collapsed })), className: 'flex w-full items-center justify-between gap-3 bg-white/5 px-4 py-3 pl-5 text-left', children: [
-                        jsxs('div', { className: 'min-w-0', children: [
-                                jsx('div', { className: 'text-lg font-black text-white', children: tierConfig.label }),
-                                jsx('div', { className: 'mt-1 text-xs font-bold text-white/40', children: (available ? '已订阅' : '未订阅') + ' · ' + String(enabledCount) + '/' + String(tierFeatures.length) + ' 已启用' }),
-                            ] }),
-                        jsxs('div', { className: 'flex shrink-0 items-center gap-2', children: [
-                                !available && jsx('span', { className: 'rounded-full border border-white/10 bg-black/45 px-3 py-1 text-xs font-bold text-white/45', children: '未订阅' }),
-                                jsx('span', { className: 'text-xl font-black text-white/55', children: collapsed ? '⌄' : '⌃' }),
-                            ] }),
-                    ] }),
-                !collapsed ? jsx('div', { className: 'space-y-2 border-t border-white/10 p-3', children: tierFeatures.map(renderFeatureCard) }) : null,
-            ] }, tierConfig.tier);
+    const purchasePoints = async (desiredAmount) => {
+        const amount = Math.max(1, Math.floor(Number(desiredAmount) || 1));
+        const costMoney = 1000 * amount;
+        recordOperationIntent({
+            来源: '催眠APP',
+            操作: '资源兑换',
+            项目: '购买当前MC点',
+            数量: String(amount) + '点',
+            兑换规则: '1000円 = 1点当前MC点',
+            消耗资源: '资金 ¥' + costMoney.toLocaleString(),
+            获得资源: '当前MC点 +' + amount + '点',
+            结算提示: '余额不足则兑换失败；只兑换资源，不自动使用兑换后的资源。',
+        });
+        setSubscriptionNotice('购买MC点请求已暂存');
+        setTimeout(() => setSubscriptionNotice(null), 1500);
     };
-    const renderStatusHandle = () => jsx('button', { type: 'button', 'aria-label': '打开资源与订阅侧栏', onClick: () => setShowStatusPanel(true), className: 'absolute right-0 z-30 flex items-center gap-1 rounded-l-2xl border border-r-0 border-pink-300/20 bg-pink-300/10 px-2 py-3 text-xs font-black text-pink-100 shadow-lg shadow-black/30', style: { top: '116px' }, children: [
-            jsx('span', { className: 'text-xl leading-none', children: '‹' }),
-            jsx('span', { className: 'text-xs uppercase tracking-wider', children: 'VIP' }),
-        ] });
-    const renderStatusPanel = () => jsxs('div', { className: 'absolute inset-0 z-40 overflow-hidden', style: { pointerEvents: showStatusPanel ? 'auto' : 'none', background: showStatusPanel ? 'rgba(0,0,0,0.75)' : 'rgba(0,0,0,0)', transition: 'background 240ms ease' }, children: [
-            jsxs('aside', { className: 'absolute inset-0 flex flex-col overflow-hidden bg-slate-950 text-white shadow-2xl shadow-black', style: { transform: showStatusPanel ? 'translateX(0)' : 'translateX(100%)', transition: 'transform 280ms cubic-bezier(0.22,1,0.36,1)' }, children: [
-                    jsxs('div', { className: 'flex shrink-0 items-center justify-between border-b border-white/10 px-5 py-5', children: [
-                            jsxs('div', { className: 'min-w-0', children: [
-                                    jsx('div', { className: 'text-xs font-black uppercase tracking-widest text-pink-300', children: 'VIP SUBSCRIPTION' }),
-                                    jsx('div', { className: 'mt-1 text-2xl font-black text-white', children: '订阅与资源' }),
-                                    jsx('div', { className: 'mt-1 text-xs font-bold text-white/45', children: '当前订阅：' + getTierLabel(subscriptionTier) }),
-                                ] }),
-                            jsx('button', { type: 'button', onClick: () => setShowStatusPanel(false), className: 'grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-white/10 bg-white/5 text-2xl font-black text-white/75', children: '×' }),
-                        ] }),
-                    jsxs('div', { className: 'flex-1 overflow-y-auto p-5 no-scrollbar', children: [
-                            jsxs('section', { className: 'rounded-3xl border border-pink-300/20 bg-black/45 p-4 shadow-inner shadow-white/5', children: [
-                                    jsxs('div', { className: 'flex items-center justify-between gap-4', children: [
-                                            jsxs('div', { className: 'min-w-0 flex-1', children: [
-                                                    jsx('div', { className: 'text-xs font-black text-white/45', children: 'MC能量' }),
-                                                    jsxs('div', { className: 'mt-1 flex items-center gap-3', children: [
-                                                            jsx('div', { className: 'h-2 flex-1 overflow-hidden rounded-full bg-white/10', children: jsx('div', { className: 'h-full rounded-full bg-gradient-to-r from-violet-500 to-pink-500', style: { width: Math.max(0, Math.min(100, Number(userData?.mcEnergy || 0) / Math.max(1, Number(userData?.mcEnergyMax || 1)) * 100)) + '%' } }) }),
-                                                            jsx('span', { className: 'shrink-0 text-base font-black text-white/80', children: String(userData?.mcEnergy ?? 0) + '/' + String(userData?.mcEnergyMax ?? 0) }),
-                                                        ] }),
-                                                ] }),
-                                            jsxs('div', { className: 'shrink-0 rounded-2xl border border-yellow-300/10 bg-black/50 px-4 py-3 text-right', children: [
-                                                    jsx('div', { className: 'text-xs font-bold text-white/40', children: '资金' }),
-                                                    jsx('div', { className: 'text-2xl font-black text-yellow-300', children: formatMoney(userData?.money ?? 0) }),
-                                                ] }),
-                                        ] }),
-                                    jsx('div', { className: 'mt-3 grid grid-cols-3 gap-2', children: [
-                                            { label: '当前MC点', value: String(userData?.mcPoints ?? 0) },
-                                            { label: '累计消耗', value: String(userData?.totalConsumedMc ?? 0) },
-                                            { label: '可疑度', value: String(userData?.suspicion ?? 0) },
-                                        ].map(item => jsxs('div', { className: 'rounded-2xl border border-white/10 bg-white/5 px-2 py-2 text-center', children: [
-                                                jsx('div', { className: 'text-[10px] font-bold text-white/35', children: item.label }),
-                                                jsx('div', { className: 'mt-1 text-sm font-black text-white/85', children: item.value }),
-                                            ] }, item.label)) }),
-                                    jsx('div', { className: 'mt-3 text-xs font-bold text-white/40', children: '订阅和兑换请求只会进入本轮操作，余额和变量由AI结算。' }),
-                                ] }),
-                            jsxs('section', { className: 'mt-4 rounded-3xl border border-cyan-300/15 bg-cyan-950/10 p-4', children: [
-                                    jsxs('div', { className: 'mb-3 flex items-center justify-between gap-3', children: [
-                                            jsx('div', { className: 'text-lg font-black text-white', children: '资源兑换' }),
-                                            jsx('div', { className: 'rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1 text-xs font-black text-cyan-100', children: '按数量暂存' }),
-                                        ] }),
-                                    jsx('div', { className: 'space-y-2', children: RESOURCE_EXCHANGE_OPTIONS.map(option => {
-                                            const quantity = parsePositiveInt(exchangeQty[option.id] || '1', 1);
-                                            return jsxs('div', { className: 'rounded-2xl border border-white/10 bg-slate-950/80 p-3', children: [
-                                                    jsxs('div', { className: 'flex items-start justify-between gap-3', children: [
-                                                            jsxs('div', { className: 'min-w-0', children: [
-                                                                    jsx('div', { className: 'text-base font-black text-white', children: option.title }),
-                                                                    jsx('div', { className: 'mt-1 text-xs font-bold text-white/45', children: option.rule }),
-                                                                ] }),
-                                                            jsxs('div', { className: 'shrink-0 text-right text-xs font-black text-cyan-100/80', children: [
-                                                                    jsx('div', { children: getExchangeSpendText(option, quantity) }),
-                                                                    jsx('div', { className: 'text-emerald-200', children: option.gainResource + ' ' + getExchangeGainText(option, quantity) }),
-                                                                ] }),
-                                                        ] }),
-                                                    jsxs('div', { className: 'mt-3 grid grid-cols-[1fr_auto] gap-2', children: [
-                                                            jsx('input', { type: 'number', inputMode: 'numeric', min: '1', value: exchangeQty[option.id] ?? '1', onChange: event => setExchangeQty(current => ({ ...current, [option.id]: event.target.value })), onBlur: () => setExchangeQty(current => ({ ...current, [option.id]: String(parsePositiveInt(current[option.id] || '1', 1)) })), className: 'min-w-0 rounded-xl border border-white/10 bg-black/45 px-3 py-2 text-sm font-black text-white outline-none focus:border-cyan-300/60' }),
-                                                            jsx('button', { type: 'button', onClick: () => requestResourceExchange(option), className: 'rounded-xl bg-gradient-to-r from-cyan-500 to-sky-500 px-4 py-2 text-sm font-black text-white shadow-lg shadow-cyan-950/30', children: '暂存' }),
-                                                        ] }),
-                                                ] }, option.id);
-                                        }) }),
-                                ] }),
-                            jsxs('section', { className: 'mt-4 rounded-3xl border border-white/10 bg-black/30 p-4', children: [
-                                    jsxs('div', { className: 'mb-3 flex items-center justify-between gap-3', children: [
-                                            jsx('div', { className: 'text-lg font-black text-white', children: '按周订阅' }),
-                                            jsx('div', { className: 'rounded-full border border-pink-300/20 bg-pink-300/10 px-3 py-1 text-xs font-black text-pink-100', children: '一周有效' }),
-                                        ] }),
-                                    jsx('div', { className: 'space-y-2', children: SUBSCRIPTION_TIER_CONFIGS.map(tierConfig => {
-                                            const enabled = subscriptionRank >= getTierRank(tierConfig.tier);
-                                            return jsxs('div', { className: 'flex items-center justify-between gap-3 rounded-2xl border px-3 py-3 ' + (enabled ? 'border-emerald-300/20 bg-emerald-400/10' : 'border-white/10 bg-slate-950/80'), children: [
-                                                    jsxs('div', { className: 'min-w-0', children: [
-                                                            jsx('div', { className: 'truncate text-base font-black text-white', children: tierConfig.label }),
-                                                            jsx('div', { className: 'mt-1 text-xs font-bold text-yellow-200/80', children: formatMoney(tierConfig.price) + ' / 周' }),
-                                                        ] }),
-                                                    enabled ? jsx('span', { className: 'shrink-0 rounded-full border border-emerald-300/20 bg-emerald-400/15 px-3 py-1 text-xs font-black text-emerald-200', children: '已启用' }) : jsx('button', { type: 'button', onClick: () => requestTierUnlock(tierConfig), className: 'shrink-0 rounded-full bg-gradient-to-r from-violet-500 to-pink-500 px-4 py-2 text-sm font-black text-white shadow-lg shadow-pink-950/30', children: '订阅' }),
-                                                ] }, tierConfig.tier);
-                                        }) }),
-                                ] }),
-                        ] }),
-                ] }),
-        ] });
-    return jsxs('div', { className: 'relative flex h-full w-full flex-col overflow-hidden bg-black text-white', style: { background: 'linear-gradient(180deg,#080916 0%,#04050b 48%,#020205 100%)' }, children: [
-            jsx('div', { className: 'absolute inset-0 opacity-10', children: jsx(VortexBackground, { speed: isFlashing ? 'animate-spin' : 'spin-slow' }) }),
-            jsx('div', { className: 'pointer-events-none absolute inset-0', style: { background: 'rgba(3,4,10,0.94)' } }),
-            jsx('div', { className: 'pointer-events-none absolute inset-0', style: { background: 'radial-gradient(circle at top,rgba(20,18,36,0.58) 0%,rgba(7,8,20,0.78) 42%,rgba(2,2,5,1) 100%)' } }),
-            jsxs('header', { className: 'relative z-10 flex shrink-0 items-center justify-between border-b border-white/10 bg-slate-950/95 px-4 py-4 backdrop-blur', children: [
-                    jsxs('div', { className: 'flex items-center gap-3', children: [
-                            jsx('button', { type: 'button', onClick: onExit, className: 'flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-3xl text-white/80 shadow-inner shadow-white/5', children: '‹' }),
-                            jsxs('div', { children: [
-                                    jsxs('div', { className: 'flex items-center gap-2 text-xl font-black', children: [
-                                            jsx(HypnoLogoSVG, { size: 28, className: 'text-fuchsia-300' }),
-                                            jsx('span', { children: '催眠APP' }),
-                                        ] }),
-                                    jsx('div', { className: 'mt-1 text-xs font-bold text-white/45', children: '指令只暂存，变量由AI结算' }),
-                                ] }),
-                        ] }),
-                    jsxs('button', { type: 'button', onClick: () => setShowStatusPanel(true), className: 'rounded-2xl border border-pink-300/20 bg-white/5 px-3 py-2 text-right shadow-lg shadow-pink-950/20', children: [
-                            jsx('div', { className: 'text-lg font-black text-white', children: String(userData?.mcEnergy ?? 0) + '/' + String(userData?.mcEnergyMax ?? 0) }),
-                            jsx('div', { className: 'text-[11px] font-bold text-pink-200/60', children: '状态 / VIP' }),
-                        ] }),
-                ] }),
-            jsx(ActiveSessionView, { timeLeft, sessionEndVirtualMinutes, sessionEndAtMs, sessionSummary, onStop: stopSession }),
-            jsxs('main', { className: 'relative z-10 flex-1 overflow-y-auto p-4 pb-28 no-scrollbar', children: [
-                    jsxs('section', { className: 'rounded-3xl border border-white/10 bg-slate-950/90 p-4 shadow-inner shadow-white/5', children: [
-                            jsxs('div', { className: 'flex items-start justify-between gap-3', children: [
-                                    jsxs('div', { className: 'min-w-0', children: [
-                                            jsx('div', { className: 'text-xs font-black uppercase tracking-widest text-fuchsia-200/70', children: 'COMMAND DECK' }),
-                                            jsx('div', { className: 'mt-1 text-lg font-black text-white', children: '选择催眠指令' }),
-                                            jsx('div', { className: 'mt-1 text-xs font-bold text-white/40', children: '从右侧边缘拉开订阅/VIP侧栏' }),
-                                        ] }),
-                                ] }),
-                            jsx('div', { className: 'mt-4 flex flex-wrap gap-2 text-xs font-black', children: jsx('span', { className: 'rounded-full border border-white/10 bg-black/30 px-3 py-1.5 text-white/60', children: '已启用 ' + String(selectedFeatures.length) + ' 条' }) }),
-                        ] }),
-                    jsx('div', { className: 'mt-4 space-y-4', children: COMMAND_TIER_CONFIGS.map(renderTierSection) }),
-                ] }),
-            jsxs('footer', { className: 'relative z-20 shrink-0 border-t border-white/10 bg-slate-950/95 p-4 pb-7 shadow-2xl shadow-black backdrop-blur', children: [
-                    jsx('div', { className: 'mb-3 text-center text-xs font-black text-white/45', children: '预计消耗：MC能量 ' + selectedCost.energy + '点' }),
-                    jsx('button', { type: 'button', onClick: startHypnosis, disabled: !selectedFeatures.length, className: 'mx-auto flex h-12 w-56 items-center justify-center rounded-full text-base font-black text-white shadow-lg transition disabled:cursor-not-allowed disabled:text-white/35', style: { background: selectedFeatures.length ? 'linear-gradient(90deg,#8b5cf6 0%,#ec4899 100%)' : '#1e293b', boxShadow: selectedFeatures.length ? '0 12px 28px rgba(236,72,153,0.25)' : 'none' }, children: '启动催眠' }),
-                    notice ? jsx('div', { className: 'mt-3 text-center text-xs font-bold text-fuchsia-100/75', children: notice }) : null,
-                ] }),
-            renderStatusHandle(),
-            renderStatusPanel(),
-        ] });
-};
-`;
-  const suffix = code.slice(end).replace(/\n\/\/# sourceMappingURL=data:application\/json;charset=utf-8;base64,[^\n]*/g, "");
-  return code.slice(0, start) + replacement + suffix;
-}
-
-function patchHypnosisAppModule(code) {
-  if (!code.includes("const HypnosisApp") || !code.includes("buildHypnosisSendMessage")) return code;
-  return rebuildHypnosisAppModule(code);
+    // --- Render Helpers ---
+`
+  );
+  output = output
+    .replace(
+      /onClick: \(\) => void purchaseEnergy\(quickSupplyQty\), disabled: [\s\S]*?, className: "flex flex-col items-start bg-blue-900\/20/,
+      'onClick: () => void purchaseEnergy(quickSupplyQty), disabled: false, className: "flex flex-col items-start bg-blue-900/20'
+    )
+    .replace(
+      /onClick: \(\) => void purchaseMaxEnergy\(quickSupplyQty\), disabled: userData\.mcPoints < quickSupplyQty, className:/,
+      'onClick: () => void purchaseMaxEnergy(quickSupplyQty), disabled: false, className:'
+    )
+    .replace(
+      /onClick: \(\) => void purchasePoints\(quickSupplyQty\), disabled: userData\.money < quickSupplyQty \* 1000, className:/,
+      'onClick: () => void purchasePoints(quickSupplyQty), disabled: false, className:'
+    )
+    .replace(
+      /children: Math\.max\(0, userData\.mcEnergyMax - Math\.floor\(userData\.mcEnergy\)\) <= 0\s*\?\s*'已满'\s*:\s*`¥\$\{\(Math\.min\(Math\.max\(0, userData\.mcEnergyMax - Math\.floor\(userData\.mcEnergy\)\), quickSupplyQty\) \* 100\)\.toLocaleString\(\)\}`/,
+      'children: `¥${(quickSupplyQty * 100).toLocaleString()}`'
+    )
+    .replace(
+      /children: Math\.max\(0, userData\.mcEnergyMax - Math\.floor\(userData\.mcEnergy\)\) <= 0\s*\?\s*'能量已满'\s*:\s*`恢复 \$\{Math\.min\(Math\.max\(0, userData\.mcEnergyMax - Math\.floor\(userData\.mcEnergy\)\), quickSupplyQty\)\} 能量`/,
+      'children: `补充 ${quickSupplyQty} 能量`'
+    )
+    .replaceAll(
+      "className: missingEnergy > 0 ? 'text-red-500 font-bold' : 'text-gray-300'",
+      "className: 'text-gray-300'"
+    )
+    .replaceAll(
+      "className: missingPoints > 0 ? 'text-red-500 font-bold' : 'text-gray-300'",
+      "className: 'text-gray-300'"
+    )
+    .replace(
+      /children: \[\(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__\.jsx\)\(lucide_react__WEBPACK_IMPORTED_MODULE_\d+__\["default"\], \{ size: 18, fill: "currentColor" \}\), missingEnergy > 0 \? '能量不足' : missingPoints > 0 \? '点数不足' : '启动催眠'\]/,
+      "children: ['启动催眠']"
+    )
+    .replace(
+      /\(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__\.jsxs\)\("span", \{ children: \["\\u5F53\\u524D\\u53EF\\u7528: ", Math\.floor\(userData\.mcEnergy\), " MC", totalPointsCost > 0 \? `, \$\{userData\.mcPoints\} PT` : ''\] \}\)/,
+      '(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("span", { children: "" })'
+    )
+    .replace(
+      /_services_dataService__WEBPACK_IMPORTED_MODULE_\d+__\.DataService\.updateResources\(\{/g,
+      'recordOperationIntent({'
+    );
+  output = output.replace(
+    "(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)(lucide_react__WEBPACK_IMPORTED_MODULE_16__[\"default\"], { size: 18, fill: \"currentColor\" }), missingEnergy > 0 ? '能量不足' : missingPoints > 0 ? '点数不足' : '启动催眠'",
+    "'启动催眠'"
+  );
+  return output;
 }
 
 function patchHypnosisTypesModule(code) {
   if (!code.includes("const VIP_LEVELS") || !code.includes('AppMode["HYPNOSIS"]')) return code;
   return code
-    .replace("    { tier: 'VIP5', unlockThreshold: 1000, label: 'VIP 5 (永久)' },", "    { tier: 'VIP5', unlockThreshold: 0, label: 'VIP 5' },")
+    .replace("    { tier: 'VIP5', unlockThreshold: 1000, label: 'VIP 5 (永久)' },", "    { tier: 'VIP5', unlockThreshold: 1000, label: 'VIP 5' },")
     .replace(/\n    \{ tier: 'VIP6', unlockThreshold: 2500, label: 'VIP 6 \(完全控制\)' \},/g, "");
 }
 
@@ -5029,7 +4751,21 @@ function injectInternalMchanApp(html, staticSeed) {
   function boot() {
     ensurePhoneDarkThemeStyle();
     refreshUntilFirstPatch();
+    let refreshScheduled = false;
+    const schedulePhoneVariableRefresh = () => {
+      if (refreshScheduled) return;
+      refreshScheduled = true;
+      window.requestAnimationFrame(() => {
+        refreshScheduled = false;
+        refreshPhoneVariableViews();
+      });
+    };
     window.setInterval(refreshPhoneVariableViews, 1500);
+    try {
+      const appRoot = document.getElementById("app") || document.body;
+      const observer = new MutationObserver(schedulePhoneVariableRefresh);
+      observer.observe(appRoot, { childList: true, subtree: true });
+    } catch {}
     window.addEventListener("HYPNOOS_OPERATION_QUEUE_CHANGED", refreshPhoneVariableViews);
     try {
       if (typeof eventOn === "function" && window.Mvu?.events) {
