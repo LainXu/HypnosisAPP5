@@ -121,7 +121,7 @@
           "id": "748c6c9a-e2ba-473b-b4b7-4024387b5dcf",
           "scriptName": "前端",
           "findRegex": "<\\s*StatusPlaceHolderImpl\\s*\\/>",
-          "replaceString": "```\n<body>\n<script>\n$('body').load('http://127.0.0.1:5173/public/frontends/hypnosis-app/st-load-inline.html')\n</script>\n</body>\n```",
+          "replaceString": "```\n<body>\n<script>\nwindow.__ST_HYPNOOS_ASSET_BASE__ = 'http://127.0.0.1:5173/public/frontends/hypnosis-app/assets/';\n$('body').load('http://127.0.0.1:5173/public/frontends/hypnosis-app/st-load-inline.html')\n</script>\n</body>\n```",
           "trimStrings": [],
           "placement": [
             2
@@ -174,7 +174,7 @@
           "id": "fe9113dc-f89b-4e42-8187-986861e67ab3",
           "scriptName": "测试用",
           "findRegex": "<\\s*StatusPlaceHolderImpl\\s*\\/>",
-          "replaceString": "```\n<body>\n<script>\n$('body').load('http://127.0.0.1:5173/public/frontends/hypnosis-app/st-load-inline.html')\n</script>\n</body>\n```",
+          "replaceString": "```\n<body>\n<script>\nwindow.__ST_HYPNOOS_ASSET_BASE__ = 'http://127.0.0.1:5173/public/frontends/hypnosis-app/assets/';\n$('body').load('http://127.0.0.1:5173/public/frontends/hypnosis-app/st-load-inline.html')\n</script>\n</body>\n```",
           "trimStrings": [],
           "placement": [
             2
@@ -191,7 +191,7 @@
           "id": "53757492-5ce3-4ad7-ad1a-334c41088542",
           "scriptName": "主仓库",
           "findRegex": "<\\s*StatusPlaceHolderImpl\\s*\\/>",
-          "replaceString": "```\n<body>\n<script>\n$('body').load('http://127.0.0.1:5173/public/frontends/hypnosis-app/st-load-inline.html')\n</script>\n</body>\n```",
+          "replaceString": "```\n<body>\n<script>\nwindow.__ST_HYPNOOS_ASSET_BASE__ = 'http://127.0.0.1:5173/public/frontends/hypnosis-app/assets/';\n$('body').load('http://127.0.0.1:5173/public/frontends/hypnosis-app/st-load-inline.html')\n</script>\n</body>\n```",
           "trimStrings": [],
           "placement": [
             2
@@ -226,7 +226,7 @@
           "id": "4f95726c-735e-4601-a240-c2470f5e23bc",
           "scriptName": "匿名版测试",
           "findRegex": "/\\<匿名版>([\\s\\S]*?)\\</匿名版>/s",
-          "replaceString": "```\n<body>\n  <script>\n    $('body').load('http://localhost:5500/dist/MChan/index.html')\n  </script>\n</body>\n```",
+          "replaceString": "",
           "trimStrings": [],
           "placement": [
             2
@@ -388,7 +388,7 @@
         "variableAuthority": "ai",
         "frontendMutation": "read-only",
         "legacyWorldbookAndRegexPreserved": true,
-        "updatedAt": "2026-06-26T22:28:40.256Z",
+        "updatedAt": "2026-06-27T13:26:31.710Z",
         "mchanMode": "static-readonly",
         "lastExportedPng": "public/cards/hypnosis-app.png",
         "sillyTavernLoadUrl": "http://127.0.0.1:5173/public/frontends/hypnosis-app/st-load-inline.html",
@@ -396,9 +396,9 @@
         "frontendMode": "local",
         "frontendUrl": "http://127.0.0.1:5173/public/frontends/hypnosis-app/st-load-inline.html",
         "assetBase": "http://127.0.0.1:5173/public/frontends/hypnosis-app/assets/",
-        "remoteFrontendUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@a1149403617f41b3f47f383d52acb9810ecd5dfa/dist/webview/index.html",
-        "remoteAssetBase": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@a1149403617f41b3f47f383d52acb9810ecd5dfa/dist/webview/assets/",
-        "remoteCommit": "a1149403617f41b3f47f383d52acb9810ecd5dfa",
+        "remoteFrontendUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@53cf37de63699a69fbd01e13cacd268fd9794467/dist/webview/index.html",
+        "remoteAssetBase": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@53cf37de63699a69fbd01e13cacd268fd9794467/dist/webview/assets/",
+        "remoteCommit": "53cf37de63699a69fbd01e13cacd268fd9794467",
         "frontendLoader": "jquery-load-local-inline-classic"
       }
     },
@@ -1423,7 +1423,7 @@
           "keys": [],
           "secondary_keys": [],
           "comment": "[mvu_plot]学校简介和地点列表",
-          "content": "<学校介绍>\n私立斋明学园: \n位于东京近郊的一所老牌私立升学高中，拥有七十余年作为“千金女校”的历史，校风严谨优雅, 老师也都是年轻女教师。为了应对少子化危机，今年四月正式改为男女混校。然而由于宣传不足和刻板印象，首届入学的男生极少，导致全校男女比例维持在悬殊的1:8。尽管校方增设了男厕和更衣室，但空气中依然弥漫着洗发水的香气，对于外人看来入学的男生都是幸运儿, 但实际情况是男生会被隔绝在学校主流圈子外。\n</学校介绍>\n<校内地点>\n校舍本馆:\n  屋顶(RF):\n    - 屋顶平台\n    - 园艺部温室\n  四楼(4F):\n    - 三年级教室(A~F)\n    - 音乐室\n    - 美术室\n    - 视听室(AV Room)\n  三楼(3F):\n    - 二年级教室(A~F)\n    - 图书室\n    - 电脑室(情报处理室)\n    - 学生会室\n  二楼(2F):\n    - 一年级教室(A~F)\n    - 理科实验室(物理/化学/生物)\n    - 广播室\n    - 连接走廊(通往体育馆)\n  一楼(1F):\n    - 升降口(鞋柜区)\n    - 教职员室(办公室)\n    - 校长室\n    - 理事长室\n    - 保健室\n    - 家政室(料理教室)\n    - 食堂和小卖部\n\n体育馆栋:\n  二楼(2F):\n    - 馆内二楼看台\n  一楼(1F):\n    - 体育馆主场(篮球/排球)\n    - 舞台\n    - 体育器材室(跳箱仓库)\n    - 更衣室和淋浴间\n  武道场(别馆):\n    - 柔道场\n    - 剑道场\n\n社团大楼(部室栋):\n  二楼(2F):\n    - 各种社团部室\n    - 空房间(旧仓库)\n  一楼(1F):\n    - 运动部部室长廊\n    - 新闻部部室\n    - 灵异研究会部室\n\n室外区域:\n  正门周边:\n    - 校门口\n    - 校门坡道\n    - 停车场\n  校舍周边:\n    - 中庭（有喷水池和花坛）\n    - 自动贩卖机角\n    - 校舍后方(阴影处)\n    - 饲养小屋\n  运动场区域:\n    - 大操场(田径跑道)\n    - 司令台(朝礼台)\n    - 网球场\n    - 游泳池\n    - 弓道场\n<校内地点>\n\n<前端地图规则>\n- 手机“地图”APP使用浏览器localStorage保存静态线点图，默认地点为：私立斋明学园、西园寺企业、西园寺的家、深雪的家、夏美的家。\n- 手机“学校”APP里的“学校地图”也使用localStorage保存静态线点图，默认地点为：教室、游泳池、操场、图书馆、走廊、校长室。\n- 地图不是MVU变量；手机“地图/学校地图”的完整图、当前地点和点击状态都保存在浏览器localStorage。AI若在剧情中确认新增重要地点，可在回复中输出完整JSON图用于前端重构：<地图更新>{\"nodes\":[{\"id\":\"school\",\"label\":\"私立斋明学园\",\"kind\":\"world\",\"x\":50,\"y\":45,\"info\":\"地点说明\"}],\"edges\":[[\"school\",\"new-place\"]]}</地图更新>。校内地点使用<学校地图更新>...</学校地图更新>。节点必须包含可读的`info`/`description`，前端点击地点时会显示该信息。\n- JSON必须是完整图，而不是增量；前端会按localStorage保存最后一次完整图。本地新增的非默认地点可由用户在前端删除；默认地点不会被删除。\n</前端地图规则>",
+          "content": "<学校介绍>\n私立斋明学园: \n位于东京近郊的一所老牌私立升学高中，拥有七十余年作为“千金女校”的历史，校风严谨优雅, 老师也都是年轻女教师。为了应对少子化危机，今年四月正式改为男女混校。然而由于宣传不足和刻板印象，首届入学的男生极少，导致全校男女比例维持在悬殊的1:8。尽管校方增设了男厕和更衣室，但空气中依然弥漫着洗发水的香气，对于外人看来入学的男生都是幸运儿, 但实际情况是男生会被隔绝在学校主流圈子外。\n</学校介绍>\n<校内地点>\n校舍本馆:\n  屋顶(RF):\n    - 屋顶平台\n    - 园艺部温室\n  四楼(4F):\n    - 三年级教室(A~F)\n    - 音乐室\n    - 美术室\n    - 视听室(AV Room)\n  三楼(3F):\n    - 二年级教室(A~F)\n    - 图书室\n    - 电脑室(情报处理室)\n    - 学生会室\n  二楼(2F):\n    - 一年级教室(A~F)\n    - 理科实验室(物理/化学/生物)\n    - 广播室\n    - 连接走廊(通往体育馆)\n  一楼(1F):\n    - 升降口(鞋柜区)\n    - 教职员室(办公室)\n    - 校长室\n    - 理事长室\n    - 保健室\n    - 家政室(料理教室)\n    - 食堂和小卖部\n\n体育馆栋:\n  二楼(2F):\n    - 馆内二楼看台\n  一楼(1F):\n    - 体育馆主场(篮球/排球)\n    - 舞台\n    - 体育器材室(跳箱仓库)\n    - 更衣室和淋浴间\n  武道场(别馆):\n    - 柔道场\n    - 剑道场\n\n社团大楼(部室栋):\n  二楼(2F):\n    - 各种社团部室\n    - 空房间(旧仓库)\n  一楼(1F):\n    - 运动部部室长廊\n    - 新闻部部室\n    - 灵异研究会部室\n\n室外区域:\n  正门周边:\n    - 校门口\n    - 校门坡道\n    - 停车场\n  校舍周边:\n    - 中庭（有喷水池和花坛）\n    - 自动贩卖机角\n    - 校舍后方(阴影处)\n    - 饲养小屋\n  运动场区域:\n    - 大操场(田径跑道)\n    - 司令台(朝礼台)\n    - 网球场\n    - 游泳池\n    - 弓道场\n<校内地点>\n\n<前端地图规则>\n- 手机“地图”APP使用浏览器localStorage保存静态线点图，默认地点为：私立斋明学园、西园寺企业、西园寺的家、深雪的家、夏美的家。\n- 手机“学校”APP里的“学校地图”也使用localStorage保存静态线点图，默认地点为：教室、游泳池、操场、图书馆、走廊、校长室。\n- 地图不是MVU变量，AI不能直接改浏览器localStorage；手机“地图/学校地图”的完整图、当前地点和点击状态都由前端保存在浏览器localStorage。新增地点优先通过地图页“请求新增地点”按钮进入<本轮APP操作>，AI收到后若地点成立，需要在回复原文中输出完整JSON图，前端读取后才会写入localStorage：<地图更新>{\"nodes\":[{\"id\":\"school\",\"label\":\"私立斋明学园\",\"kind\":\"world\",\"x\":50,\"y\":45,\"info\":\"地点说明\"}],\"edges\":[[\"school\",\"new-place\"]]}</地图更新>。校内地点使用<学校地图更新>...</学校地图更新>。节点必须包含可读的`info`/`description`，前端点击地点时会显示该信息。\n- JSON必须是完整图，而不是增量；按钮操作会携带当前完整图JSON，AI应在此基础上保留原有节点/边并追加新节点。前端会按localStorage保存最后一次完整图，并记录已处理过的消息，避免旧地图更新反复覆盖用户手动删除。本地新增的非默认地点可由用户在前端删除；默认地点不会被删除。\n</前端地图规则>",
           "constant": true,
           "selective": true,
           "insertion_order": 15,
@@ -2290,7 +2290,7 @@
   },
   "create_date": "2026-05-29T12:42:31.655Z",
   "workbench": {
-    "updatedAt": "2026-06-26T17:27:57.687Z",
+    "updatedAt": "2026-06-27T13:26:31.710Z",
     "localFrontendUrl": "http://127.0.0.1:5173/public/frontends/hypnosis-app/index.html",
     "lastExportedPng": "public/cards/hypnosis-app.png",
     "exportedAt": "2026-06-26T17:27:57.692Z",
@@ -2299,8 +2299,8 @@
     "frontendMode": "local",
     "frontendUrl": "http://127.0.0.1:5173/public/frontends/hypnosis-app/st-load-inline.html",
     "assetBase": "http://127.0.0.1:5173/public/frontends/hypnosis-app/assets/",
-    "remoteFrontendUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@a1149403617f41b3f47f383d52acb9810ecd5dfa/dist/webview/index.html",
-    "remoteAssetBase": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@a1149403617f41b3f47f383d52acb9810ecd5dfa/dist/webview/assets/",
-    "remoteCommit": "a1149403617f41b3f47f383d52acb9810ecd5dfa"
+    "remoteFrontendUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@53cf37de63699a69fbd01e13cacd268fd9794467/dist/webview/index.html",
+    "remoteAssetBase": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@53cf37de63699a69fbd01e13cacd268fd9794467/dist/webview/assets/",
+    "remoteCommit": "53cf37de63699a69fbd01e13cacd268fd9794467"
   }
 }

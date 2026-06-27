@@ -1333,6 +1333,13 @@ var __webpack_exports__ = __webpack_require__("./src/催眠APP前端/index.tsx")
 .st-graph-info-head small{font-size:10px;color:rgba(125,211,252,.7);white-space:nowrap}
 .st-graph-info p{margin:0;color:rgba(226,232,240,.72);font-size:12px;line-height:1.55;white-space:pre-wrap}
 .st-graph-delete{justify-self:end;border:1px solid rgba(244,63,94,.28);border-radius:11px;background:rgba(244,63,94,.12);color:#fecdd3;font-size:11px;font-weight:850;padding:7px 10px;cursor:pointer}
+.st-graph-add{display:grid;gap:8px}
+.st-graph-add-grid{display:grid;grid-template-columns:1fr;gap:8px}
+.st-graph-add input,.st-graph-add textarea{width:100%;border:1px solid rgba(255,255,255,.1);border-radius:12px;background:rgba(2,6,23,.45);color:#f8fafc;outline:none;padding:9px 10px;font-size:12px;line-height:1.45;font-family:inherit}
+.st-graph-add textarea{min-height:64px;resize:vertical}
+.st-graph-add input:focus,.st-graph-add textarea:focus{border-color:rgba(34,211,238,.5);box-shadow:0 0 0 3px rgba(34,211,238,.12)}
+.st-graph-add button{border:1px solid rgba(34,211,238,.32);border-radius:13px;background:linear-gradient(135deg,rgba(34,211,238,.17),rgba(168,85,247,.15));color:#e0f2fe;font-size:12px;font-weight:850;padding:9px 10px;cursor:pointer}
+.st-graph-add-hint{margin:0;color:rgba(203,213,225,.55);font-size:10px;line-height:1.45}
 .st-rule-list{display:grid;gap:8px}
 .st-rule-empty{margin:0;color:rgba(203,213,225,.52);font-size:12px;text-align:center;padding:18px 4px}
 .st-rule-item{border:1px solid rgba(255,255,255,.09);border-radius:14px;background:rgba(255,255,255,.05);padding:10px}
@@ -3416,6 +3423,10 @@ var __webpack_exports__ = __webpack_require__("./src/催眠APP前端/index.tsx")
     return "hypnoos.static-map.current." + scope + ".v1:" + graphScopeKey();
   }
 
+  function graphUpdateSeenStorageKey() {
+    return "hypnoos.static-map.update-seen.v1:" + graphScopeKey();
+  }
+
   function cloneGraph(value) {
     try {
       return JSON.parse(JSON.stringify(value));
@@ -3497,7 +3508,8 @@ var __webpack_exports__ = __webpack_require__("./src/催眠APP前端/index.tsx")
 
   function parseStaticGraphUpdateText(text) {
     const source = String(text || "");
-    if (!source.includes("<地图更新>") && !source.includes("<学校地图更新>")) return;
+    if (!source.includes("<地图更新>") && !source.includes("<学校地图更新>")) return 0;
+    let applied = 0;
     const specs = [
       { scope: "world", re: /<地图更新>([\s\S]*?)<\/地图更新>/g },
       { scope: "school", re: /<学校地图更新>([\s\S]*?)<\/学校地图更新>/g }
@@ -3506,29 +3518,73 @@ var __webpack_exports__ = __webpack_require__("./src/催眠APP前端/index.tsx")
       for (const match of source.matchAll(spec.re)) {
         try {
           saveStaticGraph(spec.scope, JSON.parse(String(match[1] || "").trim()));
+          applied += 1;
         } catch {}
       }
     }
+    return applied;
+  }
+
+  function readSeenGraphUpdateKeys() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(graphUpdateSeenStorageKey()) || "[]");
+      if (Array.isArray(parsed)) return new Set(parsed.map(String));
+    } catch {}
+    return new Set();
+  }
+
+  function writeSeenGraphUpdateKeys(keys) {
+    try {
+      localStorage.setItem(graphUpdateSeenStorageKey(), JSON.stringify(Array.from(keys).slice(-120)));
+    } catch {}
+  }
+
+  function graphMessageBody(message) {
+    if (typeof message === "string") return message;
+    if (!message || typeof message !== "object") return "";
+    return String(message.message ?? message.mes ?? message.text ?? message.content ?? message.raw ?? "");
+  }
+
+  function pushGraphMessages(target, source, label) {
+    if (!Array.isArray(source)) return;
+    source.forEach((message, index) => {
+      const body = graphMessageBody(message);
+      if (!body.includes("<地图更新>") && !body.includes("<学校地图更新>")) return;
+      const id = message && typeof message === "object"
+        ? (message.message_id ?? message.mesid ?? message.id ?? index)
+        : index;
+      target.push({ key: label + ":" + String(id) + ":" + body.length, body });
+    });
   }
 
   function syncStaticGraphUpdatesFromChat() {
     const messages = [];
     try {
       if (typeof getCurrentMessageId === "function" && typeof getChatMessages === "function") {
-        messages.push(...(getChatMessages(getCurrentMessageId()) || []));
+        const current = getChatMessages(getCurrentMessageId());
+        pushGraphMessages(messages, Array.isArray(current) ? current : [current], "current");
       }
     } catch {}
     try {
-      if (typeof getChatMessages === "function") messages.push(...(getChatMessages(-1) || []));
+      if (typeof getChatMessages === "function") pushGraphMessages(messages, getChatMessages(-1) || [], "getChatMessages");
     } catch {}
-    const seen = new Set();
+    try {
+      const context = window?.SillyTavern?.getContext?.() || (typeof getContext === "function" ? getContext() : null);
+      pushGraphMessages(messages, context?.chat || [], "context");
+    } catch {}
+    try {
+      pushGraphMessages(messages, Array.isArray(window.chat) ? window.chat : [], "window.chat");
+    } catch {}
+    const seen = readSeenGraphUpdateKeys();
+    let changed = false;
     for (const message of messages) {
-      const body = String(message?.message || "");
-      const key = String(message?.message_id ?? message?.id ?? "") + ":" + body.length;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      parseStaticGraphUpdateText(body);
+      if (seen.has(message.key)) continue;
+      if (parseStaticGraphUpdateText(message.body) > 0) {
+        seen.add(message.key);
+        changed = true;
+      }
     }
+    if (changed) writeSeenGraphUpdateKeys(seen);
   }
 
   function loadStaticGraph(scope) {
@@ -3546,6 +3602,30 @@ var __webpack_exports__ = __webpack_require__("./src/催眠APP前端/index.tsx")
     const graph = normalizeGraphGraph(cloneGraph(STATIC_GRAPH_DEFAULTS[scope]), scope);
     saveStaticGraph(scope, graph);
     return graph;
+  }
+
+  function graphSuggestedNodeId(name) {
+    const base = String(name || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9一-龥]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+    return base || "new-place";
+  }
+
+  function renderGraphAddLocationCard(scope, graph, currentNode) {
+    const target = currentNode || graph.nodes[0] || null;
+    const title = scope === "school" ? "新增校内地点" : "新增区域地点";
+    const tag = scope === "school" ? "<学校地图更新>" : "<地图更新>";
+    return '<section class="st-lite-card st-graph-add" data-graph-add-scope="' + escapeAttr(scope) + '">' +
+      '<div class="st-graph-head"><strong>' + title + '</strong><span>统一提示词</span></div>' +
+      '<div class="st-graph-add-grid">' +
+        '<input data-graph-add-name autocomplete="off" placeholder="地点名">' +
+        '<textarea data-graph-add-info placeholder="地点说明、用途、相关角色或剧情倾向"></textarea>' +
+      '</div>' +
+      '<p class="st-graph-add-hint">提交后只会加入本轮APP操作；AI需要输出完整 ' + escapeHtml(tag) + ' JSON，前端再写入本地地图。默认连接当前地点：' + escapeHtml(target?.label || "无") + '。</p>' +
+      '<button type="button" data-graph-add-submit data-graph-scope="' + escapeAttr(scope) + '" data-graph-current="' + escapeAttr(target?.id || "") + '">请求新增地点</button>' +
+    '</section>';
   }
 
   function renderStaticGraphCard(scope) {
@@ -3577,7 +3657,8 @@ var __webpack_exports__ = __webpack_require__("./src/催眠APP前端/index.tsx")
       '<div class="st-graph-canvas"><svg viewBox="0 0 100 100" preserveAspectRatio="none">' + lines + '</svg>' + nodes + '</div>' +
       info +
       '<div class="st-graph-tools"><button class="st-graph-tool" type="button" data-graph-action="reset" data-graph-scope="' + escapeAttr(scope) + '">恢复默认</button><button class="st-graph-tool" type="button" data-graph-action="sync" data-graph-scope="' + escapeAttr(scope) + '">读取更新</button></div>' +
-    '</section>';
+    '</section>' +
+    renderGraphAddLocationCard(scope, graph, currentNode);
   }
 
   function getSchoolRules() {
@@ -3627,6 +3708,37 @@ var __webpack_exports__ = __webpack_require__("./src/催眠APP前端/index.tsx")
   }
 
   function bindGraphPageActions(page) {
+    page.querySelectorAll("[data-graph-add-submit]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const scope = button.getAttribute("data-graph-scope") || "world";
+        const card = button.closest("[data-graph-add-scope]");
+        const nameInput = card?.querySelector("[data-graph-add-name]");
+        const infoInput = card?.querySelector("[data-graph-add-info]");
+        const name = String(nameInput?.value || "").trim();
+        const infoText = String(infoInput?.value || "").trim();
+        if (!name && !infoText) return;
+        const graph = loadStaticGraph(scope);
+        const currentId = button.getAttribute("data-graph-current") || currentGraphNodeId(scope, graph);
+        const currentNode = graph.nodes.find((node) => node.id === currentId) || graph.nodes[0] || null;
+        const tag = scope === "school" ? "学校地图更新" : "地图更新";
+        appendAppOperation({
+          来源: scope === "school" ? "学校地图" : "地图",
+          操作: "请求新增地点",
+          地图类型: graph.title,
+          新增地点: {
+            名称: name || "由AI按剧情命名",
+            信息: infoText || "由AI按当前剧情补全",
+            建议ID: graphSuggestedNodeId(name),
+            默认连接到: currentNode ? currentNode.label : "由AI判断",
+            默认连接到ID: currentNode ? currentNode.id : ""
+          },
+          当前完整图JSON: JSON.stringify(graph),
+          AI执行规范: "若地点成立，输出完整<" + tag + ">JSON</" + tag + ">，不是增量；保留原有节点/边，新增节点必须有id、label、kind、x、y、info，并添加合理连线。"
+        });
+        if (nameInput) nameInput.value = "";
+        if (infoInput) infoInput.value = "";
+      });
+    });
     page.querySelectorAll("[data-graph-node]").forEach((button) => {
       button.addEventListener("click", () => {
         setCurrentGraphNode(button.getAttribute("data-graph-scope") || "world", button.getAttribute("data-graph-node") || "");
