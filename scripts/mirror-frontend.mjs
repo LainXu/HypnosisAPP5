@@ -951,13 +951,39 @@ function patchStatusBarModule(code) {
   if (!code.includes("const StatusBar =") || !code.includes("components/OS/StatusBar")) return code;
   return code.replace(
     `(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "w-20", children: timeText || new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false }) })`,
-    `(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "w-28 text-[11px] font-black whitespace-nowrap", children: timeText || new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false }) })`
+    `(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "w-16 text-[11px] font-black whitespace-nowrap", children: timeText || new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false }) })`
   );
 }
 
 function patchAppRootModule(code) {
   if (!code.includes("const App =") || !code.includes("DataService.getUserData")) return code;
   let output = code;
+  output = output.replace(
+    `};
+function withTimeout`,
+    `};
+function getActiveHomeHypnosisInfo(roles) {
+    if (!roles || typeof roles !== 'object')
+        return null;
+    for (const [roleName, roleData] of Object.entries(roles)) {
+        if (!roleData || typeof roleData !== 'object' || Array.isArray(roleData))
+            continue;
+        const temp = roleData["临时催眠效果"];
+        if (!temp || typeof temp !== 'object' || Array.isArray(temp))
+            continue;
+        for (const [title, detail] of Object.entries(temp)) {
+            if (!detail || typeof detail !== 'object' || Array.isArray(detail))
+                continue;
+            const effect = String(detail["效果"] ?? '').trim();
+            const endTime = String(detail["结束时间"] ?? '').trim();
+            if (effect || endTime)
+                return { roleName, title: String(title || '临时催眠').trim() || '临时催眠' };
+        }
+    }
+    return null;
+}
+function withTimeout`
+  );
   output = output.replace(
     `    const [systemDateText, setSystemDateText] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(undefined);
     const [localNow, setLocalNow] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(() => new Date());`,
@@ -966,6 +992,7 @@ function patchAppRootModule(code) {
     const [systemScheduleDetailText, setSystemScheduleDetailText] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(undefined);
     const [systemWeekdayText, setSystemWeekdayText] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(undefined);
     const [systemDateOnlyText, setSystemDateOnlyText] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(undefined);
+    const [homeHypnosisInfo, setHomeHypnosisInfo] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(null);
     const [localNow, setLocalNow] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(() => new Date());`
   );
   output = output.replace(
@@ -990,24 +1017,73 @@ function patchAppRootModule(code) {
   );
   output = output.replaceAll(
     `systemDateText: systemDateText, localNow: localNow`,
-    `systemDateText: systemDateText, systemScheduleText: systemScheduleText, systemScheduleDetailText: systemScheduleDetailText, systemWeekdayText: systemWeekdayText, systemDateOnlyText: systemDateOnlyText, localNow: localNow`
+    `systemDateText: systemDateText, systemScheduleText: systemScheduleText, systemScheduleDetailText: systemScheduleDetailText, systemWeekdayText: systemWeekdayText, systemDateOnlyText: systemDateOnlyText, localNow: localNow, homeHypnosisInfo: homeHypnosisInfo`
   );
   output = output.replace(
     `(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)(_components_OS_StatusBar__WEBPACK_IMPORTED_MODULE_2__.StatusBar, { timeText: systemTimeText })`,
-    `(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)(_components_OS_StatusBar__WEBPACK_IMPORTED_MODULE_2__.StatusBar, { timeText: "原卡作者Ramiel" })`
+    `(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)(_components_OS_StatusBar__WEBPACK_IMPORTED_MODULE_2__.StatusBar, { timeText: "Ramiel" })`
+  );
+  output = output.replace(
+    `                const [clock, unlocks] = await Promise.all([_services_dataService__WEBPACK_IMPORTED_MODULE_6__.DataService.getSystemClock(), _services_dataService__WEBPACK_IMPORTED_MODULE_6__.DataService.getUnlocks()]);`,
+    `                const [clock, unlocks, roles] = await Promise.all([
+                    _services_dataService__WEBPACK_IMPORTED_MODULE_6__.DataService.getSystemClock(),
+                    _services_dataService__WEBPACK_IMPORTED_MODULE_6__.DataService.getUnlocks(),
+                    withTimeout(_services_mvuBridge__WEBPACK_IMPORTED_MODULE_7__.MvuBridge.getRoles(), 1600, 'MvuBridge.getRoles').catch(() => null),
+                ]);`
+  );
+  output = output.replace(
+    `                setSystemDateOnlyText(clock.dateOnlyText);
+                setBodyStatsUnlocked(unlocks.bodyStatsUnlocked);`,
+    `                setSystemDateOnlyText(clock.dateOnlyText);
+                setHomeHypnosisInfo(getActiveHomeHypnosisInfo(roles));
+                setBodyStatsUnlocked(unlocks.bodyStatsUnlocked);`
+  );
+  output = output.replace(
+    `                setSystemDateOnlyText(clock.dateOnlyText);
+                setBodyStatsUnlocked(true);`,
+    `                setSystemDateOnlyText(clock.dateOnlyText);
+                setHomeHypnosisInfo(getActiveHomeHypnosisInfo(roles));
+                setBodyStatsUnlocked(true);`
   );
   output = output.replace(
     `const HomeScreen = ({ onLaunchApp, bodyStatsUnlocked, systemTimeText, systemDateText, localNow, }) => {
     const displayTime = systemTimeText || \`\${localNow.getHours()}:\${localNow.getMinutes().toString().padStart(2, '0')}\`;
     const displayDate = systemDateText || localNow.toLocaleDateString('zh-CN', { weekday: 'long', month: 'long', day: 'numeric' });
     const [notice, setNotice] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(null);`,
-    `const HomeScreen = ({ onLaunchApp, bodyStatsUnlocked, systemTimeText, systemDateText, systemScheduleText, systemScheduleDetailText, systemWeekdayText, systemDateOnlyText, localNow, }) => {
+    `const HomeScreen = ({ onLaunchApp, bodyStatsUnlocked, systemTimeText, systemDateText, systemScheduleText, systemScheduleDetailText, systemWeekdayText, systemDateOnlyText, localNow, homeHypnosisInfo, }) => {
     const displayTime = systemTimeText || \`\${localNow.getHours()}:\${localNow.getMinutes().toString().padStart(2, '0')}\`;
     const displayDate = systemDateText || localNow.toLocaleDateString('zh-CN', { weekday: 'long', month: 'long', day: 'numeric' });
     const displayDateOnly = systemDateOnlyText || displayDate.replace(/\\s*(?:星期|周)[一二三四五六日天]\\s*/g, '').trim() || displayDate;
     const displayWeekday = systemWeekdayText || displayDate.match(/星期[一二三四五六日天]/)?.[0] || displayDate.match(/周[一二三四五六日天]/)?.[0] || '星期三';
     const displaySchedule = systemScheduleText || '当前日程';
     const displayScheduleDetail = systemScheduleDetailText || '';
+    const islandScrollRef = (0,react__WEBPACK_IMPORTED_MODULE_1__.useRef)(null);
+    const islandDragRef = (0,react__WEBPACK_IMPORTED_MODULE_1__.useRef)({ dragging: false, startX: 0, startScroll: 0 });
+    const stopIslandDrag = () => {
+        islandDragRef.current.dragging = false;
+    };
+    const onIslandPointerDown = (event) => {
+        const scroller = islandScrollRef.current;
+        if (!scroller)
+            return;
+        islandDragRef.current = { dragging: true, startX: event.clientX, startScroll: scroller.scrollLeft };
+        try {
+            event.currentTarget.setPointerCapture(event.pointerId);
+        }
+        catch {}
+    };
+    const onIslandPointerMove = (event) => {
+        const scroller = islandScrollRef.current;
+        const drag = islandDragRef.current;
+        if (!scroller || !drag.dragging)
+            return;
+        const delta = event.clientX - drag.startX;
+        scroller.scrollLeft = drag.startScroll - delta;
+        if (Math.abs(delta) > 2)
+            event.preventDefault();
+    };
+    const homeHypnosisLabel = homeHypnosisInfo ? \`\${homeHypnosisInfo.roleName}\${homeHypnosisInfo.title ? ' · ' + homeHypnosisInfo.title : ''}\` : '';
+    const homeIslandElement = (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "st-home-hypnosis-island" + (homeHypnosisInfo ? "" : " is-idle"), onPointerDown: onIslandPointerDown, onPointerMove: onIslandPointerMove, onPointerUp: stopIslandDrag, onPointerCancel: stopIslandDrag, style: { position: "absolute", top: "6px", left: "50%", zIndex: 70, display: "block", width: "156px", height: "27px", transform: "translateX(-50%)", border: "1px solid rgba(216,180,254,.22)", borderRadius: "999px", background: "rgba(2,6,23,.78)", backdropFilter: "blur(14px)", boxShadow: "0 12px 26px rgba(0,0,0,.24), inset 0 1px 0 rgba(255,255,255,.06)", color: "rgba(245,243,255,.94)", fontSize: "11px", lineHeight: "1.2", overflow: "hidden", pointerEvents: "auto", touchAction: "pan-x", userSelect: "none", cursor: homeHypnosisInfo ? "grab" : "default" }, children: homeHypnosisInfo ? (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { ref: islandScrollRef, className: "st-home-hypnosis-scroll", style: { display: "flex", width: "100%", height: "100%", alignItems: "center", justifyContent: "flex-start", gap: "7px", overflowX: "auto", overflowY: "hidden", scrollbarWidth: "none", padding: "0 10px", whiteSpace: "nowrap" }, children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("svg", { viewBox: "0 0 24 24", "aria-hidden": "true", style: { width: "14px", height: "14px", color: "#f0abfc", filter: "drop-shadow(0 0 8px rgba(240,171,252,.55))", flex: "0 0 auto" }, children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("path", { d: "M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("circle", { cx: 12, cy: 12, r: 3, fill: "currentColor" })] }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("strong", { style: { fontSize: "12px", color: "#fff", whiteSpace: "nowrap" }, children: "催眠中" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("span", { style: { minWidth: "max-content", whiteSpace: "nowrap", color: "rgba(226,232,240,.76)" }, children: homeHypnosisLabel })] }) : null });
     const makeLineIcon = (body) => ({ size = 28, className = '' }) => ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("svg", { viewBox: "0 0 24 24", width: size, height: size, className: className, fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round", dangerouslySetInnerHTML: { __html: body } }));
     const ScanRoleIcon = makeLineIcon('<path d="M4 8V5h3"/><path d="M17 5h3v3"/><path d="M20 16v3h-3"/><path d="M7 19H4v-3"/><path d="M2.5 12s3.5-5.5 9.5-5.5S21.5 12 21.5 12s-3.5 5.5-9.5 5.5S2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/>');
     const ProfileIcon = makeLineIcon('<rect x="6" y="3" width="12" height="18" rx="2"/><circle cx="12" cy="9" r="2.5"/><path d="M8.5 16c1.4-3 5.6-3 7 0"/>');
@@ -1047,7 +1123,7 @@ function patchAppRootModule(code) {
   );
   output = output.replace(
     `(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "px-6 mb-8 text-white/90 drop-shadow-md", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "text-6xl font-thin tracking-tighter", children: displayTime }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "text-lg font-medium", children: displayDate })] })`,
-    `(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "px-6 mb-7 text-white/90 drop-shadow-md", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "grid grid-cols-[minmax(0,1fr)_minmax(142px,182px)] items-center gap-3", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "min-w-0", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "text-6xl font-thin tracking-tighter leading-none", children: displayTime }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "mt-2 text-lg font-medium", children: displayDateOnly })] }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "rounded-2xl border border-white/15 bg-slate-950/35 px-3 py-2 shadow-xl backdrop-blur-md", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "flex items-center gap-2 text-sm font-black", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("i", { className: "h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_12px_rgba(103,232,249,.8)]" }), displayWeekday] }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "mt-1 truncate text-xs font-bold text-white/90", children: displaySchedule }), displayScheduleDetail && (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "mt-0.5 truncate text-[11px] font-semibold text-slate-300", children: displayScheduleDetail })] })] })] })`
+    `homeIslandElement, (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "px-6 mb-7 text-white/90 drop-shadow-md", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "grid items-center gap-3", style: { gridTemplateColumns: "168px minmax(0, 1fr)" }, children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "min-w-0", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "font-thin tracking-tighter", style: { fontSize: "54px", lineHeight: ".95" }, children: displayTime }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "mt-2 text-lg font-medium leading-tight", children: displayDateOnly })] }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "min-w-0 rounded-2xl border border-white/15 bg-slate-950/35 px-3 py-2 shadow-xl backdrop-blur-md", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "flex items-center gap-2 text-sm font-black whitespace-nowrap", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("i", { className: "h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_12px_rgba(103,232,249,.8)]" }), displayWeekday] }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "mt-1 whitespace-nowrap text-[12px] font-bold text-white/90", children: displaySchedule }), displayScheduleDetail && (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "mt-0.5 whitespace-nowrap text-[11px] font-semibold text-slate-300", children: displayScheduleDetail })] })] })] })`
   );
   output = output.replace(
     /        void _services_dataService__WEBPACK_IMPORTED_MODULE_\d+__\.DataService\.updateResources\(data\);\n/,
@@ -1179,6 +1255,25 @@ async function getMvuData() {
     .replaceAll("系统._MC能量", "系统.MC能量")
     .replaceAll("系统._累计消耗MC点", "系统.累计消耗MC点")
     .replaceAll("系统._hypnoos", "系统.hypnoos");
+  output = output.replace(
+    `    resetThisTurnAppOperationLog: async () => {`,
+    `    syncDailySchedule: async (dailySchedule) => {
+        return enqueueMvuWrite(async () => {
+            if (typeof globalThis.Mvu === 'undefined')
+                return false;
+            const data = await getMvuData();
+            if (!data)
+                return false;
+            const { mvu, option } = data;
+            const changed = await setIfChanged(mvu, '系统.当天课程表', dailySchedule);
+            if (changed) {
+                await Mvu.replaceMvuData(mvu, option);
+            }
+            return changed;
+        });
+    },
+    resetThisTurnAppOperationLog: async () => {`
+  );
   return output;
 }
 
@@ -1693,6 +1788,34 @@ function patchHypnosisDataServiceModule(code) {
         { index: 5, start: 800, end: 850, label: '5限' },
         { index: 6, start: 860, end: 910, label: '6限' },
     ];
+    const currentMonth = parsedDate ? Number(parsedDate[1]) : 4;
+    const currentDay = parsedDate ? Number(parsedDate[2]) : 9;
+    const weekdayForDate = (month, day) => weekdayNames[((3 + schoolDay(month, day) - schoolDay(4, 9)) % 7 + 7) % 7];
+    const weekdayIndexForDate = (month, day) => ({ '星期日': 0, '星期天': 0, '星期一': 1, '星期二': 2, '星期三': 3, '星期四': 4, '星期五': 5, '星期六': 6 }[weekdayForDate(month, day)] ?? 0);
+    const nextDate = (month, day) => {
+        const maxDay = monthDays[month] || 30;
+        if (day < maxDay)
+            return { month, day: day + 1 };
+        const nextMonth = monthOrder[(monthOrder.indexOf(month) + 1) % monthOrder.length] || (month % 12) + 1;
+        return { month: nextMonth, day: 1 };
+    };
+    const courseRowsForDate = (month, day) => {
+        const index = weekdayIndexForDate(month, day);
+        if (index === 0 || index === 6)
+            return [];
+        return periods.map(period => ({
+            课节: period.label,
+            时间: fmt(period.start) + '-' + fmt(period.end),
+            科目: timetable[index]?.[period.index - 1] || '自习',
+        }));
+    };
+    const firstClassForDate = (month, day) => {
+        const index = weekdayIndexForDate(month, day);
+        const weekday = weekdayForDate(month, day);
+        if (index === 0 || index === 6)
+            return { 日期: month + '月' + day + '日', 星期: weekday, 课节: '无', 时间: '', 科目: '无固定课程' };
+        return { 日期: month + '月' + day + '日', 星期: weekday, 课节: '1限', 时间: fmt(periods[0].start) + '-' + fmt(periods[0].end), 科目: timetable[index]?.[0] || '自习' };
+    };
     const course = periods.find(period => minutes >= period.start && minutes < period.end);
     const fallbackSlot = (() => {
         if (weekdayIndex === 0 || weekdayIndex === 6)
@@ -1715,13 +1838,16 @@ function patchHypnosisDataServiceModule(code) {
             return { title: '上学前', detail: '08:30前' };
         return { title: '课间', detail: '移动/准备' };
     })();
-    const manual = typeof system?.['当前/待上课程'] === 'string' && system['当前/待上课程'].trim() && system['当前/待上课程'].trim() !== '无'
-        ? system['当前/待上课程'].trim()
-        : typeof system?.当前日程 === 'string' && system.当前日程.trim()
-            ? system.当前日程.trim()
-            : '';
-    const scheduleText = manual && !['无', '{}'].includes(manual) ? manual : fallbackSlot.title;
+    const scheduleText = fallbackSlot.title;
     const scheduleDetailText = fallbackSlot.detail;
+    const tomorrow = nextDate(currentMonth, currentDay);
+    const dailySchedule = {
+        日期: currentMonth + '月' + currentDay + '日',
+        星期: weekdayText || weekdayForDate(currentMonth, currentDay),
+        当前课段: { 名称: scheduleText, 时间: scheduleDetailText },
+        课表: courseRowsForDate(currentMonth, currentDay),
+        次日第一节: firstClassForDate(tomorrow.month, tomorrow.day),
+    };
     return {
         dateText,
         dateOnlyText,
@@ -1729,6 +1855,7 @@ function patchHypnosisDataServiceModule(code) {
         weekdayText,
         scheduleText,
         scheduleDetailText,
+        dailySchedule,
         virtualMinutes: parseVirtualMinutesFrom(dateText, timeText),
     };
 }`
@@ -2343,6 +2470,13 @@ function chooseUserResourcesFromSystems(systems) {
             }
             catch (err) {
                 console.warn('[HypnoOS] 同步订阅等级变量失败', err);
+            }
+            try {
+                if (clock.dailySchedule)
+                    await _mvuBridge__WEBPACK_IMPORTED_MODULE_3__.MvuBridge.syncDailySchedule(clock.dailySchedule);
+            }
+            catch (err) {
+                console.warn('[HypnoOS] 同步当天课程表变量失败', err);
             }
             return clock;
         };
@@ -3857,13 +3991,8 @@ function injectInternalMchanApp(html, staticSeed) {
 .st-help-author-card strong{display:block;font-size:14px;line-height:1.2}
 .st-help-author-card p{margin:6px 0 0;color:rgba(226,232,240,.78);font-size:12px;line-height:1.5}
 .st-author-credit-line{margin-top:8px;padding-top:7px;border-top:1px solid rgba(255,255,255,.08);color:rgba(125,211,252,.78)!important;font-size:10px!important;font-weight:800!important;line-height:1.3!important}
-.st-home-author-status{font-size:12px!important;font-weight:900!important;letter-spacing:0!important;white-space:nowrap!important;line-height:1.1!important}
-.st-home-hypnosis-island{position:absolute;top:6px;left:50%;z-index:40;display:inline-flex;min-width:88px;max-width:min(54%,280px);height:27px;transform:translateX(-50%);align-items:center;justify-content:center;gap:7px;border:1px solid rgba(216,180,254,.22);border-radius:999px;background:rgba(2,6,23,.78);backdrop-filter:blur(14px);box-shadow:0 12px 26px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.06);padding:0 10px;color:rgba(245,243,255,.94);font-size:11px;line-height:1.2;pointer-events:none}
-.st-home-hypnosis-island.is-idle{width:88px;padding:0;background:rgba(2,6,23,.78)}
-.st-home-hypnosis-island.is-idle>*{display:none!important}
-.st-home-hypnosis-island svg{width:14px;height:14px;color:#f0abfc;filter:drop-shadow(0 0 8px rgba(240,171,252,.55));flex:0 0 auto}
-.st-home-hypnosis-island strong{font-size:12px;color:#fff;white-space:nowrap}
-.st-home-hypnosis-island span{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(226,232,240,.76)}
+.st-home-author-status{display:block!important;max-width:112px!important;overflow:hidden!important;text-overflow:ellipsis!important;font-size:10px!important;font-weight:900!important;letter-spacing:0!important;white-space:nowrap!important;line-height:1.1!important}
+.st-home-hypnosis-scroll::-webkit-scrollbar{display:none}
 .st-custom-icon-box{background:transparent!important;box-shadow:none!important;overflow:visible!important}
 .st-custom-icon-box>svg:not(.st-custom-app-icon){display:none!important}
 .st-custom-app-icon{width:100%;height:100%;display:block;border-radius:inherit;filter:drop-shadow(0 10px 18px rgba(0,0,0,.22))}
@@ -6355,7 +6484,7 @@ function injectInternalMchanApp(html, staticSeed) {
     return root?.querySelector?.('[class*="px-6"][class*="mb-8"]') || root?.firstElementChild?.firstElementChild || null;
   }
 
-  const ST_HOME_AUTHOR_STATUS = "原卡作者Ramiel";
+  const ST_HOME_AUTHOR_STATUS = "Ramiel";
 
   function patchHomeAuthorStatus(root) {
     if (!root || !looksLikePhoneHome(root)) return;
@@ -6564,69 +6693,6 @@ function injectInternalMchanApp(html, staticSeed) {
     return panel;
   }
 
-  function isMeaningfulHomeTempEffect(value) {
-    if (value === null || value === undefined || value === false) return false;
-    if (Array.isArray(value)) return value.some(isMeaningfulHomeTempEffect);
-    if (isPlainObject(value)) return Object.keys(value).length > 0 && Object.values(value).some(isMeaningfulHomeTempEffect);
-    const text = String(value).trim();
-    return Boolean(text && !/^(无|暂无|none|null|undefined|\\{\\}|\\[\\])$/i.test(text));
-  }
-
-  function homeTempEffectTitle(value) {
-    if (!isMeaningfulHomeTempEffect(value)) return "";
-    if (Array.isArray(value)) {
-      return value.map(homeTempEffectTitle).find(Boolean) || "临时效果";
-    }
-    if (isPlainObject(value)) {
-      const direct = effectScalar(value["名称"] ?? value["效果名"] ?? value["标题"] ?? value["效果"] ?? value["描述"]);
-      if (direct) return direct;
-      const first = Object.entries(value).find(([, item]) => isMeaningfulHomeTempEffect(item));
-      if (!first) return "临时效果";
-      return first[0] || homeTempEffectTitle(first[1]) || "临时效果";
-    }
-    return String(value).trim().slice(0, 18);
-  }
-
-  function activeHomeHypnosisInfo() {
-    const roles = getStatsRoles();
-    for (const [roleName, roleData] of Object.entries(roles)) {
-      if (!isPlainObject(roleData)) continue;
-      const temp = roleData["临时催眠效果"];
-      if (!isMeaningfulHomeTempEffect(temp)) continue;
-      return {
-        roleName,
-        title: homeTempEffectTitle(temp)
-      };
-    }
-    return null;
-  }
-
-  function patchHomeHypnosisIsland(root) {
-    if (!root) return;
-    let island = root.querySelector(":scope > .st-home-hypnosis-island");
-    root.querySelectorAll(".st-home-hypnosis-island").forEach((node) => {
-      if (node.parentElement !== root) node.remove();
-    });
-    if (!looksLikePhoneHome(root)) {
-      island?.remove();
-      return;
-    }
-    root.style.position = root.style.position || "relative";
-    const info = activeHomeHypnosisInfo();
-    const signature = info ? info.roleName + "|" + info.title : "idle";
-    if (!island) {
-      island = document.createElement("div");
-      island.className = "st-home-hypnosis-island";
-      root.appendChild(island);
-    }
-    if (island.dataset.signature === signature) return;
-    island.dataset.signature = signature;
-    island.className = "st-home-hypnosis-island" + (info ? "" : " is-idle");
-    island.innerHTML = info
-      ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg><strong>催眠中</strong><span>' + escapeHtml(info.roleName + (info.title ? " · " + info.title : "")) + '</span>'
-      : "";
-  }
-
   function patchAddRoleTile() {
     const root = findPhoneRoot(document.body);
     if (!root || !looksLikePhoneHome(root)) return;
@@ -6751,7 +6817,6 @@ function injectInternalMchanApp(html, staticSeed) {
   function patchHomeTile() {
     const root = findPhoneRoot(document.body);
     patchHomeAuthorStatus(root);
-    patchHomeHypnosisIsland(root);
     removeHomeOperationConfirm(root);
     ensureOperationSidePanel();
     const labels = Array.from(document.querySelectorAll("span,button,div"))
@@ -6864,6 +6929,20 @@ const __stDefaultVariables = () => ({
     "当前时间": "12:00",
     "当前日程": "午休",
     "当前/待上课程": "无",
+    "当天课程表": {
+      "日期": "4月9日",
+      "星期": "星期三",
+      "当前课段": { "名称": "4限 · 现代文", "时间": "11:40-12:30" },
+      "课表": [
+        { "课节": "1限", "时间": "08:40-09:30", "科目": "英语" },
+        { "课节": "2限", "时间": "09:40-10:30", "科目": "世界史" },
+        { "课节": "3限", "时间": "10:40-11:30", "科目": "生物" },
+        { "课节": "4限", "时间": "11:40-12:30", "科目": "现代文" },
+        { "课节": "5限", "时间": "13:20-14:10", "科目": "体育（游泳）" },
+        { "课节": "6限", "时间": "14:20-15:10", "科目": "信息" }
+      ],
+      "次日第一节": { "日期": "4月10日", "星期": "星期四", "课节": "1限", "时间": "08:40-09:30", "科目": "数学" }
+    },
     "当前事件": "午休",
     "当前地点": "私立斋明学园 / 教室",
     "hypnoos": {}
