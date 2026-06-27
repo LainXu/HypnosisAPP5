@@ -1062,6 +1062,16 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
     "    const showLowEnergyModal = false;\n    const setShowLowEnergyModal = () => {};"
   );
   output = output.replace(
+    `        if (!subscription)
+            return '未订阅';
+        if (nowVirtualMinutes === null)`,
+    `        if (!subscription)
+            return '未订阅';
+        if (subscription.source === 'system')
+            return \`VIP\${subscription.tier.slice(3)} 已订阅\`;
+        if (nowVirtualMinutes === null)`
+  );
+  output = output.replace(
     "            setFeatures(nextFeatures);",
     `            const featureDrafts = initialDraft.features && typeof initialDraft.features === 'object' ? initialDraft.features : {};
             setFeatures(nextFeatures.map(feature => {
@@ -1930,6 +1940,55 @@ function chooseUserResourcesFromSystems(systems) {
         const order = { COMPLETED: 0, ACTIVE: 1, AVAILABLE: 2, CLAIMED: 3 };
         quests.sort((a, b) => order[a.status] - order[b.status]);
         return quests;
+    },`
+  );
+  output = output.replace(
+    "const PERSISTENT_FEATURE_IDS = new Set([]);\nconst SUBSCRIPTION_TIER_TRIAL_LABEL = '试用期';",
+    `const PERSISTENT_FEATURE_IDS = new Set([]);
+const SUBSCRIPTION_TIER_TRIAL_LABEL = '试用期';
+function normalizeSubscriptionTierValue(value) {
+    const raw = String(value ?? '').trim();
+    if (!raw || raw === SUBSCRIPTION_TIER_TRIAL_LABEL || /试用|未订阅|TRIAL/i.test(raw))
+        return null;
+    const compact = raw.toUpperCase().replace(/\\s+/g, '').replace(/[（）()]/g, '');
+    const match = compact.match(/VIP([1-5])/);
+    return match ? \`VIP\${match[1]}\` : null;
+}
+function readSystemSubscriptionTier(system) {
+    if (!isPlainVariableObject(system))
+        return null;
+    return normalizeSubscriptionTierValue(system.催眠APP订阅等级 ?? system._催眠APP订阅等级 ?? system.VIP等级 ?? system.订阅等级);
+}
+function systemSubscriptionToStore(system) {
+    const tier = readSystemSubscriptionTier(system);
+    if (!tier)
+        return null;
+    return { tier, endVirtualMinutes: 999999999, autoRenew: false, source: 'system' };
+}
+function getEffectiveSubscription(store, system) {
+    return systemSubscriptionToStore(system) ?? store?.subscription ?? null;
+}`
+  );
+  output = output.replace(
+    `        const { store } = normalizeChatVariables(getVariables(CHAT_OPTION));
+        const debugEnabled = Boolean(store.debugEnabled);
+        const nowVirtualMinutes = (await DataService.getSystemClock()).virtualMinutes;
+        const subscription = store.subscription ?? null;
+        const accessContext = { debugEnabled, subscription, nowVirtualMinutes };`,
+    `        const { system, store } = getLatestChatVariables();
+        const debugEnabled = Boolean(store.debugEnabled);
+        const nowVirtualMinutes = (await DataService.getSystemClock()).virtualMinutes;
+        const subscription = getEffectiveSubscription(store, system);
+        const accessContext = { debugEnabled, subscription, nowVirtualMinutes };`
+  );
+  output = output.replace(
+    `    getSubscription: async () => {
+        const { store } = normalizeChatVariables(getVariables(CHAT_OPTION));
+        return store.subscription ?? null;
+    },`,
+    `    getSubscription: async () => {
+        const { system, store } = getLatestChatVariables();
+        return getEffectiveSubscription(store, system);
     },`
   );
   output = output.replaceAll(
@@ -2966,6 +3025,19 @@ function injectInternalMchanApp(html, staticSeed) {
 .st-cal-event time{display:grid;place-items:center;min-height:42px;border-radius:12px;background:rgba(15,23,42,.62);color:#a5f3fc;font-size:11px;font-weight:900;text-align:center;line-height:1.2}
 .st-cal-event strong{display:block;font-size:13px;color:#fff;line-height:1.25}
 .st-cal-event span{display:block;margin-top:3px;color:rgba(203,213,225,.6);font-size:11px;line-height:1.35}
+.st-cal-month{display:grid;gap:8px;padding:10px}
+.st-cal-month-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.st-cal-month-head strong{font-size:16px;color:#fff;line-height:1.2}
+.st-cal-month-head span{border:1px solid rgba(34,211,238,.22);border-radius:999px;background:rgba(34,211,238,.08);color:#a5f3fc;padding:5px 8px;font-size:10px;font-weight:900;white-space:nowrap}
+.st-cal-month-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.st-cal-weekday{min-width:0;text-align:center;color:rgba(203,213,225,.52);font-size:9px;font-weight:900;padding:2px 0}
+.st-cal-day{min-width:0;min-height:38px;border:1px solid rgba(255,255,255,.07);border-radius:10px;background:rgba(2,6,23,.28);padding:5px 4px;display:grid;align-content:start;gap:3px}
+.st-cal-day.is-empty{visibility:hidden}
+.st-cal-day.is-weekend{background:rgba(56,189,248,.055)}
+.st-cal-day.is-special{border-color:rgba(244,114,182,.26);background:linear-gradient(180deg,rgba(244,114,182,.12),rgba(2,6,23,.28))}
+.st-cal-day.is-today{border-color:rgba(34,211,238,.62);box-shadow:0 0 0 1px rgba(34,211,238,.2),0 8px 18px rgba(8,145,178,.16)}
+.st-cal-day b{font-size:12px;line-height:1;color:#f8fafc}
+.st-cal-day i{font-style:normal;color:#f9a8d4;font-size:7px;line-height:1.12;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .st-tt-current{display:flex;align-items:center;justify-content:space-between;gap:10px;border-color:rgba(34,211,238,.2);background:linear-gradient(135deg,rgba(34,211,238,.14),rgba(244,114,182,.1))}
 .st-tt-current div{min-width:0}
 .st-tt-current span{display:block;color:rgba(203,213,225,.62);font-size:11px;font-weight:800}
@@ -4515,6 +4587,38 @@ function injectInternalMchanApp(html, staticSeed) {
       .slice(0, limit);
   }
 
+  function renderCalendarMonthGrid(parsedDate) {
+    const month = parsedDate?.month || 4;
+    const todayDay = parsedDate?.day || 9;
+    const daysInMonth = ST_MONTH_DAYS[month] || 30;
+    const firstWeekday = ST_WEEKDAY_INDEX[weekdayForStoryDate(month + "月1日")] ?? 1;
+    const weekdayLabels = ["日", "一", "二", "三", "四", "五", "六"];
+    const cells = weekdayLabels.map((label) => '<div class="st-cal-weekday">' + label + '</div>');
+    for (let i = 0; i < firstWeekday; i += 1) {
+      cells.push('<div class="st-cal-day is-empty"></div>');
+    }
+    for (let day = 1; day <= daysInMonth; day += 1) {
+      const weekdayIndex = (firstWeekday + day - 1) % 7;
+      const special = specialDayForDate({ month, day });
+      const className = [
+        "st-cal-day",
+        day === todayDay ? "is-today" : "",
+        special ? "is-special" : "",
+        weekdayIndex === 0 || weekdayIndex === 6 ? "is-weekend" : ""
+      ].filter(Boolean).join(" ");
+      cells.push(
+        '<div class="' + className + '">' +
+          '<b>' + day + '</b>' +
+          (special ? '<i>' + escapeHtml(special.title) + '</i>' : '') +
+        '</div>'
+      );
+    }
+    return (
+      '<div class="st-cal-month-head"><strong>' + month + '月</strong><span>' + escapeHtml(weekdayForStoryDate(month + "月" + todayDay + "日") || "") + '</span></div>' +
+      '<div class="st-cal-month-grid">' + cells.join("") + '</div>'
+    );
+  }
+
   function renderLiteCalendarPage(page) {
     const system = getSystemState();
     const dateText = system["当前日期"] || "4月9日 星期三";
@@ -4543,6 +4647,7 @@ function injectInternalMchanApp(html, staticSeed) {
             '<article><small>状态</small><strong>' + escapeHtml(special ? special.title : weekday) + '</strong></article>' +
           '</div>' +
         '</section>' +
+        '<section class="st-lite-card st-cal-month">' + renderCalendarMonthGrid(parsedDate) + '</section>' +
         '<div class="st-cal-section-title">今日说明</div>' +
         '<section class="st-lite-card"><p style="margin:0;color:rgba(226,232,240,.72);font-size:12px;line-height:1.55">' + escapeHtml((special?.detail || slot.detail || "普通日程")) + '</p></section>' +
         '<div class="st-cal-section-title">近期特殊日期</div>' +
@@ -5007,6 +5112,8 @@ const __stDefaultVariables = () => ({
     "当前日期": "4月9日 星期三",
     "当前时间": "12:00",
     "当前日程": "午休",
+    "当前/待上课程": "无",
+    "当前事件": "午休",
     "hypnoos": {}
   },
   "角色": __stDefaultRoles()
