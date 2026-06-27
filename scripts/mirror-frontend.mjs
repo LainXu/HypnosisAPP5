@@ -3218,8 +3218,11 @@ function injectInternalMchanApp(html, staticSeed) {
 [data-st-phone-app="stats"] .st-role-picker-search{grid-area:search;width:100%;min-width:0;height:32px;border:1px solid rgba(255,255,255,.1);border-radius:12px;background:rgba(2,6,23,.45);color:#f8fafc;outline:none;padding:0 10px;font-size:12px;box-shadow:inset 0 1px 0 rgba(255,255,255,.03)}
 [data-st-phone-app="stats"] .st-role-picker-search::placeholder{color:rgba(203,213,225,.38)}
 [data-st-phone-app="stats"] .st-role-picker-search:focus{border-color:rgba(34,211,238,.55);box-shadow:0 0 0 3px rgba(34,211,238,.12)}
-[data-st-phone-app="stats"] .st-role-picker-list{grid-area:list;display:flex;gap:7px;overflow-x:auto;padding:1px 0;scrollbar-width:none;min-width:0;width:100%}
+[data-st-phone-app="stats"] .st-role-picker-scroll{grid-area:list;display:grid;grid-template-columns:18px minmax(0,1fr) 18px;align-items:center;gap:4px;min-width:0}
+[data-st-phone-app="stats"] .st-role-picker-list{display:flex;gap:7px;overflow-x:auto;padding:1px 0;scrollbar-width:none;min-width:0;width:100%;scroll-behavior:smooth}
 [data-st-phone-app="stats"] .st-role-picker-list::-webkit-scrollbar{display:none}
+[data-st-phone-app="stats"] .st-role-picker-arrow{width:18px;height:34px;border:1px solid rgba(125,211,252,.18)!important;border-radius:999px!important;background:rgba(15,23,42,.42)!important;color:rgba(186,230,253,.86)!important;font-size:13px;font-weight:900;display:grid;place-items:center;padding:0!important;line-height:1;box-shadow:0 8px 18px rgba(0,0,0,.14)}
+[data-st-phone-app="stats"] .st-role-picker-arrow:disabled{opacity:.25}
 [data-st-phone-app="stats"] .st-role-chip{flex:0 0 88px;min-width:88px;max-width:96px;border:1px solid rgba(255,255,255,.08);border-radius:13px;background:rgba(255,255,255,.055);padding:6px 7px;color:rgba(226,232,240,.78);text-align:left;box-shadow:0 8px 18px rgba(0,0,0,.12);cursor:pointer}
 [data-st-phone-app="stats"] .st-role-chip.active{border-color:rgba(34,211,238,.55);background:linear-gradient(135deg,rgba(34,211,238,.2),rgba(168,85,247,.14));color:#fff;box-shadow:0 10px 24px rgba(8,47,73,.25)}
 [data-st-phone-app="stats"] .st-role-chip strong{display:block;font-size:12px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -4030,11 +4033,25 @@ function injectInternalMchanApp(html, staticSeed) {
         '<div class="st-role-picker-row">' +
           '<div class="st-role-picker-meta"><div class="st-role-picker-title">选择目标</div><div class="st-role-picker-count"></div></div>' +
           '<input class="st-role-picker-search" type="search" placeholder="搜索角色" autocomplete="off">' +
-          '<div class="st-role-picker-list"></div>' +
+          '<div class="st-role-picker-scroll">' +
+            '<button type="button" class="st-role-picker-arrow" data-st-role-scroll="-1" aria-label="向左滚动角色">‹</button>' +
+            '<div class="st-role-picker-list"></div>' +
+            '<button type="button" class="st-role-picker-arrow" data-st-role-scroll="1" aria-label="向右滚动角色">›</button>' +
+          '</div>' +
         '</div>';
       picker.querySelector(".st-role-picker-search")?.addEventListener("input", () => {
         picker.dataset.query = picker.querySelector(".st-role-picker-search")?.value || "";
         enhanceStatsRolePicker(root);
+      });
+      picker.querySelectorAll("[data-st-role-scroll]").forEach((button) => {
+        button.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          const list = picker.querySelector(".st-role-picker-list");
+          if (!list) return;
+          const direction = Number(button.getAttribute("data-st-role-scroll")) || 1;
+          list.scrollBy({ left: direction * Math.max(82, Math.floor(list.clientWidth * 0.7)), behavior: "smooth" });
+        });
       });
       header.insertAdjacentElement("afterend", picker);
     }
@@ -4043,7 +4060,6 @@ function injectInternalMchanApp(html, staticSeed) {
     const query = String(input?.value || picker.dataset.query || "").trim().toLowerCase();
     const selected = selectedStatsRole(app, roleNames, picker.dataset.selected);
     const signature = roleNames.join("\\u0001") + "\\u0002" + selected + "\\u0002" + query;
-    enableHorizontalDragScroll(picker.querySelector(".st-role-picker-list"));
     if (picker.dataset.signature === signature) return;
     picker.dataset.signature = signature;
     picker.dataset.selected = selected;
@@ -4051,7 +4067,6 @@ function injectInternalMchanApp(html, staticSeed) {
     const list = picker.querySelector(".st-role-picker-list");
     picker.querySelector(".st-role-picker-count").textContent = roleNames.length + " 个目标";
     if (!list) return;
-    enableHorizontalDragScroll(list);
     list.innerHTML = filtered.length
       ? filtered.map((name) => {
           const data = roles[name] && typeof roles[name] === "object" ? roles[name] : {};
