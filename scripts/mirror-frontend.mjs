@@ -1233,16 +1233,15 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
                 人数是否计费: usesPersons ? '是' : '否',
                 时间: usesDuration ? String(commandDuration) + '分钟' : '不计时',
                 时间是否计费: usesDuration ? '是' : '否',
-                消耗类型: feature.costCurrency === 'MC_POINTS' ? '当前MC点' : 'MC能量',
-                预计消耗: String(feature.costCurrency === 'MC_POINTS' ? cost.points : cost.energy) + '点',
+                消耗类型: '当前MC能量',
+                预计消耗: String(cost.energy) + '点',
             };
         });
         recordOperationIntent({
             来源: '催眠APP',
             操作: timeLeft > 0 ? '追加催眠' : '启动催眠',
             功能列表: featureDetails,
-            MC能量消耗: String(totalEnergyCost) + '点',
-            当前MC点消耗: String(totalPointsCost) + '点',
+            当前MC能量消耗: String(totalEnergyCost) + '点',
             结算提示: '涉及花费的功能必须先检查余额；余额不足的功能失败，后续同批次受影响操作也失败，不能贷款或擅自兑换资金。',
         });
         setIsTransitioning(true);
