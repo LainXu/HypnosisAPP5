@@ -249,14 +249,11 @@ function remoteAssetBase(commit) {
 function frontendLoader(commit) {
   const url = remoteFrontendUrl(commit);
   const assetBase = remoteAssetBase(commit);
-  return `\`\`\`
-<body>
+  return `<div id="hypnoos-frontend-loader" style="display:none"></div>
 <script>
 window.__ST_HYPNOOS_ASSET_BASE__ = ${JSON.stringify(assetBase)};
 $("body").load(${JSON.stringify(url)})
-</script>
-</body>
-\`\`\``;
+</script>`;
 }
 
 function patchRemoteFrontend(data) {
@@ -277,8 +274,13 @@ function patchRemoteFrontend(data) {
   });
 
   for (const script of data.extensions.regex_scripts ?? []) {
-    if (/前端|测试用|主仓库/.test(script.scriptName ?? "")) {
+    const name = script.scriptName ?? "";
+    if (/前端|测试用|主仓库/.test(name)) {
       script.replaceString = frontendLoader(REMOTE_COMMIT);
+      script.findRegex = "<\\s*StatusPlaceHolderImpl\\s*\\/?\\s*>";
+      script.markdownOnly = true;
+      script.runOnEdit = true;
+      script.disabled = name !== "前端";
     }
   }
 }
