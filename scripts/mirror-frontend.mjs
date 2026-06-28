@@ -260,7 +260,7 @@ window.setTimeout(() => {
 	      }
 	      return best?.candidate ?? null;
 	    };
-	    const readOperationBalanceSnapshot = () => {
+	    const readOperationVariableSnapshot = () => {
 	      const variables = readOperationStatData();
 	      const system = variables?.["系统"];
 	      if (!system || typeof system !== "object" || Array.isArray(system)) return null;
@@ -277,6 +277,7 @@ window.setTimeout(() => {
 	      copyField("MC能量", "MC能量", "_MC能量");
 	      copyField("MC能量上限", "MC能量上限", "_MC能量上限");
 	      copyField("当前MC点", "当前MC点", "MC点");
+	      copyField("累计消耗MC点", "累计消耗MC点", "_累计消耗MC点");
 	      copyField("持有零花钱", "持有零花钱");
 	      copyField("催眠APP订阅等级", "催眠APP订阅等级", "_催眠APP订阅等级");
 	      const alisaFavor = roles?.["西园寺爱丽莎"]?.["好感度"];
@@ -285,35 +286,31 @@ window.setTimeout(() => {
 	      if (rules && typeof rules === "object" && !Array.isArray(rules)) snapshot["当前校规数"] = Object.keys(rules).length;
 	      return Object.keys(snapshot).length ? snapshot : null;
 	    };
-	    const pickOperationBalanceFields = (payload) => {
+	    const addOperationVariableFields = (fields, names) => {
+	      for (const name of names) fields.add(name);
+	    };
+	    const pickOperationVariableFields = (payload) => {
 	      const action = cleanOperationText(readOperationKey(payload, OPERATION_ACTION_KEYS, ""));
 	      const item = cleanOperationText(payload?.["项目"] ?? payload?.["功能"] ?? payload?.["命令"] ?? "");
 	      const text = operationValueToDenseText({ action, item, payload });
-	      if (/启动催眠|追加催眠/.test(action)) return ["MC能量"];
-	      if (/订阅VIP等级/.test(action)) return ["持有零花钱"];
-	      if (/领取成就|领取奖励|完成任务|任务完成|成就奖励|任务奖励/.test(action)) return ["当前MC点"];
+	      const fields = new Set();
+	      if (/启动催眠|追加催眠/.test(action)) addOperationVariableFields(fields, ["MC能量", "累计消耗MC点"]);
+	      if (/订阅VIP等级/.test(action)) addOperationVariableFields(fields, ["持有零花钱", "催眠APP订阅等级", "累计消耗MC点"]);
+	      if (/领取成就|领取奖励|完成任务|任务完成|成就奖励|任务奖励/.test(action)) addOperationVariableFields(fields, ["当前MC点"]);
 	      if (/资源兑换/.test(action)) {
-	        if (/提升MC能量上限/.test(item) || /MC能量上限/.test(text)) return ["当前MC点"];
-	        if (/补充MC能量|购买当前MC点/.test(item) || /资金|零花钱|円|¥/.test(text)) return ["持有零花钱"];
+	        if (/提升MC能量上限/.test(item) || /MC能量上限/.test(text)) addOperationVariableFields(fields, ["当前MC点", "MC能量上限"]);
+	        if (/补充MC能量/.test(item) || (/MC能量/.test(text) && /资金|零花钱|円|¥/.test(text))) addOperationVariableFields(fields, ["持有零花钱", "MC能量", "MC能量上限"]);
+	        if (/购买当前MC点/.test(item) || (/当前MC点/.test(text) && /资金|零花钱|円|¥/.test(text))) addOperationVariableFields(fields, ["持有零花钱", "当前MC点"]);
 	      }
-	      if (/申请立校规|废止初始校规/.test(action)) return ["当前MC点", "催眠APP订阅等级", "西园寺爱丽莎好感度", "当前校规数"];
-	      return [];
+	      if (/申请立校规|废止初始校规/.test(action)) addOperationVariableFields(fields, ["当前MC点", "催眠APP订阅等级", "西园寺爱丽莎好感度", "当前校规数"]);
+	      return [...fields];
 	    };
-		    const enrichOperationPayload = (payload) => {
-		      if (!payload || typeof payload !== "object" || Array.isArray(payload)) return payload;
-		      const fields = pickOperationBalanceFields(payload);
-		      const base = { ...payload };
-		      delete base["当前变量余额"];
-		      delete base["当前余额"];
-		      if (!fields.length) return base;
-		      const balance = readOperationBalanceSnapshot();
-		      if (!balance) return base;
-		      const selected = {};
-		      for (const field of fields) {
-		        if (balance[field] !== undefined && balance[field] !== null && balance[field] !== "") selected[field] = balance[field];
-		      }
-		      return Object.keys(selected).length ? { ...base, 当前变量余额: selected } : base;
-		    };
+	    const stripOperationVariableFields = (payload) => {
+	      if (!payload || typeof payload !== "object" || Array.isArray(payload)) return payload;
+	      const base = { ...payload };
+	      for (const key of ["相关变量", "当前变量余额", "当前余额", "变量余额", "相关资源"]) delete base[key];
+	      return base;
+	    };
 	    const normalizeOperationPayload = (payload) => {
 	      if (typeof payload === "string") {
 	        return { source: "APP", action: "记录", details: { 内容: payload } };
@@ -352,16 +349,16 @@ window.setTimeout(() => {
         .sort();
       return [cleanOperationText(record.source || "APP"), cleanOperationText(record.action || "操作"), fields.join("|")].join("\\u0001");
     };
-	    const makeOperationEntry = (payload) => {
-	      const enrichedPayload = enrichOperationPayload(payload);
-	      const key = operationRecordKey(enrichedPayload);
-	      return {
-	        id: "op-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8),
-	        at: Date.now(),
-	        key,
-	        payload: enrichedPayload
-	      };
-	    };
+		    const makeOperationEntry = (payload) => {
+		      const cleanPayload = stripOperationVariableFields(payload);
+		      const key = operationRecordKey(cleanPayload);
+		      return {
+		        id: "op-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8),
+		        at: Date.now(),
+		        key,
+		        payload: cleanPayload
+		      };
+		    };
     const describeOperationEntry = (entry) => {
       const payload = operationEntryPayload(entry);
       const record = normalizeOperationPayload(payload);
@@ -382,19 +379,42 @@ window.setTimeout(() => {
         line: formatOperationLine(record)
       };
     };
-    const buildOperationBlock = () => {
-      const groups = new Map();
-      for (const entry of window.__ST_OPERATION_INPUT_LOG__) {
-        const record = normalizeOperationPayload(operationEntryPayload(entry));
-        const source = record.source || "APP";
-        if (!groups.has(source)) groups.set(source, []);
-        groups.get(source).push(record);
-      }
-      const lines = ["<本轮APP操作>"];
-      for (const [source, records] of groups) {
-        const tag = operationTagName(source);
-        lines.push("<" + tag + ">");
-        for (const record of records) lines.push(formatOperationLine(record));
+	    const selectOperationVariables = (entries) => {
+	      const snapshot = readOperationVariableSnapshot();
+	      if (!snapshot) return null;
+	      const fields = new Set();
+	      for (const entry of entries) {
+	        const payload = operationEntryPayload(entry);
+	        for (const field of pickOperationVariableFields(payload)) fields.add(field);
+	      }
+	      const selected = {};
+	      for (const field of fields) {
+	        if (snapshot[field] !== undefined && snapshot[field] !== null && snapshot[field] !== "") selected[field] = snapshot[field];
+	      }
+	      return Object.keys(selected).length ? selected : null;
+	    };
+	    const buildOperationBlock = (entries = window.__ST_OPERATION_INPUT_LOG__) => {
+	      const groups = new Map();
+	      for (const entry of entries) {
+	        const record = normalizeOperationPayload(operationEntryPayload(entry));
+	        const source = record.source || "APP";
+	        if (!groups.has(source)) groups.set(source, []);
+	        groups.get(source).push(record);
+	      }
+	      const lines = ["<本轮APP操作>"];
+	      const variables = selectOperationVariables(entries);
+	      if (variables) {
+	        lines.push("<相关变量>");
+	        for (const [key, value] of Object.entries(variables)) {
+	          const text = operationValueToDenseText(value);
+	          if (text) lines.push(cleanOperationText(key) + ": " + text);
+	        }
+	        lines.push("</相关变量>");
+	      }
+	      for (const [source, records] of groups) {
+	        const tag = operationTagName(source);
+	        lines.push("<" + tag + ">");
+	        for (const record of records) lines.push(formatOperationLine(record));
         lines.push("</" + tag + ">");
       }
       lines.push("</本轮APP操作>");
@@ -507,6 +527,10 @@ window.setTimeout(() => {
     window.__ST_GET_PENDING_OPERATION_INPUT_LOG__ = () => window.__ST_OPERATION_INPUT_LOG__.slice();
     window.__ST_GET_PENDING_OPERATION_VIEW__ = () => window.__ST_OPERATION_INPUT_LOG__.map(describeOperationEntry);
     window.__ST_BUILD_PENDING_OPERATION_BLOCK__ = () => window.__ST_OPERATION_INPUT_LOG__.length ? buildOperationBlock() : "";
+    window.__ST_BUILD_OPERATION_BLOCK_FROM_PAYLOADS__ = (payloads) => {
+      const list = Array.isArray(payloads) ? payloads : [payloads];
+      return buildOperationBlock(list.filter((payload) => payload !== undefined).map(makeOperationEntry));
+    };
     window.__ST_REMOVE_PENDING_OPERATION__ = (idOrKey) => {
       const value = String(idOrKey || "");
       const before = window.__ST_OPERATION_INPUT_LOG__.length;
@@ -750,10 +774,13 @@ function patchAchievementAppModule(code) {
     output,
     "    // --- Handlers ---",
     "    // Helper: Sort Achievements",
-    `    // --- Handlers ---
-    const fallbackAppendOperationIntent = (payload) => {
-        const text = typeof payload === 'string' ? payload : JSON.stringify(payload, null, 2);
-        const block = '<本轮APP操作>\\n' + text.trim() + '\\n</本轮APP操作>';
+	    `    // --- Handlers ---
+	    const fallbackAppendOperationIntent = (payload) => {
+	        const text = typeof payload === 'string' ? payload : JSON.stringify(payload, null, 2);
+	        const buildBlock = globalThis.__ST_BUILD_OPERATION_BLOCK_FROM_PAYLOADS__;
+	        const block = typeof buildBlock === 'function'
+	            ? buildBlock([payload])
+	            : '<本轮APP操作>\\n' + text.trim() + '\\n</本轮APP操作>';
         const docs = [];
         for (const candidate of [globalThis.parent?.document, globalThis.top?.document, globalThis.document]) {
             try {
@@ -1441,13 +1468,16 @@ const writeCustomHypnosisDraft = (draft) => {
 };
 const recordOperationIntent = (payload) => {
     const append = globalThis.__ST_APPEND_OPERATION_TO_INPUT__;
-    if (typeof append === 'function') {
-        void append(payload);
-        return;
-    }
-    const text = typeof payload === 'string' ? payload : JSON.stringify(payload);
-    void _services_mvuBridge__WEBPACK_IMPORTED_MODULE_5__.MvuBridge.appendThisTurnAppOperationLog(text);
-};
+	    if (typeof append === 'function') {
+	        void append(payload);
+	        return;
+	    }
+	    const buildBlock = globalThis.__ST_BUILD_OPERATION_BLOCK_FROM_PAYLOADS__;
+	    const text = typeof buildBlock === 'function'
+	        ? buildBlock([payload])
+	        : typeof payload === 'string' ? payload : JSON.stringify(payload);
+	    void _services_mvuBridge__WEBPACK_IMPORTED_MODULE_5__.MvuBridge.appendThisTurnAppOperationLog(text);
+	};
 const normalizePositiveInt = (value, fallback = 1) => {
     const parsed = Number.parseInt(String(value ?? ''), 10);
     if (!Number.isFinite(parsed) || parsed <= 0)
@@ -1672,7 +1702,7 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
             来源: '催眠APP',
             操作: isAppendingHypnosis ? '追加催眠' : '启动催眠',
             功能列表: featureDetails,
-            当前MC能量消耗: String(totalEnergyCost) + '点',
+	            MC能量消耗: String(totalEnergyCost) + '点',
             结算提示: '涉及花费的功能必须先检查余额；余额不足的功能失败，后续同批次受影响操作也失败，不能贷款或擅自兑换资金。',
         });
         setIsTransitioning(true);
@@ -3966,14 +3996,17 @@ function injectInternalMchanApp(html, staticSeed) {
     return String(value);
   }
 
-  function appendAppOperation(payload) {
-    const append = window.__ST_APPEND_OPERATION_TO_INPUT__;
-    if (typeof append === "function") {
-      void append(payload);
-      return true;
-    }
-    const body = typeof payload === "string" ? payload : operationValueToText(payload);
-    const block = "<本轮APP操作>\\n" + body.trim() + "\\n</本轮APP操作>";
+	  function appendAppOperation(payload) {
+	    const append = window.__ST_APPEND_OPERATION_TO_INPUT__;
+	    if (typeof append === "function") {
+	      void append(payload);
+	      return true;
+	    }
+	    const body = typeof payload === "string" ? payload : operationValueToText(payload);
+	    const buildBlock = window.__ST_BUILD_OPERATION_BLOCK_FROM_PAYLOADS__;
+	    const block = typeof buildBlock === "function"
+	      ? buildBlock([payload])
+	      : "<本轮APP操作>\\n" + body.trim() + "\\n</本轮APP操作>";
     const docs = [];
     for (const candidate of [window.parent?.document, window.top?.document, document]) {
       try {
