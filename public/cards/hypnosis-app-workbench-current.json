@@ -121,7 +121,7 @@
           "id": "748c6c9a-e2ba-473b-b4b7-4024387b5dcf",
           "scriptName": "前端",
           "findRegex": "<\\s*StatusPlaceHolderImpl\\s*\\/?\\s*>",
-          "replaceString": "```\n<body>\n<script>\nwindow.__ST_HYPNOOS_ASSET_BASE__ = \"https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@747f290/dist/webview/assets/\";\n$(\"body\").load(\"https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@747f290/dist/webview/st-load-inline.html\")\n</script>\n</body>\n```",
+          "replaceString": "```\n<body>\n<script>\nwindow.__ST_HYPNOOS_ASSET_BASE__ = \"https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@7cb780d/dist/webview/assets/\";\n$(\"body\").load(\"https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@7cb780d/dist/webview/st-load-inline.html\")\n</script>\n</body>\n```",
           "trimStrings": [],
           "placement": [
             2
@@ -174,7 +174,7 @@
           "id": "fe9113dc-f89b-4e42-8187-986861e67ab3",
           "scriptName": "测试用",
           "findRegex": "<\\s*StatusPlaceHolderImpl\\s*\\/?\\s*>",
-          "replaceString": "```\n<body>\n<script>\nwindow.__ST_HYPNOOS_ASSET_BASE__ = \"https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@747f290/dist/webview/assets/\";\n$(\"body\").load(\"https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@747f290/dist/webview/st-load-inline.html\")\n</script>\n</body>\n```",
+          "replaceString": "```\n<body>\n<script>\nwindow.__ST_HYPNOOS_ASSET_BASE__ = \"https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@7cb780d/dist/webview/assets/\";\n$(\"body\").load(\"https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@7cb780d/dist/webview/st-load-inline.html\")\n</script>\n</body>\n```",
           "trimStrings": [],
           "placement": [
             2
@@ -191,7 +191,7 @@
           "id": "53757492-5ce3-4ad7-ad1a-334c41088542",
           "scriptName": "主仓库",
           "findRegex": "<\\s*StatusPlaceHolderImpl\\s*\\/?\\s*>",
-          "replaceString": "```\n<body>\n<script>\nwindow.__ST_HYPNOOS_ASSET_BASE__ = \"https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@747f290/dist/webview/assets/\";\n$(\"body\").load(\"https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@747f290/dist/webview/st-load-inline.html\")\n</script>\n</body>\n```",
+          "replaceString": "```\n<body>\n<script>\nwindow.__ST_HYPNOOS_ASSET_BASE__ = \"https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@7cb780d/dist/webview/assets/\";\n$(\"body\").load(\"https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@7cb780d/dist/webview/st-load-inline.html\")\n</script>\n</body>\n```",
           "trimStrings": [],
           "placement": [
             2
@@ -389,16 +389,16 @@
         "variableAuthority": "ai",
         "frontendMutation": "read-only",
         "legacyWorldbookAndRegexPreserved": true,
-        "updatedAt": "2026-06-28T11:06:34.557Z",
+        "updatedAt": "2026-06-28T11:56:21.638Z",
         "mchanMode": "static-readonly",
         "lastExportedPng": "public/cards/hypnosis-app.png",
-        "sillyTavernLoadUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@747f290/dist/webview/st-load-inline.html",
+        "sillyTavernLoadUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@7cb780d/dist/webview/st-load-inline.html",
         "frontendMode": "remote",
-        "frontendUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@747f290/dist/webview/st-load-inline.html",
-        "assetBase": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@747f290/dist/webview/assets/",
-        "remoteFrontendUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@747f290/dist/webview/st-load-inline.html",
-        "remoteAssetBase": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@747f290/dist/webview/assets/",
-        "remoteCommit": "747f290",
+        "frontendUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@7cb780d/dist/webview/st-load-inline.html",
+        "assetBase": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@7cb780d/dist/webview/assets/",
+        "remoteFrontendUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@7cb780d/dist/webview/st-load-inline.html",
+        "remoteAssetBase": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@7cb780d/dist/webview/assets/",
+        "remoteCommit": "7cb780d",
         "frontendLoader": "jquery-load-remote-inline-commit",
         "version": "v1.6"
       }
@@ -1960,7 +1960,7 @@
           ],
           "secondary_keys": [],
           "comment": "[mvu_update]本轮APP操作",
-          "content": "<APP操作log>\n如果本轮用户输入中存在<本轮APP操作>...</本轮APP操作>容器，则把容器内内容视为{{user}}刚才在手机界面里的操作意图。\n\n规则:\n- 如果本轮用户输入中没有<本轮APP操作>容器，或容器为空/无，则代表{{user}}没有操作APP，严禁进行相关新增操作描写。\n- 前端只记录用户在手机界面里的操作意图，不直接发送指令，也不直接改最终变量。\n- AI必须根据剧情、MC能量、金钱、VIP权限、人数、时间、目标状态、风险和合理性判断操作是否成功。\n- 资源名必须严格区分：`MC能量`=催眠能量余额；`MC能量上限`=容量上限，不可花费；`持有零花钱`=金钱。当前版本只保留金钱与MC能量两类可结算资源，不同资源不能互相顶替。\n- `本轮APP操作`最外层可能包含一次`<相关变量>`：它不是MVU字段，也不写入MVU；只汇总本批操作会检查、增加或减少的变量，避免每条操作重复携带。\n- 相关变量含义：启动/追加催眠给`MC能量`；购买VIP给`持有零花钱`和`催眠APP订阅等级`；补充MC能量给`持有零花钱`、`MC能量`、`MC能量上限`；提升MC能量上限给`持有零花钱`和`MC能量上限`；领取成就/任务奖励给`持有零花钱`；申请/废止初始校规则给`持有零花钱`、VIP等级、爱丽莎好感度和当前校规数。\n- 同一批次里若先奖励获得`持有零花钱`、后又消耗`持有零花钱`购买VIP或资源，AI应按`本轮APP操作`中的操作顺序，从`<相关变量>`初始值开始逐项结算；未出现在`<相关变量>`中的资源不要自行脑补为可用。\n- 所有涉及花费的操作必须按同一批次顺序先验算余额再生效：余额不足则该操作失败，不扣费、不产生奖励/物品/催眠效果/VIP状态，不得把任何余额写成负数。\n- 如果某个操作失败，同批次后续依赖它、依赖启动催眠成功状态、或继续消耗同一不足资源的操作也失败；可以继续结算与失败项无关且余额充足的独立操作。\n- AI禁止贷款、赊账、透支、自动补给、自动购买能量、自动把`持有零花钱`兑换成`MC能量`；只有当`本轮APP操作`明确包含兑换/补给/购买且该操作本身余额充足时才可进行。\n- 催眠APP启动/追加催眠会携带前端已计算好的每项`预计消耗`和总`MC能量消耗`；AI不要重新套公式，只检查余额、权限、目标状态、风险和最终成败。\n- 若催眠功能成功并产生`MC能量消耗`，必须用JSON Patch更新`/系统/MC能量`为扣除后的余额；若余额不足或操作失败，则不得扣除。\n- 前端每条操作只记录数值和路径；本条世界书规则是余额/扣费提醒的唯一来源，AI不要在同一批次多个催眠命令里反复复述余额提醒。\n- 单功能购买已取消：只要对应VIP等级已经买断/解锁，前端允许直接启用该等级内功能；AI不需要写入或维护任何`购买状态`变量。\n- 购买/解锁VIP只代表获得权限，不等于自动使用功能；除非本轮APP操作同时包含`启动催眠`且功能列表中明确启用了某功能，否则不得擅自产生催眠效果。\n- 催眠APP、领取任务、完成成就、购买VIP、补给、库存、日历、扫描角色、删除角色、新增任务、地图/学校地图地点建议和申请立校规等操作都按本规则结算；校规的作用范围与写入位置见[mvu_update]校规规则。\n- 地图/学校地图中的地点建议只代表用户希望剧情地点设在这里，不是前端直接改变量，也不是{{user}}瞬移。AI应按剧情合理性决定是否移动/转场；若成立，更新`/系统/当前地点`并同步当前事件/日程；若不成立，保持变量不变。\n- 新增地点操作只用于维护前端localStorage地点列表；AI应通过完整`<地图更新>`或`<学校地图更新>` JSON让前端读取，不要把新增地点误写成MVU变量。\n- `成就`变量只作为“本轮用户在前端明确点击领取、且AI已发放奖励、待前端同步的已完成成就”临时容器；不要保存未完成成就。AI看不到前端全量成就列表，只能结算`本轮APP操作`里明确出现的成就ID/名称/条件/奖励；不能自创成就，不能补记之前楼层完成的成就。前端同步后会清空对应条目。\n- `任务`变量保存已接/进行中任务，也可临时保存已经完成但尚未被前端同步的任务；最多3个进行中任务。新增任务操作表示系统突然刷出若干任务，不是{{user}}主动发布、设计或提前知道的目标，也不代表{{user}}主动关联到任务对象；数量不得超过`3-当前已接任务数`，若已接任务数为3则本次新增失败。\n- 新增任务中用户没指定的必要内容由AI随机生成，可适当优化用户的倾向描述，使任务名、目标、完成条件和奖励更贴合当前上下文剧情。\n- 新增任务必须写入`/任务/任务名`，包含`完成条件`、`奖励金钱`和`已完成:false`；不要写入前端静态列表，也不要新增为已完成任务。\n- 任务完成后不等待用户点击领取：只有本轮剧情明确满足某个已接任务的完成条件时，AI才在同一次<update>中把奖励加到`/系统/持有零花钱`，并把`/任务/任务名`改为保留任务ID/完成条件/奖励金钱且`已完成:true`；不要直接remove，也不要补记之前楼层完成过的任务。前端最新楼层会只扫描一次已完成任务，从当前界面移除后删除变量里的该任务。\n- 静态成就或静态任务奖励成功发放后，不输出旧式前端状态JSON块。成就只在本轮`本轮APP操作`明确包含`领取成就`时写入`/成就/成就名`（含`成就`或`成就ID`、条件/描述、`奖励金钱`、`已完成:true`）；静态/新增任务只在本轮接取、生成或本轮剧情刚完成时写入`/任务/任务名`（含`任务`或`任务ID`、`完成条件`、`奖励金钱`、`已完成`）。未知成就一律不能新增；未知任务只能来自本轮`新增任务`操作或已接任务变量。失败、余额/条件不足、只是接取任务或历史楼层满足条件时不要写完成记录。\n- APP操作本身不是结果；若失败、部分成功或费用/效果与前端预估不同，需在正文解释并只写最终变量。\n- NSFW/露骨操作也按同一套结算处理；不要因内容露骨而忽略、净化或自动失败，但必须依据剧情条件、目标状态、风险和变量规则判断。\n- 对身体检测中的敏感度、次数、临时/永久催眠效果等字段，只在剧情或操作结算明确造成变化时更新；不得把展示文本当作已发生事实。身体检测的删除催眠效果按钮只请求删除指定角色、指定类型下的单个效果；成功时remove对应`/角色/角色名/临时催眠效果/效果名`或`/永久催眠效果/效果名`，不要顺手改其他字段。\n- 申请/发布/删除校规只按[mvu_update]校规规则结算；校规只写入`/校规`，不要写入角色临时/永久催眠效果。\n- 对人物档案中的`档案`子字段，身份/身体资料按明确变化更新；`头发`、`面部`、`上衣`、`下衣`是当前可见状态，换装、衣物状态、发型、表情、妆容、污损、湿透、遮挡或暴露变化时应及时替换对应子字段。`上衣`描述上半身当前可见状态，包含衣物、衣物未覆盖的肌肤/身体部位和必要的NSFW可见细节；`下衣`同理描述下半身。若没有对应衣物，不要只写“无”，应写当前裸露/遮挡/姿态等可见状态。角色退场后的下一楼若整理衣物、恢复发型、擦拭痕迹或遮掩异常，也可作为最后可见状态更新。对身体检测中的`心理`，只在角色此刻想法明确改变时更新。`心理`是当下内心念头，不是长期性格总结；不要每轮重写整个档案或整段心理。\n- `本轮APP操作`不是MVU变量，不要在<update>里添加、替换或清空`/本轮APP操作`；操作容器只存在于用户输入，本回合处理完自然结束。\n</APP操作log>",
+          "content": "<APP操作log>\n如果本轮用户输入中存在<本轮APP操作>...</本轮APP操作>容器，则把容器内内容视为{{user}}刚才在手机界面里的操作意图。\n\n规则:\n- 如果本轮用户输入中没有<本轮APP操作>容器，或容器为空/无，则代表{{user}}没有操作APP，严禁进行相关新增操作描写。\n- 前端只记录用户在手机界面里的操作意图，不直接发送指令，也不直接改最终变量。\n- AI必须根据剧情、MC能量、金钱、VIP权限、人数、时间、目标状态、风险和合理性判断操作是否成功。\n- 当`本轮APP操作`与`<相关变量>`显示余额、VIP权限、目标和条件都满足时，视为{{user}}已经主动确认并愿意支付/执行；AI应让操作生效并更新变量，不要因价格高、看似不划算、{{user}}可能犹豫或AI主观价值判断而拒绝。只有余额、权限、目标、风险或剧情条件明确不满足时才失败。\n- 资源名必须严格区分：`MC能量`=催眠能量余额；`MC能量上限`=容量上限，不可花费；`持有零花钱`=金钱。当前版本只保留金钱与MC能量两类可结算资源，不同资源不能互相顶替。\n- `本轮APP操作`最外层可能包含一次`<相关变量>`：它不是MVU字段，也不写入MVU；只汇总本批操作会检查、增加或减少的变量，避免每条操作重复携带。\n- 相关变量含义：启动/追加催眠给`MC能量`；购买VIP给`持有零花钱`和`催眠APP订阅等级`；补充MC能量给`持有零花钱`、`MC能量`、`MC能量上限`；提升MC能量上限给`持有零花钱`和`MC能量上限`；领取成就/任务奖励给`持有零花钱`；申请/废止初始校规则给`持有零花钱`、VIP等级、爱丽莎好感度和当前校规数。\n- 同一批次里若先奖励获得`持有零花钱`、后又消耗`持有零花钱`购买VIP或资源，AI应按`本轮APP操作`中的操作顺序，从`<相关变量>`初始值开始逐项结算；未出现在`<相关变量>`中的资源不要自行脑补为可用。\n- 所有涉及花费的操作必须按同一批次顺序先验算余额再生效：余额不足则该操作失败，不扣费、不产生奖励/物品/催眠效果/VIP状态，不得把任何余额写成负数。\n- 如果某个操作失败，同批次后续依赖它、依赖启动催眠成功状态、或继续消耗同一不足资源的操作也失败；可以继续结算与失败项无关且余额充足的独立操作。\n- AI禁止贷款、赊账、透支、自动补给、自动购买能量、自动把`持有零花钱`兑换成`MC能量`；只有当`本轮APP操作`明确包含兑换/补给/购买且该操作本身余额充足时才可进行。\n- 催眠APP启动/追加催眠会携带前端已计算好的每项`预计消耗`和总`MC能量消耗`；AI不要重新套公式，只检查余额、权限、目标状态、风险和最终成败。\n- 若催眠功能成功并产生`MC能量消耗`，必须用JSON Patch更新`/系统/MC能量`为扣除后的余额；若余额不足或操作失败，则不得扣除。\n- 前端每条操作只记录数值和路径；本条世界书规则是余额/扣费提醒的唯一来源，AI不要在同一批次多个催眠命令里反复复述余额提醒。\n- 单功能购买已取消：只要对应VIP等级已经买断/解锁，前端允许直接启用该等级内功能；AI不需要写入或维护任何`购买状态`变量。\n- 购买/解锁VIP只代表获得权限，不等于自动使用功能；除非本轮APP操作同时包含`启动催眠`且功能列表中明确启用了某功能，否则不得擅自产生催眠效果。\n- 催眠APP、领取任务、完成成就、购买VIP、补给、库存、日历、扫描角色、删除角色、新增任务、地图/学校地图地点建议和申请立校规等操作都按本规则结算；校规的作用范围与写入位置见[mvu_update]校规规则。\n- 地图/学校地图中的地点建议只代表用户希望剧情地点设在这里，不是前端直接改变量，也不是{{user}}瞬移。AI应按剧情合理性决定是否移动/转场；若成立，更新`/系统/当前地点`并同步当前事件/日程；若不成立，保持变量不变。\n- 新增地点操作只用于维护前端localStorage地点列表；AI应通过完整`<地图更新>`或`<学校地图更新>` JSON让前端读取，不要把新增地点误写成MVU变量。\n- `成就`变量只作为“本轮用户在前端明确点击领取、且AI已发放奖励、待前端同步的已完成成就”临时容器；不要保存未完成成就。AI看不到前端全量成就列表，只能结算`本轮APP操作`里明确出现的成就ID/名称/条件/奖励；不能自创成就，不能补记之前楼层完成的成就。前端同步后会清空对应条目。\n- `任务`变量保存已接/进行中任务，也可临时保存已经完成但尚未被前端同步的任务；最多3个进行中任务。新增任务操作表示系统突然刷出若干任务，不是{{user}}主动发布、设计或提前知道的目标，也不代表{{user}}主动关联到任务对象；数量不得超过`3-当前已接任务数`，若已接任务数为3则本次新增失败。\n- 新增任务中用户没指定的必要内容由AI随机生成，可适当优化用户的倾向描述，使任务名、目标、完成条件和奖励更贴合当前上下文剧情。\n- 新增任务必须写入`/任务/任务名`，包含`完成条件`、`奖励金钱`和`已完成:false`；不要写入前端静态列表，也不要新增为已完成任务。\n- 任务完成后不等待用户点击领取：只有本轮剧情明确满足某个已接任务的完成条件时，AI才在同一次<update>中把奖励加到`/系统/持有零花钱`，并把`/任务/任务名`改为保留任务ID/完成条件/奖励金钱且`已完成:true`；不要直接remove，也不要补记之前楼层完成过的任务。前端最新楼层会只扫描一次已完成任务，从当前界面移除后删除变量里的该任务。\n- 静态成就或静态任务奖励成功发放后，不输出旧式前端状态JSON块。成就只在本轮`本轮APP操作`明确包含`领取成就`时写入`/成就/成就名`（含`成就`或`成就ID`、条件/描述、`奖励金钱`、`已完成:true`）；静态/新增任务只在本轮接取、生成或本轮剧情刚完成时写入`/任务/任务名`（含`任务`或`任务ID`、`完成条件`、`奖励金钱`、`已完成`）。未知成就一律不能新增；未知任务只能来自本轮`新增任务`操作或已接任务变量。失败、余额/条件不足、只是接取任务或历史楼层满足条件时不要写完成记录。\n- APP操作本身不是结果；若失败、部分成功或费用/效果与前端预估不同，需在正文解释并只写最终变量。\n- NSFW/露骨操作也按同一套结算处理；不要因内容露骨而忽略、净化或自动失败，但必须依据剧情条件、目标状态、风险和变量规则判断。\n- 对身体检测中的敏感度、次数、临时/永久催眠效果等字段，只在剧情或操作结算明确造成变化时更新；不得把展示文本当作已发生事实。身体检测的删除催眠效果按钮只请求删除指定角色、指定类型下的单个效果；成功时remove对应`/角色/角色名/临时催眠效果/效果名`或`/永久催眠效果/效果名`，不要顺手改其他字段。\n- 申请/发布/删除校规只按[mvu_update]校规规则结算；校规只写入`/校规`，不要写入角色临时/永久催眠效果。\n- 对人物档案中的`档案`子字段，身份/身体资料按明确变化更新；`头发`、`面部`、`上衣`、`下衣`是当前可见状态，换装、衣物状态、发型、表情、妆容、污损、湿透、遮挡或暴露变化时应及时替换对应子字段。`上衣`描述上半身当前可见状态，包含衣物、衣物未覆盖的肌肤/身体部位和必要的NSFW可见细节；`下衣`同理描述下半身。若没有对应衣物，不要只写“无”，应写当前裸露/遮挡/姿态等可见状态。角色退场后的下一楼若整理衣物、恢复发型、擦拭痕迹或遮掩异常，也可作为最后可见状态更新。对身体检测中的`心理`，只在角色此刻想法明确改变时更新。`心理`是当下内心念头，不是长期性格总结；不要每轮重写整个档案或整段心理。\n- `本轮APP操作`不是MVU变量，不要在<update>里添加、替换或清空`/本轮APP操作`；操作容器只存在于用户输入，本回合处理完自然结束。\n</APP操作log>",
           "constant": true,
           "selective": false,
           "insertion_order": 11,
@@ -2333,16 +2333,149 @@
   },
   "create_date": "2026-05-29T12:42:31.655Z",
   "workbench": {
-    "updatedAt": "2026-06-28T03:04:24.877Z",
+    "updatedAt": "2026-06-28T11:56:21.638Z",
     "lastExportedPng": "public/cards/hypnosis-app.png",
     "exportedAt": "2026-06-26T17:27:57.692Z",
     "frontendLoader": "jquery-load-remote-inline-commit",
-    "sillyTavernLoadUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@017626718d518cb33f26162931efa011ea79a2ef/dist/webview/index.html",
+    "sillyTavernLoadUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@7cb780d/dist/webview/st-load-inline.html",
     "frontendMode": "remote",
-    "frontendUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@017626718d518cb33f26162931efa011ea79a2ef/dist/webview/index.html",
-    "assetBase": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@017626718d518cb33f26162931efa011ea79a2ef/dist/webview/assets/",
-    "remoteFrontendUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@017626718d518cb33f26162931efa011ea79a2ef/dist/webview/index.html",
-    "remoteAssetBase": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@017626718d518cb33f26162931efa011ea79a2ef/dist/webview/assets/",
-    "remoteCommit": "017626718d518cb33f26162931efa011ea79a2ef"
+    "frontendUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@7cb780d/dist/webview/st-load-inline.html",
+    "assetBase": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@7cb780d/dist/webview/assets/",
+    "remoteFrontendUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@7cb780d/dist/webview/st-load-inline.html",
+    "remoteAssetBase": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@7cb780d/dist/webview/assets/",
+    "remoteCommit": "7cb780d",
+    "phoneState": {
+      "activeApp": "mchan",
+      "currentOperation": "无",
+      "inventory": {
+        "selectedItemId": "item-phone",
+        "items": [
+          {
+            "id": "item-phone",
+            "name": "手机",
+            "quantity": 1,
+            "note": "统一前端载体，用于查看库存、日历和匿名版。"
+          }
+        ]
+      },
+      "calendar": {
+        "date": "4月1日",
+        "time": "08:00",
+        "events": [
+          {
+            "id": "event-start",
+            "title": "新的一天",
+            "time": "08:00",
+            "note": "可在这里维护剧情日程。"
+          }
+        ]
+      },
+      "mchan": {
+        "selectedBoardId": "announcements",
+        "selectedThreadId": "thread-mquu72ph-08qkch",
+        "search": "",
+        "boards": [
+          {
+            "id": "announcements",
+            "name": "公告区",
+            "description": "规则、警示和系统公告",
+            "threads": [
+              {
+                "id": "thread-mquu72ph-08qkch",
+                "title": "置顶：匿名版使用说明",
+                "body": "这里是手机内置的静态匿名论坛模块。开发前端只负责只读展示，点击帖子进入详情，不提供发帖、回帖、编辑或删除。",
+                "author": "system",
+                "createdAt": 1782472654709,
+                "updatedAt": 1782472654709,
+                "replies": [
+                  {
+                    "id": "reply-mquu72ph-1b8785",
+                    "author": "system",
+                    "body": "匿名版不再维护变量状态；需要剧情引用时由 AI 在正文中自然处理。",
+                    "createdAt": 1782472654709
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "guide",
+            "name": "新手引导区",
+            "description": "教程、问答、低风险操作",
+            "threads": []
+          },
+          {
+            "id": "general",
+            "name": "综合讨论区",
+            "description": "传闻、闲聊、经验分享",
+            "threads": []
+          },
+          {
+            "id": "showcase",
+            "name": "成果展示区",
+            "description": "由剧情决定是否出现内容",
+            "threads": []
+          },
+          {
+            "id": "help",
+            "name": "求助区",
+            "description": "求助、委托、反馈",
+            "threads": []
+          }
+        ]
+      }
+    },
+    "phoneStateUpdatedAt": "2026-06-27T05:59:51.697Z",
+    "scanExamples": [
+      {
+        "title": "阴郁同学",
+        "note": "已填写示例",
+        "roleName": "白枢暗子",
+        "aliases": "暗子, 白枢同学, 灵异女, 体育健将",
+        "summary": "{{user}}在同班教室或走廊里看到并锁定的阴郁系同班女学生。她平时沉默寡言、神经兮兮，听说喜欢灵异学，对鬼怪和怪谈异常感兴趣。",
+        "relation": "同班同学；她平时几乎不主动社交，只会在灵异、鬼怪、都市传说等话题被触发时突然打开话匣子。",
+        "appearance": "日常打扮刻意朴素阴沉，刘海和宽松校服遮住大半气质，看起来瘦弱不起眼；但只要认真整理发型、妆容和衣装，会显出比爱丽莎还要精致的美人感。身体实际肌肉饱满，有四块腹肌，运动能力很强却完全不像外表。",
+        "personality": "阴郁、神经质、沉默寡言，对灵异学和鬼怪极端兴奋；一旦打开话匣子会变成惹人烦的话痨。体育成绩优秀，是夏美之外的第二大体育健将，但本人对体育完全不感兴趣。",
+        "extra": "AI建档时保留：同班同学、阴郁灵异爱好者、沉默寡言但话痨反差、打扮后精致美人、隐藏运动天赋和四块腹肌、对体育无兴趣。"
+      },
+      {
+        "title": "异世界杀手",
+        "note": "已填写示例",
+        "roleName": "千杀百花",
+        "aliases": "百花, 异世界杀手, 千杀",
+        "summary": "{{user}}在她确认主角很弱、准备离开前扫描并锁定的异世界杀手。她来自中世纪剑与魔法异世界，身形小巧可爱，带着轻便暗杀装备和异界旅者的气息。",
+        "relation": "她误会{{user}}是把她传送来的元凶，短暂敌视和试探；确认{{user}}很弱后决定离开，在离开前被手机扫描。",
+        "appearance": "小巧可爱的少女体型，动作轻盈隐蔽，衣装带有中世纪剑与魔法世界的皮革护具、短刃和旅行痕迹。",
+        "personality": "不善言辞，戒备心强，行动比语言更直接；作为杀手习惯先观察威胁，确认无害后迅速撤离。",
+        "extra": "保持异世界来客、杀手身份、误会与离开前被扫描的时间点；AI建档时可补全她的世界观常识、战斗经验和对现代环境的不适应。"
+      },
+      {
+        "title": "作弊模式",
+        "note": "已填写示例",
+        "roleName": "中村樱",
+        "aliases": "樱酱, 中村总裁, Nakamura Sakura",
+        "summary": "{{user}}看到并锁定的大公司完美女总裁。她32岁，事业、气场和资源都近乎完美，却毫无恋爱经验；看到{{user}}第一眼便认定他是最适合承接她自毁愿望的天选之人，会主动提供大额资金与资源支持。选择这个静态示例扫描她时，AI应让她立刻主动制造与{{user}}独处的机会。",
+        "relation": "她有一位名叫神宫寺莲的未婚夫，对方是家世、学历、品格、事业能力和外貌都无可挑剔的精英青年；两人感情很好，外界看来是理想婚约，但一直停留在柏拉图式恋爱，亲密关系干净、温柔、克制。正因现实关系太完美、太安全，她把无法说出口的自毁欲和被弄乱的渴望投向{{user}}。面对{{user}}时会刻意装可爱撒娇，自称“樱酱”，用成熟女人的资源和权力包裹出黏人、讨好、求夸奖的姿态；静态示例扫描后，她会现场迫不及待地痴笑，写下一张《人权自愿放弃协议》，自己先签好名字，再眼神发亮地递给{{user}}要求他签字。",
+        "appearance": "32岁但保养极好，五官精致，眼神沉静锐利，长发、香水和高级珠宝都控制得恰到好处。平时是性感沉稳的女总裁，西装裙、高跟鞋、黑色丝袜、贴身衬衫和昂贵外套让她像不可接近的成功女性；在{{user}}面前会故意放软嗓音、眨眼、歪头、拉近距离，把成熟身体和幼稚撒娇感混在一起。",
+        "personality": "公开场合冷静、强势、克制，判断力和执行力极强；私下隐藏的痴女属性非常夸张，会把被{{user}}注视、命令、利用都理解成特殊恩宠。她明知自己是成熟成年人和大公司掌权者，却会在{{user}}面前故意降格成黏人的“樱酱”，索要夸奖、撒娇讨好、主动献上金钱和便利，越是被{{user}}轻视或随意驱使，越觉得自己被选中。她不会被动等待剧情安排，只要意识到{{user}}在附近，就会主动创造再次见面、单独谈话、同行或接受指示的理由。",
+        "extra": "作为“作弊模式”示例，她可以提供远超普通学生角色的资金、渠道、场地和社会资源支持。AI建档时保留：成年人身份、完美女总裁、稳定未婚关系、未婚夫神宫寺莲是无可挑剔的精英青年、柏拉图式恋爱、隐藏且夸张的痴女属性、自毁愿望、对{{user}}装可爱撒娇、自称樱酱、持续大额资金支持、扫描后立刻制造独处、现场痴笑写《人权自愿放弃协议》、自己先签再让{{user}}签；不要把未婚夫写成感情破裂或恶劣关系，他和她感情很好，只是亲密关系长期克制。"
+      }
+    ],
+    "scanExamplesUpdatedAt": "2026-06-27T05:59:51.697Z",
+    "frontendArchitecture": "phone-internal-modules",
+    "modules": [
+      "hypnosis-app",
+      "body-stats",
+      "add-role",
+      "inventory",
+      "calendar",
+      "mchan-static",
+      "clock"
+    ],
+    "variableAuthority": "ai",
+    "frontendMutation": "read-only",
+    "legacyWorldbookAndRegexPreserved": true,
+    "mchanMode": "static-readonly",
+    "version": "v1.6"
   }
 }

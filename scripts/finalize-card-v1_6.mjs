@@ -107,6 +107,7 @@ const appOperationWorldbook = `<APP操作log>
 - 如果本轮用户输入中没有<本轮APP操作>容器，或容器为空/无，则代表{{user}}没有操作APP，严禁进行相关新增操作描写。
 - 前端只记录用户在手机界面里的操作意图，不直接发送指令，也不直接改最终变量。
 - AI必须根据剧情、MC能量、金钱、VIP权限、人数、时间、目标状态、风险和合理性判断操作是否成功。
+- 当\`本轮APP操作\`与\`<相关变量>\`显示余额、VIP权限、目标和条件都满足时，视为{{user}}已经主动确认并愿意支付/执行；AI应让操作生效并更新变量，不要因价格高、看似不划算、{{user}}可能犹豫或AI主观价值判断而拒绝。只有余额、权限、目标、风险或剧情条件明确不满足时才失败。
 - 资源名必须严格区分：\`MC能量\`=催眠能量余额；\`MC能量上限\`=容量上限，不可花费；\`持有零花钱\`=金钱。当前版本只保留金钱与MC能量两类可结算资源，不同资源不能互相顶替。
 - \`本轮APP操作\`最外层可能包含一次\`<相关变量>\`：它不是MVU字段，也不写入MVU；只汇总本批操作会检查、增加或减少的变量，避免每条操作重复携带。
 - 相关变量含义：启动/追加催眠给\`MC能量\`；购买VIP给\`持有零花钱\`和\`催眠APP订阅等级\`；补充MC能量给\`持有零花钱\`、\`MC能量\`、\`MC能量上限\`；提升MC能量上限给\`持有零花钱\`和\`MC能量上限\`；领取成就/任务奖励给\`持有零花钱\`；申请/废止初始校规则给\`持有零花钱\`、VIP等级、爱丽莎好感度和当前校规数。
@@ -302,6 +303,8 @@ function patchCard(card) {
   data.extensions.workbench.updatedAt = new Date().toISOString();
   data.extensions.workbench.version = VERSION_NAME;
   patchRemoteFrontend(data);
+  card.workbench ??= {};
+  Object.assign(card.workbench, data.extensions.workbench);
 
   const entries = data.character_book.entries;
   upsertEntry(entries, {

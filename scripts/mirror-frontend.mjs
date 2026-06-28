@@ -742,6 +742,15 @@ function patchBundledHypnosisApp(html) {
     'children: [quickSupplyQty, \\"円\\"]',
     'children: [\\"¥\\", (quickSupplyQty * 1000).toLocaleString()]'
   );
+  outputHtml = outputHtml
+    .replace(
+      /const lockedByUnlock = !canSubscribeTier\(tier\);\\n\s*const isCurrent = subscription\?\.tier === tier;\\n\s*const activeNow = subscriptionActive && Boolean\(subscription\);\\n\s*const label = !subscription \|\| !activeNow\\n\s*\? '购买'\\n\s*: isCurrent\\n\s*\? '购买'\\n\s*: subscriptionTiers\.indexOf\(tier\) > subscriptionTiers\.indexOf\(subscription\.tier\)\\n\s*\? '升级'\\n\s*: '购买';/g,
+      "const activeNow = Boolean(subscription);\\n                                                const currentTierIndex = subscription?.tier ? subscriptionTiers.indexOf(subscription.tier) : -1;\\n                                                const targetTierIndex = subscriptionTiers.indexOf(tier);\\n                                                const tierAlreadyBought = activeNow && currentTierIndex >= targetTierIndex && targetTierIndex >= 0;\\n                                                const label = tierAlreadyBought\\n                                                    ? '已买断'\\n                                                    : activeNow && currentTierIndex >= 0 && targetTierIndex > currentTierIndex\\n                                                        ? '升级'\\n                                                        : '购买';"
+    )
+    .replace(
+      /children: lockedByUnlock\\n\s*\?\s*`需累计消耗 \$\{_services_dataService__WEBPACK_IMPORTED_MODULE_\d+__\.DataService\.getSubscriptionUnlockThreshold\(tier\)\}`\\n\s*:\s*`买断 ¥\$\{price\.toLocaleString\(\)\}`/g,
+      "children: `买断 ¥${price.toLocaleString()}`"
+    );
   return outputHtml;
 }
 
@@ -1290,7 +1299,71 @@ function getActiveHomeHypnosisInfo(roles) {
     }
     return null;
 }
+function appModeToStoredPhoneApp(mode) {
+    switch (mode) {
+        case _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.HYPNOSIS:
+            return 'hypnosis';
+        case _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.BODY_STATS:
+            return 'stats';
+        case _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.CALENDAR:
+            return 'calendar';
+        case _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.HELP:
+            return 'help';
+        case _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.INVENTORY:
+            return 'inventory';
+        case _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.ACHIEVEMENTS:
+            return 'achievements';
+        default:
+            return 'home';
+    }
+}
+function storedPhoneAppToAppMode() {
+    let stored = '';
+    try {
+        stored = String(globalThis.__ST_GET_PHONE_ACTIVE_APP__?.() || localStorage.getItem('hypnoos:active-phone-app:v1') || '').trim();
+    }
+    catch {
+        stored = '';
+    }
+    switch (stored) {
+        case 'hypnosis':
+            return _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.HYPNOSIS;
+        case 'stats':
+            return _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.BODY_STATS;
+        case 'calendar':
+            return _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.CALENDAR;
+        case 'help':
+            return _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.HELP;
+        case 'inventory':
+            return _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.INVENTORY;
+        case 'achievements':
+            return _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.ACHIEVEMENTS;
+        default:
+            return _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.HOME;
+    }
+}
+function rememberPhoneActiveAppMode(mode) {
+    const app = appModeToStoredPhoneApp(mode);
+    globalThis.__ST_PHONE_ACTIVE_APP__ = app;
+    try {
+        localStorage.setItem('hypnoos:active-phone-app:v1', app);
+    }
+    catch {}
+    try {
+        window.dispatchEvent(new CustomEvent('st-phone-active-app-change', { detail: { app } }));
+    }
+    catch {}
+}
 function withTimeout`
+  );
+  output = output.replace(
+    `    const [currentApp, setCurrentApp] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(_types__WEBPACK_IMPORTED_MODULE_8__.AppMode.HOME);`,
+    `    const [currentApp, setCurrentAppState] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(() => storedPhoneAppToAppMode());
+    const setCurrentApp = (0,react__WEBPACK_IMPORTED_MODULE_1__.useCallback)((nextApp) => {
+        const resolvedApp = typeof nextApp === 'function' ? nextApp(currentApp) : nextApp;
+        rememberPhoneActiveAppMode(resolvedApp);
+        setCurrentAppState(resolvedApp);
+    }, [currentApp]);`
   );
   output = output.replace(
     `    const [systemDateText, setSystemDateText] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(undefined);
@@ -1410,7 +1483,8 @@ function withTimeout`
         }
     };
     const [orderedAppIds, setOrderedAppIds] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(readHomeAppOrder);
-    const homeDragRef = (0,react__WEBPACK_IMPORTED_MODULE_1__.useRef)({ id: '', pointerId: null, startX: 0, startY: 0, moved: false });
+    const [homeDragState, setHomeDragState] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)({ id: '', targetId: '' });
+    const homeDragRef = (0,react__WEBPACK_IMPORTED_MODULE_1__.useRef)({ id: '', pointerId: null, startX: 0, startY: 0, moved: false, targetId: '' });
     const suppressHomeClickUntilRef = (0,react__WEBPACK_IMPORTED_MODULE_1__.useRef)(0);
     const [notice, setNotice] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(null);`
   );
@@ -1481,7 +1555,7 @@ function withTimeout`
     const onHomeAppPointerDown = (event, id) => {
         if (event.button !== undefined && event.button !== 0)
             return;
-        homeDragRef.current = { id, pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, moved: false };
+        homeDragRef.current = { id, pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, moved: false, targetId: '' };
         try {
             event.currentTarget.setPointerCapture(event.pointerId);
         }
@@ -1499,8 +1573,14 @@ function withTimeout`
         event.preventDefault();
         const target = document.elementFromPoint(event.clientX, event.clientY)?.closest?.('[data-home-app-id]');
         const targetId = target?.getAttribute?.('data-home-app-id') || '';
-        if (targetId && targetId !== drag.id)
-            moveHomeApp(drag.id, targetId);
+        const nextTargetId = targetId && targetId !== drag.id ? targetId : '';
+        if (nextTargetId !== drag.targetId) {
+            drag.targetId = nextTargetId;
+            setHomeDragState({ id: drag.id, targetId: nextTargetId });
+        }
+        else if (!homeDragState.id) {
+            setHomeDragState({ id: drag.id, targetId: nextTargetId });
+        }
     };
     const endHomeAppDrag = (event) => {
         const drag = homeDragRef.current;
@@ -1510,9 +1590,13 @@ function withTimeout`
             }
             catch {}
         }
-        if (drag.moved)
+        if (drag.moved) {
+            if (drag.targetId)
+                moveHomeApp(drag.id, drag.targetId);
             suppressHomeClickUntilRef.current = Date.now() + 350;
-        homeDragRef.current = { id: '', pointerId: null, startX: 0, startY: 0, moved: false };
+        }
+        homeDragRef.current = { id: '', pointerId: null, startX: 0, startY: 0, moved: false, targetId: '' };
+        setHomeDragState({ id: '', targetId: '' });
     };
 `
   );
@@ -1522,7 +1606,7 @@ function withTimeout`
   );
   output = output.replace(
     "className: `flex flex-col items-center gap-1.5 group ${app.disabled ? 'opacity-50 grayscale cursor-not-allowed' : 'cursor-pointer'}`, onClick: () => {",
-    "className: `flex flex-col items-center gap-1.5 group ${app.disabled ? 'opacity-50 grayscale cursor-not-allowed' : 'cursor-pointer'} ${homeDragRef.current.id === app.id ? 'scale-95 opacity-80' : ''}`, \"data-home-app-id\": app.id, onPointerDown: event => onHomeAppPointerDown(event, app.id), onPointerMove: onHomeAppPointerMove, onPointerUp: endHomeAppDrag, onPointerCancel: endHomeAppDrag, style: { touchAction: 'none', userSelect: 'none' }, onClick: () => { if (Date.now() < suppressHomeClickUntilRef.current) return;"
+    "className: `flex flex-col items-center justify-center gap-1.5 group ${app.disabled ? 'opacity-50 grayscale cursor-not-allowed' : 'cursor-pointer'}`, \"data-home-app-id\": app.id, onPointerDown: event => onHomeAppPointerDown(event, app.id), onPointerMove: onHomeAppPointerMove, onPointerUp: endHomeAppDrag, onPointerCancel: endHomeAppDrag, style: { width: '100%', minHeight: '84px', padding: '4px 0', touchAction: 'none', userSelect: 'none', borderRadius: '18px', transition: 'opacity 160ms ease, filter 160ms ease, background 160ms ease, box-shadow 160ms ease', opacity: homeDragState.id && homeDragState.id !== app.id && homeDragState.targetId !== app.id ? 0.78 : 1, filter: homeDragState.targetId === app.id ? 'drop-shadow(0 0 14px rgba(103,232,249,.42))' : undefined, background: homeDragState.targetId === app.id ? 'rgba(34,211,238,.10)' : homeDragState.id === app.id ? 'rgba(255,255,255,.06)' : undefined, boxShadow: homeDragState.targetId === app.id ? 'inset 0 0 0 1px rgba(103,232,249,.42)' : undefined }, onClick: () => { if (Date.now() < suppressHomeClickUntilRef.current) return;"
   );
   output = output.replace(
     `(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "px-6 mb-8 text-white/90 drop-shadow-md", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "text-6xl font-thin tracking-tighter", children: displayTime }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "text-lg font-medium", children: displayDate })] })`,
@@ -1801,6 +1885,15 @@ const featureUsesPersonCount = (feature) => {
     return true;
 };
 const featureUsesDuration = (feature) => feature.costType !== 'ONE_TIME' && !['vip1_temp_sensitivity', 'vip1_estrus', 'vip1_memory_erase'].includes(feature.id);
+const vipTierRank = (tier) => {
+    const match = String(tier || '').toUpperCase().match(/VIP\\s*([1-5])/);
+    return match ? Number(match[1]) : 0;
+};
+const isVipTierCovered = (currentTier, targetTier) => {
+    const current = vipTierRank(currentTier);
+    const target = vipTierRank(targetTier);
+    return target > 0 && current >= target;
+};
 const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
     const initialDraft = (0,react__WEBPACK_IMPORTED_MODULE_1__.useMemo)(() => readCustomHypnosisDraft(), []);
     const [activeTemporaryHypnosis, setActiveTemporaryHypnosis] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(Boolean(userData.activeTemporaryHypnosis));
@@ -1939,6 +2032,11 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
     };
     const subscribeTier = async (tier) => {
         const price = _services_dataService__WEBPACK_IMPORTED_MODULE_4__.SUBSCRIPTION_PRICES[tier] ?? 0;
+        if (isVipTierCovered(subscription?.tier, tier)) {
+            setSubscriptionNotice('该等级已买断');
+            setTimeout(() => setSubscriptionNotice(null), 1500);
+            return;
+        }
         recordOperationIntent({
             来源: '催眠APP',
             操作: '购买VIP等级',
@@ -2219,6 +2317,65 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
       "className: 'text-gray-300'"
     )
     .replace(
+      `                                                const lockedByUnlock = !canSubscribeTier(tier);
+                                                const isCurrent = subscription?.tier === tier;
+                                                const activeNow = Boolean(subscription);
+                                                const label = !subscription || !activeNow
+                                                    ? '购买'
+                                                    : isCurrent
+                                                        ? '购买'
+                                                        : subscriptionTiers.indexOf(tier) > subscriptionTiers.indexOf(subscription.tier)
+                                                            ? '升级'
+                                                            : '购买';`,
+      `                                                const activeNow = Boolean(subscription);
+                                                const currentTierIndex = subscription?.tier ? subscriptionTiers.indexOf(subscription.tier) : -1;
+                                                const targetTierIndex = subscriptionTiers.indexOf(tier);
+                                                const tierAlreadyBought = activeNow && currentTierIndex >= targetTierIndex && targetTierIndex >= 0;
+                                                const label = tierAlreadyBought
+                                                    ? '已买断'
+                                                    : activeNow && currentTierIndex >= 0 && targetTierIndex > currentTierIndex
+                                                        ? '升级'
+                                                        : '购买';`
+    )
+    .replace(
+      "onClick: () => void subscribeTier(tier), disabled: debugEnabled || lockedByUnlock || userData.money < price",
+      "onClick: () => void subscribeTier(tier), disabled: debugEnabled || tierAlreadyBought || userData.money < price"
+    )
+    .replace(
+      `children: lockedByUnlock
+                                                                        ? \`需累计消耗 \${_services_dataService__WEBPACK_IMPORTED_MODULE_4__.DataService.getSubscriptionUnlockThreshold(tier)}\`
+                                                                        : \`买断 ¥\${price.toLocaleString()}\``,
+      "children: `买断 ¥${price.toLocaleString()}`"
+    )
+    .replace(
+      "children: lockedByUnlock ? '未解锁' : label",
+      "children: tierAlreadyBought ? '已买断' : label"
+    )
+    .replace(
+      /                                                const lockedByUnlock = !canSubscribeTier\(tier\);\n                                                const isCurrent = subscription\?\.tier === tier;\n                                                const activeNow = subscriptionActive && Boolean\(subscription\);\n                                                const label = !subscription \|\| !activeNow\n                                                    \? '购买'\n                                                    : isCurrent\n                                                        \? '购买'\n                                                        : subscriptionTiers\.indexOf\(tier\) > subscriptionTiers\.indexOf\(subscription\.tier\)\n                                                            \? '升级'\n                                                            : '购买';/g,
+      `                                                const activeNow = Boolean(subscription);
+                                                const currentTierIndex = subscription?.tier ? subscriptionTiers.indexOf(subscription.tier) : -1;
+                                                const targetTierIndex = subscriptionTiers.indexOf(tier);
+                                                const tierAlreadyBought = activeNow && currentTierIndex >= targetTierIndex && targetTierIndex >= 0;
+                                                const label = tierAlreadyBought
+                                                    ? '已买断'
+                                                    : activeNow && currentTierIndex >= 0 && targetTierIndex > currentTierIndex
+                                                        ? '升级'
+                                                        : '购买';`
+    )
+    .replace(
+      /children: lockedByUnlock\s*\?\s*`需累计消耗 \$\{_services_dataService__WEBPACK_IMPORTED_MODULE_\d+__\.DataService\.getSubscriptionUnlockThreshold\(tier\)\}`\s*:\s*`买断 ¥\$\{price\.toLocaleString\(\)\}`/g,
+      "children: `买断 ¥${price.toLocaleString()}`"
+    )
+    .replace(
+      /                                                const lockedByUnlock = !canSubscribeTier\(tier\);\\n\s*const isCurrent = subscription\?\.tier === tier;\\n\s*const activeNow = subscriptionActive && Boolean\(subscription\);\\n\s*const label = !subscription \|\| !activeNow\\n\s*\? '购买'\\n\s*: isCurrent\\n\s*\? '购买'\\n\s*: subscriptionTiers\.indexOf\(tier\) > subscriptionTiers\.indexOf\(subscription\.tier\)\\n\s*\? '升级'\\n\s*: '购买';/g,
+      "                                                const activeNow = Boolean(subscription);\\n                                                const currentTierIndex = subscription?.tier ? subscriptionTiers.indexOf(subscription.tier) : -1;\\n                                                const targetTierIndex = subscriptionTiers.indexOf(tier);\\n                                                const tierAlreadyBought = activeNow && currentTierIndex >= targetTierIndex && targetTierIndex >= 0;\\n                                                const label = tierAlreadyBought\\n                                                    ? '已买断'\\n                                                    : activeNow && currentTierIndex >= 0 && targetTierIndex > currentTierIndex\\n                                                        ? '升级'\\n                                                        : '购买';"
+    )
+    .replace(
+      /children: lockedByUnlock\\n\s*\?\s*`需累计消耗 \$\{_services_dataService__WEBPACK_IMPORTED_MODULE_\d+__\.DataService\.getSubscriptionUnlockThreshold\(tier\)\}`\\n\s*:\s*`买断 ¥\$\{price\.toLocaleString\(\)\}`/g,
+      "children: `买断 ¥${price.toLocaleString()}`"
+    )
+    .replace(
 	      /children: \[\(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__\.jsx\)\(lucide_react__WEBPACK_IMPORTED_MODULE_\d+__\["default"\], \{ size: 18, fill: "currentColor" \}\), missingEnergy > 0 \? '能量不足' : missingPoints > 0 \? '[^']+' : '启动催眠'\]/,
       "children: [isAppendingHypnosis ? '追加催眠' : '启动催眠']"
     )
@@ -2299,15 +2456,27 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
     )
     .replace(
       'isLocked && ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("span", { className: "text-xs text-gray-400 bg-gray-800 px-2 py-0.5 rounded-full", children: ["需要消耗 ", tierConfig.unlockThreshold, " 点"] }))',
-	      '(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "shrink-0 flex items-center gap-2", children: [isLocked && ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("span", { className: "text-[11px] text-gray-300 bg-gray-800/80 px-2 py-1 rounded-full", children: ["买断 ¥", (_services_dataService__WEBPACK_IMPORTED_MODULE_4__.SUBSCRIPTION_PRICES[tierConfig.tier] ?? 0).toLocaleString()] })), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)(isCollapsed ? lucide_react__WEBPACK_IMPORTED_MODULE_11__["default"] : lucide_react__WEBPACK_IMPORTED_MODULE_12__["default"], { size: 22, className: "text-pink-100/70" })] })'
+	      '(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)(isCollapsed ? lucide_react__WEBPACK_IMPORTED_MODULE_11__["default"] : lucide_react__WEBPACK_IMPORTED_MODULE_12__["default"], { size: 22, className: "shrink-0 text-pink-100/70" })'
+    )
+    .replace(
+      'isLocked && ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("span", { className: "text-xs text-gray-400 bg-gray-800 px-2 py-0.5 rounded-full", children: ["\\u9700\\u8981\\u6D88\\u8017 ", tierConfig.unlockThreshold, " \\u70B9"] }))',
+	      '(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)(isCollapsed ? lucide_react__WEBPACK_IMPORTED_MODULE_11__["default"] : lucide_react__WEBPACK_IMPORTED_MODULE_12__["default"], { size: 22, className: "shrink-0 text-pink-100/70" })'
     )
     .replace(
       'isLocked && ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "absolute inset-0 z-10 bg-hypno-dark/60 backdrop-blur-sm rounded-xl border border-white/5 flex flex-col items-center justify-center text-center p-4"',
-      'isLocked && !isCollapsed && ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "absolute inset-x-3 bottom-3 top-[76px] z-10 bg-hypno-dark/60 backdrop-blur-sm rounded-2xl border border-white/5 flex flex-col items-center justify-center text-center p-4"'
+      'false && ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "absolute inset-x-3 bottom-3 top-[76px] z-10 bg-hypno-dark/60 backdrop-blur-sm rounded-2xl border border-white/5 flex flex-col items-center justify-center text-center p-4"'
+    )
+    .replace(
+      'isLocked && !isCollapsed && ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "absolute inset-x-3 bottom-3 top-[76px] z-10 bg-hypno-dark/60 backdrop-blur-sm rounded-2xl border border-white/5 flex flex-col items-center justify-center text-center p-4"',
+      'false && ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "absolute inset-x-3 bottom-3 top-[76px] z-10 bg-hypno-dark/60 backdrop-blur-sm rounded-2xl border border-white/5 flex flex-col items-center justify-center text-center p-4"'
     )
     .replace(
       'className: `space-y-3 ${isLocked ?',
       "className: `space-y-3 px-3 pb-3 pt-3 ${isCollapsed ? 'hidden' : ''} ${isLocked ?"
+    )
+    .replace(
+      "className: `space-y-3 px-3 pb-3 pt-3 ${isCollapsed ? 'hidden' : ''} ${isLocked ? 'opacity-30 pointer-events-none select-none filter blur-[2px]' : ''}`",
+      "className: `space-y-3 px-3 pb-3 pt-3 ${isCollapsed ? 'hidden' : ''}`"
     )
     .replace(
       'bg-white/5 border rounded-xl overflow-hidden transition-all duration-300',
@@ -7636,6 +7805,29 @@ function injectInternalMchanApp(html, staticSeed) {
   window.__ST_OPEN_CLOCK_APP__ = () => openClockPage();
   window.__ST_OPEN_MAP_APP__ = () => openTodoPage(null, "map", "st-map-app", "地图", "区域信息");
   window.__ST_OPEN_SCHOOL_APP__ = () => openTodoPage(null, "school", "st-school-app", "学校", "学校地图与校规", true);
+  window.__ST_SET_PHONE_ACTIVE_APP__ = (appName) => setPhoneActiveApp(findPhoneRoot(document.body), appName || "");
+
+  function restoreStoredInternalApp() {
+    const root = findPhoneRoot(document.body);
+    if (!root || !looksLikePhoneHome(root)) return false;
+    const app = String(window.__ST_GET_PHONE_ACTIVE_APP__?.() || "").trim();
+    if (!app || app === "home") return false;
+    const openers = {
+      "add-role": () => openAddRolePage(null),
+      "scan": () => openAddRolePage(null),
+      "profile": () => openPersonProfilePage(null),
+      "calendar-lite": () => openLiteCalendarPage(null),
+      "timetable": () => openTimetablePage(null),
+      "clock": () => openClockPage(null),
+      "mchan": () => openMchanPage(null),
+      "map": () => openTodoPage(null, "map", "st-map-app", "地图", "区域信息"),
+      "school": () => openTodoPage(null, "school", "st-school-app", "学校", "学校地图与校规", true)
+    };
+    const opener = openers[app];
+    if (!opener) return false;
+    opener();
+    return true;
+  }
 
   function looksLikePhoneHome(root) {
     const rootText = root?.innerText || "";
@@ -8018,6 +8210,7 @@ function injectInternalMchanApp(html, staticSeed) {
   }
 
   function refreshPhoneVariableViews() {
+    restoreStoredInternalApp();
     patchHomeTile();
     updatePhoneDarkTheme();
     updateOpenPersonProfilePage();
