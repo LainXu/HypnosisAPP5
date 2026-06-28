@@ -957,47 +957,69 @@ function patchAchievementAppModule(code) {
         }
         fallbackAppendOperationIntent(payload);
     };
-    const ST_FRONTEND_TASK_COUNT_KEY = 'hypnoos:frontend-generated-task-count:v1';
-    const readFrontendTaskCount = () => {
+    const ST_FRONTEND_REWARD_COUNT_KEY = 'hypnoos:frontend-achievement-task-counts:v1';
+    const normalizeFrontendRewardCounts = (input) => ({
+        achievements: Math.max(0, Math.trunc(Number(input?.achievements) || 0)),
+        quests: Math.max(0, Math.trunc(Number(input?.quests) || 0)),
+    });
+    const readFrontendRewardCounts = () => {
         try {
-            const value = Number.parseInt(String(globalThis.localStorage?.getItem(ST_FRONTEND_TASK_COUNT_KEY) || '0'), 10);
-            return Number.isFinite(value) && value > 0 ? value : 0;
+            return normalizeFrontendRewardCounts(JSON.parse(globalThis.localStorage?.getItem(ST_FRONTEND_REWARD_COUNT_KEY) || '{}'));
         }
         catch {
-            return 0;
+            return normalizeFrontendRewardCounts(null);
         }
     };
-    const writeFrontendTaskCount = (value) => {
-        const next = Math.max(0, Math.trunc(Number(value) || 0));
+    const writeFrontendRewardCounts = (counts) => {
+        const next = normalizeFrontendRewardCounts(counts);
         try {
-            globalThis.localStorage?.setItem(ST_FRONTEND_TASK_COUNT_KEY, String(next));
+            globalThis.localStorage?.setItem(ST_FRONTEND_REWARD_COUNT_KEY, JSON.stringify(next));
         }
         catch {
             // localStorage may be blocked in some embedded browsers.
         }
         return next;
     };
+    const withFirstRewardHint = (payload, kind, increment = 1) => {
+        const counts = readFrontendRewardCounts();
+        const isFirst = counts.achievements <= 0 && counts.quests <= 0 && !globalThis.__HYPNOOS_FIRST_REWARD_HINT_USED__;
+        if (isFirst)
+            globalThis.__HYPNOOS_FIRST_REWARD_HINT_USED__ = true;
+        const delta = Math.max(1, Math.trunc(Number(increment) || 1));
+        const nextCounts = {
+            achievements: counts.achievements + (kind === 'achievement' ? delta : 0),
+            quests: counts.quests + (kind === 'quest' ? delta : 0),
+        };
+        writeFrontendRewardCounts(nextCounts);
+        return isFirst
+            ? {
+                ...payload,
+                首次回馈说明: '成就与任务系统是催眠系统为回馈长期测试与使用的用户而开放的现金或物品回馈机制；本说明只需在第一次领取或新增时理解一次，不要重复扩写。',
+                前端成就任务计数: { 领取前: counts, 本次: kind, 领取后: nextCounts },
+            }
+            : { ...payload, 前端成就任务计数: { 领取前: counts, 本次: kind, 领取后: nextCounts } };
+    };
     const handleClaimAchievement = async (ach) => {
         if (ach.isClaimed)
             return;
-        recordOperationIntent({
+        recordOperationIntent(withFirstRewardHint({
             来源: '成就和任务',
             操作: '领取成就',
             成就ID: ach.id,
             成就: ach.title,
             条件: ach.description,
 	            奖励: \`持有零花钱 +¥\${Number(ach.rewardMoney ?? 0).toLocaleString()}\`,
-        });
+        }, 'achievement'));
     };
     const handleAcceptQuest = async (quest) => {
-        recordOperationIntent({
+        recordOperationIntent(withFirstRewardHint({
             来源: '成就和任务',
             操作: '接取任务',
             任务ID: quest.id,
             任务: quest.title,
             条件: quest.description,
 	            奖励: \`持有零花钱 +¥\${Number(quest.rewardMoney ?? 0).toLocaleString()}\`,
-        });
+        }, 'quest'));
     };
     const handleCancelQuest = async (quest) => {
         recordOperationIntent({
@@ -1026,27 +1048,28 @@ function patchAchievementAppModule(code) {
 	            return;
 	        }
 	        const bias = String(newQuestBias || '').trim();
-	        const frontendTaskCountBefore = readFrontendTaskCount();
+	        const rewardCountsBefore = readFrontendRewardCounts();
 	        const payload = {
 	            来源: '成就和任务',
 	            操作: '新增任务',
 	            数量: \`\${count}个\`,
 	            当前已接任务数: \`\${activeQuestCount}个\`,
 	            剩余可新增数量: \`\${Math.max(0, 3 - activeQuestCount)}个\`,
-	            前端新增任务计数: {
-	                生成前: frontendTaskCountBefore,
-	                本次请求: count,
-	                生成后: frontendTaskCountBefore + count
+	            前端成就任务计数: {
+	                新增前: rewardCountsBefore,
+	                本次请求任务数: count,
+	                新增后: { achievements: rewardCountsBefore.achievements, quests: rewardCountsBefore.quests + count }
 	            },
 	            倾向: bias || '由AI根据当前上下文剧情决定并随机补全',
 	            任务来源: '系统突然出现的任务，不是{{user}}主动发布、设计或提前知道的目标，也不代表{{user}}主动关联到任务对象。',
 	            初始状态: '直接写入任务变量，作为已接/进行中的任务',
 	            生成规则: '根据当前上下文剧情新增若干由系统突然刷出的进行中任务；写入/任务，包含完成条件、奖励金钱和已完成=false；不要写入前端静态列表，也不要标记为已完成。用户没指定的必要内容由AI随机生成，可适当优化用户描述，让任务更贴合当前剧情。',
 	        };
-	        if (frontendTaskCountBefore <= 0) {
-	            payload.首次任务说明 = '成就与任务系统是催眠系统为回馈长期测试与使用的用户而开放的现金或物品回馈机制；新增任务应像系统突然刷出，不是{{user}}主动安排。';
+	        if (rewardCountsBefore.achievements <= 0 && rewardCountsBefore.quests <= 0 && !globalThis.__HYPNOOS_FIRST_REWARD_HINT_USED__) {
+	            globalThis.__HYPNOOS_FIRST_REWARD_HINT_USED__ = true;
+	            payload.首次回馈说明 = '成就与任务系统是催眠系统为回馈长期测试与使用的用户而开放的现金或物品回馈机制；新增任务应像系统突然刷出，不是{{user}}主动安排。';
 	        }
-	        writeFrontendTaskCount(frontendTaskCountBefore + count);
+	        writeFrontendRewardCounts({ achievements: rewardCountsBefore.achievements, quests: rewardCountsBefore.quests + count });
 	        recordOperationIntent(payload);
     };
 `
@@ -1299,71 +1322,7 @@ function getActiveHomeHypnosisInfo(roles) {
     }
     return null;
 }
-function appModeToStoredPhoneApp(mode) {
-    switch (mode) {
-        case _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.HYPNOSIS:
-            return 'hypnosis';
-        case _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.BODY_STATS:
-            return 'stats';
-        case _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.CALENDAR:
-            return 'calendar';
-        case _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.HELP:
-            return 'help';
-        case _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.INVENTORY:
-            return 'inventory';
-        case _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.ACHIEVEMENTS:
-            return 'achievements';
-        default:
-            return 'home';
-    }
-}
-function storedPhoneAppToAppMode() {
-    let stored = '';
-    try {
-        stored = String(globalThis.__ST_GET_PHONE_ACTIVE_APP__?.() || localStorage.getItem('hypnoos:active-phone-app:v1') || '').trim();
-    }
-    catch {
-        stored = '';
-    }
-    switch (stored) {
-        case 'hypnosis':
-            return _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.HYPNOSIS;
-        case 'stats':
-            return _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.BODY_STATS;
-        case 'calendar':
-            return _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.CALENDAR;
-        case 'help':
-            return _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.HELP;
-        case 'inventory':
-            return _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.INVENTORY;
-        case 'achievements':
-            return _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.ACHIEVEMENTS;
-        default:
-            return _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.HOME;
-    }
-}
-function rememberPhoneActiveAppMode(mode) {
-    const app = appModeToStoredPhoneApp(mode);
-    globalThis.__ST_PHONE_ACTIVE_APP__ = app;
-    try {
-        localStorage.setItem('hypnoos:active-phone-app:v1', app);
-    }
-    catch {}
-    try {
-        window.dispatchEvent(new CustomEvent('st-phone-active-app-change', { detail: { app } }));
-    }
-    catch {}
-}
 function withTimeout`
-  );
-  output = output.replace(
-    `    const [currentApp, setCurrentApp] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(_types__WEBPACK_IMPORTED_MODULE_8__.AppMode.HOME);`,
-    `    const [currentApp, setCurrentAppState] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(() => storedPhoneAppToAppMode());
-    const setCurrentApp = (0,react__WEBPACK_IMPORTED_MODULE_1__.useCallback)((nextApp) => {
-        const resolvedApp = typeof nextApp === 'function' ? nextApp(currentApp) : nextApp;
-        rememberPhoneActiveAppMode(resolvedApp);
-        setCurrentAppState(resolvedApp);
-    }, [currentApp]);`
   );
   output = output.replace(
     `    const [systemDateText, setSystemDateText] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(undefined);
@@ -5255,7 +5214,10 @@ function injectInternalMchanApp(html, staticSeed) {
 .st-person-paper-head small{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;width:70%;margin:0 auto 4px;color:rgba(68,54,42,.56);font-size:14px;line-height:1}
 .st-person-paper-head small::before,.st-person-paper-head small::after{content:"";height:1px;background:rgba(81,64,49,.42)}
 .st-person-paper-head h2{margin:0;color:#403126;font-size:34px;line-height:1.05;letter-spacing:.1em;font-weight:900;text-shadow:0 1px 0 rgba(255,255,255,.65)}
+.st-person-picker{position:relative;z-index:2;width:76%;max-width:246px;margin:0 auto 8px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:7px;align-items:center;color:rgba(68,54,42,.72);font-size:11px;font-weight:900;letter-spacing:.12em}
+.st-person-picker select{min-width:0;height:26px;border:1px solid rgba(81,64,49,.28);border-radius:999px;background:rgba(247,241,229,.68);color:#3b3025;padding:0 25px 0 10px;font-size:12px;font-weight:850;outline:none;box-shadow:0 2px 8px rgba(60,45,32,.07);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC",sans-serif}
 .st-person-photo{width:100%;aspect-ratio:4/5;border:3px double rgba(81,64,49,.45);background:#eee8dc;overflow:hidden;display:grid;place-items:center;cursor:pointer;box-shadow:0 4px 12px rgba(80,64,48,.13)}
+.st-person-photo.is-static{cursor:default}
 .st-person-photo img{width:100%;height:100%;object-fit:cover;display:block}
 .st-person-photo-empty{width:100%;height:100%;display:grid;place-items:center;text-align:center;color:rgba(68,54,42,.42);font-size:12px;font-weight:900;letter-spacing:.1em;background:linear-gradient(135deg,rgba(255,255,255,.42),rgba(220,211,195,.45))}
 .st-person-tabs{position:relative;z-index:1;display:grid;grid-template-columns:1fr 1fr;gap:8px;width:66%;max-width:214px;margin:0 auto 10px}
@@ -5283,27 +5245,12 @@ function injectInternalMchanApp(html, staticSeed) {
       || document.body;
   }
 
-  const ST_ACTIVE_APP_STORAGE_KEY = "hypnoos:active-phone-app:v1";
-  try {
-    window.__ST_PHONE_ACTIVE_APP__ = localStorage.getItem(ST_ACTIVE_APP_STORAGE_KEY) || "home";
-  } catch {
-    window.__ST_PHONE_ACTIVE_APP__ = "home";
-  }
-  window.__ST_GET_PHONE_ACTIVE_APP__ = () => window.__ST_PHONE_ACTIVE_APP__ || "home";
-
   function setPhoneActiveApp(root, appName) {
     const normalized = String(appName || "").trim();
     if (root?.dataset) {
       if (normalized) root.dataset.stPhoneApp = normalized;
       else delete root.dataset.stPhoneApp;
     }
-    window.__ST_PHONE_ACTIVE_APP__ = normalized || "home";
-    try {
-      localStorage.setItem(ST_ACTIVE_APP_STORAGE_KEY, window.__ST_PHONE_ACTIVE_APP__);
-    } catch {}
-    try {
-      window.dispatchEvent(new CustomEvent("st-phone-active-app-change", { detail: { app: window.__ST_PHONE_ACTIVE_APP__ } }));
-    } catch {}
   }
 
   function clearPhoneInternalOverlays(root) {
@@ -6904,12 +6851,43 @@ function injectInternalMchanApp(html, staticSeed) {
     { key: "上衣", label: "上　衣", long: true },
     { key: "下衣", label: "下　衣", long: true }
   ];
+  const PERSON_PROFILE_EASTER_KEY = "__isaac_binding_easter__";
+  const PERSON_PROFILE_EASTER = {
+    name: "以撒",
+    photo: stAssetUrl("profiles/isaac.png"),
+    profile: {
+      "姓名": "以撒",
+      "年龄": "5",
+      "社团/职业": "地下室迷路儿童",
+      "身高": "很小",
+      "体重": "很轻",
+      "三围": "无记录",
+      "头发": "无",
+      "面部": "呆滞，圆眼空洞地望向前方，像是刚从地下室里抬起头。",
+      "上衣": "无",
+      "下衣": "无"
+    }
+  };
   const PROFILE_PHOTO_STORAGE_PREFIX = "hypnoos:profile-photo:v1";
 
   function orderedProfileRoleNames(roles) {
     const defaults = DEFAULT_ROLE_NAMES.filter((name) => Object.prototype.hasOwnProperty.call(roles, name));
     const rest = Object.keys(roles).filter((name) => name && !DEFAULT_ROLE_NAMES.includes(name)).sort((a, b) => a.localeCompare(b, "zh-CN"));
     return defaults.concat(rest);
+  }
+
+  function isIsaacProfilePage(page) {
+    return page?.dataset?.profileStatic === PERSON_PROFILE_EASTER_KEY;
+  }
+
+  function profilePickerHtml(roleNames, selectedValue) {
+    const normalOptions = roleNames.map((name) => '<option value="' + escapeAttr(name) + '"' + (selectedValue === name ? " selected" : "") + '>' + escapeHtml(name) + '</option>').join("");
+    const placeholder = roleNames.length ? "" : '<option value=""' + (!selectedValue ? " selected" : "") + '>没有角色档案</option>';
+    return '<label class="st-person-picker"><span>名单</span><select data-profile-select>' +
+      placeholder +
+      normalOptions +
+      '<option value="' + PERSON_PROFILE_EASTER_KEY + '"' + (selectedValue === PERSON_PROFILE_EASTER_KEY ? " selected" : "") + '>以撒</option>' +
+    '</select></label>';
   }
 
   function profileStorageScope() {
@@ -6964,6 +6942,13 @@ function injectInternalMchanApp(html, staticSeed) {
   }
 
   function turnPersonProfilePage(page, delta) {
+    if (isIsaacProfilePage(page)) {
+      const roleNames = orderedProfileRoleNames(getStatsRoles());
+      delete page.dataset.profileStatic;
+      page.dataset.profileIndex = String(delta < 0 && roleNames.length ? roleNames.length - 1 : 0);
+      renderPersonProfilePage(page, delta < 0 ? -1 : 1);
+      return;
+    }
     const current = Number(page.dataset.profileIndex || 0);
     page.dataset.profileIndex = String((Number.isFinite(current) ? current : 0) + delta);
     renderPersonProfilePage(page, delta < 0 ? -1 : 1);
@@ -6984,6 +6969,20 @@ function injectInternalMchanApp(html, staticSeed) {
     if (action === "upload-photo") page.querySelector("[data-profile-file]")?.click();
   }
 
+  function selectPersonProfile(page, value) {
+    const nextValue = String(value || "");
+    if (nextValue === PERSON_PROFILE_EASTER_KEY) {
+      page.dataset.profileStatic = PERSON_PROFILE_EASTER_KEY;
+      renderPersonProfilePage(page);
+      return;
+    }
+    delete page.dataset.profileStatic;
+    const roleNames = orderedProfileRoleNames(getStatsRoles());
+    const index = roleNames.indexOf(nextValue);
+    page.dataset.profileIndex = String(index >= 0 ? index : 0);
+    renderPersonProfilePage(page);
+  }
+
   function bindPersonProfileEvents(page) {
     if (page.dataset.profileBound === "true") return;
     page.dataset.profileBound = "true";
@@ -6993,6 +6992,13 @@ function injectInternalMchanApp(html, staticSeed) {
       event.preventDefault();
       event.stopPropagation();
       runPersonProfileAction(page, target.dataset.profileAction);
+    });
+    page.addEventListener("change", (event) => {
+      const target = event.target?.closest?.("[data-profile-select]");
+      if (!target || !page.contains(target)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      selectPersonProfile(page, target.value);
     });
     page.addEventListener("keydown", (event) => {
       if (event.key === "ArrowLeft") {
@@ -7017,6 +7023,15 @@ function injectInternalMchanApp(html, staticSeed) {
   function personProfileSignature(page) {
     const roles = getStatsRoles();
     const roleNames = orderedProfileRoleNames(roles);
+    if (isIsaacProfilePage(page)) {
+      return JSON.stringify({
+        static: PERSON_PROFILE_EASTER_KEY,
+        names: roleNames,
+        profile: PERSON_PROFILE_EASTER.profile,
+        photo: PERSON_PROFILE_EASTER.photo,
+        tab: activePersonProfileTab(page)
+      });
+    }
     const index = normalizeProfileIndex(page, roleNames.length);
     const roleName = roleNames[index] || "";
     const roleData = isPlainObject(roles[roleName]) ? roles[roleName] : {};
@@ -7032,28 +7047,31 @@ function injectInternalMchanApp(html, staticSeed) {
     bindPersonProfileEvents(page);
     const roles = getStatsRoles();
     const roleNames = orderedProfileRoleNames(roles);
+    const staticIsaac = isIsaacProfilePage(page);
     const index = normalizeProfileIndex(page, roleNames.length);
     page.dataset.profileIndex = String(index);
-    if (!roleNames.length) {
+    if (!roleNames.length && !staticIsaac) {
       page.dataset.profileSignature = personProfileSignature(page);
       page.innerHTML =
         '<main class="st-lite-body st-profile-body">' +
           '<section class="st-person-paper">' +
             '<button class="st-person-back" type="button" data-profile-action="back" title="返回桌面">‹</button>' +
             '<div class="st-person-paper-head"><small>NO DATA</small><h2>人物档案</h2></div>' +
+            profilePickerHtml(roleNames, "") +
             '<section class="st-person-empty">没有可显示的角色档案。</section>' +
           '</section>' +
         '</main>';
       bindPersonProfileControls(page);
       return;
     }
-    const roleName = roleNames[index];
-    const roleData = isPlainObject(roles[roleName]) ? roles[roleName] : {};
-    const profile = roleProfileData(roleName, roleData);
-    const photo = profilePhotoSource(roleName, roleData);
+    const roleName = staticIsaac ? PERSON_PROFILE_EASTER.name : roleNames[index];
+    const roleData = !staticIsaac && isPlainObject(roles[roleName]) ? roles[roleName] : {};
+    const profile = staticIsaac ? PERSON_PROFILE_EASTER.profile : roleProfileData(roleName, roleData);
+    const photo = staticIsaac ? PERSON_PROFILE_EASTER.photo : profilePhotoSource(roleName, roleData);
     const activeTab = activePersonProfileTab(page);
     const fields = activeTab === "info" ? PERSON_PROFILE_INFO_FIELDS : PERSON_PROFILE_CLOTHING_FIELDS;
     const animationClass = direction < 0 ? " is-enter-left" : direction > 0 ? " is-enter-right" : "";
+    const selectedValue = staticIsaac ? PERSON_PROFILE_EASTER_KEY : roleName;
     const fieldsHtml = fields.map((field) => (
       '<div class="st-person-line ' + (field.long ? "is-long" : "") + '">' +
         '<span>' + escapeHtml(field.label) + '</span>' +
@@ -7065,11 +7083,12 @@ function injectInternalMchanApp(html, staticSeed) {
         '<section class="st-person-paper' + animationClass + '" aria-label="人物档案纸">' +
           '<button class="st-person-back" type="button" data-profile-action="back" title="返回桌面">‹</button>' +
           '<div class="st-person-paper-head"><small>✦</small><h2>人物档案</h2></div>' +
+          profilePickerHtml(roleNames, selectedValue) +
           '<div class="st-person-photo-wrap">' +
             '<button class="st-person-paper-nav" type="button" data-profile-action="prev" title="上一个">‹</button>' +
-            '<button class="st-person-photo" type="button" data-profile-action="upload-photo" title="点击更换照片">' +
+            (staticIsaac ? '<div class="st-person-photo is-static">' : '<button class="st-person-photo" type="button" data-profile-action="upload-photo" title="点击更换照片">') +
               (photo ? '<img alt="' + escapeAttr(roleName) + '" src="' + escapeAttr(photo) + '">' : '<div class="st-person-photo-empty">点击照片区域<br>更换图片</div>') +
-            '</button>' +
+            (staticIsaac ? '</div>' : '</button>') +
             '<button class="st-person-paper-nav" type="button" data-profile-action="next" title="下一个">›</button>' +
           '</div>' +
           '<nav class="st-person-tabs" aria-label="档案分页">' +
@@ -7078,11 +7097,12 @@ function injectInternalMchanApp(html, staticSeed) {
           '</nav>' +
           '<input type="file" accept="image/*" data-profile-file hidden>' +
           '<section class="st-person-lines">' + fieldsHtml + '</section>' +
-          '<div class="st-person-page-count">' + escapeHtml(String(index + 1) + " / " + roleNames.length) + '</div>' +
+          '<div class="st-person-page-count">' + escapeHtml(staticIsaac ? "彩蛋档案" : String(index + 1) + " / " + roleNames.length) + '</div>' +
         '</section>' +
       '</main>';
     page.dataset.profileSignature = personProfileSignature(page);
     bindPersonProfileControls(page);
+    if (staticIsaac) return;
     const fileInput = page.querySelector("[data-profile-file]");
     fileInput?.addEventListener("change", () => {
       const file = fileInput.files?.[0];
@@ -7794,29 +7814,6 @@ function injectInternalMchanApp(html, staticSeed) {
   window.__ST_OPEN_CLOCK_APP__ = () => openClockPage();
   window.__ST_OPEN_MAP_APP__ = () => openTodoPage(null, "map", "st-map-app", "地图", "区域信息");
   window.__ST_OPEN_SCHOOL_APP__ = () => openTodoPage(null, "school", "st-school-app", "学校", "学校地图与校规", true);
-  window.__ST_SET_PHONE_ACTIVE_APP__ = (appName) => setPhoneActiveApp(findPhoneRoot(document.body), appName || "");
-
-  function restoreStoredInternalApp() {
-    const root = findPhoneRoot(document.body);
-    if (!root || !looksLikePhoneHome(root)) return false;
-    const app = String(window.__ST_GET_PHONE_ACTIVE_APP__?.() || "").trim();
-    if (!app || app === "home") return false;
-    const openers = {
-      "add-role": () => openAddRolePage(null),
-      "scan": () => openAddRolePage(null),
-      "profile": () => openPersonProfilePage(null),
-      "calendar-lite": () => openLiteCalendarPage(null),
-      "timetable": () => openTimetablePage(null),
-      "clock": () => openClockPage(null),
-      "mchan": () => openMchanPage(null),
-      "map": () => openTodoPage(null, "map", "st-map-app", "地图", "区域信息"),
-      "school": () => openTodoPage(null, "school", "st-school-app", "学校", "学校地图与校规", true)
-    };
-    const opener = openers[app];
-    if (!opener) return false;
-    opener();
-    return true;
-  }
 
   function looksLikePhoneHome(root) {
     const rootText = root?.innerText || "";
@@ -8199,7 +8196,6 @@ function injectInternalMchanApp(html, staticSeed) {
   }
 
   function refreshPhoneVariableViews() {
-    restoreStoredInternalApp();
     patchHomeTile();
     updatePhoneDarkTheme();
     updateOpenPersonProfilePage();

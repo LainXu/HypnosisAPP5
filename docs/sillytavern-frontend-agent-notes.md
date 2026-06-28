@@ -122,36 +122,11 @@ The user wants AI to be the variable writer. Frontend operations should:
 Exceptions are local UI-only state:
 
 - Home icon order.
-- Current open phone app.
 - Uploaded profile photos.
 - Map/school local custom location descriptions, if they are explicitly local storage content.
+- Frontend reward counters used only to decide whether the first achievement/task explanation should be included.
 
-## Frontend App State
-
-Current phone app is stored in `hypnoos:active-phone-app:v1`.
-
-Native React app modes are mapped to:
-
-- `home`
-- `hypnosis`
-- `stats`
-- `calendar`
-- `help`
-- `inventory`
-- `achievements`
-
-Injected internal pages use:
-
-- `scan`
-- `profile`
-- `calendar-lite`
-- `timetable`
-- `clock`
-- `mchan`
-- `map`
-- `school`
-
-Keep this state local-only. AI should not read or modify it.
+Do not persist the currently open phone app. Native React pages should use normal component state, and injected internal pages may set only the current DOM root's `data-st-phone-app` for styling.
 
 ## Home Icons
 
@@ -213,6 +188,6 @@ For browser checks:
 
 - Home icons should click with one click.
 - Dragging one icon over another should swap only those two icons.
-- Switching apps and refreshing should keep the current app.
+- Refreshing or sending a message should not restore the last opened app from localStorage.
 - Achievements/tasks page should not blank the frontend.
 - Hypnosis command costs should change when person count, part count, numeric value, or duration changes.
