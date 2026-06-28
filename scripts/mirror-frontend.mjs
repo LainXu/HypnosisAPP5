@@ -182,10 +182,10 @@ window.setTimeout(() => {
     const OPERATION_SOURCE_KEYS = ["来源", "应用", "模块", "source", "app"];
     const OPERATION_ACTION_KEYS = ["操作", "动作", "类型", "action", "type"];
     window.__ST_OPERATION_INPUT_LOG__ = Array.isArray(window.__ST_OPERATION_INPUT_LOG__) ? window.__ST_OPERATION_INPUT_LOG__ : [];
-    const cleanOperationText = (value) => String(value ?? "").replace(/[<>]/g, "").trim();
-    const readOperationKey = (object, keys, fallback = "") => {
-      if (!object || typeof object !== "object" || Array.isArray(object)) return fallback;
-      for (const key of keys) {
+	    const cleanOperationText = (value) => String(value ?? "").replace(/[<>]/g, "").trim();
+	    const readOperationKey = (object, keys, fallback = "") => {
+	      if (!object || typeof object !== "object" || Array.isArray(object)) return fallback;
+	      for (const key of keys) {
         const value = object[key];
         if (value !== null && value !== undefined && String(value).trim()) return String(value).trim();
       }
@@ -203,13 +203,100 @@ window.setTimeout(() => {
           if (text) parts.push(cleanOperationText(key) + "=" + text);
         }
         return parts.join(depth > 0 ? "，" : "；");
-      }
-      return cleanOperationText(value);
-    };
-    const normalizeOperationPayload = (payload) => {
-      if (typeof payload === "string") {
-        return { source: "APP", action: "记录", details: { 内容: payload } };
-      }
+	      }
+	      return cleanOperationText(value);
+	    };
+	    const unwrapOperationStatData = (value) => {
+	      if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+	      if (value.stat_data && typeof value.stat_data === "object") return value.stat_data;
+	      return value;
+	    };
+	    const scoreOperationStatData = (value) => {
+	      const root = unwrapOperationStatData(value);
+	      if (!root || typeof root !== "object" || Array.isArray(root)) return -1;
+	      const system = root["系统"];
+	      const roles = root["角色"];
+	      let score = 0;
+	      if (system && typeof system === "object" && !Array.isArray(system)) {
+	        score += 20;
+	        for (const key of ["MC能量", "_MC能量", "MC能量上限", "_MC能量上限", "当前MC点", "持有零花钱", "催眠APP订阅等级", "_催眠APP订阅等级"]) {
+	          if (system[key] !== undefined) score += 3;
+	        }
+	      }
+	      if (roles && typeof roles === "object" && !Array.isArray(roles)) score += 8;
+	      return score;
+	    };
+	    const readOperationStatData = () => {
+	      const candidates = [];
+	      const windows = [];
+	      for (const readWindow of [() => window, () => window.parent, () => window.top]) {
+	        try {
+	          const view = readWindow();
+	          if (view && !windows.includes(view)) windows.push(view);
+	        } catch {}
+	      }
+	      const options = [{ type: "message", message_id: "latest" }, { type: "chat" }, undefined];
+	      for (const view of windows) {
+	        for (const option of options) {
+	          try {
+	            const mvu = view.Mvu?.getMvuData?.(option);
+	            const root = unwrapOperationStatData(mvu);
+	            if (root) candidates.push(root);
+	          } catch {}
+	          try {
+	            if (typeof view.getVariables === "function") {
+	              const vars = option === undefined ? view.getVariables() : view.getVariables(option);
+	              const root = unwrapOperationStatData(vars);
+	              if (root) candidates.push(root);
+	            }
+	          } catch {}
+	        }
+	      }
+	      let best = null;
+	      for (const candidate of candidates) {
+	        const score = scoreOperationStatData(candidate);
+	        if (score < 0) continue;
+	        if (!best || score > best.score) best = { candidate, score };
+	      }
+	      return best?.candidate ?? null;
+	    };
+	    const readOperationBalanceSnapshot = () => {
+	      const variables = readOperationStatData();
+	      const system = variables?.["系统"];
+	      if (!system || typeof system !== "object" || Array.isArray(system)) return null;
+	      const roles = variables?.["角色"];
+	      const snapshot = {};
+	      const copyField = (label, ...keys) => {
+	        for (const key of keys) {
+	          if (system[key] !== undefined && system[key] !== null && system[key] !== "") {
+	            snapshot[label] = system[key];
+	            return;
+	          }
+	        }
+	      };
+	      copyField("MC能量", "MC能量", "_MC能量");
+	      copyField("MC能量上限", "MC能量上限", "_MC能量上限");
+	      copyField("当前MC点", "当前MC点", "MC点");
+	      copyField("持有零花钱", "持有零花钱");
+	      copyField("催眠APP订阅等级", "催眠APP订阅等级", "_催眠APP订阅等级");
+	      const alisaFavor = roles?.["西园寺爱丽莎"]?.["好感度"];
+	      if (alisaFavor !== undefined && alisaFavor !== null) snapshot["西园寺爱丽莎好感度"] = alisaFavor;
+	      const rules = variables?.["校规"] || system["校规"];
+	      if (rules && typeof rules === "object" && !Array.isArray(rules)) snapshot["当前校规数"] = Object.keys(rules).length;
+	      return Object.keys(snapshot).length ? snapshot : null;
+	    };
+	    const operationNeedsBalanceSnapshot = (payload) => /订阅|VIP|资源兑换|补充|提升|购买|启动催眠|追加催眠|申请立校规|消耗|余额|MC能量|当前MC点|持有零花钱|资金/.test(operationValueToDenseText(payload));
+	    const enrichOperationPayload = (payload) => {
+	      if (!payload || typeof payload !== "object" || Array.isArray(payload)) return payload;
+	      if (payload["当前变量余额"] || payload["当前余额"]) return payload;
+	      if (!operationNeedsBalanceSnapshot(payload)) return payload;
+	      const balance = readOperationBalanceSnapshot();
+	      return balance ? { ...payload, 当前变量余额: balance } : payload;
+	    };
+	    const normalizeOperationPayload = (payload) => {
+	      if (typeof payload === "string") {
+	        return { source: "APP", action: "记录", details: { 内容: payload } };
+	      }
       const object = payload && typeof payload === "object" && !Array.isArray(payload) ? payload : { 内容: payload };
       const source = readOperationKey(object, OPERATION_SOURCE_KEYS, "APP");
       const action = readOperationKey(object, OPERATION_ACTION_KEYS, "操作");
@@ -244,15 +331,16 @@ window.setTimeout(() => {
         .sort();
       return [cleanOperationText(record.source || "APP"), cleanOperationText(record.action || "操作"), fields.join("|")].join("\\u0001");
     };
-    const makeOperationEntry = (payload) => {
-      const key = operationRecordKey(payload);
-      return {
-        id: "op-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8),
-        at: Date.now(),
-        key,
-        payload
-      };
-    };
+	    const makeOperationEntry = (payload) => {
+	      const enrichedPayload = enrichOperationPayload(payload);
+	      const key = operationRecordKey(enrichedPayload);
+	      return {
+	        id: "op-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8),
+	        at: Date.now(),
+	        key,
+	        payload: enrichedPayload
+	      };
+	    };
     const describeOperationEntry = (entry) => {
       const payload = operationEntryPayload(entry);
       const record = normalizeOperationPayload(payload);
@@ -1265,7 +1353,15 @@ async function getMvuData() {
             if (!data)
                 return false;
             const { mvu, option } = data;
-            const changed = await setIfChanged(mvu, '系统.当天课程表', dailySchedule);
+            let changed = false;
+            if (await setIfChanged(mvu, '系统.当天课程表', dailySchedule))
+                changed = true;
+            const courseText = String(dailySchedule?.当前或待上课程 ?? '').trim() || '无';
+            if (await setIfChanged(mvu, '系统.当前/待上课程', courseText))
+                changed = true;
+            const currentEvent = String(dailySchedule?.当前课段?.名称 ?? '').trim();
+            if (currentEvent && await setIfChanged(mvu, '系统.当前事件', currentEvent))
+                changed = true;
             if (changed) {
                 await Mvu.replaceMvuData(mvu, option);
             }
@@ -1322,7 +1418,32 @@ const featureDurationMinutes = (feature, fallbackDuration) => normalizePositiveI
 const featureUsesPersonCount = (feature) => feature.id === 'vip4_closed_space_common_sense';
 const featureUsesDuration = (feature) => feature.costType !== 'ONE_TIME' && !['vip1_temp_sensitivity', 'vip1_estrus', 'vip1_memory_erase'].includes(feature.id);
 const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
-    const initialDraft = (0,react__WEBPACK_IMPORTED_MODULE_1__.useMemo)(() => readCustomHypnosisDraft(), []);`
+    const initialDraft = (0,react__WEBPACK_IMPORTED_MODULE_1__.useMemo)(() => readCustomHypnosisDraft(), []);
+    const [activeTemporaryHypnosis, setActiveTemporaryHypnosis] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(Boolean(userData.activeTemporaryHypnosis));
+    (0,react__WEBPACK_IMPORTED_MODULE_1__.useEffect)(() => {
+        let stopped = false;
+        const refreshActiveTemporaryHypnosis = async () => {
+            try {
+                const latest = await _services_dataService__WEBPACK_IMPORTED_MODULE_4__.DataService.getUserData();
+                if (!stopped)
+                    setActiveTemporaryHypnosis(Boolean(latest.activeTemporaryHypnosis));
+            }
+            catch {
+                if (!stopped)
+                    setActiveTemporaryHypnosis(Boolean(userData.activeTemporaryHypnosis));
+            }
+        };
+        setActiveTemporaryHypnosis(Boolean(userData.activeTemporaryHypnosis));
+        void refreshActiveTemporaryHypnosis();
+        const onRefresh = () => void refreshActiveTemporaryHypnosis();
+        window.addEventListener('focus', onRefresh);
+        window.addEventListener('HYPNOOS_OPERATION_QUEUE_CHANGED', onRefresh);
+        return () => {
+            stopped = true;
+            window.removeEventListener('focus', onRefresh);
+            window.removeEventListener('HYPNOOS_OPERATION_QUEUE_CHANGED', onRefresh);
+        };
+    }, [userData.activeTemporaryHypnosis]);`
   );
   output = output.replace(
     "    const [quickSupplyQtyInput, setQuickSupplyQtyInput] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)('1');",
@@ -1536,7 +1657,7 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
   );
   output = output.replace(
     "    const missingPoints = Math.max(0, totalPointsCost - userData.mcPoints);",
-    "    const missingPoints = Math.max(0, totalPointsCost - userData.mcPoints);\n    const isAppendingHypnosis = Boolean(timeLeft > 0 || userData.activeTemporaryHypnosis);"
+    "    const missingPoints = Math.max(0, totalPointsCost - userData.mcPoints);\n    const isAppendingHypnosis = Boolean(timeLeft > 0 || activeTemporaryHypnosis || userData.activeTemporaryHypnosis);"
   );
   output = replaceBetween(
     output,
@@ -1817,6 +1938,20 @@ function patchHypnosisDataServiceModule(code) {
         return { 日期: month + '月' + day + '日', 星期: weekday, 课节: '1限', 时间: fmt(periods[0].start) + '-' + fmt(periods[0].end), 科目: timetable[index]?.[0] || '自习' };
     };
     const course = periods.find(period => minutes >= period.start && minutes < period.end);
+    const courseSlot = (() => {
+        if (weekdayIndex === 0 || weekdayIndex === 6)
+            return { title: '无', detail: '' };
+        if (course) {
+            const subject = timetable[weekdayIndex]?.[course.index - 1] || '自习';
+            return { title: course.label + ' ' + subject, detail: fmt(course.start) + '-' + fmt(course.end) };
+        }
+        const nextPeriod = periods.find(period => minutes < period.start);
+        if (nextPeriod) {
+            const subject = timetable[weekdayIndex]?.[nextPeriod.index - 1] || '自习';
+            return { title: nextPeriod.label + ' ' + subject, detail: fmt(nextPeriod.start) + '-' + fmt(nextPeriod.end) };
+        }
+        return { title: '无', detail: '' };
+    })();
     const fallbackSlot = (() => {
         if (weekdayIndex === 0 || weekdayIndex === 6)
             return { title: '周末自由', detail: '无固定课程' };
@@ -1845,6 +1980,7 @@ function patchHypnosisDataServiceModule(code) {
         日期: currentMonth + '月' + currentDay + '日',
         星期: weekdayText || weekdayForDate(currentMonth, currentDay),
         当前课段: { 名称: scheduleText, 时间: scheduleDetailText },
+        当前或待上课程: courseSlot.title,
         课表: courseRowsForDate(currentMonth, currentDay),
         次日第一节: firstClassForDate(tomorrow.month, tomorrow.day),
     };
@@ -1855,6 +1991,7 @@ function patchHypnosisDataServiceModule(code) {
         weekdayText,
         scheduleText,
         scheduleDetailText,
+        courseText: courseSlot.title,
         dailySchedule,
         virtualMinutes: parseVirtualMinutesFrom(dateText, timeText),
     };
@@ -2167,6 +2304,28 @@ function normalizeStoredQuestRecord(value, fallbackKey = '') {
         source: 'variable',
     };
 }
+function coerceRewardVariableRecord(item) {
+    const raw = isPlainVariableObject(item?.value) ? item.value : {};
+    return { ...raw, key: item?.key };
+}
+function looksLikeAchievementRecord(value) {
+    if (!isPlainVariableObject(value))
+        return false;
+    if (value.成就 != null || value.成就ID != null)
+        return true;
+    if (value.任务 != null || value.任务ID != null)
+        return false;
+    return false;
+}
+function looksLikeQuestRecord(value) {
+    if (!isPlainVariableObject(value))
+        return false;
+    if (value.任务 != null || value.任务ID != null || value.完成条件 != null)
+        return true;
+    if (value.成就 != null || value.成就ID != null)
+        return false;
+    return false;
+}
 function markStoredAchievement(state, record) {
     const normalized = normalizeStoredAchievementRecord(record, record?.key);
     if (normalized.id)
@@ -2175,8 +2334,6 @@ function markStoredAchievement(state, record) {
         state.achievements[normalized.title] = true;
         state.achievementNames[normalized.title] = true;
     }
-    if (normalized.id)
-        state.dynamicAchievements[normalized.id] = normalized;
 }
 function markStoredQuest(state, record) {
     const normalized = normalizeStoredQuestRecord(record, record?.key);
@@ -2216,14 +2373,14 @@ function collectCompletedFrontendRewardVariables(variables) {
     const achievementVars = variables['成就'];
     if (isPlainVariableObject(achievementVars)) {
         for (const [key, value] of Object.entries(achievementVars)) {
-            if (isCompletedFrontendRewardRecord(value))
+            if (isCompletedFrontendRewardRecord(value) && looksLikeAchievementRecord(value))
                 achievements.push({ key, value });
         }
     }
     const taskVars = variables['任务'];
     if (isPlainVariableObject(taskVars)) {
         for (const [key, value] of Object.entries(taskVars)) {
-            if (isCompletedFrontendRewardRecord(value))
+            if (isCompletedFrontendRewardRecord(value) && looksLikeQuestRecord(value))
                 quests.push({ key, value });
         }
     }
@@ -2249,6 +2406,30 @@ function clearCompletedFrontendRewardVariables(records) {
     const questKeys = records.quests.map(item => item.key);
     if (achievementKeys.length === 0 && questKeys.length === 0)
         return;
+    const clearWith = (option) => updateVariablesWith(vars => {
+        const root = isPlainVariableObject(vars?.stat_data) ? vars.stat_data : vars;
+        if (!isPlainVariableObject(root))
+            return vars;
+        if (isPlainVariableObject(root['成就'])) {
+            for (const key of achievementKeys)
+                delete root['成就'][key];
+        }
+        if (isPlainVariableObject(root['任务'])) {
+            for (const key of questKeys)
+                delete root['任务'][key];
+        }
+        if (isPlainVariableObject(vars?.stat_data))
+            vars.stat_data = root;
+        return vars;
+    }, option);
+    for (const option of getFrontendVariableOptions()) {
+        try {
+            clearWith(option);
+        }
+        catch (err) {
+            console.warn('[HypnoOS] 清理已同步任务/成就变量失败', err);
+        }
+    }
     try {
         updateVariablesWith(vars => {
             const root = isPlainVariableObject(vars?.stat_data) ? vars.stat_data : vars;
@@ -2292,9 +2473,9 @@ function syncFrontendRewardStateFromVariables() {
     frontendRewardVariableSyncSignature = signature;
     const state = readFrontendRewardStateRaw();
     for (const item of records.achievements)
-        markStoredAchievement(state, { ...item.value, key: item.key });
+        markStoredAchievement(state, coerceRewardVariableRecord(item));
     for (const item of records.quests)
-        markStoredQuest(state, { ...item.value, key: item.key });
+        markStoredQuest(state, coerceRewardVariableRecord(item));
     writeFrontendRewardState(state);
     try {
         localStorage.setItem(frontendRewardStateKey() + ':variable-sync', signature);
@@ -2310,7 +2491,8 @@ function syncFrontendRewardStateFromVariables() {
             // ignore
         }
     }
-    clearCompletedFrontendRewardVariables(records);
+    if (!alreadySyncedInStorage)
+        clearCompletedFrontendRewardVariables(records);
 }
 function readFrontendRewardState() {
     syncFrontendRewardStateFromVariables();
@@ -2430,83 +2612,23 @@ function chooseUserResourcesFromSystems(systems) {
     return null;
 }`
   );
-  output = output.replace(
-    `    getUserData: async () => {
-        let user;
-        try {
-            const mvuSystem = await _mvuBridge__WEBPACK_IMPORTED_MODULE_3__.MvuBridge.getSystem();
-            if (mvuSystem) {
-                user = systemToUserResources(SYSTEM_SCHEMA.parse(normalizeSystemAliases(mvuSystem)));
-            }
-        }
-        catch (err) {
-            console.warn('[HypnoOS] 读取 MVU 系统变量失败，回退到聊天变量', err);
-        }
-        updateVariablesWith(vars => {
-            const { system } = normalizeChatVariables(vars);
-            user ??= systemToUserResources(system);
-            return vars;
-        }, CHAT_OPTION);
-        if (user) {
-            updateVariablesWith(vars => {
-                const { system, store } = normalizeChatVariables(vars);
-                system._MC能量 = user.mcEnergy;
-                system._MC能量上限 = user.mcEnergyMax;
-                system.当前MC点 = user.mcPoints;
-                system._累计消耗MC点 = user.totalConsumedMc;
-                system.持有零花钱 = user.money;
-                system.主角可疑度 = user.suspicion;
-                system._hypnoos = store;
-                vars.系统 = system;
-                return vars;
-            }, CHAT_OPTION);
-        }
-        return user ?? DEFAULT_USER_DATA;
-    },
-    getSystemClock: async () => {
-        const maybeSync = async (clock) => {
-            try {
-                await syncSubscriptionTierLabel(clock.virtualMinutes);
-            }
-            catch (err) {
-                console.warn('[HypnoOS] 同步订阅等级变量失败', err);
-            }
-            try {
-                if (clock.dailySchedule)
-                    await _mvuBridge__WEBPACK_IMPORTED_MODULE_3__.MvuBridge.syncDailySchedule(clock.dailySchedule);
-            }
-            catch (err) {
-                console.warn('[HypnoOS] 同步当天课程表变量失败', err);
-            }
-            return clock;
-        };
-        try {
-            const mvuSystem = await _mvuBridge__WEBPACK_IMPORTED_MODULE_3__.MvuBridge.getSystem();
-            if (mvuSystem)
-                return await maybeSync(getSystemClockFrom(mvuSystem));
-        }
-        catch (err) {
-            console.warn('[HypnoOS] 读取 MVU 系统时间失败，回退到聊天变量', err);
-        }
-        const { system } = normalizeChatVariables(getVariables(CHAT_OPTION));
-        return await maybeSync(getSystemClockFrom(system));
-    },`,
+  output = replaceBetween(
+    output,
+    "    getUserData: async () => {",
+    "    getSessionEnd: async () => {",
     `    getUserData: async () => {
         const systems = [];
         let activeTemporaryHypnosis = false;
         let hasRoleSnapshot = false;
         try {
             const snapshots = getVariableSnapshotsSync();
-            const currentSnapshot = pickBestVariableSnapshot(snapshots);
-            if (isPlainVariableObject(currentSnapshot?.角色)) {
-                hasRoleSnapshot = true;
-                activeTemporaryHypnosis = hasActiveTemporaryHypnosisEffect(currentSnapshot.角色);
-            }
             for (const snapshot of snapshots) {
                 if (isPlainVariableObject(snapshot?.系统))
                     systems.push(snapshot.系统);
-                if (isPlainVariableObject(snapshot?.角色))
+                if (isPlainVariableObject(snapshot?.角色)) {
                     hasRoleSnapshot = true;
+                    activeTemporaryHypnosis = activeTemporaryHypnosis || hasActiveTemporaryHypnosisEffect(snapshot.角色);
+                }
             }
         }
         catch (err) {
@@ -2532,6 +2654,22 @@ function chooseUserResourcesFromSystems(systems) {
         return { ...(user ?? DEFAULT_USER_DATA), activeTemporaryHypnosis };
     },
     getSystemClock: async () => {
+        const maybeSync = async (clock) => {
+            try {
+                await syncSubscriptionTierLabel(clock.virtualMinutes);
+            }
+            catch (err) {
+                console.warn('[HypnoOS] 同步订阅等级变量失败', err);
+            }
+            try {
+                if (clock.dailySchedule)
+                    await _mvuBridge__WEBPACK_IMPORTED_MODULE_3__.MvuBridge.syncDailySchedule(clock.dailySchedule);
+            }
+            catch (err) {
+                console.warn('[HypnoOS] 同步当天课程表变量失败', err);
+            }
+            return clock;
+        };
         const systems = [];
         try {
             for (const snapshot of getVariableSnapshotsSync()) {
@@ -2559,9 +2697,9 @@ function chooseUserResourcesFromSystems(systems) {
             const clock = getSystemClockFrom(system);
             fallbackClock ??= clock;
             if (clock.dateText !== '4月9日 星期三' || clock.timeText !== '12:00' || clock.scheduleText !== '午休')
-                return clock;
+                return await maybeSync(clock);
         }
-        return fallbackClock ?? getSystemClockFrom({});
+        return await maybeSync(fallbackClock ?? getSystemClockFrom({}));
     },`
   );
   output = output.replace(
@@ -2665,14 +2803,7 @@ function chooseUserResourcesFromSystems(systems) {
             isClaimed: Boolean(store.achievements[a.id] ?? false) || isFrontendAchievementClaimed(frontendState, a),
         });
         });
-        const storedDynamic = Object.values(frontendState.dynamicAchievements ?? {})
-            .filter(a => {
-                const id = String(a?.id ?? '').trim();
-                const title = String(a?.title ?? a?.name ?? '').trim();
-                return (id || title) && !known.has(id) && !known.has(title);
-            })
-            .map(a => ({ ...a, isClaimed: true }));
-        return [...mapped, ...storedDynamic];
+        return mapped;
     },`
   );
   output = output.replace(
