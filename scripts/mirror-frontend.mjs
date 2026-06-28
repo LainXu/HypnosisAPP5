@@ -780,7 +780,31 @@ function patchEvalModuleSources(html, transform) {
 function patchLegacyCurrencyModule(code) {
   let output = code.replace(/rewardMcPoints:\s*(\d+)/g, (_, value) => `rewardMoney: ${Number(value) * 1000}`);
   output = output.replaceAll("rewardMcPoints", "rewardMoney");
+  output = output.replaceAll("自动续订：关", "买断制");
+  output = output.replaceAll("自动续订：开", "买断制");
   output = output.replaceAll("自动续订", "买断制");
+  output = output.replaceAll("订阅中心（每周）", "VIP买断");
+  output = output.replaceAll("订阅中心 (每周)", "VIP买断");
+  output = output.replaceAll("每周", "买断");
+  output = output.replace(/([¥￥]\s*[\d,]+)\/周/g, "$1");
+  output = output.replaceAll("订阅 ¥", "买断 ¥");
+  output = output.replaceAll("订阅¥", "买断¥");
+  output = output.replaceAll("订阅 ￥", "买断 ￥");
+  output = output.replaceAll("`${label} ¥${price.toLocaleString()}/周`", "`买断 ¥${price.toLocaleString()}`");
+  output = output.replaceAll("订阅已买断制", "VIP买断制");
+  output = output.replaceAll("订阅中", "已买断");
+  output = output.replaceAll("具体指令随VIP订阅开放", "具体指令随VIP买断开放");
+  output = output.replaceAll("订阅后自动解锁", "买断后自动解锁");
+  output = output.replaceAll("订阅变更由AI根据本轮APP操作结算", "VIP变更由AI根据本轮APP操作结算");
+  output = output.replaceAll("订阅请求已记录，等待AI结算", "VIP购买请求已记录，等待AI结算");
+  output = output.replaceAll('children: "订阅"', 'children: "购买"');
+  output = output.replaceAll("children: '订阅'", "children: '购买'");
+  output = output.replaceAll("'订阅'", "'购买'");
+  output = output.replaceAll('"订阅"', '"购买"');
+  output = output.replaceAll("未订阅", "未买断");
+  output = output.replaceAll("已订阅", "已买断");
+  output = output.replaceAll("MC点数", "MC能量");
+  output = output.replaceAll("充值 1 MC能量", "补充 1 MC能量");
   output = output.replaceAll("userData.mcPoints < purchasePricePoints", "false");
   output = output.replaceAll("feature.purchasePricePoints", "0");
   output = output.replaceAll("purchasePricePoints", "purchasePriceMoney");
@@ -2477,8 +2501,9 @@ function scoreStatDataCandidate(value) {
 }
 function getFrontendVariableOptions() {
     const currentOption = getCurrentVariableOption();
-    if (currentOption)
-        return [currentOption];
+    return dedupeVariableOptions([currentOption, { type: 'message', message_id: 'latest' }, CHAT_OPTION]);
+}
+function getFallbackVariableOptions() {
     return dedupeVariableOptions([{ type: 'message', message_id: 'latest' }, CHAT_OPTION]);
 }
 function getCurrentVariableOption() {
@@ -2516,6 +2541,13 @@ function getLatestMessageIdSafe() {
 function shouldPreferCurrentMessageSnapshot() {
     return Boolean(getCurrentVariableOption());
 }
+function isUsableStatDataSnapshot(value) {
+    if (!isPlainVariableObject(value))
+        return false;
+    const system = value['系统'];
+    const roles = value['角色'];
+    return isPlainVariableObject(system) || (isPlainVariableObject(roles) && Object.keys(roles).length > 0);
+}
 function dedupeVariableOptions(options) {
     const seen = new Set();
     const result = [];
@@ -2536,17 +2568,14 @@ function pickBestVariableSnapshot(candidates) {
         const score = scoreStatDataCandidate(candidate);
         if (score < 0)
             continue;
-        if (shouldPreferCurrentMessageSnapshot())
-            return candidate;
         if (!best || score > best.score)
             best = { candidate, score };
     }
     return best?.candidate ?? null;
 }
-function getVariableSnapshotsSync() {
+function getVariableSnapshotsForOptionsSync(options, includeImplicit = false) {
     const candidates = [];
-    const hasCurrentSnapshot = Boolean(getCurrentVariableOption());
-    for (const option of getFrontendVariableOptions()) {
+    for (const option of options) {
         try {
             const mvu = globalThis.Mvu?.getMvuData?.(option);
             if (mvu && typeof mvu.then !== 'function' && isPlainVariableObject(mvu.stat_data))
@@ -2556,7 +2585,7 @@ function getVariableSnapshotsSync() {
             // ignore unavailable option
         }
     }
-    for (const option of getFrontendVariableOptions()) {
+    for (const option of options) {
         try {
             const vars = typeof getVariables === 'function' ? getVariables(option) : null;
             if (isPlainVariableObject(vars))
@@ -2566,7 +2595,7 @@ function getVariableSnapshotsSync() {
             // ignore unavailable option
         }
     }
-    if (!hasCurrentSnapshot) {
+    if (includeImplicit) {
         try {
             const vars = typeof getVariables === 'function' ? getVariables() : null;
             if (isPlainVariableObject(vars))
@@ -2602,6 +2631,15 @@ function getVariableSnapshotsSync() {
         seen.add(key);
         return true;
     });
+}
+function getVariableSnapshotsSync() {
+    const currentOption = getCurrentVariableOption();
+    if (currentOption) {
+        const current = getVariableSnapshotsForOptionsSync([currentOption], false);
+        if (current.some(isUsableStatDataSnapshot))
+            return current;
+    }
+    return getVariableSnapshotsForOptionsSync(getFallbackVariableOptions(), true);
 }
 function getLatestVariablesSync() {
     return pickBestVariableSnapshot(getVariableSnapshotsSync()) ?? {};
@@ -2857,33 +2895,38 @@ function clearCompletedFrontendRewardVariables(records) {
     }
 }
 function syncFrontendRewardStateFromVariables() {
-    if (!isLatestFrontendRewardLayer())
-        return;
-    const variables = getLatestVariablesSync();
-    if (!isPlainVariableObject(variables))
-        return;
-    const records = collectCompletedFrontendRewardVariables(variables);
-    const signature = frontendRewardVariableSignature(records);
-    if (!signature)
-        return;
-    const alreadySyncedInMemory = signature === frontendRewardVariableSyncSignature;
-    frontendRewardVariableSyncSignature = signature;
-    const state = readFrontendRewardStateRaw();
-    for (const item of records.achievements)
-        markStoredAchievement(state, coerceRewardVariableRecord(item));
-    for (const item of records.quests)
-        markStoredQuest(state, coerceRewardVariableRecord(item));
-    writeFrontendRewardState(state);
-    if (!alreadySyncedInMemory) {
-        try {
-            window.dispatchEvent(new CustomEvent('HYPNOOS_REWARD_STATE_CHANGED', { detail: { signature } }));
+    try {
+        if (!isLatestFrontendRewardLayer())
+            return;
+        const variables = getLatestVariablesSync();
+        if (!isPlainVariableObject(variables))
+            return;
+        const records = collectCompletedFrontendRewardVariables(variables);
+        const signature = frontendRewardVariableSignature(records);
+        if (!signature)
+            return;
+        const alreadySyncedInMemory = signature === frontendRewardVariableSyncSignature;
+        frontendRewardVariableSyncSignature = signature;
+        const state = readFrontendRewardStateRaw();
+        for (const item of records.achievements)
+            markStoredAchievement(state, coerceRewardVariableRecord(item));
+        for (const item of records.quests)
+            markStoredQuest(state, coerceRewardVariableRecord(item));
+        writeFrontendRewardState(state);
+        if (!alreadySyncedInMemory) {
+            try {
+                window.dispatchEvent(new CustomEvent('HYPNOOS_REWARD_STATE_CHANGED', { detail: { signature } }));
+            }
+            catch {
+                // ignore
+            }
         }
-        catch {
-            // ignore
-        }
+        if (!alreadySyncedInMemory)
+            clearCompletedFrontendRewardVariables(records);
     }
-    if (!alreadySyncedInMemory)
-        clearCompletedFrontendRewardVariables(records);
+    catch (err) {
+        console.warn('[HypnoOS] 同步任务/成就状态失败', err);
+    }
 }
 function readFrontendRewardState() {
     syncFrontendRewardStateFromVariables();
@@ -3540,7 +3583,7 @@ function extractBalancedObjectLiteral(text, marker) {
 
 function cleanMchanSeedText(value, fallback = "") {
   const text = String(value || "").trim();
-  return text || fallback;
+  return (text || fallback).replaceAll("MC点", "MC能量");
 }
 
 function jsonForInlineScript(value) {
@@ -3893,12 +3936,11 @@ function upgradeInternalMchanApp(html) {
       } catch {}
     }
     let best = null;
-    for (const candidate of candidates) {
-      const score = scoreStatDataCandidate(candidate);
-      if (score < 0) continue;
-      if (shouldPreferCurrentMessageSnapshot()) return candidate;
-      if (!best || score > best.score) best = { candidate, score };
-    }
+	    for (const candidate of candidates) {
+	      const score = scoreStatDataCandidate(candidate);
+	      if (score < 0) continue;
+	      if (!best || score > best.score) best = { candidate, score };
+	    }
     return best?.candidate ?? null;
   }
 
@@ -5457,12 +5499,11 @@ function injectInternalMchanApp(html, staticSeed) {
       } catch {}
     }
     let best = null;
-    for (const candidate of candidates) {
-      const score = scoreStatDataCandidate(candidate);
-      if (score < 0) continue;
-      if (shouldPreferCurrentMessageSnapshot()) return candidate;
-      if (!best || score > best.score) best = { candidate, score };
-    }
+	    for (const candidate of candidates) {
+	      const score = scoreStatDataCandidate(candidate);
+	      if (score < 0) continue;
+	      if (!best || score > best.score) best = { candidate, score };
+	    }
     return best?.candidate ?? null;
   }
 
@@ -6741,15 +6782,24 @@ function injectInternalMchanApp(html, staticSeed) {
     const degrees = (Math.atan2(dx, -dy) * 180 / Math.PI + 360) % 360;
     const currentHour = normalizeClockPart(page.querySelector("[data-clock-hour]")?.value, 23);
     const currentMinute = normalizeClockPart(page.querySelector("[data-clock-minute]")?.value, 59);
-    if (mode === "hour") {
-      const hour12 = Math.round(degrees / 30) % 12;
-      const hour = (currentHour >= 12 ? 12 : 0) + hour12;
-      setClockValue(page, hour, currentMinute);
-    } else {
-      const minute = Math.round(degrees / 6) % 60;
-      setClockValue(page, currentHour, minute);
-    }
-  }
+	    if (mode === "hour") {
+	      const hour12 = Math.round(degrees / 30) % 12;
+	      const hour = hour12;
+	      setClockValue(page, hour, currentMinute);
+	    } else {
+	      const minute = Math.round(degrees / 6) % 60;
+	      const lastMinute = Number.parseInt(face.dataset.clockLastMinute ?? String(currentMinute), 10);
+	      let nextHour = currentHour;
+	      if (Number.isFinite(lastMinute)) {
+	        if (lastMinute >= 45 && minute <= 15)
+	          nextHour = (currentHour + 1) % 24;
+	        else if (lastMinute <= 15 && minute >= 45)
+	          nextHour = (currentHour + 23) % 24;
+	      }
+	      face.dataset.clockLastMinute = String(minute);
+	      setClockValue(page, nextHour, minute);
+	    }
+	  }
 
   function renderClockPage(page) {
     const seed = getClockSeed();
@@ -6772,9 +6822,9 @@ function injectInternalMchanApp(html, staticSeed) {
           '</div>' +
           '<div class="st-clock-time">' + escapeHtml(formatClockInput(seed.hour, seed.minute)) + '</div>' +
           '<div class="st-clock-inputs">' +
-            '<label><span>时</span><input data-clock-hour inputmode="numeric" autocomplete="off" maxlength="2" value="' + escapeAttr(String(seed.hour).padStart(2, "0")) + '"></label>' +
-            '<b class="st-clock-colon">:</b>' +
-            '<label><span>分</span><input data-clock-minute inputmode="numeric" autocomplete="off" maxlength="2" value="' + escapeAttr(String(seed.minute).padStart(2, "0")) + '"></label>' +
+	            '<label><span>时</span><input data-clock-hour inputmode="numeric" autocomplete="off" maxlength="2" min="0" max="23" value="' + escapeAttr(String(seed.hour).padStart(2, "0")) + '"></label>' +
+	            '<b class="st-clock-colon">:</b>' +
+	            '<label><span>分</span><input data-clock-minute inputmode="numeric" autocomplete="off" maxlength="2" min="0" max="59" value="' + escapeAttr(String(seed.minute).padStart(2, "0")) + '"></label>' +
           '</div>' +
           '<button type="button" class="st-clock-action" data-clock-action="suggest">建议此时间</button>' +
           '<p class="st-clock-note">这只会写入本轮操作，请 AI 按剧情连续性判断是否推进时间；前端不会直接改当前时间变量。</p>' +
@@ -6798,12 +6848,13 @@ function injectInternalMchanApp(html, staticSeed) {
       });
     });
     const face = page.querySelector(".st-clock-face");
-    face?.addEventListener("pointerdown", (event) => {
-      const mode = clockPointerMode(face, event);
-      face.dataset.clockDragMode = mode;
-      face.setPointerCapture?.(event.pointerId);
-      applyClockPointer(page, event, mode);
-      event.preventDefault();
+	    face?.addEventListener("pointerdown", (event) => {
+	      const mode = clockPointerMode(face, event);
+	      face.dataset.clockDragMode = mode;
+	      face.dataset.clockLastMinute = String(normalizeClockPart(page.querySelector("[data-clock-minute]")?.value, 59));
+	      face.setPointerCapture?.(event.pointerId);
+	      applyClockPointer(page, event, mode);
+	      event.preventDefault();
     });
     face?.addEventListener("pointermove", (event) => {
       const mode = face.dataset.clockDragMode;
@@ -6812,9 +6863,10 @@ function injectInternalMchanApp(html, staticSeed) {
       event.preventDefault();
     });
     ["pointerup", "pointercancel", "lostpointercapture"].forEach((type) => {
-      face?.addEventListener(type, () => {
-        delete face.dataset.clockDragMode;
-      });
+	      face?.addEventListener(type, () => {
+	        delete face.dataset.clockDragMode;
+	        delete face.dataset.clockLastMinute;
+	      });
     });
     page.querySelector('[data-clock-action="suggest"]')?.addEventListener("click", () => {
       const hour = normalizeClockPart(page.querySelector("[data-clock-hour]")?.value, 23);
