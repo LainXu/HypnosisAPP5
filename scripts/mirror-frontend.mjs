@@ -1548,8 +1548,7 @@ function withTimeout`
         if (fromIndex < 0 || toIndex < 0)
             return;
         const next = current.slice();
-        const [item] = next.splice(fromIndex, 1);
-        next.splice(toIndex, 0, item);
+        [next[fromIndex], next[toIndex]] = [next[toIndex], next[fromIndex]];
         persistHomeOrder(next);
     };
     const onHomeAppPointerDown = (event, id) => {
@@ -2074,43 +2073,32 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
       "        void _services_dataService__WEBPACK_IMPORTED_MODULE_4__.DataService.updateFeature(id, { userNumber: value === null ? undefined : value });\n",
       ""
     );
+  output = replaceBetween(
+      output,
+      "    const getFeatureCost = (feature) => {",
+      "    const accessContext",
+      `    const getFeatureNumericValue = (feature) => {
+        const numericConfig = getFeatureNumericConfig(feature);
+        if (!numericConfig)
+            return 1;
+        if (feature.userNumber === '')
+            return 0;
+        return clampInt(feature.userNumber ?? parseFirstNumber(feature.userNote), numericConfig.min, numericConfig.min, numericConfig.max);
+    };
+    const getFeatureCost = (feature) => {
+        if (!feature || feature.id === 'vip1_stats' || feature.costValue <= 0)
+            return { energy: 0, points: 0 };
+        const baseCost = feature.id === 'vip1_temp_sensitivity' ? 2 : feature.costValue;
+        const numericValue = getFeatureNumericValue(feature);
+        const persons = featureUsesPersonCount(feature) ? featurePersonCount(feature) : 1;
+        const parts = featureUsesPartCount(feature) ? featurePartCount(feature) : 1;
+        const minutes = featureUsesDuration(feature) ? featureDurationMinutes(feature, duration) : 1;
+        const amount = Math.max(0, Math.floor(baseCost * numericValue * persons * parts * minutes));
+        return { energy: amount, points: 0 };
+    };
+`
+    );
   output = output
-    .replace(
-      "        const persons = feature.userNumber ?? parseFirstNumber(feature.userNote) ?? 1;\n        let amount = 0;",
-      "        const persons = featurePersonCount(feature);\n        const commandDuration = featureDurationMinutes(feature, duration);\n        let amount = 0;"
-    )
-    .replace(
-      "                const heat = clampInt(feature.userNumber ?? parseFirstNumber(feature.userNote), 1, 1, 999);",
-      "                const heat = feature.userNumber === '' ? 0 : clampInt(feature.userNumber ?? parseFirstNumber(feature.userNote), 1, 1, 999);"
-    )
-    .replace(
-      "                const minutes = clampInt(feature.userNumber ?? parseFirstNumber(feature.userNote), 1, 1, 240);",
-      "                const minutes = feature.userNumber === '' ? 0 : clampInt(feature.userNumber ?? parseFirstNumber(feature.userNote), 1, 1, 240);"
-    )
-    .replace(
-      "                const delta = clampInt(feature.userNumber ?? parseFirstNumber(feature.userNote), 1, 1, 100);",
-      "                const delta = feature.userNumber === '' ? 0 : clampInt(feature.userNumber ?? parseFirstNumber(feature.userNote), 1, 1, 100);"
-    )
-    .replace(
-      "                const intensity = clampInt(feature.userNumber ?? parseFirstNumber(feature.userNote), 1, 1, 999);",
-      "                const intensity = feature.userNumber === '' ? 0 : clampInt(feature.userNumber ?? parseFirstNumber(feature.userNote), 1, 1, 999);"
-    )
-    .replace(
-      "                amount = feature.costValue * intensity * duration;",
-      "                amount = feature.costValue * intensity * commandDuration;"
-    )
-    .replace(
-      "                amount = feature.costValue * persons * duration;",
-      "                amount = feature.costValue * commandDuration;"
-    )
-    .replace(
-      "                amount = feature.costType === 'ONE_TIME' ? feature.costValue : feature.costValue * duration;",
-      "                amount = feature.costType === 'ONE_TIME' ? feature.costValue : feature.costValue * commandDuration;"
-    )
-    .replace(
-      "        if (currency === 'MC_POINTS')",
-      "        if (featureUsesPersonCount(feature))\n            amount *= persons;\n        if (featureUsesPartCount(feature))\n            amount *= featurePartCount(feature);\n        if (currency === 'MC_POINTS')"
-    )
     .replace(
     "    const handleStart = async () => {",
       `    const updateFeaturePersonCount = (id, value) => {
@@ -5071,6 +5059,7 @@ function injectInternalMchanApp(html, staticSeed) {
 .st-tt-rhythm-item span:before,.st-tt-rhythm-item span:after{content:"";position:absolute;left:50%;width:1px;height:6px;background:rgba(34,211,238,.35)}
 .st-tt-rhythm-item span:before{bottom:calc(100% + 1px)}
 .st-tt-rhythm-item span:after{top:calc(100% + 1px)}
+[data-home-app-id] *{pointer-events:none}
 @media (max-width:420px){.st-mchan-header{padding-top:38px}.st-mchan-board{padding:7px 10px}.st-mchan-content.is-detail{padding:10px}}
 \`;
     document.head.appendChild(style);

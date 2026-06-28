@@ -4,7 +4,7 @@ import { buildCardPngBytes, ensureCardShape, parseCharacterCard } from "../src/c
 const SHARE_PNG = "public/cards/催眠app二改MVU.png";
 const LOCAL_PNG = "public/cards/hypnosis-app.png";
 const WORKBENCH_JSON = "public/cards/hypnosis-app-workbench-current.json";
-const VERSION_NAME = "v1.6";
+const VERSION_NAME = "v1.7";
 const DIST_REPO = "LainXu/HypnosisAPP5-dist";
 const REMOTE_COMMIT = process.env.HYPNOOS_REMOTE_COMMIT || "";
 
@@ -293,12 +293,15 @@ function patchCard(card) {
   ensureCardShape(card);
   const data = card.data;
   data.name = `催眠app二改MVU ${VERSION_NAME}`;
+  data.character_version = VERSION_NAME;
   card.name = data.name;
-  if (data.character_book) data.character_book.name = `催眠APP（二改MVU ${VERSION_NAME}）`;
+  const worldName = `催眠APP（二改MVU ${VERSION_NAME}）`;
+  if (data.character_book) data.character_book.name = worldName;
+  data.extensions ??= {};
+  data.extensions.world = worldName;
   data.first_mes = patchOpening(data.first_mes);
   if (Array.isArray(data.alternate_greetings)) data.alternate_greetings = data.alternate_greetings.map(patchOpening);
 
-  data.extensions ??= {};
   data.extensions.workbench ??= {};
   data.extensions.workbench.updatedAt = new Date().toISOString();
   data.extensions.workbench.version = VERSION_NAME;

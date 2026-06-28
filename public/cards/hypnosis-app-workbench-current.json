@@ -1,5 +1,5 @@
 {
-  "name": "催眠app二改MVU v1.6",
+  "name": "催眠app二改MVU v1.7",
   "description": "",
   "personality": "",
   "scenario": "",
@@ -13,7 +13,7 @@
   "spec": "chara_card_v3",
   "spec_version": "3.0",
   "data": {
-    "name": "催眠app二改MVU v1.6",
+    "name": "催眠app二改MVU v1.7",
     "description": "",
     "personality": "",
     "scenario": "",
@@ -24,12 +24,12 @@
     "post_history_instructions": "",
     "tags": [],
     "creator": "Ramiel",
-    "character_version": "v1.6",
+    "character_version": "v1.7",
     "alternate_greetings": [],
     "extensions": {
       "talkativeness": "0.5",
       "fav": false,
-      "world": "催眠APP（二改MVU v1.6）",
+      "world": "催眠APP（二改MVU v1.7）",
       "depth_prompt": {
         "prompt": "",
         "depth": 4,
@@ -121,7 +121,7 @@
           "id": "748c6c9a-e2ba-473b-b4b7-4024387b5dcf",
           "scriptName": "前端",
           "findRegex": "<\\s*StatusPlaceHolderImpl\\s*\\/?\\s*>",
-          "replaceString": "```\n<body>\n<script>\nwindow.__ST_HYPNOOS_ASSET_BASE__ = \"https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@7cb780d/dist/webview/assets/\";\n$(\"body\").load(\"https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@7cb780d/dist/webview/st-load-inline.html\")\n</script>\n</body>\n```",
+          "replaceString": "```\n<body>\n<script>\nwindow.__ST_HYPNOOS_ASSET_BASE__ = \"https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@729fbfc/dist/webview/assets/\";\n$(\"body\").load(\"https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@729fbfc/dist/webview/st-load-inline.html\")\n</script>\n</body>\n```",
           "trimStrings": [],
           "placement": [
             2
@@ -174,7 +174,7 @@
           "id": "fe9113dc-f89b-4e42-8187-986861e67ab3",
           "scriptName": "测试用",
           "findRegex": "<\\s*StatusPlaceHolderImpl\\s*\\/?\\s*>",
-          "replaceString": "```\n<body>\n<script>\nwindow.__ST_HYPNOOS_ASSET_BASE__ = \"https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@7cb780d/dist/webview/assets/\";\n$(\"body\").load(\"https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@7cb780d/dist/webview/st-load-inline.html\")\n</script>\n</body>\n```",
+          "replaceString": "```\n<body>\n<script>\nwindow.__ST_HYPNOOS_ASSET_BASE__ = \"https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@729fbfc/dist/webview/assets/\";\n$(\"body\").load(\"https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@729fbfc/dist/webview/st-load-inline.html\")\n</script>\n</body>\n```",
           "trimStrings": [],
           "placement": [
             2
@@ -191,7 +191,7 @@
           "id": "53757492-5ce3-4ad7-ad1a-334c41088542",
           "scriptName": "主仓库",
           "findRegex": "<\\s*StatusPlaceHolderImpl\\s*\\/?\\s*>",
-          "replaceString": "```\n<body>\n<script>\nwindow.__ST_HYPNOOS_ASSET_BASE__ = \"https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@7cb780d/dist/webview/assets/\";\n$(\"body\").load(\"https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@7cb780d/dist/webview/st-load-inline.html\")\n</script>\n</body>\n```",
+          "replaceString": "```\n<body>\n<script>\nwindow.__ST_HYPNOOS_ASSET_BASE__ = \"https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@729fbfc/dist/webview/assets/\";\n$(\"body\").load(\"https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@729fbfc/dist/webview/st-load-inline.html\")\n</script>\n</body>\n```",
           "trimStrings": [],
           "placement": [
             2
@@ -389,18 +389,18 @@
         "variableAuthority": "ai",
         "frontendMutation": "read-only",
         "legacyWorldbookAndRegexPreserved": true,
-        "updatedAt": "2026-06-28T11:56:21.638Z",
+        "updatedAt": "2026-06-28T13:21:50.614Z",
         "mchanMode": "static-readonly",
         "lastExportedPng": "public/cards/hypnosis-app.png",
-        "sillyTavernLoadUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@7cb780d/dist/webview/st-load-inline.html",
+        "sillyTavernLoadUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@729fbfc/dist/webview/st-load-inline.html",
         "frontendMode": "remote",
-        "frontendUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@7cb780d/dist/webview/st-load-inline.html",
-        "assetBase": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@7cb780d/dist/webview/assets/",
-        "remoteFrontendUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@7cb780d/dist/webview/st-load-inline.html",
-        "remoteAssetBase": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@7cb780d/dist/webview/assets/",
-        "remoteCommit": "7cb780d",
+        "frontendUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@729fbfc/dist/webview/st-load-inline.html",
+        "assetBase": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@729fbfc/dist/webview/assets/",
+        "remoteFrontendUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@729fbfc/dist/webview/st-load-inline.html",
+        "remoteAssetBase": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@729fbfc/dist/webview/assets/",
+        "remoteCommit": "729fbfc",
         "frontendLoader": "jquery-load-remote-inline-commit",
-        "version": "v1.6"
+        "version": "v1.7"
       }
     },
     "group_only_greetings": [],
@@ -2328,22 +2328,22 @@
           }
         }
       ],
-      "name": "催眠APP（二改MVU v1.6）"
+      "name": "催眠APP（二改MVU v1.7）"
     }
   },
   "create_date": "2026-05-29T12:42:31.655Z",
   "workbench": {
-    "updatedAt": "2026-06-28T11:56:21.638Z",
+    "updatedAt": "2026-06-28T13:21:50.614Z",
     "lastExportedPng": "public/cards/hypnosis-app.png",
     "exportedAt": "2026-06-26T17:27:57.692Z",
     "frontendLoader": "jquery-load-remote-inline-commit",
-    "sillyTavernLoadUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@7cb780d/dist/webview/st-load-inline.html",
+    "sillyTavernLoadUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@729fbfc/dist/webview/st-load-inline.html",
     "frontendMode": "remote",
-    "frontendUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@7cb780d/dist/webview/st-load-inline.html",
-    "assetBase": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@7cb780d/dist/webview/assets/",
-    "remoteFrontendUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@7cb780d/dist/webview/st-load-inline.html",
-    "remoteAssetBase": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@7cb780d/dist/webview/assets/",
-    "remoteCommit": "7cb780d",
+    "frontendUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@729fbfc/dist/webview/st-load-inline.html",
+    "assetBase": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@729fbfc/dist/webview/assets/",
+    "remoteFrontendUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@729fbfc/dist/webview/st-load-inline.html",
+    "remoteAssetBase": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@729fbfc/dist/webview/assets/",
+    "remoteCommit": "729fbfc",
     "phoneState": {
       "activeApp": "mchan",
       "currentOperation": "无",
@@ -2476,6 +2476,6 @@
     "frontendMutation": "read-only",
     "legacyWorldbookAndRegexPreserved": true,
     "mchanMode": "static-readonly",
-    "version": "v1.6"
+    "version": "v1.7"
   }
 }
