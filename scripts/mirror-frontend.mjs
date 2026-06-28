@@ -626,6 +626,7 @@ window.setTimeout(() => {
   outputHtml = ensureAppMountElement(outputHtml);
   outputHtml = injectInternalMchanApp(outputHtml, options.mchanStatic);
   outputHtml = injectWorkbenchInputProbe(outputHtml);
+  outputHtml = moveHeadScriptsAfterApp(outputHtml);
   return outputHtml;
 }
 
@@ -636,6 +637,25 @@ function ensureAppMountElement(html) {
     return outputHtml.replace(/<body([^>]*)>/i, `<body$1><div id="app"></div>`);
   }
   return `${outputHtml}<div id="app"></div>`;
+}
+
+function moveHeadScriptsAfterApp(html) {
+  let outputHtml = String(html || "");
+  const headMatch = outputHtml.match(/<head\b[^>]*>([\s\S]*?)<\/head>/i);
+  if (!headMatch) return outputHtml;
+  const scripts = [];
+  const nextHeadInner = headMatch[1].replace(/<script\b[\s\S]*?<\/script>/gi, (script) => {
+    scripts.push(script);
+    return "";
+  });
+  if (!scripts.length) return outputHtml;
+  outputHtml = outputHtml.replace(headMatch[0], headMatch[0].replace(headMatch[1], nextHeadInner));
+  outputHtml = ensureAppMountElement(outputHtml);
+  const appPattern = /(<body\b[^>]*>\s*<div\s+id=(["'])app\2><\/div>)/i;
+  if (appPattern.test(outputHtml)) {
+    return outputHtml.replace(appPattern, (match) => `${match}${scripts.join("")}`);
+  }
+  return outputHtml.replace(/<body([^>]*)>/i, (_match, attrs) => `<body${attrs}><div id="app"></div>${scripts.join("")}`);
 }
 
 function patchKnownGlobals(html) {
@@ -6663,6 +6683,13 @@ function injectInternalMchanApp(html, staticSeed) {
     return Math.max(0, Math.min(max, parsed));
   }
 
+  function sanitizeClockInputValue(value, max, pad = false) {
+    const digits = String(value ?? "").replace(/\\D/g, "").slice(0, 2);
+    if (!digits) return "";
+    const safe = String(Math.max(0, Math.min(max, Number.parseInt(digits, 10) || 0)));
+    return pad ? safe.padStart(2, "0") : safe;
+  }
+
   function getClockSeed() {
     const text = getSystemState()["当前时间"] || "12:00";
     const minutes = minutesFromTimeText(text);
@@ -6760,12 +6787,13 @@ function injectInternalMchanApp(html, staticSeed) {
     });
     page.querySelectorAll("[data-clock-hour],[data-clock-minute]").forEach((input) => {
       input.addEventListener("input", () => {
-        input.value = String(input.value || "").replace(/\\D/g, "").slice(0, 2);
+        const max = input.hasAttribute("data-clock-hour") ? 23 : 59;
+        input.value = sanitizeClockInputValue(input.value, max, false);
         updateClockFace(page);
       });
       input.addEventListener("blur", () => {
         const max = input.hasAttribute("data-clock-hour") ? 23 : 59;
-        input.value = String(normalizeClockPart(input.value, max)).padStart(2, "0");
+        input.value = sanitizeClockInputValue(input.value, max, true) || "00";
         updateClockFace(page);
       });
     });
@@ -7540,6 +7568,7 @@ function injectInternalMchanApp(html, staticSeed) {
   function ensureOperationSidePanel() {
     const app = document.getElementById("app");
     if (!app) return null;
+    if (!app.firstElementChild) return null;
     document.body.classList.add("st-operation-side-layout");
     let workspace = document.getElementById("st-operation-workspace");
     if (!workspace) {

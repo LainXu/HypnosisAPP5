@@ -121,7 +121,7 @@
           "id": "748c6c9a-e2ba-473b-b4b7-4024387b5dcf",
           "scriptName": "前端",
           "findRegex": "<\\s*StatusPlaceHolderImpl\\s*\\/>",
-          "replaceString": "```\n<body>\n<script>\nwindow.__ST_HYPNOOS_ASSET_BASE__ = \"https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@8827d1fb6e2c074def956e89da675d2a8443dc97/dist/webview/assets/\";\n$(\"body\").load(\"https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@8827d1fb6e2c074def956e89da675d2a8443dc97/dist/webview/index.html\")\n</script>\n</body>\n```",
+          "replaceString": "```\n<body>\n<script>\nwindow.__ST_HYPNOOS_ASSET_BASE__ = \"https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@f6fc68d10a07892b7ae1c85eb0d592e909bcbe82/dist/webview/assets/\";\n$(\"body\").load(\"https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@f6fc68d10a07892b7ae1c85eb0d592e909bcbe82/dist/webview/index.html\")\n</script>\n</body>\n```",
           "trimStrings": [],
           "placement": [
             2
@@ -174,7 +174,7 @@
           "id": "fe9113dc-f89b-4e42-8187-986861e67ab3",
           "scriptName": "测试用",
           "findRegex": "<\\s*StatusPlaceHolderImpl\\s*\\/>",
-          "replaceString": "```\n<body>\n<script>\nwindow.__ST_HYPNOOS_ASSET_BASE__ = \"https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@8827d1fb6e2c074def956e89da675d2a8443dc97/dist/webview/assets/\";\n$(\"body\").load(\"https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@8827d1fb6e2c074def956e89da675d2a8443dc97/dist/webview/index.html\")\n</script>\n</body>\n```",
+          "replaceString": "```\n<body>\n<script>\nwindow.__ST_HYPNOOS_ASSET_BASE__ = \"https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@f6fc68d10a07892b7ae1c85eb0d592e909bcbe82/dist/webview/assets/\";\n$(\"body\").load(\"https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@f6fc68d10a07892b7ae1c85eb0d592e909bcbe82/dist/webview/index.html\")\n</script>\n</body>\n```",
           "trimStrings": [],
           "placement": [
             2
@@ -191,7 +191,7 @@
           "id": "53757492-5ce3-4ad7-ad1a-334c41088542",
           "scriptName": "主仓库",
           "findRegex": "<\\s*StatusPlaceHolderImpl\\s*\\/>",
-          "replaceString": "```\n<body>\n<script>\nwindow.__ST_HYPNOOS_ASSET_BASE__ = \"https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@8827d1fb6e2c074def956e89da675d2a8443dc97/dist/webview/assets/\";\n$(\"body\").load(\"https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@8827d1fb6e2c074def956e89da675d2a8443dc97/dist/webview/index.html\")\n</script>\n</body>\n```",
+          "replaceString": "```\n<body>\n<script>\nwindow.__ST_HYPNOOS_ASSET_BASE__ = \"https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@f6fc68d10a07892b7ae1c85eb0d592e909bcbe82/dist/webview/assets/\";\n$(\"body\").load(\"https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@f6fc68d10a07892b7ae1c85eb0d592e909bcbe82/dist/webview/index.html\")\n</script>\n</body>\n```",
           "trimStrings": [],
           "placement": [
             2
@@ -389,16 +389,16 @@
         "variableAuthority": "ai",
         "frontendMutation": "read-only",
         "legacyWorldbookAndRegexPreserved": true,
-        "updatedAt": "2026-06-28T08:05:18.959Z",
+        "updatedAt": "2026-06-28T08:27:29.015Z",
         "mchanMode": "static-readonly",
         "lastExportedPng": "public/cards/hypnosis-app.png",
-        "sillyTavernLoadUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@8827d1fb6e2c074def956e89da675d2a8443dc97/dist/webview/index.html",
+        "sillyTavernLoadUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@f6fc68d10a07892b7ae1c85eb0d592e909bcbe82/dist/webview/index.html",
         "frontendMode": "remote",
-        "frontendUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@8827d1fb6e2c074def956e89da675d2a8443dc97/dist/webview/index.html",
-        "assetBase": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@8827d1fb6e2c074def956e89da675d2a8443dc97/dist/webview/assets/",
-        "remoteFrontendUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@8827d1fb6e2c074def956e89da675d2a8443dc97/dist/webview/index.html",
-        "remoteAssetBase": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@8827d1fb6e2c074def956e89da675d2a8443dc97/dist/webview/assets/",
-        "remoteCommit": "8827d1fb6e2c074def956e89da675d2a8443dc97",
+        "frontendUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@f6fc68d10a07892b7ae1c85eb0d592e909bcbe82/dist/webview/index.html",
+        "assetBase": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@f6fc68d10a07892b7ae1c85eb0d592e909bcbe82/dist/webview/assets/",
+        "remoteFrontendUrl": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@f6fc68d10a07892b7ae1c85eb0d592e909bcbe82/dist/webview/index.html",
+        "remoteAssetBase": "https://cdn.jsdelivr.net/gh/LainXu/HypnosisAPP5-dist@f6fc68d10a07892b7ae1c85eb0d592e909bcbe82/dist/webview/assets/",
+        "remoteCommit": "f6fc68d10a07892b7ae1c85eb0d592e909bcbe82",
         "frontendLoader": "jquery-load-remote-inline-commit",
         "version": "v1.6"
       }
