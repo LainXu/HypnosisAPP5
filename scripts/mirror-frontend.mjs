@@ -285,14 +285,35 @@ window.setTimeout(() => {
 	      if (rules && typeof rules === "object" && !Array.isArray(rules)) snapshot["当前校规数"] = Object.keys(rules).length;
 	      return Object.keys(snapshot).length ? snapshot : null;
 	    };
-	    const operationNeedsBalanceSnapshot = (payload) => /订阅|VIP|资源兑换|补充|提升|购买|启动催眠|追加催眠|申请立校规|消耗|余额|MC能量|当前MC点|持有零花钱|资金/.test(operationValueToDenseText(payload));
-	    const enrichOperationPayload = (payload) => {
-	      if (!payload || typeof payload !== "object" || Array.isArray(payload)) return payload;
-	      if (payload["当前变量余额"] || payload["当前余额"]) return payload;
-	      if (!operationNeedsBalanceSnapshot(payload)) return payload;
-	      const balance = readOperationBalanceSnapshot();
-	      return balance ? { ...payload, 当前变量余额: balance } : payload;
+	    const pickOperationBalanceFields = (payload) => {
+	      const action = cleanOperationText(readOperationKey(payload, OPERATION_ACTION_KEYS, ""));
+	      const item = cleanOperationText(payload?.["项目"] ?? payload?.["功能"] ?? payload?.["命令"] ?? "");
+	      const text = operationValueToDenseText({ action, item, payload });
+	      if (/启动催眠|追加催眠/.test(action)) return ["MC能量"];
+	      if (/订阅VIP等级/.test(action)) return ["持有零花钱"];
+	      if (/领取成就|领取奖励|完成任务|任务完成|成就奖励|任务奖励/.test(action)) return ["当前MC点"];
+	      if (/资源兑换/.test(action)) {
+	        if (/提升MC能量上限/.test(item) || /MC能量上限/.test(text)) return ["当前MC点"];
+	        if (/补充MC能量|购买当前MC点/.test(item) || /资金|零花钱|円|¥/.test(text)) return ["持有零花钱"];
+	      }
+	      if (/申请立校规|废止初始校规/.test(action)) return ["当前MC点", "催眠APP订阅等级", "西园寺爱丽莎好感度", "当前校规数"];
+	      return [];
 	    };
+		    const enrichOperationPayload = (payload) => {
+		      if (!payload || typeof payload !== "object" || Array.isArray(payload)) return payload;
+		      const fields = pickOperationBalanceFields(payload);
+		      const base = { ...payload };
+		      delete base["当前变量余额"];
+		      delete base["当前余额"];
+		      if (!fields.length) return base;
+		      const balance = readOperationBalanceSnapshot();
+		      if (!balance) return base;
+		      const selected = {};
+		      for (const field of fields) {
+		        if (balance[field] !== undefined && balance[field] !== null && balance[field] !== "") selected[field] = balance[field];
+		      }
+		      return Object.keys(selected).length ? { ...base, 当前变量余额: selected } : base;
+		    };
 	    const normalizeOperationPayload = (payload) => {
 	      if (typeof payload === "string") {
 	        return { source: "APP", action: "记录", details: { 内容: payload } };
@@ -1359,8 +1380,8 @@ async function getMvuData() {
             const courseText = String(dailySchedule?.当前或待上课程 ?? '').trim() || '无';
             if (await setIfChanged(mvu, '系统.当前/待上课程', courseText))
                 changed = true;
-            const currentEvent = String(dailySchedule?.当前课段?.名称 ?? '').trim();
-            if (currentEvent && await setIfChanged(mvu, '系统.当前事件', currentEvent))
+            const specialText = String(dailySchedule?.当前或下个特殊日期 ?? '').trim();
+            if (specialText && await setIfChanged(mvu, '系统.当前或下个特殊日期', specialText))
                 changed = true;
             if (changed) {
                 await Mvu.replaceMvuData(mvu, option);
@@ -1369,6 +1390,26 @@ async function getMvuData() {
         });
     },
     resetThisTurnAppOperationLog: async () => {`
+  );
+  output = replaceBetween(
+    output,
+    "    syncUserResources: async (user) => {",
+    "    setTask: async",
+    `    syncUserResources: async () => {
+        // Resource variables are AI-authored; frontend never writes them.
+        return false;
+    },
+`
+  );
+  output = replaceBetween(
+    output,
+    "    syncSubscriptionTier: async (tierLabel) => {",
+    "    syncDailySchedule: async",
+    `    syncSubscriptionTier: async () => {
+        // Subscription variables are AI-authored; frontend never writes them.
+        return false;
+    },
+`
   );
   return output;
 }
@@ -1909,9 +1950,83 @@ function patchHypnosisDataServiceModule(code) {
         { index: 5, start: 800, end: 850, label: '5限' },
         { index: 6, start: 860, end: 910, label: '6限' },
     ];
-    const currentMonth = parsedDate ? Number(parsedDate[1]) : 4;
-    const currentDay = parsedDate ? Number(parsedDate[2]) : 9;
-    const weekdayForDate = (month, day) => weekdayNames[((3 + schoolDay(month, day) - schoolDay(4, 9)) % 7 + 7) % 7];
+	    const currentMonth = parsedDate ? Number(parsedDate[1]) : 4;
+	    const currentDay = parsedDate ? Number(parsedDate[2]) : 9;
+	    const specialDays = [
+	        { m: 4, d: 1, title: '愚人节' },
+	        { m: 4, d: 8, title: '入学式/始业式' },
+	        { m: 4, from: 10, to: 14, title: '社团招新周' },
+	        { m: 4, d: 15, title: '社团说明会' },
+	        { m: 4, d: 20, title: '身体检查' },
+	        { m: 4, d: 29, title: '黄金周假期' },
+	        { m: 5, from: 1, to: 6, title: '黄金周假期' },
+	        { m: 5, from: 20, to: 23, title: '第一学期中考' },
+	        { m: 5, d: 25, title: '球技大会' },
+	        { m: 6, d: 10, title: '全校体力测验' },
+	        { m: 6, d: 25, title: '学生会选举' },
+	        { m: 6, d: 30, title: '夜间试胆大会' },
+	        { m: 7, d: 7, title: '七夕' },
+	        { m: 7, from: 14, to: 17, title: '第一学期末考' },
+	        { m: 7, d: 21, title: '海之日' },
+	        { m: 7, d: 22, title: '第一学期结业式' },
+	        { m: 7, from: 23, to: 31, title: '暑假' },
+	        { m: 7, from: 25, to: 28, title: '社团夏季合宿' },
+	        { m: 8, from: 1, to: 31, title: '暑假' },
+	        { m: 8, d: 1, title: '全校返校日' },
+	        { m: 8, d: 11, title: '山之日' },
+	        { m: 8, from: 13, to: 16, title: '盂兰盆节' },
+	        { m: 8, from: 16, to: 17, title: '夏Comi' },
+	        { m: 8, d: 25, title: '补习/作业冲刺' },
+	        { m: 9, d: 1, title: '第二学期始业式' },
+	        { m: 9, d: 15, title: '敬老之日' },
+	        { m: 9, d: 16, title: '校庆准备' },
+	        { m: 9, d: 23, title: '秋分之日' },
+	        { m: 9, d: 29, title: '体育祭' },
+	        { m: 10, d: 1, title: '衣更' },
+	        { m: 10, d: 13, title: '运动之日' },
+	        { m: 10, from: 21, to: 24, title: '第二学期中考' },
+	        { m: 10, d: 31, title: '万圣节' },
+	        { m: 11, from: 1, to: 2, title: '文化祭' },
+	        { m: 11, d: 3, title: '文化之日/后夜祭' },
+	        { m: 11, d: 23, title: '勤劳感谢日' },
+	        { m: 11, d: 24, title: '振替休日' },
+	        { m: 11, from: 25, to: 28, title: '修学旅行' },
+	        { m: 12, from: 9, to: 12, title: '第二学期末考' },
+	        { m: 12, d: 24, title: '第二学期结业式' },
+	        { m: 12, from: 25, to: 31, title: '寒假' },
+	        { m: 1, from: 1, to: 6, title: '寒假' },
+	        { m: 1, d: 7, title: '第三学期始业式' },
+	        { m: 1, d: 13, title: '成人之日' },
+	        { m: 1, from: 17, to: 18, title: '大学入学共通测试' },
+	        { m: 1, d: 25, title: '马拉松大会' },
+	        { m: 2, d: 3, title: '节分' },
+	        { m: 2, d: 11, title: '建国纪念日' },
+	        { m: 2, d: 14, title: '情人节' },
+	        { m: 2, d: 23, title: '天皇诞辰' },
+	        { m: 2, d: 24, title: '振替休日' },
+	        { m: 2, from: 25, to: 27, title: '学年末考试' },
+	        { m: 3, d: 3, title: '女儿节' },
+	        { m: 3, d: 14, title: '白色情人节' },
+	        { m: 3, d: 20, title: '春分之日' },
+	        { m: 3, d: 24, title: '修业式' },
+	        { m: 3, from: 25, to: 31, title: '春假' },
+	    ];
+	    const specialDateStart = item => schoolDay(item.m, item.from ?? item.d);
+	    const specialDateEnd = item => schoolDay(item.m, item.to ?? item.from ?? item.d);
+	    const specialDateLabel = item => {
+	        const start = item.from ?? item.d;
+	        const end = item.to ?? start;
+	        return start === end ? item.m + '月' + start + '日' : item.m + '月' + start + '-' + end + '日';
+	    };
+	    const currentOrNextSpecialDate = (() => {
+	        const today = schoolDay(currentMonth, currentDay);
+	        const nextSpecial = specialDays
+	            .map(item => ({ item, start: specialDateStart(item), end: specialDateEnd(item) }))
+	            .filter(item => item.end >= today)
+	            .sort((a, b) => a.start - b.start || a.end - b.end)[0];
+	        return nextSpecial ? specialDateLabel(nextSpecial.item) + ' ' + nextSpecial.item.title : '无';
+	    })();
+	    const weekdayForDate = (month, day) => weekdayNames[((3 + schoolDay(month, day) - schoolDay(4, 9)) % 7 + 7) % 7];
     const weekdayIndexForDate = (month, day) => ({ '星期日': 0, '星期天': 0, '星期一': 1, '星期二': 2, '星期三': 3, '星期四': 4, '星期五': 5, '星期六': 6 }[weekdayForDate(month, day)] ?? 0);
     const nextDate = (month, day) => {
         const maxDay = monthDays[month] || 30;
@@ -1941,17 +2056,12 @@ function patchHypnosisDataServiceModule(code) {
     const courseSlot = (() => {
         if (weekdayIndex === 0 || weekdayIndex === 6)
             return { title: '无', detail: '' };
-        if (course) {
-            const subject = timetable[weekdayIndex]?.[course.index - 1] || '自习';
-            return { title: course.label + ' ' + subject, detail: fmt(course.start) + '-' + fmt(course.end) };
-        }
-        const nextPeriod = periods.find(period => minutes < period.start);
-        if (nextPeriod) {
-            const subject = timetable[weekdayIndex]?.[nextPeriod.index - 1] || '自习';
-            return { title: nextPeriod.label + ' ' + subject, detail: fmt(nextPeriod.start) + '-' + fmt(nextPeriod.end) };
-        }
-        return { title: '无', detail: '' };
-    })();
+	        if (course) {
+	            const subject = timetable[weekdayIndex]?.[course.index - 1] || '自习';
+	            return { title: course.label + ' ' + subject, detail: fmt(course.start) + '-' + fmt(course.end) };
+	        }
+	        return { title: '无', detail: '' };
+	    })();
     const fallbackSlot = (() => {
         if (weekdayIndex === 0 || weekdayIndex === 6)
             return { title: '周末自由', detail: '无固定课程' };
@@ -1980,8 +2090,9 @@ function patchHypnosisDataServiceModule(code) {
         日期: currentMonth + '月' + currentDay + '日',
         星期: weekdayText || weekdayForDate(currentMonth, currentDay),
         当前课段: { 名称: scheduleText, 时间: scheduleDetailText },
-        当前或待上课程: courseSlot.title,
-        课表: courseRowsForDate(currentMonth, currentDay),
+	        当前或待上课程: courseSlot.title,
+	        当前或下个特殊日期: currentOrNextSpecialDate,
+	        课表: courseRowsForDate(currentMonth, currentDay),
         次日第一节: firstClassForDate(tomorrow.month, tomorrow.day),
     };
     return {
@@ -2656,12 +2767,6 @@ function chooseUserResourcesFromSystems(systems) {
     getSystemClock: async () => {
         const maybeSync = async (clock) => {
             try {
-                await syncSubscriptionTierLabel(clock.virtualMinutes);
-            }
-            catch (err) {
-                console.warn('[HypnoOS] 同步订阅等级变量失败', err);
-            }
-            try {
                 if (clock.dailySchedule)
                     await _mvuBridge__WEBPACK_IMPORTED_MODULE_3__.MvuBridge.syncDailySchedule(clock.dailySchedule);
             }
@@ -2696,7 +2801,7 @@ function chooseUserResourcesFromSystems(systems) {
                 continue;
             const clock = getSystemClockFrom(system);
             fallbackClock ??= clock;
-            if (clock.dateText !== '4月9日 星期三' || clock.timeText !== '12:00' || clock.scheduleText !== '午休')
+            if (clock.dateText !== '4月9日 星期三' || clock.timeText !== '12:00' || clock.scheduleText !== '4限 · 现代文')
                 return await maybeSync(clock);
         }
         return await maybeSync(fallbackClock ?? getSystemClockFrom({}));
@@ -2954,6 +3059,45 @@ function getEffectiveSubscription(store, system) {
     "getLatestChatVariables()"
   );
   output = output.replaceAll("getVariables(CHAT_OPTION)", "getLatestVariablesSync()");
+  output = replaceBetween(
+    output,
+    "async function syncSubscriptionTierLabel",
+    "const DataService = {",
+    `async function syncSubscriptionTierLabel(nowVirtualMinutes) {
+    // Frontend is read-only for subscription variables; AI writes VIP state.
+    return;
+}
+`
+  );
+  output = replaceBetween(
+    output,
+    "    clearSubscription: async () => {",
+    "    subscribeOrRenew: async",
+    `    clearSubscription: async () => {
+        // Frontend must not reset AI-authored subscription variables.
+        return { ok: false, message: '订阅变更由AI根据本轮APP操作结算' };
+    },
+`
+  );
+  output = replaceBetween(
+    output,
+    "    subscribeOrRenew: async",
+    "    maybeAutoRenewSubscription: async",
+    `    subscribeOrRenew: async ({ tier }) => {
+        // UI records a request; AI handles money and VIP variable updates.
+        return { ok: false, message: '订阅请求已记录，等待AI结算', requestedTier: tier };
+    },
+`
+  );
+  output = replaceBetween(
+    output,
+    "    maybeAutoRenewSubscription: async",
+    "    getFeatures: async",
+    `    maybeAutoRenewSubscription: async () => {
+        return { renewed: false };
+    },
+`
+  );
   return output;
 }
 
@@ -4047,6 +4191,7 @@ function injectInternalMchanApp(html, staticSeed) {
 .st-rule-empty{margin:0;color:rgba(203,213,225,.52);font-size:12px;text-align:center;padding:18px 4px}
 .st-rule-item{border:1px solid rgba(255,255,255,.09);border-radius:14px;background:rgba(255,255,255,.05);padding:10px}
 .st-rule-item strong{display:block;color:#f8fafc;font-size:13px;line-height:1.3}
+.st-rule-item strong small{display:inline-block;margin-left:6px;border:1px solid rgba(125,211,252,.22);border-radius:999px;background:rgba(14,165,233,.12);color:#bae6fd;font-size:9px;font-weight:850;padding:2px 6px;vertical-align:1px}
 .st-rule-item p{margin:5px 0 0;color:rgba(226,232,240,.68);font-size:12px;line-height:1.5;white-space:pre-wrap}
 .st-rule-form{display:grid;gap:8px}
 .st-rule-input{width:100%;min-height:74px;border:1px solid rgba(255,255,255,.1);border-radius:14px;background:rgba(2,6,23,.45);color:#f8fafc;outline:none;padding:10px;font-size:12px;line-height:1.5;resize:vertical;font-family:inherit}
@@ -4057,6 +4202,7 @@ function injectInternalMchanApp(html, staticSeed) {
 .st-rule-state{margin:0;color:rgba(226,232,240,.68);font-size:11px;line-height:1.45}
 .st-rule-button:disabled{opacity:.48;cursor:not-allowed;filter:saturate(.7)}
 .st-rule-delete{margin-top:8px;border:1px solid rgba(244,63,94,.26);border-radius:10px;background:rgba(244,63,94,.11);color:#fecdd3;font-size:10px;font-weight:850;padding:6px 9px;cursor:pointer}
+.st-rule-delete:disabled{opacity:.46;cursor:not-allowed;filter:saturate(.7)}
 .st-cal-hero{display:grid;gap:8px;border-color:rgba(34,211,238,.18);background:linear-gradient(135deg,rgba(34,211,238,.14),rgba(168,85,247,.1))}
 .st-cal-date{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
 .st-cal-date strong{font-size:24px;line-height:1;color:#fff}
@@ -4123,6 +4269,9 @@ function injectInternalMchanApp(html, staticSeed) {
 .st-help-author-card p{margin:6px 0 0;color:rgba(226,232,240,.78);font-size:12px;line-height:1.5}
 .st-author-credit-line{margin-top:8px;padding-top:7px;border-top:1px solid rgba(255,255,255,.08);color:rgba(125,211,252,.78)!important;font-size:10px!important;font-weight:800!important;line-height:1.3!important}
 .st-home-author-status{display:block!important;max-width:112px!important;overflow:hidden!important;text-overflow:ellipsis!important;font-size:10px!important;font-weight:900!important;letter-spacing:0!important;white-space:nowrap!important;line-height:1.1!important}
+.st-home-hypnosis-island{position:absolute!important}
+.st-home-hypnosis-scroll{padding-left:34px!important}
+.st-home-hypnosis-scroll>svg:first-child{position:absolute!important;left:10px!important;top:50%!important;transform:translateY(-50%)!important;z-index:2!important;pointer-events:none!important}
 .st-home-hypnosis-scroll::-webkit-scrollbar{display:none}
 .st-custom-icon-box{background:transparent!important;box-shadow:none!important;overflow:visible!important}
 .st-custom-icon-box>svg:not(.st-custom-app-icon){display:none!important}
@@ -6375,17 +6524,34 @@ function injectInternalMchanApp(html, staticSeed) {
     return rules && typeof rules === "object" && !Array.isArray(rules) ? rules : {};
   }
 
+  const DEFAULT_SCHOOL_RULE_NAMES = new Set(["仪容礼仪", "出勤学习", "校内安全"]);
+
+  function isDefaultSchoolRuleName(name) {
+    return DEFAULT_SCHOOL_RULE_NAMES.has(String(name || "").trim());
+  }
+
   function schoolRuleRequirementState() {
     const system = getSystemState();
     const roles = getStatsRoles();
     const tier = String(system["催眠APP订阅等级"] || "").trim().toUpperCase();
     const alisaFavor = Number(roles?.["西园寺爱丽莎"]?.["好感度"] ?? 0);
+    const currentMc = Number(system["当前MC点"] ?? 0);
     const rules = getSchoolRules();
     return {
       vip5: /VIP\s*5/.test(tier),
       alisaFavor: Number.isFinite(alisaFavor) ? alisaFavor : 0,
+      currentMc: Number.isFinite(currentMc) ? currentMc : 0,
       count: Object.keys(rules).length
     };
+  }
+
+  function paidSchoolRuleBlockedReasons(requirement, { checkCount = false } = {}) {
+    const blockedReasons = [];
+    if (!requirement.vip5) blockedReasons.push("需要VIP5");
+    if (requirement.alisaFavor < 100) blockedReasons.push("西园寺爱丽莎好感度至少100");
+    if (requirement.currentMc < 500000) blockedReasons.push("当前MC点不足500000");
+    if (checkCount && requirement.count >= 3) blockedReasons.push("校规最多3条");
+    return blockedReasons;
   }
 
   function hasPendingSchoolRuleRequest() {
@@ -6404,15 +6570,15 @@ function injectInternalMchanApp(html, staticSeed) {
     const rules = getSchoolRules();
     const entries = Object.entries(rules);
     const requirement = schoolRuleRequirementState();
-    const blockedReasons = [];
-    if (!requirement.vip5) blockedReasons.push("需要VIP5");
-    if (requirement.alisaFavor < 100) blockedReasons.push("西园寺爱丽莎好感度至少100");
-    if (requirement.count >= 3) blockedReasons.push("校规最多3条");
+    const blockedReasons = paidSchoolRuleBlockedReasons(requirement, { checkCount: true });
     const canSubmit = blockedReasons.length === 0;
     const list = entries.length
       ? entries.map(([name, value]) => {
+          const isDefaultRule = isDefaultSchoolRuleName(name);
+          const deleteBlockedReasons = isDefaultRule ? paidSchoolRuleBlockedReasons(requirement) : [];
+          const canDelete = deleteBlockedReasons.length === 0;
           const text = typeof value === "object" && value !== null ? (value["内容"] || value["效果"] || JSON.stringify(value)) : value;
-          return '<article class="st-rule-item"><strong>' + escapeHtml(name) + '</strong><p>' + escapeHtml(text) + '</p><button class="st-rule-delete" type="button" data-school-rule-delete="' + escapeAttr(name) + '">删除校规</button></article>';
+          return '<article class="st-rule-item"><strong>' + escapeHtml(name) + (isDefaultRule ? '<small>初始校规</small>' : "") + '</strong><p>' + escapeHtml(text) + '</p><button class="st-rule-delete" type="button" data-school-rule-delete="' + escapeAttr(name) + '" data-school-rule-default="' + (isDefaultRule ? "true" : "false") + '"' + (canDelete ? "" : ' disabled title="' + escapeAttr(deleteBlockedReasons.join(" / ")) + '"') + '>' + (isDefaultRule ? (canDelete ? "付费废止" : "需条件") : "删除校规") + '</button></article>';
         }).join("")
       : '<p class="st-rule-empty">暂无校规</p>';
     return '<section class="st-lite-card st-graph-card">' +
@@ -6422,7 +6588,7 @@ function injectInternalMchanApp(html, staticSeed) {
     '<section class="st-lite-card st-rule-form">' +
       '<textarea class="st-rule-input" data-school-rule-input placeholder="输入想制定的校规"></textarea>' +
       '<div class="st-rule-cost is-single"><span>当前MC点 500000</span></div>' +
-      '<p class="st-rule-state">要求：VIP5；西园寺爱丽莎好感度≥100；一次发布一条；最多3条。当前：' + escapeHtml((requirement.vip5 ? "VIP5" : "非VIP5") + " / 爱丽莎好感度 " + requirement.alisaFavor + " / " + requirement.count + "条") + '</p>' +
+      '<p class="st-rule-state">要求：VIP5；西园寺爱丽莎好感度≥100；当前MC点≥500000；一次发布一条；最多3条。当前：' + escapeHtml((requirement.vip5 ? "VIP5" : "非VIP5") + " / 爱丽莎好感度 " + requirement.alisaFavor + " / 当前MC点 " + requirement.currentMc + " / " + requirement.count + "条") + '</p>' +
       '<button class="st-rule-button" type="button" data-school-rule-submit' + (canSubmit ? "" : " disabled") + '>' + (canSubmit ? "申请立校规" : blockedReasons.join(" / ")) + '</button>' +
     '</section>';
   }
@@ -6481,7 +6647,15 @@ function injectInternalMchanApp(html, staticSeed) {
       button.addEventListener("click", () => {
         const scope = button.getAttribute("data-graph-scope") || "world";
         const action = button.getAttribute("data-graph-action");
-        if (action === "delete-node") deleteStaticGraphNode(scope, button.getAttribute("data-graph-node-id") || "");
+        if (action === "delete-node") {
+          const nodeId = button.getAttribute("data-graph-node-id") || "";
+          const graph = loadStaticGraph(scope);
+          const location = graph.locations.find((item) => item.id === nodeId);
+          const label = location?.label || nodeId || "这个地点";
+          const ok = window.confirm("永久删除地点「" + label + "」？\\n\\n此操作不需要 AI 确认，会直接删除本浏览器里的自定义地点，删除后无法恢复。");
+          if (!ok) return;
+          deleteStaticGraphNode(scope, nodeId);
+        }
         if (page.classList.contains("st-school-app")) renderSchoolPage(page);
         else renderMapPage(page);
       });
@@ -6516,11 +6690,17 @@ function injectInternalMchanApp(html, staticSeed) {
     });
     page.querySelectorAll("[data-school-rule-delete]").forEach((button) => {
       button.addEventListener("click", () => {
+        const ruleName = button.getAttribute("data-school-rule-delete") || "";
+        const isDefaultRule = button.getAttribute("data-school-rule-default") === "true";
         appendAppOperation({
           来源: "学校",
-          操作: "删除校规",
-          校规名: button.getAttribute("data-school-rule-delete") || "",
-          AI执行规范: "只从/校规删除对应校规；不返还当前MC点或其他资源。"
+          操作: isDefaultRule ? "废止初始校规" : "删除校规",
+          校规名: ruleName,
+          前置条件: isDefaultRule ? "VIP5；西园寺爱丽莎好感度>=100；当前MC点>=500000。" : "后续新增校规可直接删除。",
+          固定代价: isDefaultRule ? { 当前MC点: 500000 } : { 当前MC点: 0 },
+          AI执行规范: isDefaultRule
+            ? "这是废止初始默认校规；成功时扣除500000当前MC点并remove /校规/校规名。任一条件不足则失败，不扣费、不删除。"
+            : "这是删除后续自建校规；成功时只remove /校规/校规名，不扣费、不返还当前MC点或其他资源。"
         });
       });
     });
@@ -7047,13 +7227,15 @@ const __stDefaultVariables = () => ({
     "主角可疑度": 0,
     "当前日期": "4月9日 星期三",
     "当前时间": "12:00",
-    "当前日程": "午休",
-    "当前/待上课程": "无",
-    "当天课程表": {
-      "日期": "4月9日",
-      "星期": "星期三",
-      "当前课段": { "名称": "4限 · 现代文", "时间": "11:40-12:30" },
-      "课表": [
+    "当前日程": "4限 · 现代文",
+	    "当前/待上课程": "4限 现代文",
+	    "当天课程表": {
+	      "日期": "4月9日",
+	      "星期": "星期三",
+	      "当前课段": { "名称": "4限 · 现代文", "时间": "11:40-12:30" },
+	      "当前或待上课程": "4限 现代文",
+	      "当前或下个特殊日期": "4月10-14日 社团招新周",
+	      "课表": [
         { "课节": "1限", "时间": "08:40-09:30", "科目": "英语" },
         { "课节": "2限", "时间": "09:40-10:30", "科目": "世界史" },
         { "课节": "3限", "时间": "10:40-11:30", "科目": "生物" },
@@ -7062,10 +7244,31 @@ const __stDefaultVariables = () => ({
         { "课节": "6限", "时间": "14:20-15:10", "科目": "信息" }
       ],
       "次日第一节": { "日期": "4月10日", "星期": "星期四", "课节": "1限", "时间": "08:40-09:30", "科目": "数学" }
-    },
-    "当前事件": "午休",
-    "当前地点": "私立斋明学园 / 教室",
+	    },
+	    "当前事件": "4限 · 现代文",
+	    "当前或下个特殊日期": "4月10-14日 社团招新周",
+	    "当前地点": "私立斋明学园 / 教室",
     "hypnoos": {}
+  },
+  "校规": {
+    "仪容礼仪": {
+      "内容": "在校内应保持私立斋明学园学生应有的端正仪容、礼貌言行与公共场合分寸，不得故意破坏学校名誉。",
+      "目标范围": "学校内全体人员",
+      "生效范围": "学校内",
+      "来源": "初始校规"
+    },
+    "出勤学习": {
+      "内容": "学生在授课、朝礼、终礼和学校指定活动中应按时到场，未经许可不得擅自逃课、扰乱课堂或妨碍他人学习。",
+      "目标范围": "学校内学生",
+      "生效范围": "学校内",
+      "来源": "初始校规"
+    },
+    "校内安全": {
+      "内容": "任何人不得在校内进行暴力、胁迫、危险恶作剧或无许可进入限制区域；发现异常情况应优先保证学生安全并向教职员报告。",
+      "目标范围": "学校内全体人员",
+      "生效范围": "学校内",
+      "来源": "初始校规"
+    }
   },
   "角色": __stDefaultRoles()
 });
