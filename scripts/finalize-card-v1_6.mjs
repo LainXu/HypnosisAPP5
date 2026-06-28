@@ -239,7 +239,7 @@ function sanitizeCardStrings(value) {
 }
 
 function remoteFrontendUrl(commit) {
-  return `https://cdn.jsdelivr.net/gh/${DIST_REPO}@${commit}/dist/webview/index.html`;
+  return `https://cdn.jsdelivr.net/gh/${DIST_REPO}@${commit}/dist/webview/st-load-inline.html`;
 }
 
 function remoteAssetBase(commit) {
