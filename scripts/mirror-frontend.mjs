@@ -2548,6 +2548,11 @@ function isUsableStatDataSnapshot(value) {
     const roles = value['角色'];
     return isPlainVariableObject(system) || (isPlainVariableObject(roles) && Object.keys(roles).length > 0);
 }
+function unwrapStatDataSnapshot(value) {
+    if (isPlainVariableObject(value?.stat_data))
+        return value.stat_data;
+    return value;
+}
 function dedupeVariableOptions(options) {
     const seen = new Set();
     const result = [];
@@ -2578,8 +2583,9 @@ function getVariableSnapshotsForOptionsSync(options, includeImplicit = false) {
     for (const option of options) {
         try {
             const mvu = globalThis.Mvu?.getMvuData?.(option);
-            if (mvu && typeof mvu.then !== 'function' && isPlainVariableObject(mvu.stat_data))
-                candidates.push(mvu.stat_data);
+            const root = unwrapStatDataSnapshot(mvu);
+            if (mvu && typeof mvu.then !== 'function' && isPlainVariableObject(root))
+                candidates.push(root);
         }
         catch {
             // ignore unavailable option
@@ -2588,8 +2594,9 @@ function getVariableSnapshotsForOptionsSync(options, includeImplicit = false) {
     for (const option of options) {
         try {
             const vars = typeof getVariables === 'function' ? getVariables(option) : null;
-            if (isPlainVariableObject(vars))
-                candidates.push(vars);
+            const root = unwrapStatDataSnapshot(vars);
+            if (isPlainVariableObject(root))
+                candidates.push(root);
         }
         catch {
             // ignore unavailable option
@@ -2598,16 +2605,18 @@ function getVariableSnapshotsForOptionsSync(options, includeImplicit = false) {
     if (includeImplicit) {
         try {
             const vars = typeof getVariables === 'function' ? getVariables() : null;
-            if (isPlainVariableObject(vars))
-                candidates.push(vars);
+            const root = unwrapStatDataSnapshot(vars);
+            if (isPlainVariableObject(root))
+                candidates.push(root);
         }
         catch {
             // ignore
         }
         try {
             const mvu = globalThis.Mvu?.getMvuData?.();
-            if (mvu && typeof mvu.then !== 'function' && isPlainVariableObject(mvu.stat_data))
-                candidates.push(mvu.stat_data);
+            const root = unwrapStatDataSnapshot(mvu);
+            if (mvu && typeof mvu.then !== 'function' && isPlainVariableObject(root))
+                candidates.push(root);
         }
         catch {
             // ignore
@@ -3910,29 +3919,38 @@ function upgradeInternalMchanApp(html) {
     return score;
   }
 
+  function unwrapStatDataSnapshot(value) {
+    if (value?.stat_data && typeof value.stat_data === "object" && !Array.isArray(value.stat_data)) return value.stat_data;
+    return value;
+  }
+
   function getLatestStatDataSync() {
     const candidates = [];
     const hasCurrentSnapshot = Boolean(getCurrentVariableOption());
     for (const option of getLatestVariableOptions()) {
       try {
         const mvu = window.Mvu?.getMvuData?.(option);
-        if (mvu?.stat_data && typeof mvu.stat_data === "object") candidates.push(mvu.stat_data);
+        const root = unwrapStatDataSnapshot(mvu);
+        if (root && typeof root === "object" && !Array.isArray(root)) candidates.push(root);
       } catch {}
     }
     for (const option of getLatestVariableOptions()) {
       try {
         const vars = typeof getVariables === "function" ? getVariables(option) : null;
-        if (vars && typeof vars === "object" && (vars["系统"] || vars["角色"] || vars["任务"])) candidates.push(vars);
+        const root = unwrapStatDataSnapshot(vars);
+        if (root && typeof root === "object" && (root["系统"] || root["角色"] || root["任务"])) candidates.push(root);
       } catch {}
     }
     if (!hasCurrentSnapshot) {
       try {
         const vars = typeof getVariables === "function" ? getVariables() : null;
-        if (vars && typeof vars === "object") candidates.push(vars);
+        const root = unwrapStatDataSnapshot(vars);
+        if (root && typeof root === "object") candidates.push(root);
       } catch {}
       try {
         const mvu = window.Mvu?.getMvuData?.();
-        if (mvu?.stat_data && typeof mvu.stat_data === "object") candidates.push(mvu.stat_data);
+        const root = unwrapStatDataSnapshot(mvu);
+        if (root && typeof root === "object" && !Array.isArray(root)) candidates.push(root);
       } catch {}
     }
     let best = null;
@@ -5473,29 +5491,38 @@ function injectInternalMchanApp(html, staticSeed) {
     return score;
   }
 
+  function unwrapStatDataSnapshot(value) {
+    if (value?.stat_data && typeof value.stat_data === "object" && !Array.isArray(value.stat_data)) return value.stat_data;
+    return value;
+  }
+
   function getLatestStatDataSync() {
     const candidates = [];
     const hasCurrentSnapshot = Boolean(getCurrentVariableOption());
     for (const option of getLatestVariableOptions()) {
       try {
         const mvu = window.Mvu?.getMvuData?.(option);
-        if (mvu?.stat_data && typeof mvu.stat_data === "object") candidates.push(mvu.stat_data);
+        const root = unwrapStatDataSnapshot(mvu);
+        if (root && typeof root === "object" && !Array.isArray(root)) candidates.push(root);
       } catch {}
     }
     for (const option of getLatestVariableOptions()) {
       try {
         const vars = typeof getVariables === "function" ? getVariables(option) : null;
-        if (vars && typeof vars === "object" && (vars["系统"] || vars["角色"] || vars["任务"])) candidates.push(vars);
+        const root = unwrapStatDataSnapshot(vars);
+        if (root && typeof root === "object" && (root["系统"] || root["角色"] || root["任务"])) candidates.push(root);
       } catch {}
     }
     if (!hasCurrentSnapshot) {
       try {
         const vars = typeof getVariables === "function" ? getVariables() : null;
-        if (vars && typeof vars === "object") candidates.push(vars);
+        const root = unwrapStatDataSnapshot(vars);
+        if (root && typeof root === "object") candidates.push(root);
       } catch {}
       try {
         const mvu = window.Mvu?.getMvuData?.();
-        if (mvu?.stat_data && typeof mvu.stat_data === "object") candidates.push(mvu.stat_data);
+        const root = unwrapStatDataSnapshot(mvu);
+        if (root && typeof root === "object" && !Array.isArray(root)) candidates.push(root);
       } catch {}
     }
     let best = null;
