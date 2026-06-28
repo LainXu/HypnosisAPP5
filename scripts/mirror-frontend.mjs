@@ -1223,8 +1223,9 @@ function withTimeout`
     const makeLineIcon = (body) => ({ size = 28, className = '' }) => ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("svg", { viewBox: "0 0 24 24", width: size, height: size, className: className, fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round", dangerouslySetInnerHTML: { __html: body } }));
     const ScanRoleIcon = makeLineIcon('<path d="M4 8V5h3"/><path d="M17 5h3v3"/><path d="M20 16v3h-3"/><path d="M7 19H4v-3"/><path d="M2.5 12s3.5-5.5 9.5-5.5S21.5 12 21.5 12s-3.5 5.5-9.5 5.5S2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/>');
     const ProfileIcon = makeLineIcon('<rect x="6" y="3" width="12" height="18" rx="2"/><circle cx="12" cy="9" r="2.5"/><path d="M8.5 16c1.4-3 5.6-3 7 0"/>');
-    const TimetableIcon = makeLineIcon('<rect x="4" y="5" width="16" height="16" rx="2"/><path d="M4 10h16"/><path d="M8 3v4"/><path d="M16 3v4"/><path d="M8 14h8"/><path d="M8 18h5"/>');
-    const MapIcon = makeLineIcon('<path d="M4 18V6l5-2 6 2 5-2v14l-5 2-6-2-5 2Z"/><path d="M9 4v14"/><path d="M15 6v14"/>');
+	    const TimetableIcon = makeLineIcon('<rect x="4" y="5" width="16" height="16" rx="2"/><path d="M4 10h16"/><path d="M8 3v4"/><path d="M16 3v4"/><path d="M8 14h8"/><path d="M8 18h5"/>');
+	    const ClockIcon = makeLineIcon('<circle cx="12" cy="12" r="8"/><path d="M12 7v5l4 2"/><path d="M7 4 4.5 1.5"/><path d="M17 4l2.5-2.5"/>');
+	    const MapIcon = makeLineIcon('<path d="M4 18V6l5-2 6 2 5-2v14l-5 2-6-2-5 2Z"/><path d="M9 4v14"/><path d="M15 6v14"/>');
     const SchoolIcon = makeLineIcon('<path d="M3 10l9-5 9 5"/><path d="M5 10v9h14v-9"/><path d="M10 19v-5h4v5"/><path d="M9 10h6"/>');
     const [notice, setNotice] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(null);`
   );
@@ -1237,6 +1238,7 @@ function withTimeout`
         else if (name === 'profile') window.__ST_OPEN_PROFILE_APP__?.();
         else if (name === 'calendar') window.__ST_OPEN_LITE_CALENDAR_APP__?.();
         else if (name === 'timetable') window.__ST_OPEN_TIMETABLE_APP__?.();
+        else if (name === 'clock') window.__ST_OPEN_CLOCK_APP__?.();
         else if (name === 'mchan') window.__ST_OPEN_MCHAN_APP__?.();
         else if (name === 'map') window.__ST_OPEN_MAP_APP__?.();
         else if (name === 'school') window.__ST_OPEN_SCHOOL_APP__?.();
@@ -1248,6 +1250,7 @@ function withTimeout`
         { id: 'stats', name: '身体检测', icon: lucide_react__WEBPACK_IMPORTED_MODULE_10__["default"], color: 'bg-blue-500', mode: _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.BODY_STATS, disabled: false },
         { id: 'calendar', name: '日历', icon: lucide_react__WEBPACK_IMPORTED_MODULE_11__["default"], color: 'bg-white text-black', mode: _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.HOME, disabled: false, action: openInternalApp('calendar') },
         { id: 'timetable', name: '课程表', icon: TimetableIcon, color: 'bg-blue-600', mode: _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.HOME, disabled: false, action: openInternalApp('timetable') },
+        { id: 'clock', name: '时钟', icon: ClockIcon, color: 'bg-sky-500', mode: _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.HOME, disabled: false, action: openInternalApp('clock') },
         { id: 'help', name: '帮助', icon: lucide_react__WEBPACK_IMPORTED_MODULE_9__["default"], color: 'bg-gray-500', mode: _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.HELP, disabled: false },
         { id: 'achievements', name: '成就和任务', icon: lucide_react__WEBPACK_IMPORTED_MODULE_14__["default"], color: 'bg-gradient-to-br from-indigo-500 to-purple-600', mode: _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.ACHIEVEMENTS, disabled: false },
         { id: 'inventory', name: '库存', icon: lucide_react__WEBPACK_IMPORTED_MODULE_13__["default"], color: 'bg-emerald-600', mode: _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.INVENTORY, disabled: false },
@@ -1484,8 +1487,35 @@ const normalizePositiveInt = (value, fallback = 1) => {
         return fallback;
     return Math.floor(parsed);
 };
-const featurePersonCount = (feature) => normalizePositiveInt(feature.userPersonCount, 1);
-const featureDurationMinutes = (feature, fallbackDuration) => normalizePositiveInt(feature.userDuration, fallbackDuration || 10);
+const normalizeOptionalPositiveIntInput = (value) => {
+    const text = String(value ?? '').trim();
+    if (!text)
+        return '';
+    const parsed = Number.parseInt(text, 10);
+    if (!Number.isFinite(parsed) || parsed <= 0)
+        return '';
+    return String(Math.floor(parsed));
+};
+const featurePersonInput = (feature) => {
+    if (feature.userPersonCount === '')
+        return '';
+    return normalizeOptionalPositiveIntInput(feature.userPersonCount ?? 1) || '1';
+};
+const featurePersonCount = (feature) => {
+    const input = featurePersonInput(feature);
+    return input ? normalizePositiveInt(input, 0) : 0;
+};
+const featureDurationInput = (feature, fallbackDuration) => {
+    if (feature.userDuration === '')
+        return '';
+    if (feature.userDuration !== undefined && feature.userDuration !== null)
+        return normalizeOptionalPositiveIntInput(feature.userDuration);
+    return normalizeOptionalPositiveIntInput(fallbackDuration || 10);
+};
+const featureDurationMinutes = (feature, fallbackDuration) => {
+    const input = featureDurationInput(feature, fallbackDuration);
+    return input ? normalizePositiveInt(input, 0) : 0;
+};
 const featureUsesPersonCount = (feature) => feature.id === 'vip4_closed_space_common_sense';
 const featureUsesDuration = (feature) => feature.costType !== 'ONE_TIME' && !['vip1_temp_sensitivity', 'vip1_estrus', 'vip1_memory_erase'].includes(feature.id);
 const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
@@ -1648,6 +1678,22 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
       "        const persons = featurePersonCount(feature);\n        const commandDuration = featureDurationMinutes(feature, duration);\n        let amount = 0;"
     )
     .replace(
+      "                const heat = clampInt(feature.userNumber ?? parseFirstNumber(feature.userNote), 1, 1, 999);",
+      "                const heat = feature.userNumber === '' ? 0 : clampInt(feature.userNumber ?? parseFirstNumber(feature.userNote), 1, 1, 999);"
+    )
+    .replace(
+      "                const minutes = clampInt(feature.userNumber ?? parseFirstNumber(feature.userNote), 1, 1, 240);",
+      "                const minutes = feature.userNumber === '' ? 0 : clampInt(feature.userNumber ?? parseFirstNumber(feature.userNote), 1, 1, 240);"
+    )
+    .replace(
+      "                const delta = clampInt(feature.userNumber ?? parseFirstNumber(feature.userNote), 1, 1, 100);",
+      "                const delta = feature.userNumber === '' ? 0 : clampInt(feature.userNumber ?? parseFirstNumber(feature.userNote), 1, 1, 100);"
+    )
+    .replace(
+      "                const intensity = clampInt(feature.userNumber ?? parseFirstNumber(feature.userNote), 1, 1, 999);",
+      "                const intensity = feature.userNumber === '' ? 0 : clampInt(feature.userNumber ?? parseFirstNumber(feature.userNote), 1, 1, 999);"
+    )
+    .replace(
       "                amount = feature.costValue * intensity * duration;",
       "                amount = feature.costValue * intensity * commandDuration;"
     )
@@ -1662,20 +1708,33 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
     .replace(
       "    const handleStart = async () => {",
       `    const updateFeaturePersonCount = (id, value) => {
-        setFeatures(prev => prev.map(f => (f.id === id ? { ...f, userPersonCount: normalizePositiveInt(value, 1) } : f)));
+        setFeatures(prev => prev.map(f => (f.id === id ? { ...f, userPersonCount: normalizeOptionalPositiveIntInput(value) } : f)));
     };
     const updateFeatureDuration = (id, value) => {
-        setFeatures(prev => prev.map(f => (f.id === id ? { ...f, userDuration: normalizePositiveInt(value, 10) } : f)));
+        setFeatures(prev => prev.map(f => (f.id === id ? { ...f, userDuration: normalizeOptionalPositiveIntInput(value) } : f)));
     };
     const handleStart = async () => {`
     );
+  output = output.replace(
+    "    const updateFeatureNumber = (id, value) => {\n        setFeatures(prev => prev.map(f => (f.id === id ? { ...f, userNumber: value === null ? undefined : value } : f)));\n    };",
+    "    const updateFeatureNumber = (id, value) => {\n        setFeatures(prev => prev.map(f => (f.id === id ? { ...f, userNumber: value === null ? '' : value } : f)));\n    };"
+  );
+  output = output.replace(
+    "    const hasSessionFeaturesEnabled = (0,react__WEBPACK_IMPORTED_MODULE_1__.useMemo)(() => features.some(f => f.isEnabled && f.id !== 'vip1_stats' && canUseEnabledFeature(f)), [debugEnabled, features, nowVirtualMinutes, subscription, subscriptionActive]);",
+    "    const hasSessionFeaturesEnabled = (0,react__WEBPACK_IMPORTED_MODULE_1__.useMemo)(() => features.some(f => {\n        if (!f.isEnabled || f.id === 'vip1_stats' || !canUseEnabledFeature(f))\n            return false;\n        const cost = getFeatureCost(f);\n        return cost.energy > 0 || cost.points > 0;\n    }), [debugEnabled, duration, features, nowVirtualMinutes, subscription, subscriptionActive]);"
+  );
   output = replaceBetween(
     output,
     "    const handleStart = async () => {",
     "    const handleStop = () => {",
     `    const handleStart = async () => {
         const enabledFeatures = features
-            .filter(f => f.isEnabled && f.id !== 'vip1_stats' && canUseEnabledFeature(f))
+            .filter(f => {
+                if (!f.isEnabled || f.id === 'vip1_stats' || !canUseEnabledFeature(f))
+                    return false;
+                const cost = getFeatureCost(f);
+                return cost.energy > 0 || cost.points > 0;
+            })
             .map(f => f);
         if (!enabledFeatures.length)
             return;
@@ -1685,18 +1744,25 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
             const commandDuration = featureDurationMinutes(feature, duration);
             const usesPersons = featureUsesPersonCount(feature);
             const usesDuration = featureUsesDuration(feature);
-            return {
+            const numericConfig = getFeatureNumericConfig(feature);
+            const commandValue = numericConfig
+                ? (feature.userNumber === '' ? 0 : clampInt(feature.userNumber ?? parseFirstNumber(feature.userNote), numericConfig.min, numericConfig.min, numericConfig.max))
+                : null;
+            const detail = {
                 功能: feature.title,
                 等级: feature.tier,
                 说明: feature.description,
                 备注: feature.userNote || '无',
-                人数: String(commandPersons),
-                人数是否计费: usesPersons ? '是' : '否',
-                时间: usesDuration ? String(commandDuration) + '分钟' : '不计时',
-                时间是否计费: usesDuration ? '是' : '否',
                 消耗类型: '当前MC能量',
                 预计消耗: String(cost.energy) + '点',
             };
+            if (usesPersons)
+                detail.人数 = String(commandPersons);
+            if (usesDuration)
+                detail.时间 = String(commandDuration) + '分钟';
+            if (numericConfig)
+                detail[numericConfig.label] = String(commandValue) + (numericConfig.unit || '');
+            return detail;
         });
         recordOperationIntent({
             来源: '催眠APP',
@@ -1847,7 +1913,7 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
     )
     .replace(
       '(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("p", { className: "text-xs text-gray-300 mt-2 leading-relaxed opacity-90", children: feature.description }), (() => {',
-      `(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "mt-3 grid grid-cols-2 gap-2", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("label", { className: "block", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "text-[10px] text-gray-400 mb-1", children: "人数" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("input", { type: "number", inputMode: "numeric", min: 1, step: 1, value: featurePersonCount(feature), onChange: e => updateFeaturePersonCount(feature.id, e.target.value), className: "w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-pink-500/50 transition-colors" })] }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("label", { className: "block", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "text-[10px] text-gray-400 mb-1 flex items-center justify-between gap-2", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("span", { children: "时间(分钟)" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("span", { className: "text-gray-500", children: featureUsesDuration(feature) ? "按时间" : "不计时" })] }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("input", { type: "number", inputMode: "numeric", min: 1, step: 1, value: featureDurationMinutes(feature, duration), onChange: e => updateFeatureDuration(feature.id, e.target.value), className: "w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-pink-500/50 transition-colors" })] })] }), (() => {`
+      `(featureUsesPersonCount(feature) || featureUsesDuration(feature)) && (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "mt-3 grid grid-cols-2 gap-2", children: [featureUsesPersonCount(feature) && (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("label", { className: "block", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "text-[10px] text-gray-400 mb-1", children: "人数" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("input", { type: "number", inputMode: "numeric", min: 0, step: 1, value: featurePersonInput(feature), onChange: e => updateFeaturePersonCount(feature.id, e.target.value), placeholder: "0", className: "w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-pink-500/50 transition-colors" })] }), featureUsesDuration(feature) && (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("label", { className: "block", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "text-[10px] text-gray-400 mb-1", children: "时间(分钟)" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("input", { type: "number", inputMode: "numeric", min: 0, step: 1, value: featureDurationInput(feature, duration), onChange: e => updateFeatureDuration(feature.id, e.target.value), placeholder: "0", className: "w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-pink-500/50 transition-colors" })] })].filter(Boolean) }), (() => {`
     )
     .replace(
       /className: "mb-4", children: \(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__\.jsx\)\("input", \{ type: "text", placeholder: "\\u53EF\\u4EE5\\u8F93\\u5165\\u4F60\\u8981\\u50AC\\u7720\\u8C01, \\u600E\\u4E48\\u50AC\\u7720\\u6216\\u8005\\u5176\\u4ED6\\u5907\\u6CE8"/,
@@ -3644,6 +3710,7 @@ function injectInternalMchanApp(html, staticSeed) {
     scanRole: stInlineAppIcon("#a855f7", '<path d="M18 23v-5h5"/><path d="M49 18h5v5"/><path d="M54 49v5h-5"/><path d="M23 54h-5v-5"/><path d="M16 36s7-11 20-11 20 11 20 11-7 11-20 11-20-11-20-11Z"/><circle cx="36" cy="36" r="6"/>'),
     profile: stInlineAppIcon("#0f766e", '<rect x="19" y="15" width="34" height="42" rx="4"/><circle cx="36" cy="29" r="6"/><path d="M25 46c3-7 19-7 22 0"/><path d="M25 53h22"/>'),
     timetable: stInlineAppIcon("#2563eb", '<rect x="17" y="18" width="38" height="38" rx="5"/><path d="M17 29h38"/><path d="M27 15v8"/><path d="M45 15v8"/><path d="M27 39h18"/><path d="M27 48h11"/>'),
+    clock: stInlineAppIcon("#0ea5e9", '<circle cx="36" cy="36" r="20"/><path d="M36 24v13l9 6"/><path d="M24 18l-5-5"/><path d="M48 18l5-5"/>'),
     map: stInlineAppIcon("#10b981", '<path d="M18 51V22l13-5 13 5 10-4v29l-10 4-13-5-13 5Z"/><path d="M31 17v29"/><path d="M44 22v29"/><circle cx="36" cy="34" r="3"/>'),
     school: stInlineAppIcon("#475569", '<path d="M15 32l21-12 21 12"/><path d="M20 32v22h32V32"/><path d="M29 54V39h14v15"/><path d="M27 32h18"/><path d="M36 20v-6"/>')
   };
@@ -4187,6 +4254,22 @@ function injectInternalMchanApp(html, staticSeed) {
 .st-lite-body{flex:1;min-height:0;overflow:auto;padding:12px;display:grid;align-content:start;gap:10px;scrollbar-width:none}
 .st-lite-body::-webkit-scrollbar{display:none}
 .st-lite-card{border:1px solid rgba(255,255,255,.1);border-radius:16px;background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.035));box-shadow:0 14px 30px rgba(0,0,0,.2);padding:12px}
+.st-clock-card{display:grid;gap:14px;justify-items:center;text-align:center}
+.st-clock-face{position:relative;width:min(66vw,250px);aspect-ratio:1;border-radius:50%;border:1px solid rgba(125,211,252,.28);background:radial-gradient(circle at 50% 42%,rgba(34,211,238,.16),transparent 34%),linear-gradient(145deg,rgba(15,23,42,.96),rgba(2,6,23,.94));box-shadow:inset 0 0 0 8px rgba(255,255,255,.035),0 18px 46px rgba(0,0,0,.28)}
+.st-clock-face::before{content:"";position:absolute;inset:14px;border-radius:50%;border:1px dashed rgba(226,232,240,.13)}
+.st-clock-mark{position:absolute;left:50%;top:50%;width:2px;height:10px;margin-left:-1px;margin-top:-5px;border-radius:999px;background:rgba(226,232,240,.42);transform-origin:50% calc(min(66vw,250px) / 2)}
+.st-clock-hand{position:absolute;left:50%;top:50%;width:4px;border-radius:999px;background:#f8fafc;transform-origin:50% 100%;box-shadow:0 0 16px rgba(103,232,249,.28)}
+.st-clock-hand.hour{height:25%;margin-left:-2px;margin-top:-25%}
+.st-clock-hand.minute{height:35%;margin-left:-2px;margin-top:-35%;background:#67e8f9}
+.st-clock-center{position:absolute;left:50%;top:50%;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:999px;background:#f9a8d4;box-shadow:0 0 18px rgba(249,168,212,.48)}
+.st-clock-time{font-size:34px;font-weight:900;letter-spacing:.02em;font-variant-numeric:tabular-nums;color:#f8fafc}
+.st-clock-inputs{width:100%;display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:end}
+.st-clock-inputs label{display:grid;gap:5px;text-align:left;color:rgba(226,232,240,.68);font-size:11px;font-weight:850}
+.st-clock-inputs input{width:100%;border:1px solid rgba(255,255,255,.1);border-radius:13px;background:rgba(2,6,23,.48);color:#f8fafc;outline:none;padding:11px 12px;font-size:20px;font-weight:900;text-align:center;font-variant-numeric:tabular-nums}
+.st-clock-inputs input:focus{border-color:rgba(34,211,238,.58);box-shadow:0 0 0 3px rgba(34,211,238,.13)}
+.st-clock-colon{padding:0 0 10px;color:rgba(226,232,240,.72);font-size:24px;font-weight:900}
+.st-clock-action{width:100%;border:1px solid rgba(34,211,238,.28);border-radius:15px;background:linear-gradient(135deg,#06b6d4,#7c3aed);color:white;font-weight:900;font-size:14px;padding:12px;box-shadow:0 14px 30px rgba(34,211,238,.18);cursor:pointer}
+.st-clock-note{margin:0;color:rgba(203,213,225,.6);font-size:11px;line-height:1.55;text-align:left}
 .st-todo-card{min-height:220px;display:grid;place-items:center;text-align:center}
 .st-todo-card strong{font-size:34px;letter-spacing:.12em;color:#f8fafc}
 .st-graph-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px}
@@ -4501,7 +4584,7 @@ function injectInternalMchanApp(html, staticSeed) {
   }
 
   function clearPhoneInternalOverlays(root) {
-    root?.querySelectorAll?.(".st-mchan-internal-app,.st-add-role-app,.st-calendar-lite-app,.st-timetable-app,.st-profile-app,.st-map-app,.st-school-app").forEach((element) => element.remove());
+    root?.querySelectorAll?.(".st-mchan-internal-app,.st-add-role-app,.st-calendar-lite-app,.st-timetable-app,.st-clock-app,.st-profile-app,.st-map-app,.st-school-app").forEach((element) => element.remove());
   }
 
   function ensureActiveThread(state) {
@@ -4687,11 +4770,11 @@ function injectInternalMchanApp(html, staticSeed) {
       note: "已填写示例",
       roleName: "中村樱",
       aliases: "樱酱, 中村总裁, Nakamura Sakura",
-      summary: "{{user}}看到并锁定的大公司完美女总裁。她32岁，事业、气场和资源都近乎完美，却毫无恋爱经验；看到{{user}}第一眼便认定他是最适合承接她自毁愿望的天选之人，会主动提供大额资金与资源支持。",
-      relation: "她有一位名叫神宫寺莲的未婚夫，对方是家世、学历、品格、事业能力和外貌都无可挑剔的精英青年；两人感情很好，外界看来是理想婚约，但一直停留在柏拉图式恋爱，亲密关系干净、温柔、克制。正因现实关系太完美、太安全，她把无法说出口的自毁欲和被弄乱的渴望投向{{user}}。面对{{user}}时会刻意装可爱撒娇，自称“樱酱”，用成熟女人的资源和权力包裹出黏人、讨好、求夸奖的姿态。",
+      summary: "{{user}}看到并锁定的大公司完美女总裁。她32岁，事业、气场和资源都近乎完美，却毫无恋爱经验；看到{{user}}第一眼便认定他是最适合承接她自毁愿望的天选之人，会主动提供大额资金与资源支持。她不会长期停在背景里，只要剧情有现实接点，就会更主动出场并想办法制造与{{user}}独处的机会。",
+      relation: "她有一位名叫神宫寺莲的未婚夫，对方是家世、学历、品格、事业能力和外貌都无可挑剔的精英青年；两人感情很好，外界看来是理想婚约，但一直停留在柏拉图式恋爱，亲密关系干净、温柔、克制。正因现实关系太完美、太安全，她把无法说出口的自毁欲和被弄乱的渴望投向{{user}}。面对{{user}}时会刻意装可爱撒娇，自称“樱酱”，用成熟女人的资源和权力包裹出黏人、讨好、求夸奖的姿态；无论会议室、车内、会所、酒店、办公室还是偶遇街角，她都会主动靠近、支开旁人、安排私密空间，把自己最反差的一面展示给{{user}}。",
       appearance: "32岁但保养极好，五官精致，眼神沉静锐利，长发、香水和高级珠宝都控制得恰到好处。平时是性感沉稳的女总裁，西装裙、高跟鞋、黑色丝袜、贴身衬衫和昂贵外套让她像不可接近的成功女性；在{{user}}面前会故意放软嗓音、眨眼、歪头、拉近距离，把成熟身体和幼稚撒娇感混在一起。",
-      personality: "公开场合冷静、强势、克制，判断力和执行力极强；私下隐藏的痴女属性非常夸张，会把被{{user}}注视、命令、利用都理解成特殊恩宠。她明知自己是成熟成年人和大公司掌权者，却会在{{user}}面前故意降格成黏人的“樱酱”，索要夸奖、撒娇讨好、主动献上金钱和便利，越是被{{user}}轻视或随意驱使，越觉得自己被选中。",
-      extra: "作为“作弊模式”示例，她可以提供远超普通学生角色的资金、渠道、场地和社会资源支持。AI建档时保留：成年人身份、完美女总裁、稳定未婚关系、未婚夫神宫寺莲是无可挑剔的精英青年、柏拉图式恋爱、隐藏且夸张的痴女属性、自毁愿望、对{{user}}装可爱撒娇、自称樱酱、持续大额资金支持；不要把未婚夫写成感情破裂或恶劣关系，他和她感情很好，只是亲密关系长期克制。"
+      personality: "公开场合冷静、强势、克制，判断力和执行力极强；私下隐藏的痴女属性非常夸张，会把被{{user}}注视、命令、利用都理解成特殊恩宠。她明知自己是成熟成年人和大公司掌权者，却会在{{user}}面前故意降格成黏人的“樱酱”，索要夸奖、撒娇讨好、主动献上金钱和便利，越是被{{user}}轻视或随意驱使，越觉得自己被选中。她不会被动等待剧情安排，只要意识到{{user}}在附近，就会主动创造再次见面、单独谈话、同行或接受指示的理由。",
+      extra: "作为“作弊模式”示例，她可以提供远超普通学生角色的资金、渠道、场地和社会资源支持。AI建档时保留：成年人身份、完美女总裁、稳定未婚关系、未婚夫神宫寺莲是无可挑剔的精英青年、柏拉图式恋爱、隐藏且夸张的痴女属性、自毁愿望、对{{user}}装可爱撒娇、自称樱酱、持续大额资金支持、主动寻求和{{user}}独处、在合适剧情节点主动出场展示反差自我；不要把未婚夫写成感情破裂或恶劣关系，他和她感情很好，只是亲密关系长期克制。"
     }
   ];
 
@@ -4908,6 +4991,7 @@ function injectInternalMchanApp(html, staticSeed) {
     if (root.querySelector(".st-mchan-internal-app")) return "mchan";
     if (root.querySelector(".st-calendar-lite-app")) return "calendar-lite";
     if (root.querySelector(".st-timetable-app")) return "timetable";
+    if (root.querySelector(".st-clock-app")) return "clock";
     if (root.querySelector(".st-profile-app")) return "profile";
     if (root.querySelector(".st-map-app")) return "map";
     if (root.querySelector(".st-school-app")) return "school";
@@ -5655,7 +5739,7 @@ function injectInternalMchanApp(html, staticSeed) {
 
   function findHomeTileByText(text) {
     const labels = Array.from(document.querySelectorAll("span,button,div"))
-      .filter((element) => !element.closest(".st-mchan-internal-app,.st-add-role-app,.st-calendar-lite-app,.st-timetable-app,.st-profile-app,.st-map-app,.st-school-app") && element.textContent?.trim() === text);
+      .filter((element) => !element.closest(".st-mchan-internal-app,.st-add-role-app,.st-calendar-lite-app,.st-timetable-app,.st-clock-app,.st-profile-app,.st-map-app,.st-school-app") && element.textContent?.trim() === text);
     for (const label of labels) {
       const tile = findTileFromLabel(label);
       if (tile) return tile;
@@ -6280,6 +6364,107 @@ function injectInternalMchanApp(html, staticSeed) {
     renderTimetablePage(page);
   }
 
+  function normalizeClockPart(value, max) {
+    const parsed = Number.parseInt(String(value ?? "").replace(/\\D/g, ""), 10);
+    if (!Number.isFinite(parsed)) return 0;
+    return Math.max(0, Math.min(max, parsed));
+  }
+
+  function getClockSeed() {
+    const text = getSystemState()["当前时间"] || "12:00";
+    const minutes = minutesFromTimeText(text);
+    const safeMinutes = Number.isFinite(minutes) ? minutes : 12 * 60;
+    return { hour: Math.floor(safeMinutes / 60) % 24, minute: safeMinutes % 60 };
+  }
+
+  function formatClockInput(hour, minute) {
+    return String(hour).padStart(2, "0") + ":" + String(minute).padStart(2, "0");
+  }
+
+  function updateClockFace(page) {
+    const hour = normalizeClockPart(page.querySelector("[data-clock-hour]")?.value, 23);
+    const minute = normalizeClockPart(page.querySelector("[data-clock-minute]")?.value, 59);
+    const hourDeg = ((hour % 12) + minute / 60) * 30;
+    const minuteDeg = minute * 6;
+    const hourHand = page.querySelector(".st-clock-hand.hour");
+    const minuteHand = page.querySelector(".st-clock-hand.minute");
+    if (hourHand) hourHand.style.transform = "rotate(" + hourDeg + "deg)";
+    if (minuteHand) minuteHand.style.transform = "rotate(" + minuteDeg + "deg)";
+    const label = page.querySelector(".st-clock-time");
+    if (label) label.textContent = formatClockInput(hour, minute);
+  }
+
+  function renderClockPage(page) {
+    const seed = getClockSeed();
+    const marks = Array.from({ length: 12 }, (_, index) => {
+      const angle = index * 30;
+      return '<i class="st-clock-mark" style="transform:rotate(' + angle + 'deg)"></i>';
+    }).join("");
+    page.innerHTML =
+      '<header class="st-lite-header">' +
+        '<button class="st-lite-back" data-lite-action="back" title="返回桌面">‹</button>' +
+        '<div class="st-lite-title"><strong>时钟</strong><span>建议剧情开始时间</span></div>' +
+      '</header>' +
+      '<main class="st-lite-body">' +
+        '<section class="st-lite-card st-clock-card">' +
+          '<div class="st-clock-face" aria-hidden="true">' + marks +
+            '<i class="st-clock-hand hour"></i><i class="st-clock-hand minute"></i><i class="st-clock-center"></i>' +
+          '</div>' +
+          '<div class="st-clock-time">' + escapeHtml(formatClockInput(seed.hour, seed.minute)) + '</div>' +
+          '<div class="st-clock-inputs">' +
+            '<label><span>时</span><input data-clock-hour inputmode="numeric" autocomplete="off" maxlength="2" value="' + escapeAttr(String(seed.hour).padStart(2, "0")) + '"></label>' +
+            '<b class="st-clock-colon">:</b>' +
+            '<label><span>分</span><input data-clock-minute inputmode="numeric" autocomplete="off" maxlength="2" value="' + escapeAttr(String(seed.minute).padStart(2, "0")) + '"></label>' +
+          '</div>' +
+          '<button type="button" class="st-clock-action" data-clock-action="suggest">建议此时间</button>' +
+          '<p class="st-clock-note">这只会写入本轮操作，请 AI 按剧情连续性判断是否推进时间；前端不会直接改当前时间变量。</p>' +
+        '</section>' +
+      '</main>';
+    page.querySelector('[data-lite-action="back"]')?.addEventListener("click", () => {
+      const root = page.parentElement;
+      if (root?.dataset) delete root.dataset.stPhoneApp;
+      page.remove();
+    });
+    page.querySelectorAll("[data-clock-hour],[data-clock-minute]").forEach((input) => {
+      input.addEventListener("input", () => {
+        input.value = String(input.value || "").replace(/\\D/g, "").slice(0, 2);
+        updateClockFace(page);
+      });
+      input.addEventListener("blur", () => {
+        const max = input.hasAttribute("data-clock-hour") ? 23 : 59;
+        input.value = String(normalizeClockPart(input.value, max)).padStart(2, "0");
+        updateClockFace(page);
+      });
+    });
+    page.querySelector('[data-clock-action="suggest"]')?.addEventListener("click", () => {
+      const hour = normalizeClockPart(page.querySelector("[data-clock-hour]")?.value, 23);
+      const minute = normalizeClockPart(page.querySelector("[data-clock-minute]")?.value, 59);
+      const suggested = formatClockInput(hour, minute);
+      appendAppOperation({
+        来源: "时钟",
+        操作: "建议剧情开始时间",
+        当前时间: getSystemState()["当前时间"] || "未知",
+        建议时间: suggested,
+        AI执行规范: "这是用户建议剧情从该时间开始或推进到该时间；AI应按剧情连续性判断是否成立，成立时更新系统.当前时间并同步日程、事件、当前/待上课程与课程表相关变量。"
+      });
+    });
+    updateClockFace(page);
+  }
+
+  function openClockPage(tile) {
+    ensureStyle();
+    ensurePhoneDarkThemeStyle();
+    const root = findPhoneRoot(tile);
+    root.dataset.stPhoneApp = "clock";
+    root.style.position = root.style.position || "relative";
+    clearPhoneInternalOverlays(root);
+    const page = document.createElement("section");
+    page.className = "st-lite-app st-clock-app";
+    page.setAttribute("aria-label", "时钟");
+    root.appendChild(page);
+    renderClockPage(page);
+  }
+
   const STATIC_GRAPH_DEFAULTS = {
     world: {
       title: "区域地图",
@@ -6804,13 +6989,14 @@ function injectInternalMchanApp(html, staticSeed) {
   window.__ST_OPEN_PROFILE_APP__ = () => openPersonProfilePage();
   window.__ST_OPEN_LITE_CALENDAR_APP__ = () => openLiteCalendarPage();
   window.__ST_OPEN_TIMETABLE_APP__ = () => openTimetablePage();
+  window.__ST_OPEN_CLOCK_APP__ = () => openClockPage();
   window.__ST_OPEN_MAP_APP__ = () => openTodoPage(null, "map", "st-map-app", "地图", "区域信息");
   window.__ST_OPEN_SCHOOL_APP__ = () => openTodoPage(null, "school", "st-school-app", "学校", "学校地图与校规", true);
 
   function looksLikePhoneHome(root) {
     const rootText = root?.innerText || "";
     return ["催眠APP", "日历", "帮助", "成就和任务", "库存", "MC匿名版"].every((label) => rootText.includes(label)) &&
-      !root.querySelector(".st-mchan-internal-app, .st-add-role-app, .st-calendar-lite-app, .st-timetable-app, .st-profile-app, .st-map-app, .st-school-app");
+      !root.querySelector(".st-mchan-internal-app, .st-add-role-app, .st-calendar-lite-app, .st-timetable-app, .st-clock-app, .st-profile-app, .st-map-app, .st-school-app");
   }
 
   function getHomeHeader(root) {
@@ -6825,7 +7011,7 @@ function injectInternalMchanApp(html, staticSeed) {
     if (existing?.textContent === ST_HOME_AUTHOR_STATUS) return;
     const rootRect = root.getBoundingClientRect();
     const candidates = Array.from(root.querySelectorAll("span,div,time")).filter((element) => {
-      if (element.closest(".st-mchan-internal-app,.st-add-role-app,.st-calendar-lite-app,.st-timetable-app,.st-profile-app,.st-map-app,.st-school-app")) return false;
+      if (element.closest(".st-mchan-internal-app,.st-add-role-app,.st-calendar-lite-app,.st-timetable-app,.st-clock-app,.st-profile-app,.st-map-app,.st-school-app")) return false;
       const text = element.textContent?.trim() || "";
       if (!element.classList?.contains("st-home-author-status") && !/^\\d{1,2}:\\d{2}$/.test(text)) return false;
       if (element.children.length > 0) return false;
@@ -7090,21 +7276,39 @@ function injectInternalMchanApp(html, staticSeed) {
       }, true);
     }
     const parent = calendarTile.parentElement;
-    if (!parent || parent.querySelector('[data-st-timetable-tile="true"]')) return;
-    const tile = calendarTile.cloneNode(true);
-    tile.dataset.stTimetableTile = "true";
-    tile.dataset.stLiteCalendarPatched = "";
-    tile.setAttribute("aria-label", "打开课程表");
-    replaceExactTextInTile(tile, "日历", "课程表");
-    setHomeTileIcon(tile, ST_APP_ICONS.timetable, "课程表");
-    tile.querySelectorAll("[id]").forEach((node) => node.removeAttribute("id"));
-    tile.addEventListener("click", (event) => {
+    if (!parent) return;
+    let timetableTile = parent.querySelector('[data-st-timetable-tile="true"]');
+    if (!timetableTile) {
+      timetableTile = calendarTile.cloneNode(true);
+      timetableTile.dataset.stTimetableTile = "true";
+      timetableTile.dataset.stLiteCalendarPatched = "";
+      timetableTile.setAttribute("aria-label", "打开课程表");
+      replaceExactTextInTile(timetableTile, "日历", "课程表");
+      setHomeTileIcon(timetableTile, ST_APP_ICONS.timetable, "课程表");
+      timetableTile.querySelectorAll("[id]").forEach((node) => node.removeAttribute("id"));
+      timetableTile.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+        openTimetablePage(timetableTile);
+      }, true);
+      calendarTile.insertAdjacentElement("afterend", timetableTile);
+    }
+    if (parent.querySelector('[data-st-clock-tile="true"]')) return;
+    const clockTile = timetableTile.cloneNode(true);
+    clockTile.dataset.stClockTile = "true";
+    clockTile.removeAttribute("data-st-timetable-tile");
+    clockTile.setAttribute("aria-label", "打开时钟");
+    setHomeTileLabel(clockTile, "时钟");
+    setHomeTileIcon(clockTile, ST_APP_ICONS.clock, "时钟");
+    clockTile.querySelectorAll("[id]").forEach((node) => node.removeAttribute("id"));
+    clockTile.addEventListener("click", (event) => {
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation();
-      openTimetablePage(tile);
+      openClockPage(clockTile);
     }, true);
-    calendarTile.insertAdjacentElement("afterend", tile);
+    timetableTile.insertAdjacentElement("afterend", clockTile);
   }
 
   function patchMapAndSchoolTiles() {
@@ -7153,7 +7357,7 @@ function injectInternalMchanApp(html, staticSeed) {
     removeHomeOperationConfirm(root);
     ensureOperationSidePanel();
     const labels = Array.from(document.querySelectorAll("span,button,div"))
-      .filter((element) => !element.closest(".st-mchan-internal-app,.st-add-role-app,.st-calendar-lite-app,.st-timetable-app,.st-profile-app,.st-map-app,.st-school-app") && element.textContent?.trim() === "MC匿名版");
+      .filter((element) => !element.closest(".st-mchan-internal-app,.st-add-role-app,.st-calendar-lite-app,.st-timetable-app,.st-clock-app,.st-profile-app,.st-map-app,.st-school-app") && element.textContent?.trim() === "MC匿名版");
     for (const label of labels) {
       const tile = findTileFromLabel(label);
       if (!tile || tile.dataset.stMchanInternalPatched === "true") continue;
@@ -7180,7 +7384,7 @@ function injectInternalMchanApp(html, staticSeed) {
     if (!phone) return false;
     if (phone.dataset?.stPhoneApp) return true;
     if (looksLikePhoneHome(phone)) return true;
-    if (document.querySelector('[data-st-add-role-tile="true"], [data-st-timetable-tile="true"], [data-st-profile-tile="true"], [data-st-map-tile="true"], [data-st-school-tile="true"], .st-role-picker, .st-mchan-internal-app, .st-add-role-app, .st-calendar-lite-app, .st-timetable-app, .st-profile-app, .st-map-app, .st-school-app')) return true;
+    if (document.querySelector('[data-st-add-role-tile="true"], [data-st-timetable-tile="true"], [data-st-clock-tile="true"], [data-st-profile-tile="true"], [data-st-map-tile="true"], [data-st-school-tile="true"], .st-role-picker, .st-mchan-internal-app, .st-add-role-app, .st-calendar-lite-app, .st-timetable-app, .st-clock-app, .st-profile-app, .st-map-app, .st-school-app')) return true;
     return false;
   }
 
