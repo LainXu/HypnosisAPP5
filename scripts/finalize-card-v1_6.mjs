@@ -205,10 +205,10 @@ function patchVariableRules(content) {
 
 function sanitizeCardString(value) {
   return String(value ?? "")
-    .replace(/\n\s*当前MC点:\s*0\s*/g, "\n")
-    .replace(/\n\s*累计消耗MC点:\s*0\s*/g, "\n")
-    .replace(/\n\s*当前MC点:\s*zod[^,\n]*,?/g, "")
-    .replace(/\n\s*累计消耗MC点:\s*zod[^,\n]*,?/g, "")
+    .replace(/^[ \t]*当前MC点:\s*0[ \t]*\r?\n/gm, "")
+    .replace(/^[ \t]*累计消耗MC点:\s*0[ \t]*\r?\n/gm, "")
+    .replace(/^[ \t]*当前MC点:\s*zod[^\r\n,]*,?[ \t]*\r?\n/gm, "")
+    .replace(/^[ \t]*累计消耗MC点:\s*zod[^\r\n,]*,?[ \t]*\r?\n/gm, "")
     .replaceAll("悬赏 30 MC点", "悬赏 30000円")
     .replaceAll("30MC点", "30000円")
     .replaceAll("10-50MC点", "10000-50000円")
@@ -361,6 +361,8 @@ function patchCard(card) {
     .replaceAll("要求其他人支付MC点查看", "要求其他人付费查看")
     .replaceAll("增加{{user}}的`当前MC点`10 - 50点", "增加{{user}}的`持有零花钱`10000 - 50000円")
     .replaceAll("MC点", "现金"));
+  patchEntry(entries, "[initvar]变量初始化不需要开", (content) => content
+    .replace(/\n主角可疑度:\s*0\s*\n\s*持有零花钱:/, "\n  主角可疑度: 0\n  持有零花钱:"));
 
   sanitizeCardStrings(card);
   return card;

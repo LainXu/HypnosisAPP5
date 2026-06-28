@@ -1,5 +1,5 @@
 import { createReadStream, statSync } from "node:fs";
-import { access, stat, writeFile } from "node:fs/promises";
+import { access, readFile, stat, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { extname, join, normalize, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -75,16 +75,21 @@ async function handleWorkbenchPost(request, response, pathname) {
       sendJson(response, 400, { ok: false, error: "Invalid PNG" });
       return true;
     }
-    await writeFile(WORKSPACE_CARD_PNG, body);
-    sendJson(response, 200, { ok: true, path: "public/cards/hypnosis-app.png", size: body.length });
+    const current = await readFile(WORKSPACE_CARD_PNG).catch(() => null);
+    const unchanged = current && current.equals(body);
+    if (!unchanged) await writeFile(WORKSPACE_CARD_PNG, body);
+    sendJson(response, 200, { ok: true, unchanged, path: "public/cards/hypnosis-app.png", size: body.length });
     return true;
   }
 
   if (pathname === "/__workbench/save-card-json") {
     const body = await readRequestBody(request);
     const parsed = JSON.parse(body.toString("utf8"));
-    await writeFile(WORKSPACE_CARD_JSON, `${JSON.stringify(parsed, null, 2)}\n`, "utf8");
-    sendJson(response, 200, { ok: true, path: "public/cards/hypnosis-app-workbench-current.json" });
+    const next = `${JSON.stringify(parsed, null, 2)}\n`;
+    const current = await readFile(WORKSPACE_CARD_JSON, "utf8").catch(() => null);
+    const unchanged = current === next;
+    if (!unchanged) await writeFile(WORKSPACE_CARD_JSON, next, "utf8");
+    sendJson(response, 200, { ok: true, unchanged, path: "public/cards/hypnosis-app-workbench-current.json" });
     return true;
   }
 

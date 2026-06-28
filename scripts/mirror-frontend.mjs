@@ -152,7 +152,11 @@ function sanitizeGeneratedFrontend(html) {
     .replaceAll(" + ${totalPointsCost} PT", "")
     .replaceAll(" + ${totalPointsCost}円", "")
     .replaceAll(", +${missingPoints} PT", "")
-    .replaceAll(", +${missingPoints}円", "");
+    .replaceAll(", +${missingPoints}円", "")
+    .replaceAll(
+      'children: [quickSupplyQty, \\"円\\"]',
+      'children: [\\"¥\\", (quickSupplyQty * 1000).toLocaleString()]'
+    );
 }
 
 async function readSource(input) {
@@ -721,6 +725,10 @@ function patchBundledHypnosisApp(html) {
       "            purchases: { ...store.purchases },"
     );
   outputHtml = patchEvalModuleSources(outputHtml, (code) => patchLegacyCurrencyModule(patchStatusBarModule(patchAppEntryModule(patchAppRootModule(patchMvuBridgeModule(patchHypnosisDataServiceModule(patchHypnosisAppModule(patchHypnosisSendModule(patchHypnosisTypesModule(patchAchievementAppModule(code)))))))))));
+  outputHtml = outputHtml.replaceAll(
+    'children: [quickSupplyQty, \\"円\\"]',
+    'children: [\\"¥\\", (quickSupplyQty * 1000).toLocaleString()]'
+  );
   return outputHtml;
 }
 
@@ -810,11 +818,16 @@ function patchLegacyCurrencyModule(code) {
   output = output.replaceAll("purchasePricePoints", "purchasePriceMoney");
   output = output.replaceAll("userData.totalConsumedMc", "0");
   output = output.replaceAll("ctx.totalConsumedMc >= getSubscriptionUnlockThreshold(ctx.tier)", "true");
-  output = output.replaceAll("u.totalConsumedMc >= 10", "false");
   output = output.replaceAll("u.totalConsumedMc >= 100", "u.money >= 100000");
+  output = output.replaceAll("u.totalConsumedMc >= 10", "false");
   output = output.replaceAll("'MC_POINTS'", "'MC_ENERGY'");
   output = output.replaceAll('"MC_POINTS"', '"MC_ENERGY"');
   output = output.replaceAll(" MC点", "円");
+  output = output.replaceAll(
+    'children: [quickSupplyQty, "円"]',
+    'children: ["¥", (quickSupplyQty * 1000).toLocaleString()]'
+  );
+  output = output.replaceAll("续订", "购买");
   return output;
 }
 
@@ -2042,6 +2055,24 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
     .replace(
       /children: Math\.max\(0, userData\.mcEnergyMax - Math\.floor\(userData\.mcEnergy\)\) <= 0\s*\?\s*'能量已满'\s*:\s*`恢复 \$\{Math\.min\(Math\.max\(0, userData\.mcEnergyMax - Math\.floor\(userData\.mcEnergy\)\), quickSupplyQty\)\} 能量`/,
       'children: `补充 ${quickSupplyQty} 能量`'
+    )
+    .replaceAll(
+      'children: [quickSupplyQty, "円"]',
+      'children: ["¥", (quickSupplyQty * 1000).toLocaleString()]'
+    )
+    .replaceAll(
+      'onClick: () => void purchasePoints(quickSupplyQty), disabled: false, className: "w-full flex',
+      'onClick: () => void purchasePoints(quickSupplyQty), disabled: true, className: "hidden w-full flex'
+    )
+    .replaceAll('" \\u8BA2\\u9605\\u4E2D\\u5FC3\\uFF08\\u6BCF\\u5468\\uFF09"', '" VIP买断"')
+    .replaceAll('children: "\\u5F53\\u524D\\u8BA2\\u9605"', 'children: "当前买断"')
+    .replaceAll(
+      'children: ["\\u81EA\\u52A8\\u7EED\\u8BA2: ", subscription?.autoRenew ? \'开\' : \'关\']',
+      'children: ""'
+    )
+    .replaceAll(
+      'className: "text-[10px] px-2 py-1 rounded-lg border border-white/10 bg-white/5 text-gray-300 disabled:opacity-40"',
+      'className: "hidden"'
     )
     .replaceAll(
       "className: missingEnergy > 0 ? 'text-red-500 font-bold' : 'text-gray-300'",
@@ -4621,8 +4652,7 @@ function injectInternalMchanApp(html, staticSeed) {
 .st-lite-body::-webkit-scrollbar{display:none}
 .st-lite-card{border:1px solid rgba(255,255,255,.1);border-radius:16px;background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.035));box-shadow:0 14px 30px rgba(0,0,0,.2);padding:12px}
 .st-clock-card{display:grid;gap:14px;justify-items:center;text-align:center}
-.st-clock-face{position:relative;width:min(66vw,250px);aspect-ratio:1;border-radius:50%;border:1px solid rgba(125,211,252,.28);background:radial-gradient(circle at 50% 42%,rgba(34,211,238,.16),transparent 34%),linear-gradient(145deg,rgba(15,23,42,.96),rgba(2,6,23,.94));box-shadow:inset 0 0 0 8px rgba(255,255,255,.035),0 18px 46px rgba(0,0,0,.28);cursor:grab;touch-action:none;user-select:none}
-.st-clock-face:active{cursor:grabbing}
+.st-clock-face{position:relative;width:min(66vw,250px);aspect-ratio:1;border-radius:50%;border:1px solid rgba(125,211,252,.28);background:radial-gradient(circle at 50% 42%,rgba(34,211,238,.16),transparent 34%),linear-gradient(145deg,rgba(15,23,42,.96),rgba(2,6,23,.94));box-shadow:inset 0 0 0 8px rgba(255,255,255,.035),0 18px 46px rgba(0,0,0,.28);user-select:none}
 .st-clock-face::before{content:"";position:absolute;inset:14px;border-radius:50%;border:1px dashed rgba(226,232,240,.13)}
 .st-clock-mark{position:absolute;width:2px;height:10px;border-radius:999px;background:rgba(226,232,240,.42)}
 .st-clock-hand{position:absolute;left:50%;top:50%;width:4px;border-radius:999px;background:#f8fafc;transform-origin:50% 100%;box-shadow:0 0 16px rgba(103,232,249,.28)}
@@ -6790,44 +6820,6 @@ function injectInternalMchanApp(html, staticSeed) {
     updateClockFace(page);
   }
 
-  function clockPointerMode(face, event) {
-    if (event.target?.closest?.(".st-clock-hand.hour")) return "hour";
-    if (event.target?.closest?.(".st-clock-hand.minute")) return "minute";
-    const rect = face.getBoundingClientRect();
-    const dx = event.clientX - (rect.left + rect.width / 2);
-    const dy = event.clientY - (rect.top + rect.height / 2);
-    const distance = Math.hypot(dx, dy);
-    return distance < rect.width * 0.26 ? "hour" : "minute";
-  }
-
-  function applyClockPointer(page, event, mode) {
-    const face = page.querySelector(".st-clock-face");
-    if (!face) return;
-    const rect = face.getBoundingClientRect();
-    const dx = event.clientX - (rect.left + rect.width / 2);
-    const dy = event.clientY - (rect.top + rect.height / 2);
-    const degrees = (Math.atan2(dx, -dy) * 180 / Math.PI + 360) % 360;
-    const currentHour = normalizeClockPart(page.querySelector("[data-clock-hour]")?.value, 23);
-    const currentMinute = normalizeClockPart(page.querySelector("[data-clock-minute]")?.value, 59);
-	    if (mode === "hour") {
-	      const hour12 = Math.round(degrees / 30) % 12;
-	      const hour = hour12;
-	      setClockValue(page, hour, currentMinute);
-	    } else {
-	      const minute = Math.round(degrees / 6) % 60;
-	      const lastMinute = Number.parseInt(face.dataset.clockLastMinute ?? String(currentMinute), 10);
-	      let nextHour = currentHour;
-	      if (Number.isFinite(lastMinute)) {
-	        if (lastMinute >= 45 && minute <= 15)
-	          nextHour = (currentHour + 1) % 24;
-	        else if (lastMinute <= 15 && minute >= 45)
-	          nextHour = (currentHour + 23) % 24;
-	      }
-	      face.dataset.clockLastMinute = String(minute);
-	      setClockValue(page, nextHour, minute);
-	    }
-	  }
-
   function renderClockPage(page) {
     const seed = getClockSeed();
     const marks = Array.from({ length: 12 }, (_, index) => {
@@ -6873,27 +6865,6 @@ function injectInternalMchanApp(html, staticSeed) {
         input.value = sanitizeClockInputValue(input.value, max, true) || "00";
         updateClockFace(page);
       });
-    });
-    const face = page.querySelector(".st-clock-face");
-	    face?.addEventListener("pointerdown", (event) => {
-	      const mode = clockPointerMode(face, event);
-	      face.dataset.clockDragMode = mode;
-	      face.dataset.clockLastMinute = String(normalizeClockPart(page.querySelector("[data-clock-minute]")?.value, 59));
-	      face.setPointerCapture?.(event.pointerId);
-	      applyClockPointer(page, event, mode);
-	      event.preventDefault();
-    });
-    face?.addEventListener("pointermove", (event) => {
-      const mode = face.dataset.clockDragMode;
-      if (!mode) return;
-      applyClockPointer(page, event, mode);
-      event.preventDefault();
-    });
-    ["pointerup", "pointercancel", "lostpointercapture"].forEach((type) => {
-	      face?.addEventListener(type, () => {
-	        delete face.dataset.clockDragMode;
-	        delete face.dataset.clockLastMinute;
-	      });
     });
     page.querySelector('[data-clock-action="suggest"]')?.addEventListener("click", () => {
       const hour = normalizeClockPart(page.querySelector("[data-clock-hour]")?.value, 23);

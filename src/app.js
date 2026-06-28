@@ -439,10 +439,16 @@ function syncPhoneToCard() {
   const d = getCardData(state.cardState.card);
   d.extensions ||= {};
   d.extensions.workbench ||= {};
-  d.extensions.workbench.phoneState = cloneCard(state.phone);
-  d.extensions.workbench.phoneStateUpdatedAt = new Date().toISOString();
-  d.extensions.workbench.scanExamples = normalizeScanExamples(state.scanExamples);
-  d.extensions.workbench.scanExamplesUpdatedAt = new Date().toISOString();
+  const nextPhone = cloneCard(state.phone);
+  const nextScanExamples = normalizeScanExamples(state.scanExamples);
+  if (JSON.stringify(d.extensions.workbench.phoneState ?? null) !== JSON.stringify(nextPhone)) {
+    d.extensions.workbench.phoneState = nextPhone;
+    d.extensions.workbench.phoneStateUpdatedAt = new Date().toISOString();
+  }
+  if (JSON.stringify(d.extensions.workbench.scanExamples ?? null) !== JSON.stringify(nextScanExamples)) {
+    d.extensions.workbench.scanExamples = nextScanExamples;
+    d.extensions.workbench.scanExamplesUpdatedAt = new Date().toISOString();
+  }
   persistScanExamplesForPreview();
 }
 
