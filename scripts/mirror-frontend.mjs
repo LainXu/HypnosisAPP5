@@ -5653,15 +5653,6 @@ function injectInternalMchanApp(html, staticSeed) {
     return matches[0];
   }
 
-  function manualScheduleSlot(manual, slot) {
-    const text = String(manual || "").trim();
-    if (!text || text === "无" || text === "{}") return null;
-    if (text === slot.title || text === slot.subject || text === slot.period || text === slot.title.replace(/^\\d限 · /, "")) {
-      return { title: slot.title, detail: slot.detail };
-    }
-    return { title: text, detail: "当前日程" };
-  }
-
   function normalSchoolSlot(minutes, weekdayText) {
     const weekdayIndex = ST_WEEKDAY_INDEX[weekdayText];
     if (weekdayIndex === 0 || weekdayIndex === 6) {
@@ -5699,14 +5690,12 @@ function injectInternalMchanApp(html, staticSeed) {
     return String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0");
   }
 
-  function routineSlot(minutes, weekdayText, currentSchedule, parsedDate) {
+  function routineSlot(minutes, weekdayText, parsedDate) {
     const special = specialDayForDate(parsedDate);
     const normal = normalSchoolSlot(minutes, weekdayText);
     if (special?.holiday || special?.exam || (special && !/普通授课/.test(special.detail || ""))) {
       return { title: special.title, detail: special.detail || "特别日程" };
     }
-    const manual = manualScheduleSlot(currentSchedule, normal);
-    if (manual) return manual;
     if (special && /普通授课/.test(special.detail || "")) {
       return { title: normal.title, detail: normal.detail + " / " + special.title };
     }
@@ -5775,7 +5764,7 @@ function injectInternalMchanApp(html, staticSeed) {
     const timeText = system["当前时间"] || "12:00";
     const parsedDate = parseStoryDate(dateText);
     const weekday = weekdayForStoryDate(dateText) || "星期三";
-    const slot = routineSlot(minutesFromTimeText(timeText), weekday, system["当前日程"], parsedDate);
+    const slot = routineSlot(minutesFromTimeText(timeText), weekday, parsedDate);
     const special = specialDayForDate(parsedDate);
     const events = upcomingSpecialDays(parsedDate);
     const eventsHtml = events.map((event) => (
@@ -5829,7 +5818,7 @@ function injectInternalMchanApp(html, staticSeed) {
     const activePeriod = ST_CLASS_PERIODS.find((period) => minutes >= period.start && minutes < period.end)?.index || 0;
     const special = specialDayForDate(parsedDate);
     const blocksClass = special && (special.holiday || special.exam || !/普通授课/.test(special.detail || ""));
-    const slot = routineSlot(minutes, weekday, system["当前日程"], parsedDate);
+    const slot = routineSlot(minutes, weekday, parsedDate);
     const weekHtml = days.map((day) => {
       const periods = ST_CLASS_PERIODS.map((period) => {
         const subject = ST_WEEKLY_TIMETABLE[day.index]?.[period.index - 1] || "自习";
