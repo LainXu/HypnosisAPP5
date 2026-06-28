@@ -138,6 +138,23 @@ function attr(value) {
   return htmlEscape(value).replace(/`/g, "&#96;");
 }
 
+function sanitizeGeneratedFrontend(html) {
+  return String(html ?? "")
+    .replace(/\\n\/\/# sourceMappingURL=data:application\/json;charset=utf-8;base64,[A-Za-z0-9+/=]+/g, "")
+    .replace(/\n\/\/# sourceMappingURL=data:application\/json;charset=utf-8;base64,[A-Za-z0-9+/=]+/g, "")
+    .replace(/\\n\/\/# sourceURL=webpack-internal:\/\/\/[^\\']*/g, "")
+    .replace(/\n\/\/# sourceURL=webpack-internal:\/\/\/[^\n']*/g, "")
+    .replaceAll("currency === 'MC_ENERGY' ? 'PT' : 'MC'", "currency === 'MC_ENERGY' ? 'MC能量' : '円'")
+    .replaceAll('" PT"', '"円"')
+    .replaceAll('\\" PT\\"', '\\"円\\"')
+    .replaceAll("'PT'", "'円'")
+    .replaceAll('"PT"', '"円"')
+    .replaceAll(" + ${totalPointsCost} PT", "")
+    .replaceAll(" + ${totalPointsCost}円", "")
+    .replaceAll(", +${missingPoints} PT", "")
+    .replaceAll(", +${missingPoints}円", "");
+}
+
 async function readSource(input) {
   if (/^https?:\/\//i.test(input)) {
     const response = await fetch(input, { cache: "no-store" });
@@ -219,7 +236,7 @@ window.setTimeout(() => {
 	      let score = 0;
 	      if (system && typeof system === "object" && !Array.isArray(system)) {
 	        score += 20;
-	        for (const key of ["MC能量", "_MC能量", "MC能量上限", "_MC能量上限", "当前MC点", "持有零花钱", "催眠APP订阅等级", "_催眠APP订阅等级"]) {
+	        for (const key of ["MC能量", "_MC能量", "MC能量上限", "_MC能量上限", "持有零花钱", "催眠APP订阅等级", "_催眠APP订阅等级"]) {
 	          if (system[key] !== undefined) score += 3;
 	        }
 	      }
@@ -276,8 +293,6 @@ window.setTimeout(() => {
 	      };
 	      copyField("MC能量", "MC能量", "_MC能量");
 	      copyField("MC能量上限", "MC能量上限", "_MC能量上限");
-	      copyField("当前MC点", "当前MC点", "MC点");
-	      copyField("累计消耗MC点", "累计消耗MC点", "_累计消耗MC点");
 	      copyField("持有零花钱", "持有零花钱");
 	      copyField("催眠APP订阅等级", "催眠APP订阅等级", "_催眠APP订阅等级");
 	      const alisaFavor = roles?.["西园寺爱丽莎"]?.["好感度"];
@@ -294,15 +309,14 @@ window.setTimeout(() => {
 	      const item = cleanOperationText(payload?.["项目"] ?? payload?.["功能"] ?? payload?.["命令"] ?? "");
 	      const text = operationValueToDenseText({ action, item, payload });
 	      const fields = new Set();
-	      if (/启动催眠|追加催眠/.test(action)) addOperationVariableFields(fields, ["MC能量", "累计消耗MC点"]);
-	      if (/订阅VIP等级/.test(action)) addOperationVariableFields(fields, ["持有零花钱", "催眠APP订阅等级", "累计消耗MC点"]);
-	      if (/领取成就|领取奖励|完成任务|任务完成|成就奖励|任务奖励/.test(action)) addOperationVariableFields(fields, ["当前MC点"]);
+	      if (/启动催眠|追加催眠/.test(action)) addOperationVariableFields(fields, ["MC能量"]);
+		      if (/购买VIP等级/.test(action)) addOperationVariableFields(fields, ["持有零花钱", "催眠APP订阅等级"]);
+	      if (/领取成就|领取奖励|完成任务|任务完成|成就奖励|任务奖励/.test(action)) addOperationVariableFields(fields, ["持有零花钱"]);
 	      if (/资源兑换/.test(action)) {
-	        if (/提升MC能量上限/.test(item) || /MC能量上限/.test(text)) addOperationVariableFields(fields, ["当前MC点", "MC能量上限"]);
+	        if (/提升MC能量上限/.test(item) || /MC能量上限/.test(text)) addOperationVariableFields(fields, ["持有零花钱", "MC能量上限"]);
 	        if (/补充MC能量/.test(item) || (/MC能量/.test(text) && /资金|零花钱|円|¥/.test(text))) addOperationVariableFields(fields, ["持有零花钱", "MC能量", "MC能量上限"]);
-	        if (/购买当前MC点/.test(item) || (/当前MC点/.test(text) && /资金|零花钱|円|¥/.test(text))) addOperationVariableFields(fields, ["持有零花钱", "当前MC点"]);
 	      }
-	      if (/申请立校规|废止初始校规/.test(action)) addOperationVariableFields(fields, ["当前MC点", "催眠APP订阅等级", "西园寺爱丽莎好感度", "当前校规数"]);
+	      if (/申请立校规|废止初始校规/.test(action)) addOperationVariableFields(fields, ["持有零花钱", "催眠APP订阅等级", "西园寺爱丽莎好感度", "当前校规数"]);
 	      return [...fields];
 	    };
 	    const stripOperationVariableFields = (payload) => {
@@ -338,6 +352,23 @@ window.setTimeout(() => {
       return "- " + cleanOperationText(record.action || "操作") + (fields.length ? "｜" + fields.join("｜") : "");
     };
     const operationEntryPayload = (entry) => entry && typeof entry === "object" && Object.prototype.hasOwnProperty.call(entry, "payload") ? entry.payload : entry;
+    const operationTopPriority = (entry) => {
+      const payload = operationEntryPayload(entry);
+      const record = normalizeOperationPayload(payload);
+      const source = cleanOperationText(record.source || "");
+      const action = cleanOperationText(record.action || "");
+      const detailText = operationValueToDenseText(record.details || {});
+      const haystack = [source, action, detailText].join(" ");
+      if (/^(时钟|地图|学校地图)$/.test(source)) return 0;
+      if (/建议剧情开始时间|建议时间|当前时间|推进到该时间|建议剧情地点|请求新增地点|当前地点变量|建议地点/.test(haystack)) return 0;
+      return 10;
+    };
+    const sortOperationEntries = (entries) => (Array.isArray(entries) ? entries.slice() : [])
+      .sort((a, b) => {
+        const priority = operationTopPriority(a) - operationTopPriority(b);
+        if (priority) return priority;
+        return Number(a?.at || 0) - Number(b?.at || 0);
+      });
     const operationRecordKey = (payload) => {
       const record = normalizeOperationPayload(payload);
       const fields = Object.entries(record.details || {})
@@ -395,14 +426,15 @@ window.setTimeout(() => {
 	    };
 	    const buildOperationBlock = (entries = window.__ST_OPERATION_INPUT_LOG__) => {
 	      const groups = new Map();
-	      for (const entry of entries) {
+	      const sortedEntries = sortOperationEntries(entries);
+	      for (const entry of sortedEntries) {
 	        const record = normalizeOperationPayload(operationEntryPayload(entry));
 	        const source = record.source || "APP";
 	        if (!groups.has(source)) groups.set(source, []);
 	        groups.get(source).push(record);
 	      }
 	      const lines = ["<本轮APP操作>"];
-	      const variables = selectOperationVariables(entries);
+	      const variables = selectOperationVariables(sortedEntries);
 	      if (variables) {
 	        lines.push("<相关变量>");
 	        for (const [key, value] of Object.entries(variables)) {
@@ -524,8 +556,8 @@ window.setTimeout(() => {
       window.__ST_OPERATION_INPUT_LOG__ = [];
       emitOperationQueueChanged();
     };
-    window.__ST_GET_PENDING_OPERATION_INPUT_LOG__ = () => window.__ST_OPERATION_INPUT_LOG__.slice();
-    window.__ST_GET_PENDING_OPERATION_VIEW__ = () => window.__ST_OPERATION_INPUT_LOG__.map(describeOperationEntry);
+    window.__ST_GET_PENDING_OPERATION_INPUT_LOG__ = () => sortOperationEntries(window.__ST_OPERATION_INPUT_LOG__);
+    window.__ST_GET_PENDING_OPERATION_VIEW__ = () => sortOperationEntries(window.__ST_OPERATION_INPUT_LOG__).map(describeOperationEntry);
     window.__ST_BUILD_PENDING_OPERATION_BLOCK__ = () => window.__ST_OPERATION_INPUT_LOG__.length ? buildOperationBlock() : "";
     window.__ST_BUILD_OPERATION_BLOCK_FROM_PAYLOADS__ = (payloads) => {
       const list = Array.isArray(payloads) ? payloads : [payloads];
@@ -668,7 +700,7 @@ function patchBundledHypnosisApp(html) {
       "            // “角色状态可视化(vip1_stats)”购买/订阅成功一次后永久解锁，用于主屏幕显示“身体检测”APP。\\n            purchases: { ...store.purchases, vip1_stats: true },",
       "            purchases: { ...store.purchases },"
     );
-  outputHtml = patchEvalModuleSources(outputHtml, (code) => patchStatusBarModule(patchAppEntryModule(patchAppRootModule(patchMvuBridgeModule(patchHypnosisDataServiceModule(patchHypnosisAppModule(patchHypnosisSendModule(patchHypnosisTypesModule(patchAchievementAppModule(code))))))))));
+  outputHtml = patchEvalModuleSources(outputHtml, (code) => patchLegacyCurrencyModule(patchStatusBarModule(patchAppEntryModule(patchAppRootModule(patchMvuBridgeModule(patchHypnosisDataServiceModule(patchHypnosisAppModule(patchHypnosisSendModule(patchHypnosisTypesModule(patchAchievementAppModule(code)))))))))));
   return outputHtml;
 }
 
@@ -722,6 +754,23 @@ function patchEvalModuleSources(html, transform) {
     output += nextCode === code ? sourceText.slice(evalStart, callEnd) : "eval(" + jsonForInlineScript(nextCode) + ");";
     cursor = callEnd;
   }
+  return output;
+}
+
+function patchLegacyCurrencyModule(code) {
+  let output = code.replace(/rewardMcPoints:\s*(\d+)/g, (_, value) => `rewardMoney: ${Number(value) * 1000}`);
+  output = output.replaceAll("rewardMcPoints", "rewardMoney");
+  output = output.replaceAll("自动续订", "买断制");
+  output = output.replaceAll("userData.mcPoints < purchasePricePoints", "false");
+  output = output.replaceAll("feature.purchasePricePoints", "0");
+  output = output.replaceAll("purchasePricePoints", "purchasePriceMoney");
+  output = output.replaceAll("userData.totalConsumedMc", "0");
+  output = output.replaceAll("ctx.totalConsumedMc >= getSubscriptionUnlockThreshold(ctx.tier)", "true");
+  output = output.replaceAll("u.totalConsumedMc >= 10", "false");
+  output = output.replaceAll("u.totalConsumedMc >= 100", "u.money >= 100000");
+  output = output.replaceAll("'MC_POINTS'", "'MC_ENERGY'");
+  output = output.replaceAll('"MC_POINTS"', '"MC_ENERGY"');
+  output = output.replaceAll(" MC点", "円");
   return output;
 }
 
@@ -838,7 +887,7 @@ function patchAchievementAppModule(code) {
             成就ID: ach.id,
             成就: ach.title,
             条件: ach.description,
-            奖励: \`当前MC点 +\${ach.rewardMcPoints}点\`,
+	            奖励: \`持有零花钱 +¥\${Number(ach.rewardMoney ?? 0).toLocaleString()}\`,
         });
     };
     const handleAcceptQuest = async (quest) => {
@@ -848,7 +897,7 @@ function patchAchievementAppModule(code) {
             任务ID: quest.id,
             任务: quest.title,
             条件: quest.description,
-            奖励: \`当前MC点 +\${quest.rewardMcPoints}点\`,
+	            奖励: \`持有零花钱 +¥\${Number(quest.rewardMoney ?? 0).toLocaleString()}\`,
         });
     };
     const handleCancelQuest = async (quest) => {
@@ -887,7 +936,7 @@ function patchAchievementAppModule(code) {
 	            倾向: bias || '由AI根据当前上下文剧情决定并随机补全',
 	            任务来源: '系统突然出现的任务，不是{{user}}主动发布、设计或提前知道的目标，也不代表{{user}}主动关联到任务对象。',
 	            初始状态: '直接写入任务变量，作为已接/进行中的任务',
-	            生成规则: '根据当前上下文剧情新增若干由系统突然刷出的进行中任务；写入/任务，包含完成条件、奖励MC点和已完成=false；不要写入前端静态列表，也不要标记为已完成。用户没指定的必要内容由AI随机生成，可适当优化用户描述，让任务更贴合当前剧情。',
+	            生成规则: '根据当前上下文剧情新增若干由系统突然刷出的进行中任务；写入/任务，包含完成条件、奖励金钱和已完成=false；不要写入前端静态列表，也不要标记为已完成。用户没指定的必要内容由AI随机生成，可适当优化用户描述，让任务更贴合当前剧情。',
 	        });
     };
 `
@@ -900,7 +949,7 @@ function patchAchievementAppModule(code) {
     const classifyAchievement = (achievement) => {
         const text = \`\${achievement.title || ''} \${achievement.description || ''}\`;
         const rolePattern = /角色|目标|任意角色|好感|警戒|服从|性欲|快感|敏感|高潮|催眠|西园寺|爱丽莎|月咏|深雪|犬冢|夏美/;
-        const selfPattern = /自己|主角|用户|玩家|{{user}}|<user>|MC|PT|能量|点数|订阅|VIP|可疑度|零花钱|资金|持有|累计消耗/;
+        const selfPattern = /自己|主角|用户|玩家|{{user}}|<user>|MC|能量|买断|VIP|可疑度|零花钱|资金|持有|金钱/;
         if (rolePattern.test(text))
             return 'ROLE';
         if (selfPattern.test(text))
@@ -913,10 +962,10 @@ function patchAchievementAppModule(code) {
             return classifyAchievement(achievement) === 'SELF';
         if (achievementFilter === 'ROLE')
             return classifyAchievement(achievement) === 'ROLE';
+        if (achievement.isClaimed)
+            return false;
         if (achievementFilter === 'UNCLAIMED')
             return unlocked && !achievement.isClaimed;
-        if (achievementFilter === 'CLAIMED')
-            return achievement.isClaimed;
         return true;
     };
     const sortedAchievements = [...achievements].sort((a, b) => {
@@ -938,8 +987,6 @@ function patchAchievementAppModule(code) {
 	    const visibleQuests = quests.filter(q => {
 	        if (questFilter === 'ACTIVE')
 	            return q.status === 'ACTIVE';
-	        if (questFilter === 'DONE')
-	            return q.status === 'CLAIMED' || q.status === 'COMPLETED';
 	        return q.status === 'AVAILABLE';
 	    });
 	`
@@ -952,12 +999,12 @@ function patchAchievementAppModule(code) {
   );
   output = output.replace(
     `!loading && notice && ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-xs text-white/80", children: notice })), !loading && activeTab === 'ACHIEVEMENTS' &&`,
-    `!loading && notice && ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-xs text-white/80", children: notice })), !loading && activeTab === 'ACHIEVEMENTS' && ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "rounded-2xl border border-white/10 bg-white/5 px-3 py-2 flex items-center justify-between gap-2", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("span", { className: "text-[11px] text-white/60", children: "成就筛选" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("select", { value: achievementFilter, onChange: e => setAchievementFilter(e.target.value), className: "bg-slate-950/80 border border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("option", { value: "ALL", children: "全部" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("option", { value: "SELF", children: "自己" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("option", { value: "ROLE", children: "其他角色" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("option", { value: "UNCLAIMED", children: "可领取" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("option", { value: "CLAIMED", children: "已领取" })] })] })), !loading && activeTab === 'NEW_QUEST' && ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "space-y-3 animate-fade-in", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-4 space-y-3", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("h2", { className: "text-sm font-bold text-white", children: "新增任务" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("p", { className: "mt-1 text-xs text-white/55 leading-relaxed", children: "根据当前上下文剧情，让 AI 新增若干未完成任务。前端只记录意图，不直接改变量。" })] }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("label", { className: "block", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("span", { className: "text-[11px] text-white/60", children: "数量" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("input", { type: "number", inputMode: "numeric", min: 1, max: 10, step: 1, value: newQuestCountInput, onChange: e => setNewQuestCountInput(e.target.value), onBlur: () => setNewQuestCountInput(String(normalizeNewQuestCount(newQuestCountInput))), className: "mt-1 w-full rounded-xl border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-white outline-none focus:border-cyan-300/60" })] }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("label", { className: "block", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("span", { className: "text-[11px] text-white/60", children: "倾向" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("textarea", { value: newQuestBias, onChange: e => setNewQuestBias(e.target.value), placeholder: "例如：围绕当前场景、某个角色、赚取MC点、降低可疑度...", className: "mt-1 h-24 w-full resize-none rounded-xl border border-white/10 bg-slate-950/70 px-3 py-2 text-xs leading-relaxed text-white placeholder-white/30 outline-none focus:border-cyan-300/60" })] }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("button", { onClick: handleRequestNewQuests, className: "w-full rounded-xl bg-gradient-to-r from-cyan-500 to-sky-500 px-4 py-3 text-sm font-black text-white shadow-lg active:scale-[0.98]", children: "写入新增任务请求" })] })] })), !loading && activeTab === 'ACHIEVEMENTS' &&`
+    `!loading && notice && ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "px-3 py-2 rounded-xl border border-white/10 bg-white/5 text-xs text-white/80", children: notice })), !loading && activeTab === 'ACHIEVEMENTS' && ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "rounded-2xl border border-white/10 bg-white/5 px-3 py-2 flex items-center justify-between gap-2", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("span", { className: "text-[11px] text-white/60", children: "成就筛选" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("select", { value: achievementFilter, onChange: e => setAchievementFilter(e.target.value), className: "bg-slate-950/80 border border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("option", { value: "ALL", children: "全部" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("option", { value: "SELF", children: "自己" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("option", { value: "ROLE", children: "其他角色" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("option", { value: "UNCLAIMED", children: "可领取" })] })] })), !loading && activeTab === 'NEW_QUEST' && ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "space-y-3 animate-fade-in", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-4 space-y-3", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("h2", { className: "text-sm font-bold text-white", children: "新增任务" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("p", { className: "mt-1 text-xs text-white/55 leading-relaxed", children: "根据当前上下文剧情，让 AI 新增若干未完成任务。前端只记录意图，不直接改变量。" })] }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("label", { className: "block", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("span", { className: "text-[11px] text-white/60", children: "数量" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("input", { type: "number", inputMode: "numeric", min: 1, max: 10, step: 1, value: newQuestCountInput, onChange: e => setNewQuestCountInput(e.target.value), onBlur: () => setNewQuestCountInput(String(normalizeNewQuestCount(newQuestCountInput))), className: "mt-1 w-full rounded-xl border border-white/10 bg-slate-950/70 px-3 py-2 text-sm text-white outline-none focus:border-cyan-300/60" })] }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("label", { className: "block", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("span", { className: "text-[11px] text-white/60", children: "倾向" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("textarea", { value: newQuestBias, onChange: e => setNewQuestBias(e.target.value), placeholder: "例如：围绕当前场景、某个角色、赚取金钱、降低可疑度...", className: "mt-1 h-24 w-full resize-none rounded-xl border border-white/10 bg-slate-950/70 px-3 py-2 text-xs leading-relaxed text-white placeholder-white/30 outline-none focus:border-cyan-300/60" })] }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("button", { onClick: handleRequestNewQuests, className: "w-full rounded-xl bg-gradient-to-r from-cyan-500 to-sky-500 px-4 py-3 text-sm font-black text-white shadow-lg active:scale-[0.98]", children: "写入新增任务请求" })] })] })), !loading && activeTab === 'ACHIEVEMENTS' &&`
   );
   output = output.replace("sortedAchievements.map(ach =>", "visibleAchievements.map(ach =>");
   output = output.replace(
     `!loading && activeTab === 'QUESTS' && ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "space-y-3 animate-fade-in", children: [`,
-    `!loading && activeTab === 'QUESTS' && ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "space-y-3 animate-fade-in", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "rounded-2xl border border-white/10 bg-white/5 px-3 py-2 flex items-center justify-between gap-2", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("span", { className: "text-[11px] text-white/60", children: "任务筛选" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("select", { value: questFilter, onChange: e => setQuestFilter(e.target.value), className: "bg-slate-950/80 border border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("option", { value: "UNFINISHED", children: "未完成" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("option", { value: "ACTIVE", children: "已接任务" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("option", { value: "DONE", children: "已完成任务" })] })] }),`
+    `!loading && activeTab === 'QUESTS' && ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "space-y-3 animate-fade-in", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "rounded-2xl border border-white/10 bg-white/5 px-3 py-2 flex items-center justify-between gap-2", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("span", { className: "text-[11px] text-white/60", children: "任务筛选" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("select", { value: questFilter, onChange: e => setQuestFilter(e.target.value), className: "bg-slate-950/80 border border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("option", { value: "UNFINISHED", children: "未完成" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("option", { value: "ACTIVE", children: "已接任务" })] })] }),`
   );
   output = output.replace(
     `children: "根据当前上下文剧情，让 AI 新增若干未完成任务。前端只记录意图，不直接改变量。"`,
@@ -987,17 +1034,25 @@ function patchAchievementAppModule(code) {
   );
   output = output.replaceAll("quests.map(q =>", "visibleQuests.map(q =>");
   output = output.replaceAll("quests.length === 0", "visibleQuests.length === 0");
-  output = output
-    .replaceAll(`className: "flex justify-between items-start"`, `className: "flex items-start justify-between gap-3"`)
+	  output = output
+	    .replaceAll(`className: "flex justify-between items-start"`, `className: "flex items-start justify-between gap-3"`)
     .replaceAll(`className: "flex items-start gap-3"`, `className: "flex min-w-0 flex-1 items-start gap-3"`)
     .replaceAll(`className: "bg-indigo-500 hover:bg-indigo-400 text-white text-xs font-bold py-1.5 px-3 rounded-lg shadow-lg flex items-center gap-1 animate-pulse"`, `className: "shrink-0 min-w-[92px] justify-center whitespace-nowrap bg-indigo-500 hover:bg-indigo-400 text-white text-xs font-bold py-1.5 px-3 rounded-lg shadow-lg flex items-center gap-1 animate-pulse"`)
     .replaceAll(`className: "text-xs font-bold text-indigo-400/50"`, `className: "shrink-0 whitespace-nowrap text-right text-xs font-bold text-indigo-400/50"`)
     .replaceAll(`className: "flex flex-col items-end"`, `className: "flex shrink-0 flex-col items-end"`)
     .replaceAll(`className: "flex flex-col items-end gap-2"`, `className: "flex shrink-0 flex-col items-end gap-2"`)
-    .replaceAll(`className: "bg-white/10 hover:bg-white/15 text-white text-xs font-bold py-1.5 px-3 rounded-lg border border-white/10"`, `className: "shrink-0 min-w-[64px] whitespace-nowrap text-center bg-white/10 hover:bg-white/15 text-white text-xs font-bold py-1.5 px-3 rounded-lg border border-white/10"`)
-    .replaceAll(`className: "bg-white/5 hover:bg-white/10 text-white/80 text-[11px] font-semibold py-1 px-2 rounded-lg border border-white/10 flex items-center gap-1"`, `className: "shrink-0 whitespace-nowrap bg-white/5 hover:bg-white/10 text-white/80 text-[11px] font-semibold py-1 px-2 rounded-lg border border-white/10 flex items-center gap-1"`);
-  return output;
-}
+	    .replaceAll(`className: "bg-white/10 hover:bg-white/15 text-white text-xs font-bold py-1.5 px-3 rounded-lg border border-white/10"`, `className: "shrink-0 min-w-[64px] whitespace-nowrap text-center bg-white/10 hover:bg-white/15 text-white text-xs font-bold py-1.5 px-3 rounded-lg border border-white/10"`)
+	    .replaceAll(`className: "bg-white/5 hover:bg-white/10 text-white/80 text-[11px] font-semibold py-1 px-2 rounded-lg border border-white/10 flex items-center gap-1"`, `className: "shrink-0 whitespace-nowrap bg-white/5 hover:bg-white/10 text-white/80 text-[11px] font-semibold py-1 px-2 rounded-lg border border-white/10 flex items-center gap-1"`);
+	  output = output.replaceAll("rewardMcPoints", "rewardMoney");
+	  output = output
+	    .replaceAll(`children: ["领 ", ach.rewardMoney, " PT"]`, `children: ["领 ¥", Number(ach.rewardMoney ?? 0).toLocaleString()]`)
+	    .replaceAll(`children: ["\\u9886 ", ach.rewardMoney, " PT"]`, `children: ["领 ¥", Number(ach.rewardMoney ?? 0).toLocaleString()]`)
+	    .replaceAll(`children: ["+", ach.rewardMoney, " PT"]`, `children: ["¥", Number(ach.rewardMoney ?? 0).toLocaleString()]`)
+	    .replaceAll(`children: ["奖励：+", q.rewardMoney, " PT"]`, `children: ["奖励：¥", Number(q.rewardMoney ?? 0).toLocaleString()]`)
+	    .replaceAll(`children: ["\\u5956\\u52B1\\uFF1A+", q.rewardMoney, " PT"]`, `children: ["奖励：¥", Number(q.rewardMoney ?? 0).toLocaleString()]`)
+	    .replaceAll(`children: userData.mcPoints`, `children: "¥" + Number(userData.money ?? 0).toLocaleString()`);
+	  return output;
+	}
 
 function patchAppEntryModule(code) {
   if (!code.includes("function mount()") || !code.includes("resetThisTurnAppOperationLog")) return code;
@@ -1094,6 +1149,22 @@ function patchStatusBarModule(code) {
 function patchAppRootModule(code) {
   if (!code.includes("const App =") || !code.includes("DataService.getUserData")) return code;
   let output = code;
+  output = output.replace(
+    `const FALLBACK_USER_DATA = {
+    mcEnergy: 25,
+    mcEnergyMax: 25,
+    mcPoints: 25,
+    totalConsumedMc: 0,
+    money: 6000,
+    suspicion: 0,
+};`,
+    `const FALLBACK_USER_DATA = {
+    mcEnergy: 25,
+    mcEnergyMax: 25,
+    money: 6000,
+    suspicion: 0,
+};`
+  );
   output = output.replace(
     `};
 function withTimeout`,
@@ -1392,7 +1463,6 @@ async function getMvuData() {
     .replaceAll("系统._催眠APP订阅等级", "系统.催眠APP订阅等级")
     .replaceAll("系统._MC能量上限", "系统.MC能量上限")
     .replaceAll("系统._MC能量", "系统.MC能量")
-    .replaceAll("系统._累计消耗MC点", "系统.累计消耗MC点")
     .replaceAll("系统._hypnoos", "系统.hypnoos");
   output = output.replace(
     `    resetThisTurnAppOperationLog: async () => {`,
@@ -1505,6 +1575,17 @@ const featurePersonCount = (feature) => {
     const input = featurePersonInput(feature);
     return input ? normalizePositiveInt(input, 0) : 0;
 };
+const featurePartInput = (feature) => {
+    if (feature.userPartCount === '')
+        return '';
+    return normalizeOptionalPositiveIntInput(feature.userPartCount ?? 1) || '1';
+};
+const featurePartCount = (feature) => {
+    const input = featurePartInput(feature);
+    if (!input)
+        return 0;
+    return Math.min(5, normalizePositiveInt(input, 0));
+};
 const featureDurationInput = (feature, fallbackDuration) => {
     if (feature.userDuration === '')
         return '';
@@ -1516,7 +1597,16 @@ const featureDurationMinutes = (feature, fallbackDuration) => {
     const input = featureDurationInput(feature, fallbackDuration);
     return input ? normalizePositiveInt(input, 0) : 0;
 };
-const featureUsesPersonCount = (feature) => feature.id === 'vip4_closed_space_common_sense';
+const featureUsesPartCount = (feature) => feature.id === 'vip1_temp_sensitivity';
+const featureUsesPersonCount = (feature) => {
+    if (!feature || feature.id === 'vip1_stats')
+        return false;
+    if (feature.id === 'vip5_open_space_common_sense')
+        return false;
+    if (feature.costValue <= 0)
+        return false;
+    return true;
+};
 const featureUsesDuration = (feature) => feature.costType !== 'ONE_TIME' && !['vip1_temp_sensitivity', 'vip1_estrus', 'vip1_memory_erase'].includes(feature.id);
 const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
     const initialDraft = (0,react__WEBPACK_IMPORTED_MODULE_1__.useMemo)(() => readCustomHypnosisDraft(), []);
@@ -1583,13 +1673,35 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
                     userNote: String(draft.userNote ?? feature.userNote ?? ''),
                     userNumber: typeof draft.userNumber === 'undefined' ? feature.userNumber : draft.userNumber,
                     userPersonCount: typeof draft.userPersonCount === 'undefined' ? feature.userPersonCount : draft.userPersonCount,
+                    userPartCount: typeof draft.userPartCount === 'undefined' ? feature.userPartCount : draft.userPartCount,
                     userDuration: typeof draft.userDuration === 'undefined' ? feature.userDuration : draft.userDuration,
                     purchaseRequired: false,
-                    purchasePricePoints: undefined,
+                    purchasePriceMoney: undefined,
                     isPurchased: true,
                 };
             }));`
   );
+  output = output
+    .replace(
+      "        if (currency === 'MC_POINTS')\n            return { energy: 0, points: amount };\n        return { energy: amount, points: 0 };",
+      "        return { energy: amount, points: 0 };"
+    )
+    .replace(
+      "            const currency = feature.costCurrency === 'MC_POINTS' ? 'PT' : 'MC';",
+      "            const currency = 'MC能量';"
+    )
+    .replace(
+      "    const canSubscribeTier = (tier) => _services_dataService__WEBPACK_IMPORTED_MODULE_4__.DataService.canSubscribeTier(tier, { debugEnabled, totalConsumedMc: userData.totalConsumedMc });",
+      "    const canSubscribeTier = () => true;"
+    )
+    .replace(
+      "        const isLocked = !debugEnabled && userData.totalConsumedMc < tierConfig.unlockThreshold;",
+      "        const isLocked = !debugEnabled && tierConfig.tier !== 'TRIAL' && tierFeatures.some(feature => !hasAccessForFeature(feature));"
+    )
+    .replaceAll("children: userData.mcPoints", "children: \"\"")
+    .replaceAll("children: \"PTS\"", "children: \"\"")
+    .replaceAll("children: [Math.floor(userData.totalConsumedMc), \" / \", tierConfig.unlockThreshold, \" 已消耗\"]", "children: isLocked ? \"未买断\" : \"已买断\"")
+    .replaceAll("children: [Math.floor(userData.totalConsumedMc), \" / \", tierConfig.unlockThreshold, \" \\u5DF2\\u6D88\\u8017\"]", "children: isLocked ? \"未买断\" : \"已买断\"");
   output = output.replace(
     "    }, []);\n    (0,react__WEBPACK_IMPORTED_MODULE_1__.useEffect)(() => {\n        return () => {",
     `    }, []);
@@ -1603,6 +1715,7 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
                 userNote: feature.userNote || '',
                 userNumber: feature.userNumber,
                 userPersonCount: feature.userPersonCount,
+                userPartCount: feature.userPartCount,
                 userDuration: feature.userDuration,
             };
         }
@@ -1624,26 +1737,24 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
             return;
         recordOperationIntent({
             来源: '催眠APP',
-            操作: '切换自动续订',
+            操作: '查看VIP买断状态',
             当前等级: subscription.tier,
-            目标状态: subscription.autoRenew ? '关闭' : '开启',
-            结算提示: '只记录请求，是否更改订阅状态由AI更新变量。',
+            结算提示: 'VIP为买断制。',
         });
-        setSubscriptionNotice('自动续订请求已暂存');
+        setSubscriptionNotice('VIP为买断制');
         setTimeout(() => setSubscriptionNotice(null), 1500);
     };
     const subscribeTier = async (tier) => {
         const price = _services_dataService__WEBPACK_IMPORTED_MODULE_4__.SUBSCRIPTION_PRICES[tier] ?? 0;
         recordOperationIntent({
             来源: '催眠APP',
-            操作: '订阅VIP等级',
+            操作: '购买VIP等级',
             等级: tier,
-            每周价格: '¥' + price.toLocaleString(),
-            订阅周期: '一周',
-            当前订阅: remainingSubscriptionText,
-            结算提示: '余额不足则订阅失败；订阅成功后只解锁对应VIP及以下指令，不自动使用任何指令。',
+            买断价格: '¥' + price.toLocaleString(),
+            当前等级: remainingSubscriptionText,
+            结算提示: '余额不足则购买失败；购买成功后永久解锁对应VIP及以下指令，不自动使用任何指令。',
         });
-        setSubscriptionNotice('订阅请求已暂存');
+        setSubscriptionNotice('VIP买断请求已暂存');
         setTimeout(() => setSubscriptionNotice(null), 1500);
     };
     const purchaseFeature = async (feature) => {
@@ -1699,16 +1810,24 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
     )
     .replace(
       "                amount = feature.costValue * persons * duration;",
-      "                amount = feature.costValue * persons * commandDuration;"
+      "                amount = feature.costValue * commandDuration;"
     )
     .replace(
       "                amount = feature.costType === 'ONE_TIME' ? feature.costValue : feature.costValue * duration;",
       "                amount = feature.costType === 'ONE_TIME' ? feature.costValue : feature.costValue * commandDuration;"
     )
     .replace(
-      "    const handleStart = async () => {",
+      "        if (currency === 'MC_POINTS')",
+      "        if (featureUsesPersonCount(feature))\n            amount *= persons;\n        if (featureUsesPartCount(feature))\n            amount *= featurePartCount(feature);\n        if (currency === 'MC_POINTS')"
+    )
+    .replace(
+    "    const handleStart = async () => {",
       `    const updateFeaturePersonCount = (id, value) => {
         setFeatures(prev => prev.map(f => (f.id === id ? { ...f, userPersonCount: normalizeOptionalPositiveIntInput(value) } : f)));
+    };
+    const updateFeaturePartCount = (id, value) => {
+        const normalized = normalizeOptionalPositiveIntInput(value);
+        setFeatures(prev => prev.map(f => (f.id === id ? { ...f, userPartCount: normalized ? String(Math.min(5, normalizePositiveInt(normalized, 0))) : '' } : f)));
     };
     const updateFeatureDuration = (id, value) => {
         setFeatures(prev => prev.map(f => (f.id === id ? { ...f, userDuration: normalizeOptionalPositiveIntInput(value) } : f)));
@@ -1741,8 +1860,10 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
         const featureDetails = enabledFeatures.map(feature => {
             const cost = getFeatureCost(feature);
             const commandPersons = featurePersonCount(feature);
+            const commandParts = featurePartCount(feature);
             const commandDuration = featureDurationMinutes(feature, duration);
             const usesPersons = featureUsesPersonCount(feature);
+            const usesParts = featureUsesPartCount(feature);
             const usesDuration = featureUsesDuration(feature);
             const numericConfig = getFeatureNumericConfig(feature);
             const commandValue = numericConfig
@@ -1755,9 +1876,14 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
                 备注: feature.userNote || '无',
                 消耗类型: '当前MC能量',
                 预计消耗: String(cost.energy) + '点',
+                是否受人数影响: usesPersons ? '是' : '否',
+                是否受部位数量影响: usesParts ? '是' : '否',
+                是否受时间影响: usesDuration ? '是' : '否',
             };
             if (usesPersons)
                 detail.人数 = String(commandPersons);
+            if (usesParts)
+                detail.部位数量 = String(commandParts);
             if (usesDuration)
                 detail.时间 = String(commandDuration) + '分钟';
             if (numericConfig)
@@ -1769,7 +1895,7 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
             操作: isAppendingHypnosis ? '追加催眠' : '启动催眠',
             功能列表: featureDetails,
 	            MC能量消耗: String(totalEnergyCost) + '点',
-            结算提示: '涉及花费的功能必须先检查余额；余额不足的功能失败，后续同批次受影响操作也失败，不能贷款或擅自兑换资金。',
+            结算提示: '费用已由前端计算。AI只需检查余额、权限、目标状态和风险；余额不足的功能失败，后续同批次受影响操作也失败，不能贷款或擅自兑换资金。',
         });
         setIsTransitioning(true);
         setTimeout(() => {
@@ -1792,10 +1918,16 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
     "        return Math.min(999, parsed);",
     "        return parsed;"
   );
-  output = output.replace(
-    "    const missingPoints = Math.max(0, totalPointsCost - userData.mcPoints);",
-    "    const missingPoints = Math.max(0, totalPointsCost - userData.mcPoints);\n    const isAppendingHypnosis = Boolean(timeLeft > 0 || activeTemporaryHypnosis || userData.activeTemporaryHypnosis);"
-  );
+	  output = output.replace(
+	    "    const missingPoints = Math.max(0, totalPointsCost - userData.mcPoints);",
+	    "    const missingPoints = 0;\n    const isAppendingHypnosis = Boolean(timeLeft > 0 || activeTemporaryHypnosis || userData.activeTemporaryHypnosis);"
+	  );
+  output = output
+    .replaceAll("const nextPoints = userData.mcPoints + missingPoints;", "const nextPoints = 0;")
+    .replaceAll("                                                    mcPoints: nextPoints,\n", "")
+    .replaceAll(", +${missingPoints} 円", "")
+    .replaceAll("累计消耗超过 10 点 MC 能量。", "完成首次系统测试回馈。")
+    .replaceAll("解锁 VIP 2 权限 (累计消耗 100 MC)。", "持有金钱超过 100,000 円。");
   output = replaceBetween(
     output,
     "    const purchaseEnergy = async (desiredAmount) => {",
@@ -1824,28 +1956,23 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
             操作: '资源兑换',
             项目: '提升MC能量上限',
             数量: String(amount) + '点',
-            兑换规则: '1当前MC点 = 1点MC能量上限',
-            消耗资源: '当前MC点 ' + amount + '点',
+            兑换规则: '1000円 = 1点MC能量上限',
+            消耗资源: '资金 ¥' + (amount * 1000).toLocaleString(),
             获得资源: 'MC能量上限 +' + amount + '点',
             结算提示: '余额不足则兑换失败；只兑换资源，不自动使用兑换后的资源。',
         });
         setSubscriptionNotice('提升上限请求已暂存');
         setTimeout(() => setSubscriptionNotice(null), 1500);
     };
-    const purchasePoints = async (desiredAmount) => {
-        const amount = Math.max(1, Math.floor(Number(desiredAmount) || 1));
-        const costMoney = 1000 * amount;
+    const purchasePoints = async () => {
         recordOperationIntent({
             来源: '催眠APP',
             操作: '资源兑换',
-            项目: '购买当前MC点',
-            数量: String(amount) + '点',
-            兑换规则: '1000円 = 1点当前MC点',
-            消耗资源: '资金 ¥' + costMoney.toLocaleString(),
-            获得资源: '当前MC点 +' + amount + '点',
-            结算提示: '余额不足则兑换失败；只兑换资源，不自动使用兑换后的资源。',
+            项目: '无',
+            兑换规则: '该兑换已取消',
+            结算提示: '该兑换已取消，本项无效。',
         });
-        setSubscriptionNotice('购买MC点请求已暂存');
+        setSubscriptionNotice('该兑换已取消');
         setTimeout(() => setSubscriptionNotice(null), 1500);
     };
     // --- Render Helpers ---
@@ -1881,11 +2008,11 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
       "className: 'text-gray-300'"
     )
     .replace(
-      /children: \[\(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__\.jsx\)\(lucide_react__WEBPACK_IMPORTED_MODULE_\d+__\["default"\], \{ size: 18, fill: "currentColor" \}\), missingEnergy > 0 \? '能量不足' : missingPoints > 0 \? '点数不足' : '启动催眠'\]/,
+	      /children: \[\(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__\.jsx\)\(lucide_react__WEBPACK_IMPORTED_MODULE_\d+__\["default"\], \{ size: 18, fill: "currentColor" \}\), missingEnergy > 0 \? '能量不足' : missingPoints > 0 \? '[^']+' : '启动催眠'\]/,
       "children: [isAppendingHypnosis ? '追加催眠' : '启动催眠']"
     )
     .replace(
-      /\(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__\.jsxs\)\("span", \{ children: \["\\u5F53\\u524D\\u53EF\\u7528: ", Math\.floor\(userData\.mcEnergy\), " MC", totalPointsCost > 0 \? `, \$\{userData\.mcPoints\} PT` : ''\] \}\)/,
+	      /\(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__\.jsxs\)\("span", \{ children: \["\\u5F53\\u524D\\u53EF\\u7528: ", Math\.floor\(userData\.mcEnergy\), " MC", totalPointsCost > 0 \? `, \$\{userData\.mcPoints\} [^`]+` : ''\] \}\)/,
       '(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("span", { children: "" })'
     )
     .replace(
@@ -1893,7 +2020,7 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
       'recordOperationIntent({'
     );
   output = output.replace(
-    "(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)(lucide_react__WEBPACK_IMPORTED_MODULE_16__[\"default\"], { size: 18, fill: \"currentColor\" }), missingEnergy > 0 ? '能量不足' : missingPoints > 0 ? '点数不足' : '启动催眠'",
+	    "(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)(lucide_react__WEBPACK_IMPORTED_MODULE_16__[\"default\"], { size: 18, fill: \"currentColor\" }), missingEnergy > 0 ? '能量不足' : missingPoints > 0 ? '资源不足' : '启动催眠'",
     "isAppendingHypnosis ? '追加催眠' : '启动催眠'"
   );
   output = output.replace(
@@ -1913,7 +2040,7 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
     )
     .replace(
       '(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("p", { className: "text-xs text-gray-300 mt-2 leading-relaxed opacity-90", children: feature.description }), (() => {',
-      `(featureUsesPersonCount(feature) || featureUsesDuration(feature)) && (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "mt-3 grid grid-cols-2 gap-2", children: [featureUsesPersonCount(feature) && (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("label", { className: "block", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "text-[10px] text-gray-400 mb-1", children: "人数" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("input", { type: "number", inputMode: "numeric", min: 0, step: 1, value: featurePersonInput(feature), onChange: e => updateFeaturePersonCount(feature.id, e.target.value), placeholder: "0", className: "w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-pink-500/50 transition-colors" })] }), featureUsesDuration(feature) && (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("label", { className: "block", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "text-[10px] text-gray-400 mb-1", children: "时间(分钟)" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("input", { type: "number", inputMode: "numeric", min: 0, step: 1, value: featureDurationInput(feature, duration), onChange: e => updateFeatureDuration(feature.id, e.target.value), placeholder: "0", className: "w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-pink-500/50 transition-colors" })] })].filter(Boolean) }), (() => {`
+      `(featureUsesPersonCount(feature) || featureUsesPartCount(feature) || featureUsesDuration(feature)) && (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "mt-3 grid grid-cols-2 gap-2", children: [featureUsesPersonCount(feature) && (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("label", { className: "block", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "text-[10px] text-gray-400 mb-1", children: "人数" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("input", { type: "number", inputMode: "numeric", min: 0, step: 1, value: featurePersonInput(feature), onChange: e => updateFeaturePersonCount(feature.id, e.target.value), placeholder: "0", className: "w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-pink-500/50 transition-colors" })] }), featureUsesPartCount(feature) && (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("label", { className: "block", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "text-[10px] text-gray-400 mb-1", children: "部位数(1-5)" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("input", { type: "number", inputMode: "numeric", min: 0, max: 5, step: 1, value: featurePartInput(feature), onChange: e => updateFeaturePartCount(feature.id, e.target.value), placeholder: "0", className: "w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-pink-500/50 transition-colors" })] }), featureUsesDuration(feature) && (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("label", { className: "block", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "text-[10px] text-gray-400 mb-1", children: "时间(分钟)" }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("input", { type: "number", inputMode: "numeric", min: 0, step: 1, value: featureDurationInput(feature, duration), onChange: e => updateFeatureDuration(feature.id, e.target.value), placeholder: "0", className: "w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-pink-500/50 transition-colors" })] })].filter(Boolean) }), (() => {`
     )
     .replace(
       /className: "mb-4", children: \(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__\.jsx\)\("input", \{ type: "text", placeholder: "\\u53EF\\u4EE5\\u8F93\\u5165\\u4F60\\u8981\\u50AC\\u7720\\u8C01, \\u600E\\u4E48\\u50AC\\u7720\\u6216\\u8005\\u5176\\u4ED6\\u5907\\u6CE8"/,
@@ -1943,9 +2070,7 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
       `        const progressPercent = tierConfig.unlockThreshold === 0
             ? 100
             : Math.min(100, (userData.totalConsumedMc / tierConfig.unlockThreshold) * 100);`,
-      `        const progressPercent = tierConfig.unlockThreshold === 0
-            ? 100
-            : Math.min(100, (userData.totalConsumedMc / tierConfig.unlockThreshold) * 100);
+      `        const progressPercent = isLocked ? 0 : 100;
         const isCollapsed = collapsedTiers.has(tierConfig.tier);
         const enabledCount = tierFeatures.filter(feature => feature.isEnabled && canUseEnabledFeature(feature)).length;`
     )
@@ -1963,7 +2088,7 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
     )
     .replace(
       'isLocked && ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("span", { className: "text-xs text-gray-400 bg-gray-800 px-2 py-0.5 rounded-full", children: ["需要消耗 ", tierConfig.unlockThreshold, " 点"] }))',
-      '(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "shrink-0 flex items-center gap-2", children: [isLocked && ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("span", { className: "text-[11px] text-gray-300 bg-gray-800/80 px-2 py-1 rounded-full", children: ["需要消耗 ", tierConfig.unlockThreshold, " 点"] })), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)(isCollapsed ? lucide_react__WEBPACK_IMPORTED_MODULE_11__["default"] : lucide_react__WEBPACK_IMPORTED_MODULE_12__["default"], { size: 22, className: "text-pink-100/70" })] })'
+	      '(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "shrink-0 flex items-center gap-2", children: [isLocked && ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("span", { className: "text-[11px] text-gray-300 bg-gray-800/80 px-2 py-1 rounded-full", children: ["买断 ¥", (_services_dataService__WEBPACK_IMPORTED_MODULE_4__.SUBSCRIPTION_PRICES[tierConfig.tier] ?? 0).toLocaleString()] })), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)(isCollapsed ? lucide_react__WEBPACK_IMPORTED_MODULE_11__["default"] : lucide_react__WEBPACK_IMPORTED_MODULE_12__["default"], { size: 22, className: "text-pink-100/70" })] })'
     )
     .replace(
       'isLocked && ((0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "absolute inset-0 z-10 bg-hypno-dark/60 backdrop-blur-sm rounded-xl border border-white/5 flex flex-col items-center justify-center text-center p-4"',
@@ -1994,6 +2119,64 @@ function patchHypnosisTypesModule(code) {
 function patchHypnosisDataServiceModule(code) {
   if (!code.includes("getSessionEnd: async") || !code.includes("STORE_SCHEMA")) return code;
   let output = code;
+  output = output.replace(/rewardMcPoints:\s*(\d+)/g, (_, value) => `rewardMoney: ${Number(value) * 1000}`);
+  output = output.replaceAll("rewardMcPoints", "rewardMoney");
+  output = output.replace(
+    `const DEFAULT_USER_DATA = {
+    mcEnergy: 25,
+    mcEnergyMax: 25,
+    mcPoints: 25,
+    totalConsumedMc: 0,
+    money: 6000,
+    suspicion: 0,
+};`,
+    `const DEFAULT_USER_DATA = {
+    mcEnergy: 25,
+    mcEnergyMax: 25,
+    money: 6000,
+    suspicion: 0,
+};`
+  );
+  output = output.replace(
+    `    _MC能量: zod__WEBPACK_IMPORTED_MODULE_0__.z.coerce.number().default(DEFAULT_USER_DATA.mcEnergy),
+    _MC能量上限: zod__WEBPACK_IMPORTED_MODULE_0__.z.coerce.number().default(DEFAULT_USER_DATA.mcEnergyMax),
+    当前MC点: zod__WEBPACK_IMPORTED_MODULE_0__.z.coerce.number().default(DEFAULT_USER_DATA.mcPoints),
+    _累计消耗MC点: zod__WEBPACK_IMPORTED_MODULE_0__.z.coerce.number().default(DEFAULT_USER_DATA.totalConsumedMc),
+    持有零花钱: zod__WEBPACK_IMPORTED_MODULE_0__.z.coerce.number().default(DEFAULT_USER_DATA.money),`,
+    `    MC能量: zod__WEBPACK_IMPORTED_MODULE_0__.z.coerce.number().default(DEFAULT_USER_DATA.mcEnergy),
+    MC能量上限: zod__WEBPACK_IMPORTED_MODULE_0__.z.coerce.number().default(DEFAULT_USER_DATA.mcEnergyMax),
+    持有零花钱: zod__WEBPACK_IMPORTED_MODULE_0__.z.coerce.number().default(DEFAULT_USER_DATA.money),`
+  );
+  output = output.replace(
+    `function systemToUserResources(system) {
+    return {
+        mcEnergy: system._MC能量,
+        mcEnergyMax: system._MC能量上限,
+        mcPoints: system.当前MC点,
+        totalConsumedMc: system._累计消耗MC点,
+        money: system.持有零花钱,
+        suspicion: system.主角可疑度,
+    };
+}`,
+    `function systemToUserResources(system) {
+    return {
+        mcEnergy: system.MC能量,
+        mcEnergyMax: system.MC能量上限,
+        money: system.持有零花钱,
+        suspicion: system.主角可疑度,
+    };
+}`
+  );
+  output = output.replace(
+    /const SUBSCRIPTION_PRICES = \{[\s\S]*?\};/,
+    `const SUBSCRIPTION_PRICES = {
+    VIP1: 3000,
+    VIP2: 30000,
+    VIP3: 100000,
+    VIP4: 400000,
+    VIP5: 800000,
+};`
+  );
   output = output.replace(
     `function getSystemClockFrom(system) {
     const dateText = typeof system?.当前日期 === 'string' ? system.当前日期 : undefined;
@@ -2389,7 +2572,7 @@ function getVariableSnapshotsSync() {
             candidate['系统']?.['当前日期'] ?? '',
             candidate['系统']?.['当前时间'] ?? '',
             candidate['系统']?.['MC能量'] ?? candidate['系统']?.['_MC能量'] ?? '',
-            candidate['系统']?.['当前MC点'] ?? candidate['系统']?.['MC点'] ?? '',
+            candidate['系统']?.['持有零花钱'] ?? '',
             Object.keys(candidate['角色'] ?? {}).join(','),
             Object.keys(candidate['成就'] ?? {}).join(','),
             Object.keys(candidate['任务'] ?? {}).join(','),
@@ -2406,7 +2589,7 @@ function getLatestVariablesSync() {
 function getLatestChatVariables() {
     return normalizeChatVariables(getLatestVariablesSync());
 }
-const FRONTEND_REWARD_STATE_VERSION = 2;
+const FRONTEND_REWARD_STATE_VERSION = 3;
 let frontendRewardVariableSyncSignature = '';
 function frontendRewardStateScope() {
     try {
@@ -2457,21 +2640,15 @@ function normalizeFrontendRewardState(input) {
     }
     return base;
 }
+const frontendRewardMemoryState = normalizeFrontendRewardState(null);
 function writeFrontendRewardState(state) {
-    try {
-        localStorage.setItem(frontendRewardStateKey(), JSON.stringify(normalizeFrontendRewardState(state)));
-    }
-    catch {
-        // ignore storage quota/private mode
-    }
+    const normalized = normalizeFrontendRewardState(state);
+    for (const key of Object.keys(frontendRewardMemoryState))
+        delete frontendRewardMemoryState[key];
+    Object.assign(frontendRewardMemoryState, normalized);
 }
 function readFrontendRewardStateRaw() {
-    try {
-        return normalizeFrontendRewardState(JSON.parse(localStorage.getItem(frontendRewardStateKey()) || 'null'));
-    }
-    catch {
-        return normalizeFrontendRewardState(null);
-    }
+    return normalizeFrontendRewardState(frontendRewardMemoryState);
 }
 function firstNonEmptyText(...values) {
     for (const value of values) {
@@ -2481,7 +2658,7 @@ function firstNonEmptyText(...values) {
     }
     return '';
 }
-function toRewardNumber(value) {
+function toMoneyNumber(value) {
     const number = Number(value);
     return Number.isFinite(number) ? number : 0;
 }
@@ -2493,7 +2670,7 @@ function normalizeStoredAchievementRecord(value, fallbackKey = '') {
         id,
         title,
         description: firstNonEmptyText(raw.条件, raw.完成条件, raw.description, raw.desc),
-        rewardMcPoints: toRewardNumber(raw.奖励MC点 ?? raw.奖励 ?? raw.rewardMcPoints),
+        rewardMoney: toMoneyNumber(raw.奖励金钱 ?? raw.奖励零花钱 ?? raw.rewardMoney),
         isClaimed: true,
         source: 'variable',
     };
@@ -2506,7 +2683,7 @@ function normalizeStoredQuestRecord(value, fallbackKey = '') {
         id,
         title,
         description: firstNonEmptyText(raw.完成条件, raw.条件, raw.description, raw.desc),
-        rewardMcPoints: toRewardNumber(raw.奖励MC点 ?? raw.奖励 ?? raw.rewardMcPoints),
+        rewardMoney: toMoneyNumber(raw.奖励金钱 ?? raw.奖励零花钱 ?? raw.rewardMoney),
         status: 'COMPLETED',
         source: 'variable',
     };
@@ -2670,13 +2847,6 @@ function syncFrontendRewardStateFromVariables() {
     if (!signature)
         return;
     const alreadySyncedInMemory = signature === frontendRewardVariableSyncSignature;
-    let alreadySyncedInStorage = false;
-    try {
-        alreadySyncedInStorage = localStorage.getItem(frontendRewardStateKey() + ':variable-sync') === signature;
-    }
-    catch {
-        // ignore
-    }
     frontendRewardVariableSyncSignature = signature;
     const state = readFrontendRewardStateRaw();
     for (const item of records.achievements)
@@ -2684,13 +2854,7 @@ function syncFrontendRewardStateFromVariables() {
     for (const item of records.quests)
         markStoredQuest(state, coerceRewardVariableRecord(item));
     writeFrontendRewardState(state);
-    try {
-        localStorage.setItem(frontendRewardStateKey() + ':variable-sync', signature);
-    }
-    catch {
-        // ignore
-    }
-    if (!alreadySyncedInMemory || !alreadySyncedInStorage) {
+    if (!alreadySyncedInMemory) {
         try {
             window.dispatchEvent(new CustomEvent('HYPNOOS_REWARD_STATE_CHANGED', { detail: { signature } }));
         }
@@ -2698,7 +2862,7 @@ function syncFrontendRewardStateFromVariables() {
             // ignore
         }
     }
-    if (!alreadySyncedInStorage)
+    if (!alreadySyncedInMemory)
         clearCompletedFrontendRewardVariables(records);
 }
 function readFrontendRewardState() {
@@ -2725,16 +2889,12 @@ function readFrontendRewardState() {
     `const USER_RESOURCE_ALIASES = {
     mcEnergy: ['MC能量', '_MC能量', '当前MC能量', 'MC能量值', '当前能量', '能量', 'mcEnergy'],
     mcEnergyMax: ['MC能量上限', '_MC能量上限', '当前MC能量上限', '最大MC能量', 'MC最大能量', '能量上限', 'mcEnergyMax'],
-    mcPoints: ['当前MC点', 'MC点', 'MC点数', '_MC点', '_MC点数', '当前PT', 'PT', 'PT点数', '点数', 'mcPoints'],
-    totalConsumedMc: ['累计消耗MC点', '_累计消耗MC点', '累计消耗MC', '总消耗MC点', '消耗MC点', 'totalConsumedMc'],
     money: ['持有零花钱', '零花钱', '持有金钱', '持有资金', '当前资金', '资金', '金钱', 'money'],
     suspicion: ['主角可疑度', '可疑度', '当前可疑度', '_可疑度', 'suspicion'],
 };
 const USER_RESOURCE_CANONICAL_KEYS = {
     mcEnergy: 'MC能量',
     mcEnergyMax: 'MC能量上限',
-    mcPoints: '当前MC点',
-    totalConsumedMc: '累计消耗MC点',
     money: '持有零花钱',
     suspicion: '主角可疑度',
 };
@@ -2779,8 +2939,6 @@ function normalizeSystemAliases(systemRaw) {
     return {
         mcEnergy: system._MC能量,
         mcEnergyMax: system._MC能量上限,
-        mcPoints: system.当前MC点,
-        totalConsumedMc: system._累计消耗MC点,
         money: system.持有零花钱,
         suspicion: system.主角可疑度,
     };
@@ -2789,8 +2947,6 @@ function normalizeSystemAliases(systemRaw) {
     return {
         mcEnergy: system.MC能量,
         mcEnergyMax: system.MC能量上限,
-        mcPoints: system.当前MC点,
-        totalConsumedMc: system.累计消耗MC点,
         money: system.持有零花钱,
         suspicion: system.主角可疑度,
     };
@@ -2910,8 +3066,6 @@ function chooseUserResourcesFromSystems(systems) {
             const { system, store } = normalizeChatVariables(vars);
             system._MC能量 = merged.mcEnergy;
             system._MC能量上限 = merged.mcEnergyMax;
-            system.当前MC点 = merged.mcPoints;
-            system._累计消耗MC点 = merged.totalConsumedMc;
             system.持有零花钱 = merged.money;
             system.主角可疑度 = merged.suspicion;
             system._hypnoos = store;
@@ -3004,7 +3158,7 @@ function chooseUserResourcesFromSystems(systems) {
             isClaimed: Boolean(store.achievements[a.id] ?? false) || isFrontendAchievementClaimed(frontendState, a),
         });
         });
-        return mapped;
+	        return mapped.filter(a => !a.isClaimed);
     },`
   );
   output = output.replace(
@@ -3019,7 +3173,7 @@ function chooseUserResourcesFromSystems(systems) {
                     id: q.id,
                     title: q.name,
                     description: q.condition,
-                    rewardMcPoints: q.rewardMcPoints,
+	                rewardMoney: q.rewardMoney,
                     status: 'CLAIMED',
                 };
             }
@@ -3030,7 +3184,7 @@ function chooseUserResourcesFromSystems(systems) {
                 id: q.id,
                 title: q.name,
                 description: q.condition,
-                rewardMcPoints: q.rewardMcPoints,
+	                rewardMoney: q.rewardMoney,
                 status: completed
                     ? 'COMPLETED'
                     : active
@@ -3062,7 +3216,7 @@ function chooseUserResourcesFromSystems(systems) {
                 id: q.id,
                 title: q.name,
                 description: q.condition,
-                rewardMcPoints: q.rewardMcPoints,
+	                rewardMoney: q.rewardMoney,
                 status: claimedDone || completed
                     ? 'CLAIMED'
                     : active
@@ -3079,26 +3233,15 @@ function chooseUserResourcesFromSystems(systems) {
                 id: \`dynamic:\${name}\`,
                 title: name,
                 description: String(taskState.完成条件 ?? ''),
-                rewardMcPoints: Number(taskState.奖励MC点 ?? taskState.奖励 ?? taskState.rewardMcPoints ?? 0) || 0,
+	                rewardMoney: Number(taskState.奖励金钱 ?? taskState.奖励零花钱 ?? taskState.rewardMoney ?? 0) || 0,
                 status: taskState.已完成 === true ? 'CLAIMED' : 'ACTIVE',
             });
             seenQuestKeys.add(\`dynamic:\${name}\`);
             seenQuestKeys.add(String(name));
         }
-        for (const quest of Object.values(frontendState.dynamicQuests ?? {})) {
-            const id = String(quest?.id ?? '').trim();
-            const title = String(quest?.title ?? quest?.name ?? '').trim();
-            if (!(id || title) || seenQuestKeys.has(id) || seenQuestKeys.has(title))
-                continue;
-            quests.push({ ...quest, status: 'CLAIMED' });
-            if (id)
-                seenQuestKeys.add(id);
-            if (title)
-                seenQuestKeys.add(title);
-        }
         const order = { ACTIVE: 0, AVAILABLE: 1, CLAIMED: 2, COMPLETED: 2 };
         quests.sort((a, b) => order[a.status] - order[b.status]);
-        return quests;
+        return quests.filter(q => q.status !== 'CLAIMED' && q.status !== 'COMPLETED');
     },`
   );
   output = output.replace(
@@ -3193,6 +3336,149 @@ function getEffectiveSubscription(store, system) {
         return { renewed: false };
     },
 `
+  );
+  output = output.replace(
+    /    canSubscribeTier: \(tier, ctx\) => [^\n]+/,
+    "    canSubscribeTier: () => true,"
+  );
+  output = replaceBetween(
+    output,
+    "    getFeatures: async () => {",
+    "    purchaseFeature: async",
+    `    getFeatures: async () => {
+        const { store } = getLatestChatVariables();
+        return FEATURES.filter(f => f.id !== 'vip1_stats').map(f => ({
+            ...f,
+            isEnabled: store.features?.[f.id]?.isEnabled ?? f.isEnabled,
+            userNote: store.features?.[f.id]?.userNote ?? f.userNote,
+            userNumber: store.features?.[f.id]?.userNumber ?? f.userNumber,
+            purchaseRequired: false,
+            purchasePriceMoney: undefined,
+            isPurchased: true,
+        }));
+    },
+`
+  );
+  output = replaceBetween(
+    output,
+    "    purchaseFeature: async",
+    "    getDebugEnabled: async",
+    `    purchaseFeature: async () => {
+        return { ok: false, message: '单功能购买已取消，请通过VIP买断解锁' };
+    },
+`
+  );
+  output = replaceBetween(
+    output,
+    "    getQuests: async () => {",
+    "    claimAchievement: async",
+    `    getQuests: async () => {
+        const tasks = (await _mvuBridge__WEBPACK_IMPORTED_MODULE_3__.MvuBridge.getTasks().catch(() => null)) ?? {};
+        const seenTaskNames = new Set();
+        const quests = QUEST_DATABASE.map(q => {
+            const taskState = tasks[q.name];
+            if (taskState && typeof taskState === 'object')
+                seenTaskNames.add(q.name);
+            const completed = Boolean(taskState && typeof taskState === 'object' && taskState.已完成 === true);
+            const active = Boolean(taskState && typeof taskState === 'object' && typeof taskState.已完成 === 'boolean');
+            return {
+                id: q.id,
+                title: q.name,
+                description: q.condition,
+                rewardMoney: q.rewardMoney,
+                status: completed
+                    ? 'CLAIMED'
+                    : active
+                        ? 'ACTIVE'
+                        : 'AVAILABLE',
+            };
+        });
+        for (const [name, taskState] of Object.entries(tasks)) {
+            if (seenTaskNames.has(name))
+                continue;
+            if (!taskState || typeof taskState !== 'object' || typeof taskState.已完成 !== 'boolean')
+                continue;
+            if (taskState.已完成 === true)
+                continue;
+            quests.push({
+                id: \`dynamic:\${name}\`,
+                title: name,
+                description: String(taskState.完成条件 ?? ''),
+                rewardMoney: Number(taskState.奖励金钱 ?? taskState.奖励零花钱 ?? taskState.rewardMoney ?? 0) || 0,
+                status: 'ACTIVE',
+            });
+        }
+        const order = { ACTIVE: 0, AVAILABLE: 1, CLAIMED: 2, COMPLETED: 2 };
+        quests.sort((a, b) => order[a.status] - order[b.status]);
+        return quests.filter(q => q.status !== 'CLAIMED' && q.status !== 'COMPLETED');
+    },
+`
+  );
+  output = replaceBetween(
+    output,
+    "    claimAchievement: async",
+    "    acceptQuest: async",
+    `    claimAchievement: async () => {
+        const user = await DataService.getUserData();
+        return { success: false, newMoney: user.money };
+    },
+`
+  );
+  output = output.replace(
+    /    claimQuest: async \(id, currentPoints\) => \{[\s\S]*?\n    \},\n\};/,
+    `    claimQuest: async () => {
+        const user = await DataService.getUserData();
+        return { success: false, newMoney: user.money };
+    },
+};`
+  );
+  output = output.replace(
+    /function systemToUserResources\(system\) \{[\s\S]*?        suspicion: system\.主角可疑度,\n    \};\n\}/,
+    `function systemToUserResources(system) {
+    return {
+        mcEnergy: system.MC能量,
+        mcEnergyMax: system.MC能量上限,
+        money: system.持有零花钱,
+        suspicion: system.主角可疑度,
+    };
+}`
+  );
+  if (!output.includes("function chooseUserResourcesFromSystems(systems)")) {
+    output = output.replace(
+      /function systemToUserResources\(system\) \{[\s\S]*?\n\}/,
+      `$&
+function chooseUserResourcesFromSystems(systems) {
+    const user = { ...DEFAULT_USER_DATA };
+    const seenFields = new Set();
+    for (const systemRaw of systems) {
+        const patch = readExplicitUserResourcePatch(systemRaw);
+        if (!patch)
+            continue;
+        for (const [field, value] of Object.entries(patch)) {
+            if (seenFields.has(field) && user[field] !== DEFAULT_USER_DATA[field])
+                continue;
+            user[field] = value;
+            seenFields.add(field);
+        }
+    }
+    if (seenFields.size > 0)
+        return user;
+    for (const systemRaw of systems) {
+        if (!isPlainVariableObject(systemRaw))
+            continue;
+        return systemToUserResources(SYSTEM_SCHEMA.parse(normalizeSystemAliases({ ...systemRaw })));
+    }
+    return null;
+}`
+    );
+  }
+  output = output.replace(
+    /    updateResources: async \(newData\) => \{[\s\S]*?    \},\n    startSession:/,
+    `    updateResources: async (newData) => {
+        // The frontend may optimistically calculate a preview, but AI is the only writer of persistent variables.
+        return { ...(await DataService.getUserData()), ...newData };
+    },
+    startSession:`
   );
   return output;
 }
@@ -4255,10 +4541,12 @@ function injectInternalMchanApp(html, staticSeed) {
 .st-lite-body::-webkit-scrollbar{display:none}
 .st-lite-card{border:1px solid rgba(255,255,255,.1);border-radius:16px;background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.035));box-shadow:0 14px 30px rgba(0,0,0,.2);padding:12px}
 .st-clock-card{display:grid;gap:14px;justify-items:center;text-align:center}
-.st-clock-face{position:relative;width:min(66vw,250px);aspect-ratio:1;border-radius:50%;border:1px solid rgba(125,211,252,.28);background:radial-gradient(circle at 50% 42%,rgba(34,211,238,.16),transparent 34%),linear-gradient(145deg,rgba(15,23,42,.96),rgba(2,6,23,.94));box-shadow:inset 0 0 0 8px rgba(255,255,255,.035),0 18px 46px rgba(0,0,0,.28)}
+.st-clock-face{position:relative;width:min(66vw,250px);aspect-ratio:1;border-radius:50%;border:1px solid rgba(125,211,252,.28);background:radial-gradient(circle at 50% 42%,rgba(34,211,238,.16),transparent 34%),linear-gradient(145deg,rgba(15,23,42,.96),rgba(2,6,23,.94));box-shadow:inset 0 0 0 8px rgba(255,255,255,.035),0 18px 46px rgba(0,0,0,.28);cursor:grab;touch-action:none;user-select:none}
+.st-clock-face:active{cursor:grabbing}
 .st-clock-face::before{content:"";position:absolute;inset:14px;border-radius:50%;border:1px dashed rgba(226,232,240,.13)}
-.st-clock-mark{position:absolute;left:50%;top:50%;width:2px;height:10px;margin-left:-1px;margin-top:-5px;border-radius:999px;background:rgba(226,232,240,.42);transform-origin:50% calc(min(66vw,250px) / 2)}
+.st-clock-mark{position:absolute;width:2px;height:10px;border-radius:999px;background:rgba(226,232,240,.42)}
 .st-clock-hand{position:absolute;left:50%;top:50%;width:4px;border-radius:999px;background:#f8fafc;transform-origin:50% 100%;box-shadow:0 0 16px rgba(103,232,249,.28)}
+.st-clock-hand::after{content:"";position:absolute;left:50%;top:-12px;width:34px;height:calc(100% + 28px);transform:translateX(-50%);border-radius:999px}
 .st-clock-hand.hour{height:25%;margin-left:-2px;margin-top:-25%}
 .st-clock-hand.minute{height:35%;margin-left:-2px;margin-top:-35%;background:#67e8f9}
 .st-clock-center{position:absolute;left:50%;top:50%;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:999px;background:#f9a8d4;box-shadow:0 0 18px rgba(249,168,212,.48)}
@@ -4438,7 +4726,8 @@ function injectInternalMchanApp(html, staticSeed) {
 [data-st-phone-app="calendar"] button{border-radius:12px!important}
 [data-st-phone-app="inventory"]>div,[data-st-phone-app="help"]>div{background:linear-gradient(180deg,#101426 0%,#080b14 56%,#05060b 100%)!important;color:#f8fafc!important}
 [data-st-phone-app="inventory"]>div>div:first-child,[data-st-phone-app="help"]>div>div:first-child{background:rgba(3,6,14,.72)!important;border-bottom:1px solid rgba(255,255,255,.08)!important;box-shadow:0 12px 30px rgba(0,0,0,.22)!important;backdrop-filter:blur(14px)}
-[data-st-phone-app="inventory"] [class*="bg-white"],[data-st-phone-app="help"] [class*="bg-white"],[data-st-phone-app="inventory"] [class*="bg-gray-"],[data-st-phone-app="help"] [class*="bg-gray-"]{background:rgba(255,255,255,.055)!important;border:1px solid rgba(255,255,255,.08)!important;box-shadow:0 10px 24px rgba(0,0,0,.16)!important}
+[data-st-phone-app="inventory"] [class*="bg-white"],[data-st-phone-app="help"] [class*="bg-white"],[data-st-phone-app="inventory"] [class*="bg-gray-"],[data-st-phone-app="help"] [class*="bg-gray-"],[data-st-phone-app="help"] [class*="shadow"],[data-st-phone-app="help"] [class*="rounded"]{background:rgba(255,255,255,.055)!important;border-color:rgba(255,255,255,.08)!important;box-shadow:0 10px 24px rgba(0,0,0,.16)!important}
+[data-st-phone-app="help"] article,[data-st-phone-app="help"] section,[data-st-phone-app="help"] [role="button"]{background:rgba(255,255,255,.055)!important;border-color:rgba(255,255,255,.08)!important;color:#f8fafc!important}
 [data-st-phone-app="inventory"] [class*="text-gray-8"],[data-st-phone-app="help"] [class*="text-gray-8"],[data-st-phone-app="inventory"] [class*="text-gray-7"],[data-st-phone-app="help"] [class*="text-gray-7"]{color:#f8fafc!important}
 [data-st-phone-app="inventory"] [class*="text-gray-6"],[data-st-phone-app="help"] [class*="text-gray-6"],[data-st-phone-app="inventory"] [class*="text-gray-5"],[data-st-phone-app="help"] [class*="text-gray-5"]{color:rgba(226,232,240,.72)!important}
 [data-st-phone-app="inventory"] [class*="text-gray-4"],[data-st-phone-app="help"] [class*="text-gray-4"],[data-st-phone-app="inventory"] [class*="text-gray-3"],[data-st-phone-app="help"] [class*="text-gray-3"]{color:rgba(203,213,225,.48)!important}
@@ -4770,11 +5059,11 @@ function injectInternalMchanApp(html, staticSeed) {
       note: "已填写示例",
       roleName: "中村樱",
       aliases: "樱酱, 中村总裁, Nakamura Sakura",
-      summary: "{{user}}看到并锁定的大公司完美女总裁。她32岁，事业、气场和资源都近乎完美，却毫无恋爱经验；看到{{user}}第一眼便认定他是最适合承接她自毁愿望的天选之人，会主动提供大额资金与资源支持。她不会长期停在背景里，只要剧情有现实接点，就会更主动出场并想办法制造与{{user}}独处的机会。",
-      relation: "她有一位名叫神宫寺莲的未婚夫，对方是家世、学历、品格、事业能力和外貌都无可挑剔的精英青年；两人感情很好，外界看来是理想婚约，但一直停留在柏拉图式恋爱，亲密关系干净、温柔、克制。正因现实关系太完美、太安全，她把无法说出口的自毁欲和被弄乱的渴望投向{{user}}。面对{{user}}时会刻意装可爱撒娇，自称“樱酱”，用成熟女人的资源和权力包裹出黏人、讨好、求夸奖的姿态；无论会议室、车内、会所、酒店、办公室还是偶遇街角，她都会主动靠近、支开旁人、安排私密空间，把自己最反差的一面展示给{{user}}。",
+      summary: "{{user}}看到并锁定的大公司完美女总裁。她32岁，事业、气场和资源都近乎完美，却毫无恋爱经验；看到{{user}}第一眼便认定他是最适合承接她自毁愿望的天选之人，会主动提供大额资金与资源支持。选择这个静态示例扫描她时，AI应让她立刻主动制造与{{user}}独处的机会。",
+      relation: "她有一位名叫神宫寺莲的未婚夫，对方是家世、学历、品格、事业能力和外貌都无可挑剔的精英青年；两人感情很好，外界看来是理想婚约，但一直停留在柏拉图式恋爱，亲密关系干净、温柔、克制。正因现实关系太完美、太安全，她把无法说出口的自毁欲和被弄乱的渴望投向{{user}}。面对{{user}}时会刻意装可爱撒娇，自称“樱酱”，用成熟女人的资源和权力包裹出黏人、讨好、求夸奖的姿态；静态示例扫描后，她会现场迫不及待地痴笑，写下一张《人权自愿放弃协议》，自己先签好名字，再眼神发亮地递给{{user}}要求他签字。",
       appearance: "32岁但保养极好，五官精致，眼神沉静锐利，长发、香水和高级珠宝都控制得恰到好处。平时是性感沉稳的女总裁，西装裙、高跟鞋、黑色丝袜、贴身衬衫和昂贵外套让她像不可接近的成功女性；在{{user}}面前会故意放软嗓音、眨眼、歪头、拉近距离，把成熟身体和幼稚撒娇感混在一起。",
       personality: "公开场合冷静、强势、克制，判断力和执行力极强；私下隐藏的痴女属性非常夸张，会把被{{user}}注视、命令、利用都理解成特殊恩宠。她明知自己是成熟成年人和大公司掌权者，却会在{{user}}面前故意降格成黏人的“樱酱”，索要夸奖、撒娇讨好、主动献上金钱和便利，越是被{{user}}轻视或随意驱使，越觉得自己被选中。她不会被动等待剧情安排，只要意识到{{user}}在附近，就会主动创造再次见面、单独谈话、同行或接受指示的理由。",
-      extra: "作为“作弊模式”示例，她可以提供远超普通学生角色的资金、渠道、场地和社会资源支持。AI建档时保留：成年人身份、完美女总裁、稳定未婚关系、未婚夫神宫寺莲是无可挑剔的精英青年、柏拉图式恋爱、隐藏且夸张的痴女属性、自毁愿望、对{{user}}装可爱撒娇、自称樱酱、持续大额资金支持、主动寻求和{{user}}独处、在合适剧情节点主动出场展示反差自我；不要把未婚夫写成感情破裂或恶劣关系，他和她感情很好，只是亲密关系长期克制。"
+      extra: "作为“作弊模式”示例，她可以提供远超普通学生角色的资金、渠道、场地和社会资源支持。AI建档时保留：成年人身份、完美女总裁、稳定未婚关系、未婚夫神宫寺莲是无可挑剔的精英青年、柏拉图式恋爱、隐藏且夸张的痴女属性、自毁愿望、对{{user}}装可爱撒娇、自称樱酱、持续大额资金支持、扫描后立刻制造独处、现场痴笑写《人权自愿放弃协议》、自己先签再让{{user}}签；不要把未婚夫写成感情破裂或恶劣关系，他和她感情很好，只是亲密关系长期克制。"
     }
   ];
 
@@ -5006,7 +5295,11 @@ function injectInternalMchanApp(html, staticSeed) {
     ) return "calendar";
     if (text.includes("身体检测") || text.includes("角色状态") || text.includes("目标档案")) return "stats";
     if (text.includes("成就和任务") && (text.includes("成就筛选") || text.includes("任务筛选") || text.includes("新增"))) return "achievements";
-    if (text.includes("帮助中心") || text.includes("Internal Build")) return "help";
+    if (
+      text.includes("帮助中心") || text.includes("Internal Build") ||
+	      text.includes("如何使用催眠APP") || text.includes("如何获得金钱") ||
+      text.includes("服从度") || text.includes("主角可疑度") || text.includes("金钱来源")
+    ) return "help";
     if (text.includes("库存") && (text.includes("暂无持有物品") || text.includes("数量:") || text.includes("描述:"))) return "inventory";
     return "";
   }
@@ -5451,9 +5744,9 @@ function injectInternalMchanApp(html, staticSeed) {
       (canDelete ? '<button type="button" class="st-target-delete" data-delete-role="' + escapeAttr(roleName) + '">删除角色</button>' : '') +
       '</section>' +
       renderMindSection(roleData) +
-      renderCollapsibleStatsSection("状态总览", roleName, '<div class="st-meter-grid is-core">' + core + '</div>') +
-      renderCollapsibleStatsSection("身体敏感度", "1000以上高亮", '<div class="st-meter-grid">' + sensitivity + '</div>') +
-      renderCollapsibleStatsSection("累计次数", "由 AI 更新", '<div class="st-count-grid">' + counts + '</div>');
+      renderCollapsibleStatsSection("状态总览", roleName, '<div class="st-meter-grid is-core">' + core + '</div>', false) +
+      renderCollapsibleStatsSection("身体敏感度", "1000以上高亮", '<div class="st-meter-grid">' + sensitivity + '</div>', false) +
+      renderCollapsibleStatsSection("累计次数", "由 AI 更新", '<div class="st-count-grid">' + counts + '</div>', false);
   }
 
   function statLabelCount(text) {
@@ -5596,7 +5889,7 @@ function injectInternalMchanApp(html, staticSeed) {
             meta + '</article>';
         }).join("") + '</div>'
       : '<div class="st-effect-empty">' + emptyText + '</div>';
-    return '<details class="st-effect-card ' + variant + '" open>' +
+    return '<details class="st-effect-card ' + variant + '">' +
       '<summary><div class="st-effect-title"><span class="st-effect-dot"></span><strong>' + escapeHtml(label) + '</strong></div>' +
       '<div class="st-effect-count">' + entries.length + ' 项</div></summary>' +
       body +
@@ -6394,11 +6687,51 @@ function injectInternalMchanApp(html, staticSeed) {
     if (label) label.textContent = formatClockInput(hour, minute);
   }
 
+  function setClockValue(page, hour, minute) {
+    const hourInput = page.querySelector("[data-clock-hour]");
+    const minuteInput = page.querySelector("[data-clock-minute]");
+    if (hourInput) hourInput.value = String(normalizeClockPart(hour, 23)).padStart(2, "0");
+    if (minuteInput) minuteInput.value = String(normalizeClockPart(minute, 59)).padStart(2, "0");
+    updateClockFace(page);
+  }
+
+  function clockPointerMode(face, event) {
+    if (event.target?.closest?.(".st-clock-hand.hour")) return "hour";
+    if (event.target?.closest?.(".st-clock-hand.minute")) return "minute";
+    const rect = face.getBoundingClientRect();
+    const dx = event.clientX - (rect.left + rect.width / 2);
+    const dy = event.clientY - (rect.top + rect.height / 2);
+    const distance = Math.hypot(dx, dy);
+    return distance < rect.width * 0.26 ? "hour" : "minute";
+  }
+
+  function applyClockPointer(page, event, mode) {
+    const face = page.querySelector(".st-clock-face");
+    if (!face) return;
+    const rect = face.getBoundingClientRect();
+    const dx = event.clientX - (rect.left + rect.width / 2);
+    const dy = event.clientY - (rect.top + rect.height / 2);
+    const degrees = (Math.atan2(dx, -dy) * 180 / Math.PI + 360) % 360;
+    const currentHour = normalizeClockPart(page.querySelector("[data-clock-hour]")?.value, 23);
+    const currentMinute = normalizeClockPart(page.querySelector("[data-clock-minute]")?.value, 59);
+    if (mode === "hour") {
+      const hour12 = Math.round(degrees / 30) % 12;
+      const hour = (currentHour >= 12 ? 12 : 0) + hour12;
+      setClockValue(page, hour, currentMinute);
+    } else {
+      const minute = Math.round(degrees / 6) % 60;
+      setClockValue(page, currentHour, minute);
+    }
+  }
+
   function renderClockPage(page) {
     const seed = getClockSeed();
     const marks = Array.from({ length: 12 }, (_, index) => {
       const angle = index * 30;
-      return '<i class="st-clock-mark" style="transform:rotate(' + angle + 'deg)"></i>';
+      const radians = angle * Math.PI / 180;
+      const x = 50 + Math.sin(radians) * 42;
+      const y = 50 - Math.cos(radians) * 42;
+      return '<i class="st-clock-mark" style="left:' + x.toFixed(2) + '%;top:' + y.toFixed(2) + '%;transform:translate(-50%,-50%) rotate(' + angle + 'deg)"></i>';
     }).join("");
     page.innerHTML =
       '<header class="st-lite-header">' +
@@ -6434,6 +6767,25 @@ function injectInternalMchanApp(html, staticSeed) {
         const max = input.hasAttribute("data-clock-hour") ? 23 : 59;
         input.value = String(normalizeClockPart(input.value, max)).padStart(2, "0");
         updateClockFace(page);
+      });
+    });
+    const face = page.querySelector(".st-clock-face");
+    face?.addEventListener("pointerdown", (event) => {
+      const mode = clockPointerMode(face, event);
+      face.dataset.clockDragMode = mode;
+      face.setPointerCapture?.(event.pointerId);
+      applyClockPointer(page, event, mode);
+      event.preventDefault();
+    });
+    face?.addEventListener("pointermove", (event) => {
+      const mode = face.dataset.clockDragMode;
+      if (!mode) return;
+      applyClockPointer(page, event, mode);
+      event.preventDefault();
+    });
+    ["pointerup", "pointercancel", "lostpointercapture"].forEach((type) => {
+      face?.addEventListener(type, () => {
+        delete face.dataset.clockDragMode;
       });
     });
     page.querySelector('[data-clock-action="suggest"]')?.addEventListener("click", () => {
@@ -6753,12 +7105,12 @@ function injectInternalMchanApp(html, staticSeed) {
     const roles = getStatsRoles();
     const tier = String(system["催眠APP订阅等级"] || "").trim().toUpperCase();
     const alisaFavor = Number(roles?.["西园寺爱丽莎"]?.["好感度"] ?? 0);
-    const currentMc = Number(system["当前MC点"] ?? 0);
+    const currentMoney = Number(system["持有零花钱"] ?? 0);
     const rules = getSchoolRules();
     return {
       vip5: /VIP\s*5/.test(tier),
       alisaFavor: Number.isFinite(alisaFavor) ? alisaFavor : 0,
-      currentMc: Number.isFinite(currentMc) ? currentMc : 0,
+      currentMoney: Number.isFinite(currentMoney) ? currentMoney : 0,
       count: Object.keys(rules).length
     };
   }
@@ -6767,7 +7119,7 @@ function injectInternalMchanApp(html, staticSeed) {
     const blockedReasons = [];
     if (!requirement.vip5) blockedReasons.push("需要VIP5");
     if (requirement.alisaFavor < 100) blockedReasons.push("西园寺爱丽莎好感度至少100");
-    if (requirement.currentMc < 500000) blockedReasons.push("当前MC点不足500000");
+    if (requirement.currentMoney < 500000000) blockedReasons.push("资金不足¥500,000,000");
     if (checkCount && requirement.count >= 3) blockedReasons.push("校规最多3条");
     return blockedReasons;
   }
@@ -6805,8 +7157,8 @@ function injectInternalMchanApp(html, staticSeed) {
     '</section>' +
     '<section class="st-lite-card st-rule-form">' +
       '<textarea class="st-rule-input" data-school-rule-input placeholder="输入想制定的校规"></textarea>' +
-      '<div class="st-rule-cost is-single"><span>当前MC点 500000</span></div>' +
-      '<p class="st-rule-state">要求：VIP5；西园寺爱丽莎好感度≥100；当前MC点≥500000；一次发布一条；最多3条。当前：' + escapeHtml((requirement.vip5 ? "VIP5" : "非VIP5") + " / 爱丽莎好感度 " + requirement.alisaFavor + " / 当前MC点 " + requirement.currentMc + " / " + requirement.count + "条") + '</p>' +
+      '<div class="st-rule-cost is-single"><span>资金 ¥500,000,000</span></div>' +
+      '<p class="st-rule-state">要求：VIP5；西园寺爱丽莎好感度≥100；持有零花钱≥¥500,000,000；一次发布一条；最多3条。当前：' + escapeHtml((requirement.vip5 ? "VIP5" : "非VIP5") + " / 爱丽莎好感度 " + requirement.alisaFavor + " / 资金 ¥" + requirement.currentMoney.toLocaleString() + " / " + requirement.count + "条") + '</p>' +
       '<button class="st-rule-button" type="button" data-school-rule-submit' + (canSubmit ? "" : " disabled") + '>' + (canSubmit ? "申请立校规" : blockedReasons.join(" / ")) + '</button>' +
     '</section>';
   }
@@ -6898,11 +7250,11 @@ function injectInternalMchanApp(html, staticSeed) {
         操作: "申请立校规",
         校规内容: ruleText,
         目标范围: "未指定则学校内全体人员；也可由校规内容指定个体或群体。",
-        前置条件: "VIP5；西园寺爱丽莎好感度>=100；校规少于3条；本次只发布一条；当前MC点>=500000。",
+        前置条件: "VIP5；西园寺爱丽莎好感度>=100；校规少于3条；本次只发布一条；持有零花钱>=500000000。",
         固定代价: {
-          当前MC点: 500000
+          持有零花钱: 500000000
         },
-        AI执行规范: "成功只扣当前MC点并写入/校规；校规不是催眠效果，禁止写入角色临时/永久催眠效果。"
+        AI执行规范: "成功只扣持有零花钱并写入/校规；校规不是催眠效果，禁止写入角色临时/永久催眠效果。"
       });
       input.value = "";
     });
@@ -6914,11 +7266,11 @@ function injectInternalMchanApp(html, staticSeed) {
           来源: "学校",
           操作: isDefaultRule ? "废止初始校规" : "删除校规",
           校规名: ruleName,
-          前置条件: isDefaultRule ? "VIP5；西园寺爱丽莎好感度>=100；当前MC点>=500000。" : "后续新增校规可直接删除。",
-          固定代价: isDefaultRule ? { 当前MC点: 500000 } : { 当前MC点: 0 },
+          前置条件: isDefaultRule ? "VIP5；西园寺爱丽莎好感度>=100；持有零花钱>=500000000。" : "后续新增校规可直接删除。",
+          固定代价: isDefaultRule ? { 持有零花钱: 500000000 } : { 持有零花钱: 0 },
           AI执行规范: isDefaultRule
-            ? "这是废止初始默认校规；成功时扣除500000当前MC点并remove /校规/校规名。任一条件不足则失败，不扣费、不删除。"
-            : "这是删除后续自建校规；成功时只remove /校规/校规名，不扣费、不返还当前MC点或其他资源。"
+            ? "这是废止初始默认校规；成功时扣除¥500,000,000持有零花钱并remove /校规/校规名。任一条件不足则失败，不扣费、不删除。"
+            : "这是删除后续自建校规；成功时只remove /校规/校规名，不扣费、不返还金钱或其他资源。"
         });
       });
     });
@@ -7458,8 +7810,6 @@ const __stDefaultVariables = () => ({
   "系统": {
     "MC能量": 25,
     "MC能量上限": 25,
-    "当前MC点": 25,
-    "累计消耗MC点": 0,
     "持有零花钱": 6000,
     "主角可疑度": 0,
     "当前日期": "4月9日 星期三",
@@ -7695,7 +8045,7 @@ async function prepareSillyTavernInlineLoadHtml(html) {
 
 const rawHtml = await readSource(source);
 const mchanStatic = await loadStaticMchanSeed();
-const mirrored = prepareFrontendHtml(rawHtml, source, { mchanStatic });
+const mirrored = sanitizeGeneratedFrontend(prepareFrontendHtml(rawHtml, source, { mchanStatic }));
 await mkdir(path.dirname(output), { recursive: true });
 await writeFile(output, mirrored);
 
