@@ -249,11 +249,14 @@ function remoteAssetBase(commit) {
 function frontendLoader(commit) {
   const url = remoteFrontendUrl(commit);
   const assetBase = remoteAssetBase(commit);
-  return `<div id="hypnoos-frontend-loader" style="display:none"></div>
+  return `\`\`\`
+<body>
 <script>
 window.__ST_HYPNOOS_ASSET_BASE__ = ${JSON.stringify(assetBase)};
 $("body").load(${JSON.stringify(url)})
-</script>`;
+</script>
+</body>
+\`\`\``;
 }
 
 function patchRemoteFrontend(data) {
