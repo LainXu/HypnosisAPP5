@@ -948,6 +948,26 @@ function patchAchievementAppModule(code) {
         }
         fallbackAppendOperationIntent(payload);
     };
+    const ST_FRONTEND_TASK_COUNT_KEY = 'hypnoos:frontend-generated-task-count:v1';
+    const readFrontendTaskCount = () => {
+        try {
+            const value = Number.parseInt(String(globalThis.localStorage?.getItem(ST_FRONTEND_TASK_COUNT_KEY) || '0'), 10);
+            return Number.isFinite(value) && value > 0 ? value : 0;
+        }
+        catch {
+            return 0;
+        }
+    };
+    const writeFrontendTaskCount = (value) => {
+        const next = Math.max(0, Math.trunc(Number(value) || 0));
+        try {
+            globalThis.localStorage?.setItem(ST_FRONTEND_TASK_COUNT_KEY, String(next));
+        }
+        catch {
+            // localStorage may be blocked in some embedded browsers.
+        }
+        return next;
+    };
     const handleClaimAchievement = async (ach) => {
         if (ach.isClaimed)
             return;
@@ -997,17 +1017,28 @@ function patchAchievementAppModule(code) {
 	            return;
 	        }
 	        const bias = String(newQuestBias || '').trim();
-	        recordOperationIntent({
+	        const frontendTaskCountBefore = readFrontendTaskCount();
+	        const payload = {
 	            来源: '成就和任务',
 	            操作: '新增任务',
 	            数量: \`\${count}个\`,
 	            当前已接任务数: \`\${activeQuestCount}个\`,
 	            剩余可新增数量: \`\${Math.max(0, 3 - activeQuestCount)}个\`,
+	            前端新增任务计数: {
+	                生成前: frontendTaskCountBefore,
+	                本次请求: count,
+	                生成后: frontendTaskCountBefore + count
+	            },
 	            倾向: bias || '由AI根据当前上下文剧情决定并随机补全',
 	            任务来源: '系统突然出现的任务，不是{{user}}主动发布、设计或提前知道的目标，也不代表{{user}}主动关联到任务对象。',
 	            初始状态: '直接写入任务变量，作为已接/进行中的任务',
 	            生成规则: '根据当前上下文剧情新增若干由系统突然刷出的进行中任务；写入/任务，包含完成条件、奖励金钱和已完成=false；不要写入前端静态列表，也不要标记为已完成。用户没指定的必要内容由AI随机生成，可适当优化用户描述，让任务更贴合当前剧情。',
-	        });
+	        };
+	        if (frontendTaskCountBefore <= 0) {
+	            payload.首次任务说明 = '成就与任务系统是催眠系统为回馈长期测试与使用的用户而开放的现金或物品回馈机制；新增任务应像系统突然刷出，不是{{user}}主动安排。';
+	        }
+	        writeFrontendTaskCount(frontendTaskCountBefore + count);
+	        recordOperationIntent(payload);
     };
 `
   );
@@ -1366,8 +1397,21 @@ function withTimeout`
     const ProfileIcon = makeLineIcon('<rect x="6" y="3" width="12" height="18" rx="2"/><circle cx="12" cy="9" r="2.5"/><path d="M8.5 16c1.4-3 5.6-3 7 0"/>');
 	    const TimetableIcon = makeLineIcon('<rect x="4" y="5" width="16" height="16" rx="2"/><path d="M4 10h16"/><path d="M8 3v4"/><path d="M16 3v4"/><path d="M8 14h8"/><path d="M8 18h5"/>');
 	    const ClockIcon = makeLineIcon('<circle cx="12" cy="12" r="8"/><path d="M12 7v5l4 2"/><path d="M7 4 4.5 1.5"/><path d="M17 4l2.5-2.5"/>');
-	    const MapIcon = makeLineIcon('<path d="M4 18V6l5-2 6 2 5-2v14l-5 2-6-2-5 2Z"/><path d="M9 4v14"/><path d="M15 6v14"/>');
+    const MapIcon = makeLineIcon('<path d="M4 18V6l5-2 6 2 5-2v14l-5 2-6-2-5 2Z"/><path d="M9 4v14"/><path d="M15 6v14"/>');
     const SchoolIcon = makeLineIcon('<path d="M3 10l9-5 9 5"/><path d="M5 10v9h14v-9"/><path d="M10 19v-5h4v5"/><path d="M9 10h6"/>');
+    const ST_HOME_APP_ORDER_KEY = 'hypnoos:home-app-order:v1';
+    const readHomeAppOrder = () => {
+        try {
+            const parsed = JSON.parse(localStorage.getItem(ST_HOME_APP_ORDER_KEY) || '[]');
+            return Array.isArray(parsed) ? parsed.map(String).filter(Boolean) : [];
+        }
+        catch {
+            return [];
+        }
+    };
+    const [orderedAppIds, setOrderedAppIds] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(readHomeAppOrder);
+    const homeDragRef = (0,react__WEBPACK_IMPORTED_MODULE_1__.useRef)({ id: '', pointerId: null, startX: 0, startY: 0, moved: false });
+    const suppressHomeClickUntilRef = (0,react__WEBPACK_IMPORTED_MODULE_1__.useRef)(0);
     const [notice, setNotice] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(null);`
   );
   output = replaceBetween(
@@ -1399,7 +1443,86 @@ function withTimeout`
         { id: 'map', name: '地图', icon: MapIcon, color: 'bg-emerald-500', mode: _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.HOME, disabled: false, action: openInternalApp('map') },
         { id: 'school', name: '学校', icon: SchoolIcon, color: 'bg-slate-600', mode: _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.HOME, disabled: false, action: openInternalApp('school') },
     ];
+    const normalizeHomeOrder = (ids) => {
+        const available = new Set(visibleApps.map(app => app.id));
+        const ordered = [];
+        for (const id of ids || []) {
+            if (available.has(id) && !ordered.includes(id))
+                ordered.push(id);
+        }
+        for (const app of visibleApps) {
+            if (!ordered.includes(app.id))
+                ordered.push(app.id);
+        }
+        return ordered;
+    };
+    const orderedApps = normalizeHomeOrder(orderedAppIds).map(id => visibleApps.find(app => app.id === id)).filter(Boolean);
+    const persistHomeOrder = (ids) => {
+        const next = normalizeHomeOrder(ids);
+        setOrderedAppIds(next);
+        try {
+            localStorage.setItem(ST_HOME_APP_ORDER_KEY, JSON.stringify(next));
+        }
+        catch {}
+    };
+    const moveHomeApp = (fromId, toId) => {
+        if (!fromId || !toId || fromId === toId)
+            return;
+        const current = normalizeHomeOrder(orderedAppIds);
+        const fromIndex = current.indexOf(fromId);
+        const toIndex = current.indexOf(toId);
+        if (fromIndex < 0 || toIndex < 0)
+            return;
+        const next = current.slice();
+        const [item] = next.splice(fromIndex, 1);
+        next.splice(toIndex, 0, item);
+        persistHomeOrder(next);
+    };
+    const onHomeAppPointerDown = (event, id) => {
+        if (event.button !== undefined && event.button !== 0)
+            return;
+        homeDragRef.current = { id, pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, moved: false };
+        try {
+            event.currentTarget.setPointerCapture(event.pointerId);
+        }
+        catch {}
+    };
+    const onHomeAppPointerMove = (event) => {
+        const drag = homeDragRef.current;
+        if (!drag.id || drag.pointerId !== event.pointerId)
+            return;
+        const dx = event.clientX - drag.startX;
+        const dy = event.clientY - drag.startY;
+        if (!drag.moved && Math.hypot(dx, dy) < 10)
+            return;
+        drag.moved = true;
+        event.preventDefault();
+        const target = document.elementFromPoint(event.clientX, event.clientY)?.closest?.('[data-home-app-id]');
+        const targetId = target?.getAttribute?.('data-home-app-id') || '';
+        if (targetId && targetId !== drag.id)
+            moveHomeApp(drag.id, targetId);
+    };
+    const endHomeAppDrag = (event) => {
+        const drag = homeDragRef.current;
+        if (drag.pointerId !== null && (!event || event.pointerId === drag.pointerId)) {
+            try {
+                event?.currentTarget?.releasePointerCapture?.(drag.pointerId);
+            }
+            catch {}
+        }
+        if (drag.moved)
+            suppressHomeClickUntilRef.current = Date.now() + 350;
+        homeDragRef.current = { id: '', pointerId: null, startX: 0, startY: 0, moved: false };
+    };
 `
+  );
+  output = output.replace(
+    "children: visibleApps.map(app =>",
+    "children: orderedApps.map(app =>"
+  );
+  output = output.replace(
+    "className: `flex flex-col items-center gap-1.5 group ${app.disabled ? 'opacity-50 grayscale cursor-not-allowed' : 'cursor-pointer'}`, onClick: () => {",
+    "className: `flex flex-col items-center gap-1.5 group ${app.disabled ? 'opacity-50 grayscale cursor-not-allowed' : 'cursor-pointer'} ${homeDragRef.current.id === app.id ? 'scale-95 opacity-80' : ''}`, \"data-home-app-id\": app.id, onPointerDown: event => onHomeAppPointerDown(event, app.id), onPointerMove: onHomeAppPointerMove, onPointerUp: endHomeAppDrag, onPointerCancel: endHomeAppDrag, style: { touchAction: 'none', userSelect: 'none' }, onClick: () => { if (Date.now() < suppressHomeClickUntilRef.current) return;"
   );
   output = output.replace(
     `(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsxs)("div", { className: "px-6 mb-8 text-white/90 drop-shadow-md", children: [(0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "text-6xl font-thin tracking-tighter", children: displayTime }), (0,react_jsx_runtime__WEBPACK_IMPORTED_MODULE_0__.jsx)("div", { className: "text-lg font-medium", children: displayDate })] })`,
@@ -4906,7 +5029,7 @@ function injectInternalMchanApp(html, staticSeed) {
 [data-st-phone-app="stats"] .st-stat-section-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 11px;background:rgba(2,6,23,.25);cursor:pointer;list-style:none;user-select:none}
 [data-st-phone-app="stats"] .st-stat-section[open] .st-stat-section-head{border-bottom:1px solid rgba(255,255,255,.075)}
 [data-st-phone-app="stats"] .st-stat-section-head::-webkit-details-marker{display:none}
-[data-st-phone-app="stats"] .st-stat-section-head::after{content:"";flex:0 0 auto;width:7px;height:7px;border-right:2px solid rgba(125,211,252,.8);border-bottom:2px solid rgba(125,211,252,.8);transform:rotate(45deg);transition:transform .18s ease,margin .18s ease}
+[data-st-phone-app="stats"] .st-stat-section-head::after{display:none}
 [data-st-phone-app="stats"] .st-stat-section[open] .st-stat-section-head::after{transform:rotate(225deg);margin-top:4px}
 [data-st-phone-app="stats"] .st-stat-section-head strong{font-size:12px;color:#f8fafc;line-height:1.2}
 [data-st-phone-app="stats"] .st-stat-section-head span{min-width:0;margin-left:auto;font-size:10px;color:rgba(203,213,225,.5);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -4914,6 +5037,10 @@ function injectInternalMchanApp(html, staticSeed) {
 [data-st-phone-app="stats"] .st-profile-item{border:1px solid rgba(255,255,255,.08);border-radius:13px;background:rgba(2,6,23,.28);padding:9px 10px;box-shadow:inset 0 1px 0 rgba(255,255,255,.03)}
 [data-st-phone-app="stats"] .st-profile-item strong{display:block;margin-bottom:5px;color:rgba(125,211,252,.82);font-size:11px;line-height:1.2}
 [data-st-phone-app="stats"] .st-profile-item p{margin:0;color:rgba(226,232,240,.76);font-size:11px;line-height:1.55;white-space:pre-wrap}
+[data-st-phone-app="stats"] .st-stat-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;padding:10px 10px 0}
+[data-st-phone-app="stats"] .st-stat-tab{min-width:0;height:30px;border:1px solid rgba(255,255,255,.1)!important;border-radius:999px!important;background:rgba(2,6,23,.35)!important;color:rgba(203,213,225,.72)!important;font-size:10px;font-weight:850;padding:0 4px!important;white-space:nowrap;box-shadow:none!important}
+[data-st-phone-app="stats"] .st-stat-tab.active{border-color:rgba(34,211,238,.55)!important;background:linear-gradient(135deg,rgba(34,211,238,.22),rgba(168,85,247,.15))!important;color:#f8fafc!important;box-shadow:0 8px 20px rgba(8,47,73,.18)!important}
+[data-st-phone-app="stats"] .st-stat-tab-panel{padding-top:0}
 [data-st-phone-app="stats"] .st-meter-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:10px}
 [data-st-phone-app="stats"] .st-meter-grid.is-core{grid-template-columns:1fr}
 [data-st-phone-app="stats"] .st-meter{min-width:0;border:1px solid rgba(255,255,255,.08);border-radius:13px;background:rgba(2,6,23,.28);padding:8px 9px;box-shadow:inset 0 1px 0 rgba(255,255,255,.03)}
@@ -4973,6 +5100,9 @@ function injectInternalMchanApp(html, staticSeed) {
 .st-person-photo{width:100%;aspect-ratio:4/5;border:3px double rgba(81,64,49,.45);background:#eee8dc;overflow:hidden;display:grid;place-items:center;cursor:pointer;box-shadow:0 4px 12px rgba(80,64,48,.13)}
 .st-person-photo img{width:100%;height:100%;object-fit:cover;display:block}
 .st-person-photo-empty{width:100%;height:100%;display:grid;place-items:center;text-align:center;color:rgba(68,54,42,.42);font-size:12px;font-weight:900;letter-spacing:.1em;background:linear-gradient(135deg,rgba(255,255,255,.42),rgba(220,211,195,.45))}
+.st-person-tabs{position:relative;z-index:1;display:grid;grid-template-columns:1fr 1fr;gap:8px;width:66%;max-width:214px;margin:0 auto 10px}
+.st-person-tab{height:28px;border:1px solid rgba(81,64,49,.32);border-radius:999px;background:rgba(247,241,229,.58);color:rgba(68,54,42,.68);font-size:12px;font-weight:900;letter-spacing:.08em;cursor:pointer;box-shadow:0 2px 8px rgba(60,45,32,.08)}
+.st-person-tab.active{background:rgba(81,64,49,.9);color:#fff8ed;border-color:rgba(81,64,49,.7)}
 .st-person-lines{position:relative;z-index:1;display:grid;gap:0}
 .st-person-line{display:grid;grid-template-columns:76px minmax(0,1fr);gap:8px;align-items:start;min-height:29px;border-bottom:1px dashed rgba(81,64,49,.35);padding:5px 0}
 .st-person-line span{color:#33291f;font-size:15px;font-weight:900;letter-spacing:.12em;white-space:nowrap}
@@ -4993,6 +5123,29 @@ function injectInternalMchanApp(html, staticSeed) {
       || document.querySelector(".w-full.h-full.bg-black.overflow-hidden.relative")
       || document.querySelector("#root")
       || document.body;
+  }
+
+  const ST_ACTIVE_APP_STORAGE_KEY = "hypnoos:active-phone-app:v1";
+  try {
+    window.__ST_PHONE_ACTIVE_APP__ = localStorage.getItem(ST_ACTIVE_APP_STORAGE_KEY) || "home";
+  } catch {
+    window.__ST_PHONE_ACTIVE_APP__ = "home";
+  }
+  window.__ST_GET_PHONE_ACTIVE_APP__ = () => window.__ST_PHONE_ACTIVE_APP__ || "home";
+
+  function setPhoneActiveApp(root, appName) {
+    const normalized = String(appName || "").trim();
+    if (root?.dataset) {
+      if (normalized) root.dataset.stPhoneApp = normalized;
+      else delete root.dataset.stPhoneApp;
+    }
+    window.__ST_PHONE_ACTIVE_APP__ = normalized || "home";
+    try {
+      localStorage.setItem(ST_ACTIVE_APP_STORAGE_KEY, window.__ST_PHONE_ACTIVE_APP__);
+    } catch {}
+    try {
+      window.dispatchEvent(new CustomEvent("st-phone-active-app-change", { detail: { app: window.__ST_PHONE_ACTIVE_APP__ } }));
+    } catch {}
   }
 
   function clearPhoneInternalOverlays(root) {
@@ -5063,6 +5216,7 @@ function injectInternalMchanApp(html, staticSeed) {
 
   function bindPage(page, state) {
     page.querySelector('[data-mchan-action="back"]')?.addEventListener("click", () => {
+      setPhoneActiveApp(page.parentElement, "");
       page.remove();
       recordOperation("关闭匿名版");
     });
@@ -5098,7 +5252,7 @@ function injectInternalMchanApp(html, staticSeed) {
     ensureStyle();
     ensurePhoneDarkThemeStyle();
     const root = findPhoneRoot(tile);
-    root.dataset.stPhoneApp = "mchan";
+    setPhoneActiveApp(root, "mchan");
     root.style.position = root.style.position || "relative";
     clearPhoneInternalOverlays(root);
     const page = document.createElement("section");
@@ -5322,6 +5476,7 @@ function injectInternalMchanApp(html, staticSeed) {
         '</div>' +
       '</main>';
     page.querySelector('[data-add-role-action="back"]')?.addEventListener("click", () => {
+      setPhoneActiveApp(page.parentElement, "");
       page.remove();
     });
     page.querySelector('[data-add-role-action="clear"]')?.addEventListener("click", () => {
@@ -5386,7 +5541,7 @@ function injectInternalMchanApp(html, staticSeed) {
     ensureStyle();
     ensurePhoneDarkThemeStyle();
     const root = findPhoneRoot(tile);
-    root.dataset.stPhoneApp = "add-role";
+    setPhoneActiveApp(root, "add-role");
     root.style.position = root.style.position || "relative";
     clearPhoneInternalOverlays(root);
     const page = document.createElement("section");
@@ -5848,36 +6003,51 @@ function injectInternalMchanApp(html, staticSeed) {
     return compact || pickFirstText(roleData, ["角色定位", "定位", "身体", "身份", "种族", "备注"]) || "角色变量已载入";
   }
 
-  function renderCollapsibleStatsSection(title, meta, bodyHtml, open = true) {
-    return '<details class="st-stat-section"' + (open ? " open" : "") + '>' +
-      '<summary class="st-stat-section-head"><strong>' + escapeHtml(title) + '</strong><span>' + escapeHtml(meta) + '</span></summary>' +
-      bodyHtml +
-      '</details>';
-  }
-
   function renderProfileField(field, roleData) {
     const text = pickFirstText(roleData, field.keys) || "未记录";
     return '<article class="st-profile-item"><strong>' + escapeHtml(field.label) + '</strong><p>' + escapeHtml(text) + '</p></article>';
   }
 
-  function renderMindSection(roleData) {
-    const profile = ST_MIND_FIELDS.map((field) => renderProfileField(field, roleData)).join("");
-    return renderCollapsibleStatsSection("心理状态", "第一视角内心", '<div class="st-profile-grid">' + profile + '</div>');
+  const ST_STATS_TABS = [
+    { id: "mind", label: "心理" },
+    { id: "core", label: "状态" },
+    { id: "sensitivity", label: "敏感" },
+    { id: "count", label: "次数" }
+  ];
+
+  function statsActiveTab(app) {
+    const value = app?.dataset?.statsTab || "mind";
+    return ST_STATS_TABS.some((tab) => tab.id === value) ? value : "mind";
   }
 
-  function renderStatsOverview(roleName, roleData) {
+  function renderStatsTabButtons(active) {
+    return '<nav class="st-stat-tabs" aria-label="身体检测分页">' + ST_STATS_TABS.map((tab) => (
+      '<button type="button" class="st-stat-tab ' + (tab.id === active ? "active" : "") + '" data-stats-tab="' + escapeAttr(tab.id) + '">' + escapeHtml(tab.label) + '</button>'
+    )).join("") + '</nav>';
+  }
+
+  function renderStatsOverview(roleName, roleData, activeTab = "mind") {
     const core = ST_CORE_STATS.map((label) => renderMeterStat(label, statValue(roleData, label))).join("");
     const sensitivity = ST_SENSITIVITY_STATS.map((label) => renderMeterStat(label, statValue(roleData, label))).join("");
     const counts = ST_COUNT_STATS.map((label) => renderCountStat(label, statValue(roleData, label))).join("");
+    const mind = ST_MIND_FIELDS.map((field) => renderProfileField(field, roleData)).join("");
+    const panel = activeTab === "core"
+      ? '<div class="st-meter-grid is-core">' + core + '</div>'
+      : activeTab === "sensitivity"
+        ? '<div class="st-meter-grid">' + sensitivity + '</div>'
+        : activeTab === "count"
+          ? '<div class="st-count-grid">' + counts + '</div>'
+          : '<div class="st-profile-grid">' + mind + '</div>';
     const canDelete = Boolean(roleName) && !DEFAULT_ROLE_NAMES.includes(roleName);
     return '<section class="st-target-summary">' +
       '<div class="st-target-summary-main"><span>目标</span><strong>' + escapeHtml(roleName) + '</strong><small>' + escapeHtml(pickRoleMeta(roleName, roleData)) + '</small></div>' +
       (canDelete ? '<button type="button" class="st-target-delete" data-delete-role="' + escapeAttr(roleName) + '">删除角色</button>' : '') +
       '</section>' +
-      renderMindSection(roleData) +
-      renderCollapsibleStatsSection("状态总览", roleName, '<div class="st-meter-grid is-core">' + core + '</div>', false) +
-      renderCollapsibleStatsSection("身体敏感度", "1000以上高亮", '<div class="st-meter-grid">' + sensitivity + '</div>', false) +
-      renderCollapsibleStatsSection("累计次数", "由 AI 更新", '<div class="st-count-grid">' + counts + '</div>', false);
+      '<section class="st-stat-section">' +
+        '<header class="st-stat-section-head"><strong>当前心理状态</strong><span>' + escapeHtml(ST_STATS_TABS.find((tab) => tab.id === activeTab)?.label || "心理") + '</span></header>' +
+        renderStatsTabButtons(activeTab) +
+        '<div class="st-stat-tab-panel">' + panel + '</div>' +
+      '</section>';
   }
 
   function statLabelCount(text) {
@@ -5926,11 +6096,21 @@ function injectInternalMchanApp(html, staticSeed) {
       panel.className = "st-stats-overview";
       content.prepend(panel);
     }
-    const signature = selected + "\\u0002" + safeSignature(roleData);
+    const activeTab = statsActiveTab(app);
+    const signature = selected + "\\u0002" + activeTab + "\\u0002" + safeSignature(roleData);
     if (panel.dataset.signature === signature) return;
     panel.dataset.signature = signature;
-    panel.innerHTML = renderStatsOverview(selected, roleData);
+    panel.innerHTML = renderStatsOverview(selected, roleData, activeTab);
     panel.querySelector(".st-target-delete")?.addEventListener("click", () => requestDeleteStatsRole(selected));
+    panel.querySelectorAll("[data-stats-tab]").forEach((button) => {
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        app.dataset.statsTab = button.getAttribute("data-stats-tab") || "mind";
+        panel.dataset.signature = "";
+        enhanceStatsOverview(root);
+      });
+    });
   }
 
   function pickFirstText(record, keys) {
@@ -6136,8 +6316,7 @@ function injectInternalMchanApp(html, staticSeed) {
     const root = document.querySelector(".w-full.h-full.bg-black.overflow-hidden.relative");
     if (!root) return;
     const app = detectPhoneApp(root);
-    if (app) root.dataset.stPhoneApp = app;
-    else delete root.dataset.stPhoneApp;
+    if ((root.dataset.stPhoneApp || "") !== (app || "")) setPhoneActiveApp(root, app || "");
     if (app !== "help") {
       root.querySelectorAll(".st-help-author-card,.st-author-credit-line").forEach((element) => element.remove());
     }
@@ -6482,7 +6661,10 @@ function injectInternalMchanApp(html, staticSeed) {
         '<div class="st-cal-section-title">近期特殊日期</div>' +
         '<section class="st-cal-events">' + (eventsHtml || '<article class="st-cal-event"><time>--</time><div><strong>暂无特殊日期</strong><span>按普通日程推进</span></div></article>') + '</section>' +
       '</main>';
-    page.querySelector('[data-lite-action="back"]')?.addEventListener("click", () => page.remove());
+    page.querySelector('[data-lite-action="back"]')?.addEventListener("click", () => {
+      setPhoneActiveApp(page.parentElement, "");
+      page.remove();
+    });
   }
 
   function splitSubject(subject) {
@@ -6544,16 +6726,21 @@ function injectInternalMchanApp(html, staticSeed) {
           '<div class="st-tt-rhythm-item"><b>15:45</b><span>放学</span><i>16:00</i></div>' +
         '</section>' +
       '</main>';
-    page.querySelector('[data-lite-action="back"]')?.addEventListener("click", () => page.remove());
+    page.querySelector('[data-lite-action="back"]')?.addEventListener("click", () => {
+      setPhoneActiveApp(page.parentElement, "");
+      page.remove();
+    });
   }
 
-  const PERSON_PROFILE_FIELDS = [
+  const PERSON_PROFILE_INFO_FIELDS = [
     { key: "姓名", label: "姓　名" },
     { key: "年龄", label: "年　龄" },
     { key: "社团/职业", label: "社　团" },
     { key: "身高", label: "身　高" },
     { key: "体重", label: "体　重" },
-    { key: "三围", label: "三　围" },
+    { key: "三围", label: "三　围" }
+  ];
+  const PERSON_PROFILE_CLOTHING_FIELDS = [
     { key: "头发", label: "头　发", long: true },
     { key: "面部", label: "面　部", long: true },
     { key: "上衣", label: "上　衣", long: true },
@@ -6614,7 +6801,7 @@ function injectInternalMchanApp(html, staticSeed) {
 
   function closePersonProfilePage(page) {
     const root = page.parentElement;
-    if (root?.dataset?.stPhoneApp === "profile") delete root.dataset.stPhoneApp;
+    if (root?.dataset?.stPhoneApp === "profile") setPhoneActiveApp(root, "");
     page.parentNode?.removeChild(page);
   }
 
@@ -6624,10 +6811,18 @@ function injectInternalMchanApp(html, staticSeed) {
     renderPersonProfilePage(page, delta < 0 ? -1 : 1);
   }
 
+  function activePersonProfileTab(page) {
+    return page?.dataset?.profileTab === "info" ? "info" : "clothing";
+  }
+
   function runPersonProfileAction(page, action) {
     if (action === "back") closePersonProfilePage(page);
     if (action === "prev") turnPersonProfilePage(page, -1);
     if (action === "next") turnPersonProfilePage(page, 1);
+    if (action === "clothing" || action === "info") {
+      page.dataset.profileTab = action;
+      renderPersonProfilePage(page);
+    }
     if (action === "upload-photo") page.querySelector("[data-profile-file]")?.click();
   }
 
@@ -6698,8 +6893,10 @@ function injectInternalMchanApp(html, staticSeed) {
     const roleData = isPlainObject(roles[roleName]) ? roles[roleName] : {};
     const profile = roleProfileData(roleName, roleData);
     const photo = profilePhotoSource(roleName, roleData);
+    const activeTab = activePersonProfileTab(page);
+    const fields = activeTab === "info" ? PERSON_PROFILE_INFO_FIELDS : PERSON_PROFILE_CLOTHING_FIELDS;
     const animationClass = direction < 0 ? " is-enter-left" : direction > 0 ? " is-enter-right" : "";
-    const fieldsHtml = PERSON_PROFILE_FIELDS.map((field) => (
+    const fieldsHtml = fields.map((field) => (
       '<div class="st-person-line ' + (field.long ? "is-long" : "") + '">' +
         '<span>' + escapeHtml(field.label) + '</span>' +
         '<strong>' + escapeHtml(profileFieldText(profile, roleName, field)) + '</strong>' +
@@ -6717,6 +6914,10 @@ function injectInternalMchanApp(html, staticSeed) {
             '</button>' +
             '<button class="st-person-paper-nav" type="button" data-profile-action="next" title="下一个">›</button>' +
           '</div>' +
+          '<nav class="st-person-tabs" aria-label="档案分页">' +
+            '<button class="st-person-tab ' + (activeTab === "clothing" ? "active" : "") + '" type="button" data-profile-action="clothing">衣着</button>' +
+            '<button class="st-person-tab ' + (activeTab === "info" ? "active" : "") + '" type="button" data-profile-action="info">信息</button>' +
+          '</nav>' +
           '<input type="file" accept="image/*" data-profile-file hidden>' +
           '<section class="st-person-lines">' + fieldsHtml + '</section>' +
           '<div class="st-person-page-count">' + escapeHtml(String(index + 1) + " / " + roleNames.length) + '</div>' +
@@ -6743,7 +6944,7 @@ function injectInternalMchanApp(html, staticSeed) {
     ensureStyle();
     ensurePhoneDarkThemeStyle();
     const root = findPhoneRoot(tile);
-    root.dataset.stPhoneApp = "profile";
+    setPhoneActiveApp(root, "profile");
     root.style.position = root.style.position || "relative";
     clearPhoneInternalOverlays(root);
     const page = document.createElement("section");
@@ -6764,7 +6965,7 @@ function injectInternalMchanApp(html, staticSeed) {
     ensureStyle();
     ensurePhoneDarkThemeStyle();
     const root = findPhoneRoot(tile);
-    root.dataset.stPhoneApp = "calendar-lite";
+    setPhoneActiveApp(root, "calendar-lite");
     root.style.position = root.style.position || "relative";
     clearPhoneInternalOverlays(root);
     const page = document.createElement("section");
@@ -6778,7 +6979,7 @@ function injectInternalMchanApp(html, staticSeed) {
     ensureStyle();
     ensurePhoneDarkThemeStyle();
     const root = findPhoneRoot(tile);
-    root.dataset.stPhoneApp = "timetable";
+    setPhoneActiveApp(root, "timetable");
     root.style.position = root.style.position || "relative";
     clearPhoneInternalOverlays(root);
     const page = document.createElement("section");
@@ -6864,7 +7065,7 @@ function injectInternalMchanApp(html, staticSeed) {
       '</main>';
     page.querySelector('[data-lite-action="back"]')?.addEventListener("click", () => {
       const root = page.parentElement;
-      if (root?.dataset) delete root.dataset.stPhoneApp;
+      setPhoneActiveApp(root, "");
       page.remove();
     });
     page.querySelectorAll("[data-clock-hour],[data-clock-minute]").forEach((input) => {
@@ -6898,7 +7099,7 @@ function injectInternalMchanApp(html, staticSeed) {
     ensureStyle();
     ensurePhoneDarkThemeStyle();
     const root = findPhoneRoot(tile);
-    root.dataset.stPhoneApp = "clock";
+    setPhoneActiveApp(root, "clock");
     root.style.position = root.style.position || "relative";
     clearPhoneInternalOverlays(root);
     const page = document.createElement("section");
@@ -7378,7 +7579,7 @@ function injectInternalMchanApp(html, staticSeed) {
       '</main>';
     page.querySelector('[data-lite-action="back"]')?.addEventListener("click", () => {
       const root = page.parentElement;
-      if (root?.dataset) delete root.dataset.stPhoneApp;
+      setPhoneActiveApp(root, "");
       page.remove();
     });
     bindGraphPageActions(page);
@@ -7400,7 +7601,7 @@ function injectInternalMchanApp(html, staticSeed) {
       '</main>';
     page.querySelector('[data-lite-action="back"]')?.addEventListener("click", () => {
       const root = page.parentElement;
-      if (root?.dataset) delete root.dataset.stPhoneApp;
+      setPhoneActiveApp(root, "");
       page.remove();
     });
     page.querySelectorAll("[data-school-tab]").forEach((button) => {
@@ -7416,7 +7617,7 @@ function injectInternalMchanApp(html, staticSeed) {
     ensureStyle();
     ensurePhoneDarkThemeStyle();
     const root = findPhoneRoot(tile);
-    root.dataset.stPhoneApp = appName;
+    setPhoneActiveApp(root, appName);
     root.style.position = root.style.position || "relative";
     clearPhoneInternalOverlays(root);
     const page = document.createElement("section");
