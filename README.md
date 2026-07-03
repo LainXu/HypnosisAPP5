@@ -1,6 +1,12 @@
-# SillyTavern Card Workbench
+# 催眠app二改MVU 工作区
 
-本项目是一个零依赖的本地角色卡可视化工作台，用来读取 SillyTavern PNG 角色卡里的 `chara` / `ccv3` 元数据，并编辑角色信息、世界书、正则脚本、变量规则和前端加载片段。
+本项目用于维护唯一一张角色卡和手机前端。当前唯一卡文件是：
+
+```text
+public/cards/催眠app二改MVU v1.9.9.png
+```
+
+根目录工作台只做“成就与任务”数据库编辑，并直接读取/写回这张 PNG 卡；不维护本地副本、多版本库或中间 JSON 工作副本。
 
 ## 运行
 
@@ -53,19 +59,26 @@ npm run mirror:frontend:remote
 npm run extract:mchan
 ```
 
-也可以传入本地 HTML 或远程 URL：
-
-```bash
-node scripts/mirror-frontend.mjs /tmp/index.html public/frontends/hypnosis-app/index.html
-node scripts/mirror-frontend.mjs https://example.com/index.html public/frontends/hypnosis-app/index.html
-```
-
 ## 能做什么
 
-- 直接加载 PNG 角色卡或 JSON。
-- 可视化编辑角色字段、世界书条目和正则脚本。
-- 前端预览默认使用本地镜像，也支持远程 URL 和粘贴 HTML 后重新渲染。
-- 变量页默认采用“AI 是变量唯一写入源，前端只读展示和提交操作意图”的工作流。
-- 变量页提供「合并匿名版 + 轻量规则」迁移按钮：把 MC匿名版改为手机内部静态只读页面，并追加更轻的 `<update>` 规则；旧世界书和正则正文保留不改写。
-- 身体检测/角色状态默认作为基础手机模块开放，不再作为 VIP1 功能。
-- 可以保存到浏览器本地库，导出 JSON；如果当前卡来自 PNG，也可以把修改后的 `chara` 和 `ccv3` 重新写回 PNG。
+- 编辑成就和任务条目，支持增删查改、复制和批量合并/替换。
+- 奖励使用 `星光点` 和可选物品，物品包含名称、描述和数量。
+- 保存时直接写回 `public/cards/催眠app二改MVU v1.9.9.png`。
+- 保留手机前端预览与输入框测试区。
+- 手机前端采用“AI 是变量唯一写入源，前端只读展示和提交操作意图”的工作流。
+
+## 唯一发布命令
+
+发布远程前端并把 CDN commit 回写到唯一卡：
+
+```bash
+npm run publish:card
+```
+
+这个命令固定执行一次：生成本地前端镜像、同步 `LainXu/HypnosisAPP5-dist`、提交并推送 dist、用新 commit 回写 `public/cards/催眠app二改MVU v1.9.9.png`。不再手动维护第二张本地卡。
+
+新对话接手前只需要读：
+
+```text
+docs/PROJECT_STATE.md
+```

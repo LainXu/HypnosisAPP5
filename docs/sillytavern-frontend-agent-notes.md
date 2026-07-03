@@ -1,6 +1,8 @@
 # SillyTavern Frontend Agent Notes
 
-This note is for agents working on this repository after v1.7. It records the local packaging flow, SillyTavern integration points, MVU variable rules, and frontend pitfalls found during the HypnosisAPP card rewrite.
+> Historical note. For current work, read `docs/PROJECT_STATE.md` first and follow its single-card, one-pass workflow. This file may mention old paths kept only for background.
+
+This note is for agents working on this repository after v1.8. It records the local packaging flow, SillyTavern integration points, MVU variable rules, and frontend pitfalls found during the HypnosisAPP card rewrite.
 
 ## Repository Shape
 
@@ -8,8 +10,8 @@ This note is for agents working on this repository after v1.7. It records the lo
 - `scripts/mirror-frontend.mjs` is the real frontend patch generator. Edit this first; generated HTML is overwritten.
 - `public/frontends/hypnosis-app/index.html` is the local preview frontend.
 - `public/frontends/hypnosis-app/st-load.html` and `public/frontends/hypnosis-app/st-load-inline.html` are SillyTavern loaders.
-- `scripts/finalize-card-v1_6.mjs` exports the share PNG/JSON card metadata. Despite the filename, the version constant controls the current card version.
-- `/private/tmp/hypno-dist` is the separate public distribution repo used for CDN hosting.
+- `scripts/finalize-card-v1_6.mjs` patches the single versioned PNG card metadata.
+- `npm run publish:card` publishes the webview to CDN and writes the resulting commit back into the single card.
 
 Do not use the workbench UI for final edits unless the user explicitly asks. It can rewrite card files and make versions drift.
 
@@ -21,20 +23,10 @@ Local frontend:
 npm run mirror:frontend
 ```
 
-Card export:
+Card export and remote release:
 
 ```bash
-HYPNOOS_REMOTE_COMMIT=<dist_commit> node scripts/finalize-card-v1_6.mjs
-```
-
-Remote release flow:
-
-```bash
-cp public/frontends/hypnosis-app/st-load-inline.html /private/tmp/hypno-dist/dist/webview/st-load-inline.html
-git -C /private/tmp/hypno-dist add dist/webview/st-load-inline.html
-git -C /private/tmp/hypno-dist commit -m "..."
-git -C /private/tmp/hypno-dist push
-HYPNOOS_REMOTE_COMMIT=<new_hash> node scripts/finalize-card-v1_6.mjs
+npm run publish:card
 ```
 
 The card regex loads:
@@ -58,6 +50,22 @@ Use commit-pinned jsDelivr URLs. Do not use `main` for shared cards, or old chat
 - Keep per-floor reads scoped to the current message/layer whenever possible. Old message frontends should not always follow newest variables unless intentionally designed.
 - Remote frontend code cannot directly update browser `localStorage` through AI. AI can only write text/variables; frontend must observe variables and then update storage itself.
 - Do not rely on long polling. Prefer one refresh on mount plus event-driven refresh hooks where available.
+
+## Internal Phone App Workflow
+
+Most current phone pages are injected internal apps from `scripts/mirror-frontend.mjs`, not the old React route pages. When adding or rebuilding one:
+
+- Add the home icon/action in the `visibleApps` replacement block.
+- Export an opener such as `window.__ST_OPEN_HELP_APP__`.
+- Add the app class to `clearPhoneInternalOverlays`, `detectPhoneApp`, `looksLikePhoneHome`, `patchHomeTile`, and `hasInitialPhonePatch` exclusion selectors.
+- Reuse `renderLiteHeader` and `bindLiteHeader` unless the app intentionally has a special paper/desktop scene.
+- Do not let old React top bars and the new island header coexist.
+- Any temporary animation or modal that belongs to the phone must be appended inside the phone root returned by `findPhoneRoot`, never to `document.body`; otherwise it can cover the operation side panel.
+- Prefer one MVU/worldbook read when entering the app. Do not reread current chat lorebook on every click unless the action explicitly needs fresh binding state.
+
+For Tavern Helper / JS-Slash-Runner variable behavior, keep this documentation link nearby:
+
+<https://n0vi028.github.io/JS-Slash-Runner-Doc/guide/%E5%8A%9F%E8%83%BD%E8%AF%A6%E6%83%85/%E5%8F%98%E9%87%8F/%E5%8F%98%E9%87%8F%E7%B1%BB%E5%9E%8B.html>
 
 ## MVU Variable Model
 

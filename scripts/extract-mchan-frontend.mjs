@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-const DEFAULT_CARD = "public/cards/hypnosis-app.png";
+const DEFAULT_CARD = "public/cards/催眠app二改MVU v1.9.9.png";
 const DEFAULT_OUTPUT = "public/frontends/mchan/index.html";
 
 const cardPath = process.argv[2] || DEFAULT_CARD;
