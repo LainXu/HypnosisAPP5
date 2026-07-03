@@ -1,12 +1,6 @@
-# 催眠app二改MVU 工作区
+# 前端工作区
 
-本项目用于维护唯一一张角色卡和手机前端。当前唯一卡文件是：
-
-```text
-public/cards/催眠app二改MVU v1.9.9.png
-```
-
-根目录工作台只做“成就与任务”数据库编辑，并直接读取/写回这张 PNG 卡；不维护本地副本、多版本库或中间 JSON 工作副本。
+这是一个用于维护交互式前端界面和配套静态资源的工作区。仓库保留源码、生成脚本、预览入口和发布所需资源，便于在本地迭代后同步到远端。
 
 ## 运行
 
@@ -14,71 +8,38 @@ public/cards/催眠app二改MVU v1.9.9.png
 npm run dev
 ```
 
-然后打开：
+开发服务器启动后，按终端提示打开本地预览地址。
 
-```text
-http://localhost:5173
-```
+## 常用脚本
 
-## 本地前端镜像
-
-开发阶段默认预览本地镜像：
-
-```text
-public/frontends/hypnosis-app/index.html
-```
-
-重新从本地基底生成镜像：
+生成本地预览文件：
 
 ```bash
 npm run mirror:frontend
 ```
 
-默认基底已经固定在工作区内：
-
-```text
-public/frontends/hypnosis-app/source.html
-```
-
-如果确实要更新远程原始前端，先刷新本地基底，再重新生成镜像：
+刷新远程基底后重新生成：
 
 ```bash
 npm run refresh:frontend-source
 npm run mirror:frontend
 ```
 
-也可以临时直接用远程源生成一次：
+临时直接从远程源生成：
 
 ```bash
 npm run mirror:frontend:remote
 ```
 
-从角色卡旧匿名版正则提取 MChan 本地镜像。`mirror:frontend` 会读取这个镜像里的种子帖，注入到手机内部的静态只读匿名版页面：
+## 目录概览
 
-```bash
-npm run extract:mchan
-```
+- `src/`：工作台源码。
+- `scripts/`：镜像生成、资源整理与发布辅助脚本。
+- `public/frontends/`：前端预览文件与运行资源。
+- `docs/`：开发记录和接手说明。
 
-## 能做什么
+## 维护约定
 
-- 编辑成就和任务条目，支持增删查改、复制和批量合并/替换。
-- 奖励使用 `星光点` 和可选物品，物品包含名称、描述和数量。
-- 保存时直接写回 `public/cards/催眠app二改MVU v1.9.9.png`。
-- 保留手机前端预览与输入框测试区。
-- 手机前端采用“AI 是变量唯一写入源，前端只读展示和提交操作意图”的工作流。
-
-## 唯一发布命令
-
-发布远程前端并把 CDN commit 回写到唯一卡：
-
-```bash
-npm run publish:card
-```
-
-这个命令固定执行一次：生成本地前端镜像、同步 `LainXu/HypnosisAPP5-dist`、提交并推送 dist、用新 commit 回写 `public/cards/催眠app二改MVU v1.9.9.png`。不再手动维护第二张本地卡。
-
-新对话接手前只需要读：
-
-```text
-docs/PROJECT_STATE.md
-```
+- 前端生成文件由脚本统一产出，避免手工改动多份副本。
+- 大体积临时文件和素材源文件不纳入版本库。
+- 提交前优先确认暂存区，只提交与前端项目直接相关的变更。
