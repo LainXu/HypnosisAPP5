@@ -586,8 +586,7 @@ html.st-hypnoos-booting.st-hypnoos-boot-failed body::after{content:"前端加载
 	      copyField("当前地点", "当前地点");
 	      copyField("_当前日程", "_当前日程", "当前日程");
 	      copyField("_当前特殊日期", "_当前特殊日期", "当前特殊日期");
-	      copyField("当天原课程表", "当天原课程表");
-	      copyField("当天魔改课程表", "当天魔改课程表");
+	      copyField("课程表", "课程表");
 	      copyField("派遣岗位", "派遣岗位");
 	      copyField("主角可疑度", "主角可疑度");
 	      copyField("特殊地点解锁", "特殊地点解锁", "特殊地点权限", "已解锁特殊地点");
@@ -602,7 +601,7 @@ html.st-hypnoos-booting.st-hypnoos-boot-failed body::after{content:"前端加载
 	      for (const name of names) fields.add(name);
 	    };
 	    const operationPayloadBuffText = (payload) => {
-	      const text = cleanOperationText(payload?.["打工获得buff"] ?? payload?.["当前buff"] ?? payload?.["buff"] ?? "");
+	      const text = cleanOperationText(payload?.["当前buff"] ?? payload?.["buff"] ?? "");
 	      return text && text !== "无" ? text : "";
 	    };
 	    const pickOperationVariableFields = (payload) => {
@@ -618,16 +617,13 @@ html.st-hypnoos-booting.st-hypnoos-boot-failed body::after{content:"前端加载
 	      if (/领取成就|领取任务奖励|领取奖励|完成任务|任务完成|成就奖励|任务奖励/.test(action)) addOperationVariableFields(fields, ["星光点", "持有物品"]);
 	      if (/派遣结束提醒|取消派遣/.test(action)) addOperationVariableFields(fields, ["当前日期", "当前时间", "星光点", "派遣岗位"]);
 	      if (/派遣角色/.test(action)) addOperationVariableFields(fields, ["当前日期", "当前时间", "主角可疑度", "派遣岗位"]);
-	      if (/^打工$/.test(source) && /打工buff提醒/.test(action)) {
-	        addOperationVariableFields(fields, ["buff", "buff结束时间"]);
-	      } else if (/^打工$/.test(source) && /开始打工|有偶遇|打工中提醒|打工偶遇/.test(action)) {
+	      if (/^打工$/.test(source) && /开始打工|有偶遇|打工中提醒|打工偶遇/.test(action)) {
 	        if (/开始打工/.test(action)) addOperationVariableFields(fields, ["持有零花钱"]);
-	        if (operationPayloadBuffText(payload)) addOperationVariableFields(fields, ["buff", "buff结束时间"]);
 	        if (/全盛出击|MC能量|恢复/.test(text)) addOperationVariableFields(fields, ["MC能量", "MC能量上限"]);
 	      }
 	      if (/购买角色包|角色包/.test(action)) addOperationVariableFields(fields, ["星光点"]);
 	      if (/^邂逅$/.test(source) && /兑换星光点|购买校规修改券|购买课程表魔改券|购买特殊地点准入证/.test(action)) addOperationVariableFields(fields, ["星光点", "持有零花钱", "持有物品"]);
-	      if (/^课程表$/.test(source) && /课程表魔改券/.test(action)) addOperationVariableFields(fields, ["持有物品", "当天原课程表", "当天魔改课程表"]);
+	      if (/^课程表$/.test(source) && /课程表魔改券/.test(action)) addOperationVariableFields(fields, ["持有物品", "课程表"]);
 	      if (/^地图$/.test(source) && /^解锁特殊地点$/.test(action)) addOperationVariableFields(fields, ["星光点", "特殊地点解锁"]);
 	      if (/资源兑换/.test(action)) {
 	        if (/提升MC能量上限/.test(item) || /MC能量上限/.test(text)) addOperationVariableFields(fields, ["持有零花钱", "MC能量上限"]);
@@ -683,6 +679,8 @@ html.st-hypnoos-booting.st-hypnoos-boot-failed body::after{content:"前端加载
 	      "前端写入前事件记录",
 	      "前端写入后事件记录",
 	      "事件位",
+	      "获得零花钱",
+	      "获得社畜值",
 	      "社畜值上限",
 	      "结算后社畜值上限预览",
 	      "剧情设定",
@@ -3171,9 +3169,9 @@ async function getMvuData() {
             const scheduleName = String(dailySchedule?.当前课段?.名称 ?? dailySchedule?.当前日程 ?? '').trim() || '无';
             const scheduleDetail = String(dailySchedule?.当前课段?.时间 ?? '').trim();
             const specialText = String(dailySchedule?.当前特殊日期 ?? '').trim();
-		            const fallbackTimetableRows = Array.isArray(dailySchedule?.课表) ? dailySchedule.课表 : [];
-		            const originalTimetableRows = Array.isArray(dailySchedule?.原课程表) ? dailySchedule.原课程表 : fallbackTimetableRows;
-		            const modifiedTimetableRows = Array.isArray(dailySchedule?.魔改课程表) ? dailySchedule.魔改课程表 : fallbackTimetableRows;
+		            const timetableRows = Array.isArray(dailySchedule?.课程表)
+		                ? dailySchedule.课程表
+		                : (Array.isArray(dailySchedule?.课表) ? dailySchedule.课表 : []);
 	            const signature = [
 	                String(option?.type || 'message'),
 	                String(option?.message_id ?? 'latest'),
@@ -3182,21 +3180,22 @@ async function getMvuData() {
 	                scheduleName,
 	                scheduleDetail,
 	                specialText,
-		                JSON.stringify(originalTimetableRows),
-		                JSON.stringify(modifiedTimetableRows)
+		                JSON.stringify(timetableRows)
 		            ].join('\\u0001');
 	            if (signature && globalThis.__ST_HYPNOOS_DAILY_SCHEDULE_SYNC_SIGNATURE__ === signature)
 		                return false;
 		            let changed = false;
 		            const system = mvu?.stat_data?.["系统"];
-		            if (system && Object.prototype.hasOwnProperty.call(system, "当天课程表")) {
-		                delete system["当天课程表"];
-		                changed = true;
+		            if (system) {
+		                for (const key of ["当天课程表", "当天原课程表", "当天魔改课程表"]) {
+		                    if (Object.prototype.hasOwnProperty.call(system, key)) {
+		                        delete system[key];
+		                        changed = true;
+		                    }
+		                }
 		            }
-		            if (await setIfChanged(mvu, '系统.当天原课程表', originalTimetableRows))
+		            if (await setIfChanged(mvu, '系统.课程表', timetableRows))
 		                changed = true;
-	            if (await setIfChanged(mvu, '系统.当天魔改课程表', modifiedTimetableRows))
-	                changed = true;
             if (await setIfChanged(mvu, '系统._当前周几', weekdayText || ''))
                 changed = true;
             if (await setIfChanged(mvu, '系统._当前日程', scheduleName))
@@ -4404,13 +4403,15 @@ function patchHypnosisDataServiceModule(code) {
         const text = String(entry?.当前特殊日期 || '');
         return Boolean(item && (item.holiday || item.exam || !/普通授课/.test(text)));
     };
-	    const courseRowsForDate = (month, day, table = timetable) => {
+	    const courseRowsForDate = (month, day, table = timetable, originalTable = originalTimetable) => {
 	        const index = weekdayIndexForDate(month, day);
 	        if (index === 0 || index === 6 || noCourseDate(month, day))
 	            return [];
 	        return periods.map(period => ({
 	            课节: period.label,
-	            科目: table[index]?.[period.index - 1] || '自习',
+	            科目: originalTable[index]?.[period.index - 1] || '自习',
+	            是否魔改: (table[index]?.[period.index - 1] || '自习') !== (originalTable[index]?.[period.index - 1] || '自习'),
+	            魔改课程: (table[index]?.[period.index - 1] || '自习') !== (originalTable[index]?.[period.index - 1] || '自习') ? (table[index]?.[period.index - 1] || '自习') : '',
 	        }));
 	    };
     const firstClassForDate = (month, day) => {
@@ -4460,9 +4461,8 @@ function patchHypnosisDataServiceModule(code) {
         当前课段: { 名称: scheduleText, 时间: scheduleDetailText },
         当前日程: scheduleText,
         当前特殊日期: currentSpecialDate,
-	        课表: courseRowsForDate(currentMonth, currentDay, timetable),
-	        原课程表: courseRowsForDate(currentMonth, currentDay, originalTimetable),
-	        魔改课程表: courseRowsForDate(currentMonth, currentDay, timetable),
+	        课表: courseRowsForDate(currentMonth, currentDay, timetable, originalTimetable),
+	        课程表: courseRowsForDate(currentMonth, currentDay, timetable, originalTimetable),
 	        次日第一节: firstClassForDate(tomorrow.month, tomorrow.day),
 	    };
     return {
@@ -12150,11 +12150,13 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     });
   }
 
-		  function roleEventFallbackSummary(bit) {
-		    const index = Math.max(0, Math.min(4, Number(bit) || 0));
-		    const generic = ENCOUNTER_GENERIC_AFFECTION_CHAIN[index] || {};
-		    return String(generic.summary || "角色围绕本阶段关系变化与{{user}}发生一次明确推进关系的事件。");
-		  }
+			  function roleEventFallbackSummary(bit) {
+			    const rawIndex = Number(bit) || 0;
+			    if (rawIndex >= ROLE_EVENT_CUSTOM_BIT) return "人物档案第六事件。触发条件为好感度>=200且服从度>=100；事件内容由用户在前端弹窗中自定义，AI必须以本轮操作的自定义事件内容为准生成剧情。";
+			    const index = Math.max(0, Math.min(4, rawIndex));
+			    const generic = ENCOUNTER_GENERIC_AFFECTION_CHAIN[index] || {};
+			    return String(generic.summary || "角色围绕本阶段关系变化与{{user}}发生一次明确推进关系的事件。");
+			  }
 
 		  function roleEventGenericNameInstruction(eventItem, bit) {
 		    const index = Math.max(0, Math.min(4, Number(eventItem?.bit ?? bit) || 0));
@@ -12162,18 +12164,30 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 		    return String(generic.nameInstruction || "由AI根据当前角色状态、地点、关系氛围和事件主题生成一个贴合该角色的具体事件名。");
 		  }
 
-		  function roleEventThresholds(roleName) {
-		    const specific = ROLE_EVENT_HINT_CONFIG.find((config) => String(config.role || "") === String(roleName || ""));
-		    if (specific?.thresholds?.length) {
-		      return specific.thresholds.slice(0, 5).map((item, index) => ({
-		        value: Number(item.value || ENCOUNTER_AFFECTION_CHAIN_THRESHOLDS[index] || 0),
-		        bit: Math.max(0, Math.min(4, Number(item.bit ?? index) || 0)),
-		        label: String(item.label || item.title || ""),
-		        title: String(item.title || item.label || ""),
-		        summary: String(item.summary || item.description || item.text || roleEventFallbackSummary(item.bit ?? index))
-		      }));
-		    }
-	    return ENCOUNTER_AFFECTION_CHAIN_THRESHOLDS.map((value, index) => {
+			  function roleEventCustomThreshold() {
+			    return {
+			      value: 200,
+			      obeyValue: 100,
+			      bit: ROLE_EVENT_CUSTOM_BIT,
+			      label: "200/100 自定义",
+			      title: "自定义事件",
+			      summary: roleEventFallbackSummary(ROLE_EVENT_CUSTOM_BIT),
+			      custom: true
+			    };
+			  }
+
+			  function roleEventThresholds(roleName) {
+			    const specific = ROLE_EVENT_HINT_CONFIG.find((config) => String(config.role || "") === String(roleName || ""));
+			    if (specific?.thresholds?.length) {
+			      return specific.thresholds.slice(0, 5).map((item, index) => ({
+			        value: Number(item.value || ENCOUNTER_AFFECTION_CHAIN_THRESHOLDS[index] || 0),
+			        bit: Math.max(0, Math.min(4, Number(item.bit ?? index) || 0)),
+			        label: String(item.label || item.title || ""),
+			        title: String(item.title || item.label || ""),
+			        summary: String(item.summary || item.description || item.text || roleEventFallbackSummary(item.bit ?? index))
+			      })).concat(roleEventCustomThreshold());
+			    }
+		    return ENCOUNTER_AFFECTION_CHAIN_THRESHOLDS.map((value, index) => {
 	      const generic = ENCOUNTER_GENERIC_AFFECTION_CHAIN[index] || {};
 	      return {
 	        value,
@@ -12185,12 +12199,12 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	        summary: String(generic.summary || ""),
 	        generic: true
 	      };
-	    });
-	  }
+		    }).concat(roleEventCustomThreshold());
+		  }
 
   function roleEventRecordWithBit(record, bit) {
     const chars = normalizedRoleEventRecord(record).split("");
-    const safeBit = Math.max(0, Math.min(4, Number(bit) || 0));
+    const safeBit = Math.max(0, Math.min(ROLE_EVENT_RECORD_LENGTH - 1, Number(bit) || 0));
     chars[safeBit] = "1";
     return chars.join("");
   }
@@ -12241,10 +12255,17 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     }
   }
 
-  async function requestTriggerProfileEvent(page, roleName, roleData, eventItem) {
-    const bit = Math.max(0, Math.min(4, Number(eventItem?.bit) || 0));
+  async function requestTriggerProfileEvent(page, roleName, roleData, eventItem, customContent = "") {
+    const bit = Math.max(0, Math.min(ROLE_EVENT_RECORD_LENGTH - 1, Number(eventItem?.bit) || 0));
     const eventIndex = bit + 1;
     const numeral = ENCOUNTER_EVENT_NUMERALS[bit] || String(eventIndex);
+    const isCustom = Boolean(eventItem?.custom || bit === ROLE_EVENT_CUSTOM_BIT);
+    const customText = String(customContent || "").trim();
+    if (isCustom && !customText) {
+      page.dataset.profileEventNotice = "第六事件需要先填写自定义事件内容。";
+      renderPersonProfilePage(page);
+      return;
+    }
     const record = normalizedRoleEventRecord(roleData?.["事件记录"]);
     if (pendingAnyRoleEventTrigger()) {
       page.dataset.profileEventNotice = "本轮已有角色事件暂存，发送或取消后才能触发下一个。";
@@ -12272,20 +12293,22 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
           事件序号: eventIndex,
 	          事件位: bit,
 	          事件标记: numeral,
-	          事件名: String(eventItem?.generic ? "由AI根据角色状态生成事件名" : (eventItem?.title || eventItem?.label || "通用事件" + numeral)),
-	          ...(eventItem?.generic ? {
+          事件名: String(isCustom ? "用户自定义事件" : (eventItem?.generic ? "由AI根据角色状态生成事件名" : (eventItem?.title || eventItem?.label || "通用事件" + numeral))),
+	          ...(eventItem?.generic && !isCustom ? {
 	            通用事件主题: String(eventItem?.topic || eventItem?.label || ""),
 	            事件命名要求: roleEventGenericNameInstruction(eventItem, bit)
 	          } : {}),
-			          事件描述: String(eventItem?.summary || roleEventFallbackSummary(bit)),
-	          好感链来源: eventItem?.generic ? "通用好感链（未生成专属世界书条目）" : "角色专属好感链或事件配置",
+			          事件描述: String(isCustom ? customText : (eventItem?.summary || roleEventFallbackSummary(bit))),
+	          ...(isCustom ? { 自定义事件内容: customText } : {}),
+	          好感链来源: isCustom ? "人物档案第六自定义事件" : (eventItem?.generic ? "通用好感链（未生成专属世界书条目）" : "角色专属好感链或事件配置"),
 	          当前好感度: statValue(target, "好感度"),
-	          建议好感条件: "好感度≥" + Number(eventItem?.value || 0),
+	          当前服从度: statValue(target, "服从度"),
+	          建议好感条件: isCustom ? "好感度≥200；服从度≥100" : "好感度≥" + Number(eventItem?.value || 0),
 	          前端处理: "已由前端直接写入角色事件记录",
 	          前端写入前事件记录: currentRecord,
 	          前端写入后事件记录: writtenRecord,
 	          变量写入路径: ["/角色/" + roleName + "/事件记录"],
-			          AI执行规范: "这是用户在人物档案主动选择触发角色事件；事件记录位图已由前端直接写入并锁定暂存。优先使用本操作里的事件名/事件描述生成该阶段事件剧情；若角色专属好感链/事件世界书存在，可结合对应序号条目。若没有专属世界书，则使用通用好感链，并根据通用事件主题、当前角色人设、好感/服从/警戒/性欲/快感值、心理、地点、关系进展和近期剧情自然生成；通用链的事件名不得照抄“由AI根据角色状态生成事件名”，必须生成一个贴合该角色的具体标题。AI不得再次replace /角色/" + roleName + "/事件记录，不得重复触发已完成事件，也不要自动发奖。回复末尾必须输出完整闭合的<人物档案事件记录>块，最后单独一行写</人物档案事件记录>。",
+			          AI执行规范: isCustom ? "这是用户在人物档案主动选择触发第六自定义事件；事件记录第六位已由前端直接写入并锁定暂存。第六事件的触发条件是好感度>=200且服从度>=100，剧情内容以本操作的自定义事件内容为准；AI可以结合当前角色人设、变量、地点、近期剧情润色，但不得改写成普通好感链事件，不得再次replace /角色/" + roleName + "/事件记录。回复末尾必须输出完整闭合的<人物档案事件记录>块，最后单独一行写</人物档案事件记录>。" : "这是用户在人物档案主动选择触发角色事件；事件记录位图已由前端直接写入并锁定暂存。优先使用本操作里的事件名/事件描述生成该阶段事件剧情；若角色专属好感链/事件世界书存在，可结合对应序号条目。若没有专属世界书，则使用通用好感链，并根据通用事件主题、当前角色人设、好感/服从/警戒/性欲/快感值、心理、地点、关系进展和近期剧情自然生成；通用链的事件名不得照抄“由AI根据角色状态生成事件名”，必须生成一个贴合该角色的具体标题。AI不得再次replace /角色/" + roleName + "/事件记录，不得重复触发已完成事件，也不要自动发奖。回复末尾必须输出完整闭合的<人物档案事件记录>块，最后单独一行写</人物档案事件记录>。",
 	          不可删除: true
 	        }
 	      };
@@ -12301,7 +12324,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
   }
 
   async function requestRecallProfileEvent(page, roleName, roleData, eventItem) {
-    const bit = Math.max(0, Math.min(4, Number(eventItem?.bit) || 0));
+    const bit = Math.max(0, Math.min(ROLE_EVENT_RECORD_LENGTH - 1, Number(eventItem?.bit) || 0));
     const eventIndex = bit + 1;
     const numeral = ENCOUNTER_EVENT_NUMERALS[bit] || String(eventIndex);
     const memory = getProfileEventMemory(roleName, bit);
@@ -12353,21 +12376,27 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
   function renderPersonEventsPanel(page, roleName, roleData) {
     const record = normalizedRoleEventRecord(roleData?.["事件记录"]);
     const favor = Number(statValue(roleData, "好感度"));
+    const obey = Number(statValue(roleData, "服从度"));
     const thresholds = roleEventThresholds(roleName);
     const notice = page?.dataset?.profileEventNotice || "";
     const anyPending = pendingAnyRoleEventTrigger();
     const cards = thresholds.map((item, index) => {
-      const bit = Math.max(0, Math.min(4, Number(item.bit ?? index) || 0));
+      const bit = Math.max(0, Math.min(ROLE_EVENT_RECORD_LENGTH - 1, Number(item.bit ?? index) || 0));
       const numeral = ENCOUNTER_EVENT_NUMERALS[bit] || String(bit + 1);
       const done = record[bit] === "1";
       const pending = pendingRoleEventTrigger(roleName, bit);
       const memory = getProfileEventMemory(roleName, bit);
       const recallPending = pendingRoleEventRecall(roleName, bit);
       const blockedByOtherEvent = anyPending && !pending;
-      const available = !done && !pending && !blockedByOtherEvent && Number.isFinite(favor) && favor >= Number(item.value || 0);
+      const needFavor = Number(item.value || 0);
+      const needObey = Number(item.obeyValue || 0);
+      const available = !done && !pending && !blockedByOtherEvent
+        && Number.isFinite(favor) && favor >= needFavor
+        && (!needObey || (Number.isFinite(obey) && obey >= needObey));
       const state = (done && memory ? "is-done has-memory" : done ? "is-done" : pending ? "is-pending" : available ? "is-available" : "is-locked");
       const status = done ? "已完成" : pending ? "已暂存" : blockedByOtherEvent ? "本轮已锁" : available ? "可触发" : "未满足";
-      return '<article class="st-profile-event-card ' + state + '" title="好感条件：' + escapeAttr(String(item.value || 0)) + '">' +
+      const requirement = "好感条件：" + needFavor + (needObey ? "；服从条件：" + needObey : "");
+      return '<article class="st-profile-event-card ' + state + '" title="' + escapeAttr(requirement) + '">' +
         '<div class="st-profile-event-mark">' +
           '<strong>' + escapeHtml(numeral) + '</strong>' +
           (done ? '<i aria-hidden="true">✓</i>' : '') +
@@ -12381,7 +12410,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       '</article>';
     }).join("");
     return '<section class="st-person-lines is-body">' +
-      renderPersonPanel("事件", '<div class="st-profile-event-grid" data-profile-event-scroll>' + cards + '</div>' + (notice ? '<p class="st-profile-event-notice">' + escapeHtml(notice) + '</p>' : ''), "壹到伍") +
+      renderPersonPanel("事件", '<div class="st-profile-event-grid" data-profile-event-scroll>' + cards + '</div>' + (notice ? '<p class="st-profile-event-notice">' + escapeHtml(notice) + '</p>' : ''), "壹到陆") +
       '</section>';
   }
 
@@ -12418,6 +12447,50 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     renderPersonProfilePage(page);
   }
 
+  function openProfileCustomEventDialog(page, roleName, bit = ROLE_EVENT_CUSTOM_BIT) {
+    if (isIsaacProfilePage(page)) return;
+    page.dataset.profileCustomEventDialog = "true";
+    page.dataset.profileCustomEventRole = String(roleName || "");
+    page.dataset.profileCustomEventBit = String(Math.max(0, Math.min(ROLE_EVENT_RECORD_LENGTH - 1, Number(bit) || 0)));
+    page.dataset.profileCustomEventText = "";
+    delete page.dataset.profileCustomEventError;
+    delete page.dataset.profilePickerOpen;
+    renderPersonProfilePage(page);
+    window.setTimeout(() => {
+      const input = page.querySelector("[data-profile-custom-event-input]");
+      input?.focus?.();
+    }, 0);
+  }
+
+  function closeProfileCustomEventDialog(page) {
+    delete page.dataset.profileCustomEventDialog;
+    delete page.dataset.profileCustomEventRole;
+    delete page.dataset.profileCustomEventBit;
+    delete page.dataset.profileCustomEventText;
+    delete page.dataset.profileCustomEventError;
+    renderPersonProfilePage(page);
+  }
+
+  function submitProfileCustomEventDialog(page) {
+    const context = currentEditableProfileContext(page);
+    if (!context) return closeProfileCustomEventDialog(page);
+    const bit = Math.max(0, Math.min(ROLE_EVENT_RECORD_LENGTH - 1, Number(page.dataset.profileCustomEventBit || ROLE_EVENT_CUSTOM_BIT) || 0));
+    const text = String(page.querySelector("[data-profile-custom-event-input]")?.value || "").trim();
+    if (!text) {
+      page.dataset.profileCustomEventText = "";
+      page.dataset.profileCustomEventError = "请填写第六事件内容。";
+      renderPersonProfilePage(page);
+      return;
+    }
+    const item = roleEventThresholds(context.roleName).find((threshold) => Number(threshold.bit) === bit) || roleEventCustomThreshold();
+    delete page.dataset.profileCustomEventDialog;
+    delete page.dataset.profileCustomEventRole;
+    delete page.dataset.profileCustomEventBit;
+    delete page.dataset.profileCustomEventText;
+    delete page.dataset.profileCustomEventError;
+    requestTriggerProfileEvent(page, context.roleName, context.roleData, { ...item, custom: true }, text);
+  }
+
   function submitProfileNicknameDialog(page) {
     const input = page.querySelector("[data-profile-nickname-input]");
     const mode = page.querySelector('input[name="profile-nickname-mode"]:checked')?.value || "private";
@@ -12440,6 +12513,23 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
         '<div class="st-profile-nickname-actions">' +
           '<button type="button" data-profile-nickname-action="cancel">取消</button>' +
           '<button type="submit" class="primary">暂存</button>' +
+        '</div>' +
+      '</form>' +
+    '</div>';
+  }
+
+  function renderProfileCustomEventDialog(page, roleName) {
+    const value = String(page?.dataset?.profileCustomEventText || "").trim();
+    const error = String(page?.dataset?.profileCustomEventError || "").trim();
+    return '<div class="st-profile-nickname-dialog st-profile-custom-event-dialog" role="dialog" aria-modal="true" aria-label="自定义第六事件">' +
+      '<form class="st-profile-nickname-card" data-profile-custom-event-form>' +
+        '<h3>第六事件</h3>' +
+        '<p>好感度达到200且服从度达到100后，可以给「' + escapeHtml(roleName || "角色") + '」写一个自定义事件。AI会按这里的内容生成剧情。</p>' +
+        '<label><span>事件内容</span><textarea maxlength="800" data-profile-custom-event-input placeholder="写下这次事件要发生什么">' + escapeHtml(value) + '</textarea></label>' +
+        (error ? '<p class="st-profile-event-notice">' + escapeHtml(error) + '</p>' : '') +
+        '<div class="st-profile-nickname-actions">' +
+          '<button type="button" data-profile-custom-event-action="cancel">取消</button>' +
+          '<button type="submit" class="primary">触发</button>' +
         '</div>' +
       '</form>' +
     '</div>';
@@ -12955,16 +13045,14 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	        system["_当前周几"],
 	        system["_当前日程"],
 	        system["_当前特殊日期"],
-		        system["当天原课程表"],
-		        system["当天魔改课程表"]
+		        system["课程表"]
 	      ]);
 	      workApplyReadonlySchedule(system, dateText, timeText);
 	      const after = JSON.stringify([
 	        system["_当前周几"],
 	        system["_当前日程"],
 	        system["_当前特殊日期"],
-		        system["当天原课程表"],
-		        system["当天魔改课程表"]
+		        system["课程表"]
 	      ]);
 	      return before === after
 	        ? { ok: false, message: "只读课程表变量无需同步。" }
@@ -13093,7 +13181,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       原课程名: details.originalSubject || "",
       魔改课程名: details.nextSubject || "",
       前端处理: "已由前端扣除课程表魔改券，并把本次单格修改保存到本聊天本地魔改课程表。",
-	      AI执行规范: "课程表魔改券已由前端扣除；AI不得再次扣券或扣星光点。本券一次只能修改当天剩余课程中的一节，课程表内容由前端本地保存，并同步当天原课程表和当天魔改课程表等只读日程字段。"
+	      AI执行规范: "课程表魔改券已由前端扣除；AI不得再次扣券或扣星光点。本券一次只能修改当天剩余课程中的一节，课程表内容由前端本地保存，并同步/系统/课程表只读日程字段；其中科目为原课程，是否魔改标记差异，魔改课程为空表示未魔改。"
     });
     return { ok: true, remaining: Math.max(0, beforeCount - 1) };
   }
@@ -14677,8 +14765,12 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
         const roleNames = orderedProfileRoleNames(roles);
         const roleName = roleNames[normalizeProfileIndex(page, roleNames.length)] || "";
         const roleData = isPlainObject(roles[roleName]) ? roles[roleName] : {};
-        const bit = Math.max(0, Math.min(4, Number(eventTrigger.getAttribute("data-profile-trigger-event") || 0) || 0));
+        const bit = Math.max(0, Math.min(ROLE_EVENT_RECORD_LENGTH - 1, Number(eventTrigger.getAttribute("data-profile-trigger-event") || 0) || 0));
         const item = roleEventThresholds(roleName).find((threshold) => Number(threshold.bit) === bit) || { bit, value: ENCOUNTER_AFFECTION_CHAIN_THRESHOLDS[bit] || 0 };
+        if (item.custom || bit === ROLE_EVENT_CUSTOM_BIT) {
+          openProfileCustomEventDialog(page, roleName, bit);
+          return;
+        }
         requestTriggerProfileEvent(page, roleName, roleData, item);
         return;
       }
@@ -14691,7 +14783,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
         const roleNames = orderedProfileRoleNames(roles);
         const roleName = roleNames[normalizeProfileIndex(page, roleNames.length)] || "";
         const roleData = isPlainObject(roles[roleName]) ? roles[roleName] : {};
-        const bit = Math.max(0, Math.min(4, Number(eventRecall.getAttribute("data-profile-recall-event") || 0) || 0));
+        const bit = Math.max(0, Math.min(ROLE_EVENT_RECORD_LENGTH - 1, Number(eventRecall.getAttribute("data-profile-recall-event") || 0) || 0));
         const item = roleEventThresholds(roleName).find((threshold) => Number(threshold.bit) === bit) || { bit, value: ENCOUNTER_AFFECTION_CHAIN_THRESHOLDS[bit] || 0 };
         requestRecallProfileEvent(page, roleName, roleData, item);
         return;
@@ -14723,11 +14815,24 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
         closeProfilePhotoDialog(page);
         return;
       }
+      if (event.target?.closest?.(".st-profile-custom-event-dialog") && !event.target?.closest?.(".st-profile-nickname-card")) {
+        event.preventDefault();
+        event.stopPropagation();
+        closeProfileCustomEventDialog(page);
+        return;
+      }
       const nicknameAction = event.target?.closest?.("[data-profile-nickname-action]");
       if (nicknameAction && page.contains(nicknameAction)) {
         event.preventDefault();
         event.stopPropagation();
         if (nicknameAction.getAttribute("data-profile-nickname-action") === "cancel") closeProfileNicknameDialog(page);
+        return;
+      }
+      const customEventAction = event.target?.closest?.("[data-profile-custom-event-action]");
+      if (customEventAction && page.contains(customEventAction)) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (customEventAction.getAttribute("data-profile-custom-event-action") === "cancel") closeProfileCustomEventDialog(page);
         return;
       }
       const target = event.target?.closest?.("[data-profile-action]");
@@ -14784,16 +14889,24 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     });
     page.addEventListener("submit", (event) => {
       const form = event.target?.closest?.("[data-profile-nickname-form]");
-      if (!form || !page.contains(form)) return;
+      if (form && page.contains(form)) {
+        event.preventDefault();
+        event.stopPropagation();
+        submitProfileNicknameDialog(page);
+        return;
+      }
+      const customForm = event.target?.closest?.("[data-profile-custom-event-form]");
+      if (!customForm || !page.contains(customForm)) return;
       event.preventDefault();
       event.stopPropagation();
-      submitProfileNicknameDialog(page);
+      submitProfileCustomEventDialog(page);
     });
     page.addEventListener("keydown", (event) => {
-      if (event.target?.closest?.(".st-profile-nickname-dialog,.st-profile-photo-dialog")) {
+      if (event.target?.closest?.(".st-profile-nickname-dialog,.st-profile-photo-dialog,.st-profile-custom-event-dialog")) {
         if (event.key === "Escape") {
           event.preventDefault();
           if (event.target?.closest?.(".st-profile-photo-dialog")) closeProfilePhotoDialog(page);
+          else if (event.target?.closest?.(".st-profile-custom-event-dialog")) closeProfileCustomEventDialog(page);
           else closeProfileNicknameDialog(page);
         }
         return;
@@ -15008,6 +15121,9 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     const nicknameDialogHtml = !staticIsaac && page.dataset.profileNicknameDialog === "true"
       ? renderProfileNicknameDialog(roleName, roleData)
       : "";
+    const customEventDialogHtml = !staticIsaac && page.dataset.profileCustomEventDialog === "true"
+      ? renderProfileCustomEventDialog(page, roleName)
+      : "";
     const photoDialogHtml = !staticIsaac && page.dataset.profilePhotoDialog === "true"
       ? renderProfilePhotoDialog(roleName, roleData, page.dataset.profilePhotoResetWarning === "true")
       : "";
@@ -15037,6 +15153,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
           '</section>' +
           detailActionsHtml +
           nicknameDialogHtml +
+          customEventDialogHtml +
           photoDialogHtml +
         '</section>' +
       '</main>';
@@ -15351,7 +15468,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	        目标日期: info.targetDateText,
 	        目标时间: suggested,
 	        时间解释: "前端已由用户选择目标日期和目标时间，并校验目标不早于当前变量时间、且不超过当前变量时间后2天。",
-	        AI执行规范: "这是用户设置的强制剧情时间锚点，不是可忽略建议。AI必须让本轮剧情从目标日期与目标时间开始或推进到该时间点；除非用户最新正文明确取消或改时间，不得绕开、忽略或另选时间。前端已经判断目标日期：直接按/目标日期和/目标时间执行，不要重新判断是否跨天。只更新/系统/当前时间和必要的/系统/当前事件；目标日期不同于当前日期时同步更新/系统/当前日期。/系统/_当前周几、/系统/_当前日程、/系统/_当前特殊日期、/系统/当天原课程表和/系统/当天魔改课程表为前端只读同步字段，AI不要手写这些字段。"
+	        AI执行规范: "这是用户设置的强制剧情时间锚点，不是可忽略建议。AI必须让本轮剧情从目标日期与目标时间开始或推进到该时间点；除非用户最新正文明确取消或改时间，不得绕开、忽略或另选时间。前端已经判断目标日期：直接按/目标日期和/目标时间执行，不要重新判断是否跨天。只更新/系统/当前时间和必要的/系统/当前事件；目标日期不同于当前日期时同步更新/系统/当前日期。/系统/_当前周几、/系统/_当前日程、/系统/_当前特殊日期和/系统/课程表为前端只读同步字段，AI不要手写这些字段。"
 	      })).then(() => renderClockPage(page));
 	    });
     updateClockFace(page);
@@ -16092,6 +16209,11 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     return (date.getMonth() + 1) + "月" + date.getDate() + "日 " + formatPeriodTime(endMinutes);
   }
 
+  function workBuffEndTextFromStart(startText) {
+    const text = workOffsetDateTimeText(startText, 24);
+    return text || "";
+  }
+
   function workStableHash(text) {
     let hash = 0;
     const source = String(text || "");
@@ -16470,14 +16592,21 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	    return parseStoryDate(nextText) || parsed || { month: 4, day: 10 };
 	  }
 
-		  function workCourseRowsForDate(parsedDate, weekdayText, table = readWeeklyTimetable()) {
+		  function workCourseRowsForDate(parsedDate, weekdayText, table = readWeeklyTimetable(), originalTable = normalizeWeeklyTimetable(ST_WEEKLY_TIMETABLE)) {
 		    const weekdayIndex = ST_WEEKDAY_INDEX[weekdayText];
 		    const special = parsedDate ? storyCalendarDay(parsedDate.month, parsedDate.day)?.specialDay : null;
 		    if (!parsedDate || weekdayIndex === 0 || weekdayIndex === 6 || special?.holiday || special?.exam || (special && !/普通授课/.test(special.detail || ""))) return [];
-		    return ST_CLASS_PERIODS.map((period) => ({
-		      课节: period.label,
-		      科目: weeklyTimetableSubject(weekdayIndex, period.index, table)
-		    }));
+		    return ST_CLASS_PERIODS.map((period) => {
+		      const originalSubject = weeklyTimetableSubject(weekdayIndex, period.index, originalTable);
+		      const subject = weeklyTimetableSubject(weekdayIndex, period.index, table);
+		      const isModified = subject !== originalSubject;
+		      return {
+		        课节: period.label,
+		        科目: originalSubject,
+		        是否魔改: isModified,
+		        魔改课程: isModified ? subject : ""
+		      };
+		    });
 		  }
 
 	  function workFirstClassForDate(parsedDate) {
@@ -16514,21 +16643,24 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 		      当前课段: { 名称: slot.title || "无", 时间: slot.detail || "" },
 		      当前日程: slot.title || "无",
 		      当前特殊日期: calendar?.specialText || "",
-		      课表: workCourseRowsForDate(parsed, weekdayText, modifiedTable),
-		      原课程表: workCourseRowsForDate(parsed, weekdayText, originalTable),
-		      魔改课程表: workCourseRowsForDate(parsed, weekdayText, modifiedTable),
+		      课表: workCourseRowsForDate(parsed, weekdayText, modifiedTable, originalTable),
+		      课程表: workCourseRowsForDate(parsed, weekdayText, modifiedTable, originalTable),
 		      次日第一节: workFirstClassForDate(tomorrow)
 		    };
 		  }
 
-	  function workApplyReadonlySchedule(system, dateText, timeText) {
+	  function workApplyReadonlySchedule(system, dateText, timeText, options = {}) {
 	    const dailySchedule = workDailyScheduleForDateTime(dateText, timeText);
 		    system["_当前周几"] = String(dailySchedule.星期 || "");
 		    system["_当前日程"] = String(dailySchedule.当前课段?.名称 || dailySchedule.当前日程 || "无");
 		    system["_当前特殊日期"] = String(dailySchedule.当前特殊日期 || "");
-			    if (Object.prototype.hasOwnProperty.call(system, "当天课程表")) delete system["当天课程表"];
-			    system["当天原课程表"] = Array.isArray(dailySchedule.原课程表) ? dailySchedule.原课程表 : [];
-			    system["当天魔改课程表"] = Array.isArray(dailySchedule.魔改课程表) ? dailySchedule.魔改课程表 : [];
+		    const syncTimetable = options.syncTimetable !== false;
+		    if (syncTimetable) {
+			    for (const key of ["当天课程表", "当天原课程表", "当天魔改课程表"]) {
+			      if (Object.prototype.hasOwnProperty.call(system, key)) delete system[key];
+			    }
+			    system["课程表"] = Array.isArray(dailySchedule.课程表) ? dailySchedule.课程表 : [];
+		    }
 		    return dailySchedule;
 		  }
 
@@ -16561,7 +16693,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	    const encounterTime = encounterRole ? workOffsetDateTimeText(timeInfo.startText, encounterDelayHours) : "";
 	    const writeDateTimeText = encounterRole ? encounterTime : timeInfo.endText;
 	    const writeParts = workDateTimePartsFromText(writeDateTimeText);
-	    const buffEndText = timingInfo.buff ? workOffsetDateTimeText(timeInfo.startText, 24) : "";
+	    const buffEndText = timingInfo.buff ? workBuffEndTextFromStart(timeInfo.startText) : "";
 	    const shachikuGain = workShachikuGain(job, currentValue);
 	    const result = await rewardApplySystemMutation((system, stat) => {
 	      const beforeMoney = workNumber(system["持有零花钱"], 0);
@@ -16575,7 +16707,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	      }
 	      if (timingInfo.buff) {
 	        system["buff"] = timingInfo.buff;
-	        system["buff结束时间"] = buffEndText;
+	        system["buff结束时间"] = buffEndText || workBuffEndTextFromStart(timeInfo.startText);
 	        if (timingInfo.buff === "全盛出击") {
 	          const maxEnergy = hypnosisNumber(system["MC能量上限"] ?? system["_MC能量上限"], 0);
 	          if (maxEnergy > 0) hypnosisSetSystemNumber(system, "MC能量", maxEnergy, ["_MC能量", "当前MC能量"]);
@@ -16584,9 +16716,8 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	      if (writeParts.dateText) system["当前日期"] = writeParts.dateText;
 	      if (writeParts.timeText) system["当前时间"] = writeParts.timeText;
 	      system["当前事件"] = encounterRole ? ("打工偶遇（剧情进行中）：" + encounterRole) : ("打工结束：" + job.title);
-	      const dailySchedule = writeParts.dateText && writeParts.timeText ? workApplyReadonlySchedule(system, writeParts.dateText, writeParts.timeText) : null;
-			      const variablePaths = ["/系统/持有零花钱", "/系统/社畜值", "/系统/当前日期", "/系统/当前时间", "/系统/当前事件", "/系统/_当前周几", "/系统/_当前日程", "/系统/_当前特殊日期", "/系统/当天原课程表", "/系统/当天魔改课程表"];
-	      if (timingInfo.buff || timingInfo.currentBuffExpiredAtStart) variablePaths.push("/系统/buff", "/系统/buff结束时间");
+	      const dailySchedule = writeParts.dateText && writeParts.timeText ? workApplyReadonlySchedule(system, writeParts.dateText, writeParts.timeText, { syncTimetable: false }) : null;
+			      const variablePaths = ["/系统/持有零花钱", "/系统/社畜值"];
 	      if (timingInfo.buff === "全盛出击") variablePaths.push("/系统/MC能量");
 	      return {
 	        ok: true,
@@ -16596,18 +16727,14 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	          操作: "开始打工",
 	          工作ID: job.id,
 	          工作: job.title,
-	          工作地点: job.place,
 	          暂存摘要: job.title + "｜" + timeInfo.startText + "-" + timeInfo.endText + (encounterRole ? "｜打工偶遇" : ""),
 	          开始时间: timeInfo.startText,
 	          预计结束时间: timeInfo.endText,
-	          前端写入当前时间: writeDateTimeText,
-	          前端处理: "已由前端直接结算工资、社畜值、buff、buff结束时间和当前时间",
+	          前端处理: "已由前端直接结算打工收益和时间推进",
 	          获得零花钱: job.wage,
 	          前端写入后持有零花钱: nextMoney,
 	          获得社畜值: shachikuGain,
 	          前端写入后社畜值: nextShachiku,
-	          打工获得buff: timingInfo.buff || "无",
-	          buff结束时间: buffEndText || "无",
 	          偶遇: encounterRole ? "有" : "无",
 	          偶遇女角色: encounterRole || "无",
 	          偶遇发生时间: encounterTime || "无",
@@ -16626,14 +16753,13 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	        来源: "打工",
 	        操作: "打工偶遇（剧情进行中）",
 	        工作: result.payload["工作"] || "未记录",
-	        工作地点: result.payload["工作地点"] || "未记录",
 	        开始时间: result.payload["开始时间"] || "未记录",
 	        预计结束时间: result.payload["预计结束时间"] || "未记录",
 	        暂存摘要: "打工偶遇（剧情进行中）｜" + encounterRoleName + "｜收束至 " + (result.payload["预计结束时间"] || "未记录"),
 	        偶遇女角色: encounterRoleName,
 	        偶遇发生时间: result.payload["偶遇发生时间"] || "未记录",
-	        前端处理: "打工工资、社畜值、buff、buff结束时间和当前时间已由前端处理；本条锁定暂存只提醒AI先处理开始后3小时发生的打工偶遇。",
-	        AI执行规范: "本轮只处理打工途中偶遇互动，暂停在偶遇剧情进行中；不要跳过偶遇直接写完整打工结束。互动完成后再把剧情收束到预计结束时间；不得再次发工资、增加社畜值、改buff或重复结算打工。",
+	        前端处理: "打工结算已由前端处理；本条锁定暂存只提醒AI先处理开始后3小时发生的打工偶遇。",
+	        AI执行规范: "本轮只处理打工途中偶遇互动，暂停在偶遇剧情进行中；不要跳过偶遇直接写完整打工结束。互动完成后再把剧情收束到预计结束时间；不得再次发工资、增加社畜值或重复结算打工。",
 	        不可删除: true,
 	        locked: true,
 	        forceLocked: true
@@ -16818,14 +16944,13 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	      来源: "打工",
 		      操作: "打工偶遇（剧情进行中）",
 	      工作: latest["工作"] || "未记录",
-	      工作地点: latest["工作地点"] || "未记录",
 	      开始时间: latest["开始时间"] || "未记录",
 	      预计结束时间: endText,
 	      暂存摘要: "打工偶遇（剧情进行中）｜" + encounterRole + "｜收束至 " + endText,
 	      偶遇女角色: encounterRole,
 	      偶遇发生时间: latest["偶遇发生时间"] || workEffectiveCurrentTimeText(),
-	      前端处理: "打工工资、社畜值、buff、buff结束时间和当前时间已由前端处理；本条锁定暂存只提醒AI处理偶遇后收束。",
-	      AI执行规范: "本轮只处理打工途中偶遇互动，并在互动后把剧情收束到预计结束时间；不得再次发工资、增加社畜值、改buff或重复结算打工。",
+	      前端处理: "打工结算已由前端处理；本条锁定暂存只提醒AI处理偶遇后收束。",
+	      AI执行规范: "本轮只处理打工途中偶遇互动，并在互动后把剧情收束到预计结束时间；不得再次发工资、增加社畜值或重复结算打工。",
 	      不可删除: true,
 	      locked: true,
 	      forceLocked: true
@@ -16854,21 +16979,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       window.__ST_SET_WORK_BUFF_STATUS_REMINDER__?.(null);
       return;
     }
-		    const reminderPayload = {
-		      来源: "打工",
-		      操作: "打工buff提醒",
-	      暂存摘要: buff + "｜持续至 " + endText,
-	      当前buff: buff,
-	      buff结束时间: endText,
-		      前端处理: "当前buff和buff结束时间由前端只读维护；本条锁定暂存告知AI buff仍在持续。",
-		      AI执行规范: "本条只提醒打工buff持续到结束时间，不是新的打工或结算。AI不得重复结算打工，不得改写buff或buff结束时间；到达buff结束时间后由前端清空/系统/buff和/系统/buff结束时间。",
-		      提醒: "当前buff持续至" + endText + "，按世界书规则影响相关操作；到达buff结束时间后由前端清空。",
-		      状态提醒: "锁定显示当前buff结束时间；到期后前端从暂存区撤下并清空变量。",
-		      不可删除: true,
-		      locked: true,
-		      forceLocked: true
-		    };
-    window.__ST_SET_WORK_BUFF_STATUS_REMINDER__?.(reminderPayload);
+    window.__ST_SET_WORK_BUFF_STATUS_REMINDER__?.(null);
   }
 
   function flashWorkButton(button, text) {
@@ -17102,7 +17213,9 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	    const generic = ENCOUNTER_GENERIC_AFFECTION_CHAIN[Math.max(0, Math.min(4, Number(index) || 0))] || {};
 	    return String(generic.summary || "角色围绕本阶段关系变化与{{user}}发生一次明确推进关系的事件。");
 	  };
-  const ENCOUNTER_EVENT_NUMERALS = ["壹", "貳", "參", "肆", "伍"];
+	  const ENCOUNTER_EVENT_NUMERALS = ["壹", "貳", "參", "肆", "伍", "陆"];
+	  const ROLE_EVENT_RECORD_LENGTH = 6;
+	  const ROLE_EVENT_CUSTOM_BIT = 5;
   const ENCOUNTER_WORLDBOOK_VARIABLE_START_COMMENT = "[mvu_update]⬇️⬇️⬇️ 变量列表从此开始 ⬇️⬇️⬇️";
   const ENCOUNTER_WORLDBOOK_VARIABLE_END_COMMENT = "[mvu_update]⬆️⬆️⬆️ 变量列表到此结束 ⬆️⬆️⬆️";
   const ENCOUNTER_WORLDBOOK_PERSONA_START_COMMENT = "[mvu_plot]⬇️⬇️⬇️ 人设从此开始 ⬇️⬇️⬇️";
@@ -17550,7 +17663,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     const lines = [
       "<" + name + "好感链>",
       "- 本条是该角色的五段好感事件提案。只有本轮人物档案的触发角色事件操作指定该角色和对应事件时，才写成正式事件；其他时候只可自然铺垫。",
-      "- /角色/" + name + "/事件记录是前端只读维护的五位字符串，从左到右对应事件壹到伍；前端已写入对应位后，AI只写事件剧情，不得再replace、补写、回退或清空事件记录。",
+      "- /角色/" + name + "/事件记录是前端只读维护的六位字符串；前五位对应事件壹到伍，第六位对应好感度>=200且服从度>=100时由用户弹窗自定义的事件。前端已写入对应位后，AI只写事件剧情，不得再replace、补写、回退或清空事件记录。",
       "- 前端可按事件序号读取对应的事件名和事件描述拼入本轮提示词；AI生成剧情时优先使用被触发事件块，不要改写其他事件块。",
       "- 事件正式触发后，回复末尾输出完整闭合的<人物档案事件记录>块，字段包含角色名、事件序号、标题、概要、关键场面、关系变化和后续钩子；最后必须单独一行写</人物档案事件记录>。该块只供前端本地保存回忆摘要，不写入MVU变量。"
     ];
@@ -17684,7 +17797,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	      "工作价值": workValue,
 	      "绰号": "",
 	      "绰号已认可": false,
-      "事件记录": "00000",
+      "事件记录": "000000",
 	      "至关重要记忆": "",
 	      "档案": {
 	        "照片": "",
@@ -18436,7 +18549,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       "工作价值": 9,
       "绰号": "",
       "绰号已认可": false,
-      "事件记录": "00000",
+      "事件记录": "000000",
       "档案": {
         "照片": "",
         "姓名": "白枢暗子",
@@ -18474,7 +18587,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       "工作价值": 9,
       "绰号": "",
       "绰号已认可": false,
-      "事件记录": "00000",
+      "事件记录": "000000",
       "档案": {
         "照片": "",
         "姓名": "千杀百花",
@@ -18512,7 +18625,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       "工作价值": 20,
       "绰号": "",
       "绰号已认可": false,
-      "事件记录": "00000",
+      "事件记录": "000000",
       "档案": {
         "照片": "",
         "姓名": "中村樱",
@@ -19630,7 +19743,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       return;
     }
     data.stat["系统"]["星光点"] = current - cost;
-    encounterAddInventoryItemDetailed(data.stat, TIMETABLE_MOD_COUPON_ITEM, count, "用于在课程表APP中修改当天剩余课程中的一节。前端保存单格修改时扣券，并同步当天原课程表和当天魔改课程表等只读日程字段。");
+    encounterAddInventoryItemDetailed(data.stat, TIMETABLE_MOD_COUPON_ITEM, count, "用于在课程表APP中修改当天剩余课程中的一节。前端保存单格修改时扣券，并同步课程表只读日程字段。");
     await globalThis.Mvu.replaceMvuData(data.mvu, data.option);
     await appendAppOperation({
       来源: "邂逅",
@@ -21138,7 +21251,8 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 
   function normalizedRoleEventRecord(value) {
     const text = String(value ?? "").trim();
-    return /^[01]{5}$/.test(text) ? text : "00000";
+    if (/^[01]{6}$/.test(text)) return text;
+    return "000000";
   }
 
 	  const PROFILE_EVENT_MEMORY_STORAGE_PREFIX = "hypnoos.profile.eventMemories.v1:";
@@ -21256,14 +21370,15 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 
   function profileEventMemoryIndexNumber(value) {
     const text = String(value ?? "").trim();
-    const digit = text.match(/[1-5]/);
+    const digit = text.match(/[1-6]/);
     if (digit) return Number(digit[0]);
     const marks = [
       ["壹", "一"],
       ["貳", "贰", "二", "两"],
       ["參", "叁", "三"],
       ["肆", "四"],
-      ["伍", "五"]
+      ["伍", "五"],
+      ["陆", "陸", "六"]
     ];
     for (let index = 0; index < marks.length; index += 1) {
       if (marks[index].some((mark) => text.includes(mark))) return index + 1;
@@ -21297,7 +21412,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     const roleName = profileEventMemoryFieldValue(fields, ["角色名", "角色", "人物", "姓名"], 80);
     const eventIndex = profileEventMemoryIndexNumber(profileEventMemoryFieldValue(fields, ["事件序号", "事件", "事件编号", "事件标记"], 32));
     const bit = eventIndex ? eventIndex - 1 : -1;
-    if (!roleName || bit < 0 || bit > 4) return null;
+    if (!roleName || bit < 0 || bit >= ROLE_EVENT_RECORD_LENGTH) return null;
     const title = profileEventMemoryFieldValue(fields, ["标题", "事件标题", "题名"], 120);
     const summary = profileEventMemoryFieldValue(fields, ["概要", "摘要", "简单内容", "事件概要", "内容"], 600);
     const scene = profileEventMemoryFieldValue(fields, ["关键场面", "场面", "地点与场面", "记忆画面"], 500);
@@ -21441,7 +21556,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 
   function getProfileEventMemory(roleName, bit) {
     const name = String(roleName || "").trim();
-    const key = String(Math.max(0, Math.min(4, Number(bit) || 0)));
+    const key = String(Math.max(0, Math.min(ROLE_EVENT_RECORD_LENGTH - 1, Number(bit) || 0)));
     if (!name) return null;
     const store = readProfileEventMemoryStore();
     const record = store.events?.[name]?.[key];
@@ -21456,20 +21571,25 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       const data = typeof encounterCurrentMvuData === "function" ? encounterCurrentMvuData() : null;
       const roles = data?.stat?.["角色"];
       if (!roles || typeof roles !== "object" || Array.isArray(roles)) return false;
-      const missing = Object.entries(roles)
-        .filter(([, roleData]) => roleData && typeof roleData === "object" && !Array.isArray(roleData) && !Object.prototype.hasOwnProperty.call(roleData, "事件记录"))
-        .map(([name]) => String(name || "").trim())
+      const updates = Object.entries(roles)
+        .filter(([, roleData]) => roleData && typeof roleData === "object" && !Array.isArray(roleData))
+        .map(([name, roleData]) => {
+          const roleName = String(name || "").trim();
+          const current = Object.prototype.hasOwnProperty.call(roleData, "事件记录") ? String(roleData["事件记录"] ?? "").trim() : "";
+          const normalized = normalizedRoleEventRecord(current);
+          return roleName && current !== normalized ? { name: roleName, normalized } : null;
+        })
         .filter(Boolean)
-        .sort((a, b) => a.localeCompare(b, "zh-Hans-CN"));
+        .sort((a, b) => a.name.localeCompare(b.name, "zh-Hans-CN"));
       const scope = String(globalThis.__ST_HYPNOOS_FRONTEND_MESSAGE_SCOPE__?.() || globalThis.__ST_HYPNOOS_FRONTEND_SLOT_SCOPE__?.() || "latest");
-      const signature = scope + "::" + missing.join("|");
-      if (!missing.length) {
+      const signature = scope + "::" + updates.map((item) => item.name + "=" + item.normalized).join("|");
+      if (!updates.length) {
         globalThis.__ST_ROLE_EVENT_RECORD_SYNC_SIGNATURE__ = signature;
         return false;
       }
       if (globalThis.__ST_ROLE_EVENT_RECORD_SYNC_SIGNATURE__ === signature) return false;
-      for (const name of missing) {
-        if (roles[name] && typeof roles[name] === "object" && !Array.isArray(roles[name])) roles[name]["事件记录"] = "00000";
+      for (const item of updates) {
+        if (roles[item.name] && typeof roles[item.name] === "object" && !Array.isArray(roles[item.name])) roles[item.name]["事件记录"] = item.normalized;
       }
       await encounterReplaceMvuData(data);
       globalThis.__ST_ROLE_EVENT_RECORD_SYNC_SIGNATURE__ = signature;
@@ -24863,7 +24983,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
             描述: location.info || point.info || "暂无地点信息。",
             地图类型: "主教学楼案内図"
           },
-          AI执行规范: "这只是用户希望剧情地点设在这里的建议；前端不能直接改当前地点。AI应按剧情、时间和移动条件判断是否成立，成立时更新/系统/当前地点和/系统/当前事件；/系统/_当前周几、/系统/_当前日程、/系统/_当前特殊日期、/系统/当天原课程表和/系统/当天魔改课程表为前端只读同步字段，AI不要手写这些字段。不合理时可拒绝或延后。"
+          AI执行规范: "这只是用户希望剧情地点设在这里的建议；前端不能直接改当前地点。AI应按剧情、时间和移动条件判断是否成立，成立时更新/系统/当前地点和/系统/当前事件；/系统/_当前周几、/系统/_当前日程、/系统/_当前特殊日期和/系统/课程表为前端只读同步字段，AI不要手写这些字段。不合理时可拒绝或延后。"
         })).then(() => renderCampusPage(page));
       });
     });
@@ -25056,7 +25176,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
             描述: location.info || "暂无地点信息。",
             地图类型: graph.title
           },
-	          AI执行规范: "这只是用户希望剧情地点设在这里的建议；前端不能直接改当前地点。AI应按剧情、时间和移动条件判断是否成立，成立时更新/系统/当前地点和/系统/当前事件；/系统/_当前周几、/系统/_当前日程、/系统/_当前特殊日期、/系统/当天原课程表和/系统/当天魔改课程表为前端只读同步字段，AI不要手写这些字段。不合理时可拒绝或延后。"
+	          AI执行规范: "这只是用户希望剧情地点设在这里的建议；前端不能直接改当前地点。AI应按剧情、时间和移动条件判断是否成立，成立时更新/系统/当前地点和/系统/当前事件；/系统/_当前周几、/系统/_当前日程、/系统/_当前特殊日期和/系统/课程表为前端只读同步字段，AI不要手写这些字段。不合理时可拒绝或延后。"
 	        })).then(() => {
 	          rerenderGraphHost(page);
 	        });
@@ -25472,7 +25592,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       },
       AI执行规范: specialLocation
         ? "这只是用户希望剧情进入该校内特殊地点的建议；前端不能直接改当前地点。AI应按剧情、时间、权限和世界观判断是否成立，成立时更新/系统/当前地点并展开对应特殊地点剧情；不合理时可拒绝、延后或给出进入条件。"
-        : "这只是用户希望剧情地点设在这里的建议；前端不能直接改当前地点。AI应按剧情、时间和移动条件判断是否成立，成立时更新/系统/当前地点和/系统/当前事件；/系统/_当前周几、/系统/_当前日程、/系统/_当前特殊日期、/系统/当天原课程表和/系统/当天魔改课程表为前端只读同步字段，AI不要手写这些字段。不合理时可拒绝或延后。"
+        : "这只是用户希望剧情地点设在这里的建议；前端不能直接改当前地点。AI应按剧情、时间和移动条件判断是否成立，成立时更新/系统/当前地点和/系统/当前事件；/系统/_当前周几、/系统/_当前日程、/系统/_当前特殊日期和/系统/课程表为前端只读同步字段，AI不要手写这些字段。不合理时可拒绝或延后。"
     })).then(() => renderCityMapPage(page));
   }
 
@@ -26383,11 +26503,13 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
         const role = roles[config.role];
         if (!role || typeof role !== "object" || Array.isArray(role)) continue;
         const value = Number(role[config.valueKey || "好感度"] ?? 0);
+        const obey = Number(role["服从度"] ?? 0);
         if (!Number.isFinite(value)) continue;
         const record = normalizedRoleEventRecord(role["事件记录"]);
-        for (const threshold of config.thresholds || []) {
-          const bit = Math.max(0, Math.min(4, Number(threshold.bit) || 0));
-          if (value >= Number(threshold.value || 0) && record[bit] !== "1") {
+        for (const threshold of roleEventThresholds(config.role) || []) {
+          const bit = Math.max(0, Math.min(ROLE_EVENT_RECORD_LENGTH - 1, Number(threshold.bit) || 0));
+          const needObey = Number(threshold.obeyValue || 0);
+          if (value >= Number(threshold.value || 0) && (!needObey || obey >= needObey) && record[bit] !== "1") {
             hints.push(config.role + " " + threshold.label);
           }
         }
@@ -26894,21 +27016,13 @@ const __stDefaultVariables = () => ({
     "当前时间": "12:30",
     "_当前日程": "午休",
     "_当前特殊日期": "",
-	    "当天原课程表": [
-	      { "课节": "1限", "科目": "英语" },
-	      { "课节": "2限", "科目": "世界史" },
-	      { "课节": "3限", "科目": "生物" },
-	      { "课节": "4限", "科目": "现代文" },
-	      { "课节": "5限", "科目": "体育（游泳）" },
-	      { "课节": "6限", "科目": "信息" }
-	    ],
-	    "当天魔改课程表": [
-	      { "课节": "1限", "科目": "英语" },
-	      { "课节": "2限", "科目": "世界史" },
-	      { "课节": "3限", "科目": "生物" },
-	      { "课节": "4限", "科目": "现代文" },
-	      { "课节": "5限", "科目": "体育（游泳）" },
-	      { "课节": "6限", "科目": "信息" }
+	    "课程表": [
+	      { "课节": "1限", "科目": "英语", "是否魔改": false, "魔改课程": "" },
+	      { "课节": "2限", "科目": "世界史", "是否魔改": false, "魔改课程": "" },
+	      { "课节": "3限", "科目": "生物", "是否魔改": false, "魔改课程": "" },
+	      { "课节": "4限", "科目": "现代文", "是否魔改": false, "魔改课程": "" },
+	      { "课节": "5限", "科目": "体育（游泳）", "是否魔改": false, "魔改课程": "" },
+	      { "课节": "6限", "科目": "信息", "是否魔改": false, "魔改课程": "" }
 	    ],
 		    "当前事件": "午休前最后一节课下课",
 	    "当前地点": "教室",
