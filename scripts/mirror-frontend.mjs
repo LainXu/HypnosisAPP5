@@ -608,13 +608,17 @@ html.st-hypnoos-booting.st-hypnoos-boot-failed body::after{content:"前端加载
 	      const item = cleanOperationText(payload?.["项目"] ?? payload?.["功能"] ?? payload?.["命令"] ?? "");
 	      const text = operationValueToDenseText({ action, item, payload });
 	      const fields = new Set();
-	      if (/^(时钟|地图|学校地图)$/.test(source)) addOperationVariableFields(fields, ["当前日期", "_当前周几", "当前时间", "当前地点", "_当前日程", "_当前特殊日期"]);
+	      if (/^时钟$/.test(source)) addOperationVariableFields(fields, ["当前日期", "当前时间", "当前地点"]);
+	      if (/^(地图|学校地图)$/.test(source)) addOperationVariableFields(fields, ["当前日期", "当前时间", "当前地点"]);
 	      if (/启动催眠|追加催眠/.test(action)) addOperationVariableFields(fields, ["MC能量"]);
 	      if (/购买VIP等级/.test(action)) addOperationVariableFields(fields, ["持有零花钱", "星光点", "催眠APP订阅等级"]);
 	      if (/领取成就|领取任务奖励|领取奖励|完成任务|任务完成|成就奖励|任务奖励/.test(action)) addOperationVariableFields(fields, ["星光点", "持有物品"]);
 	      if (/派遣结束提醒|取消派遣/.test(action)) addOperationVariableFields(fields, ["当前日期", "当前时间", "星光点", "派遣岗位"]);
 	      if (/派遣角色/.test(action)) addOperationVariableFields(fields, ["当前日期", "当前时间", "主角可疑度", "派遣岗位"]);
-	      if (/开始打工|打工/.test(action)) addOperationVariableFields(fields, ["当前日期", "_当前周几", "当前时间", "当前地点", "_当前日程", "_当前特殊日期", "持有零花钱", "社畜值", "buff", "buff结束时间", "MC能量", "MC能量上限"]);
+	      if (/开始打工|打工/.test(action)) {
+	        addOperationVariableFields(fields, ["当前日期", "当前时间", "当前地点", "持有零花钱", "社畜值", "buff", "buff结束时间"]);
+	        if (/全盛出击|MC能量|恢复/.test(text)) addOperationVariableFields(fields, ["MC能量", "MC能量上限"]);
+	      }
 	      if (/购买角色包|角色包/.test(action)) addOperationVariableFields(fields, ["星光点"]);
 	      if (/^邂逅$/.test(source) && /兑换星光点|购买校规修改券|购买课程表魔改券|购买特殊地点准入证/.test(action)) addOperationVariableFields(fields, ["星光点", "持有零花钱", "持有物品"]);
 	      if (/^课程表$/.test(source) && /课程表魔改券/.test(action)) addOperationVariableFields(fields, ["持有物品", "当天课程表", "当天原课程表", "当天魔改课程表"]);
@@ -764,7 +768,7 @@ html.st-hypnoos-booting.st-hypnoos-boot-failed body::after{content:"前端加载
 	      }
 	      if (text === "人物档案") {
 	        const parts = ["人物档案是纸质资料操作；设置绰号、删除角色或效果只改目标路径，不连带改催眠APP、真实姓名或其他变量；固定初始角色永远不能删除"];
-	        if (operationHasAction(records, /触发角色事件/)) parts.push("事件记录位图已由前端写入，AI只写对应事件剧情，不得二次改事件记录或重复触发；本次回复末尾必须输出<人物档案事件记录>块，包含角色名、事件序号、标题、概要、关键场面、关系变化和后续钩子，供前端本地保存回忆摘要，不写入MVU变量");
+	        if (operationHasAction(records, /触发角色事件/)) parts.push("事件记录位图已由前端写入，AI只写对应事件剧情，不得二次改事件记录或重复触发；本次回复末尾必须输出完整闭合的<人物档案事件记录>块，包含角色名、事件序号、标题、概要、关键场面、关系变化和后续钩子，最后单独一行写</人物档案事件记录>，供前端本地保存回忆摘要，不写入MVU变量");
 	        if (operationHasAction(records, /回忆角色事件/)) parts.push("回忆角色事件已由前端把本地保存的事件摘要写入对应角色的至关重要记忆；AI读取该字段让对应角色围绕该事件自然聊天，不改事件记录、不当作新事件触发");
 	        return ["- AI执行规范｜" + parts.join("；") + "。"];
 	      }
@@ -1299,7 +1303,7 @@ html.st-hypnoos-booting.st-hypnoos-boot-failed body::after{content:"前端加载
 			      }
 			      const settledWorkNotice = operationFrontendSettledWorkNotice(entries);
 			      if (settledWorkNotice) {
-			        for (const key of ["持有零花钱", "社畜值", "buff", "buff结束时间", "当前日期", "当前时间", "_当前周几", "_当前日程", "_当前特殊日期", "MC能量"]) {
+			        for (const key of ["持有零花钱", "社畜值", "buff", "buff结束时间", "当前日期", "当前时间", "当前地点", "MC能量", "MC能量上限"]) {
 			          if (selected[key] !== undefined && selected[key] !== null && selected[key] !== "") {
 			            selected[key] = String(selected[key]) + "（" + settledWorkNotice + "）";
 			          }
@@ -12117,17 +12121,23 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     });
   }
 
-	  function roleEventThresholds(roleName) {
-	    const specific = ROLE_EVENT_HINT_CONFIG.find((config) => String(config.role || "") === String(roleName || ""));
-	    if (specific?.thresholds?.length) {
-	      return specific.thresholds.slice(0, 5).map((item, index) => ({
-	        value: Number(item.value || ENCOUNTER_AFFECTION_CHAIN_THRESHOLDS[index] || 0),
-	        bit: Math.max(0, Math.min(4, Number(item.bit ?? index) || 0)),
-	        label: String(item.label || item.title || ""),
-	        title: String(item.title || item.label || ""),
-	        summary: String(item.summary || item.description || item.text || "")
-	      }));
-	    }
+		  function roleEventFallbackSummary(bit) {
+		    const index = Math.max(0, Math.min(4, Number(bit) || 0));
+		    const generic = ENCOUNTER_GENERIC_AFFECTION_CHAIN[index] || {};
+		    return String(generic.summary || "角色围绕本阶段关系变化与{{user}}发生一次明确推进关系的事件。");
+		  }
+
+		  function roleEventThresholds(roleName) {
+		    const specific = ROLE_EVENT_HINT_CONFIG.find((config) => String(config.role || "") === String(roleName || ""));
+		    if (specific?.thresholds?.length) {
+		      return specific.thresholds.slice(0, 5).map((item, index) => ({
+		        value: Number(item.value || ENCOUNTER_AFFECTION_CHAIN_THRESHOLDS[index] || 0),
+		        bit: Math.max(0, Math.min(4, Number(item.bit ?? index) || 0)),
+		        label: String(item.label || item.title || ""),
+		        title: String(item.title || item.label || ""),
+		        summary: String(item.summary || item.description || item.text || roleEventFallbackSummary(item.bit ?? index))
+		      }));
+		    }
 	    return ENCOUNTER_AFFECTION_CHAIN_THRESHOLDS.map((value, index) => {
 	      const generic = ENCOUNTER_GENERIC_AFFECTION_CHAIN[index] || {};
 	      return {
@@ -12226,7 +12236,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	          事件位: bit,
 	          事件标记: numeral,
 	          事件名: String(eventItem?.title || eventItem?.label || "通用事件" + numeral),
-	          事件描述: String(eventItem?.summary || "由AI按当前角色状态生成。"),
+		          事件描述: String(eventItem?.summary || roleEventFallbackSummary(bit)),
 	          好感链来源: eventItem?.generic ? "通用好感链（未生成专属世界书条目）" : "角色专属好感链或事件配置",
 	          当前好感度: statValue(target, "好感度"),
 	          建议好感条件: "好感度≥" + Number(eventItem?.value || 0),
@@ -12234,7 +12244,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	          前端写入前事件记录: currentRecord,
 	          前端写入后事件记录: writtenRecord,
 	          变量写入路径: ["/角色/" + roleName + "/事件记录"],
-	          AI执行规范: "这是用户在人物档案主动选择触发角色事件；事件记录位图已由前端直接写入并锁定暂存。优先使用本操作里的事件名/事件描述生成该阶段事件剧情；若角色专属好感链/事件世界书存在，可结合对应序号条目。若没有专属世界书，则使用通用好感链并根据当前角色人设、好感/服从/警戒/性欲/快感值、心理、地点、关系进展和近期剧情自然生成。AI不得再次replace /角色/" + roleName + "/事件记录，不得重复触发已完成事件，也不要自动发奖。",
+		          AI执行规范: "这是用户在人物档案主动选择触发角色事件；事件记录位图已由前端直接写入并锁定暂存。优先使用本操作里的事件名/事件描述生成该阶段事件剧情；若角色专属好感链/事件世界书存在，可结合对应序号条目。若没有专属世界书，则使用通用好感链并根据当前角色人设、好感/服从/警戒/性欲/快感值、心理、地点、关系进展和近期剧情自然生成。AI不得再次replace /角色/" + roleName + "/事件记录，不得重复触发已完成事件，也不要自动发奖。回复末尾必须输出完整闭合的<人物档案事件记录>块，最后单独一行写</人物档案事件记录>。",
 	          不可删除: true
 	        }
 	      };
@@ -16865,13 +16875,17 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	  const ENCOUNTER_ROLE_PAGE_SIZE = 4;
 	  const ENCOUNTER_ROLE_IMAGE_SLOT_COUNT = 4;
   const ENCOUNTER_AFFECTION_CHAIN_THRESHOLDS = [40, 70, 100, 140, 200];
-  const ENCOUNTER_GENERIC_AFFECTION_CHAIN = [
-    { title: "注意到异常", summary: "角色第一次明确注意到{{user}}、催眠APP或当前关系里的异常，并因此对{{user}}产生额外关注。" },
-    { title: "主动靠近", summary: "角色找理由和{{user}}单独接触，试探对方意图，也暴露一点自己的兴趣、弱点或欲望。" },
-    { title: "关系越界", summary: "角色在信任、好奇、依赖或被影响的状态下跨过原本的社交距离，做出比平时更亲近的选择。" },
-    { title: "秘密共享", summary: "角色把一个秘密、请求或重要情绪交给{{user}}，两人的关系因此变得难以回到普通距离。" },
-    { title: "关键选择", summary: "角色在重要场景中主动选择站到{{user}}这边，承认关系已经改变，并留下后续更深事件的钩子。" }
-  ];
+	  const ENCOUNTER_GENERIC_AFFECTION_CHAIN = [
+	    { title: "注意到异常", summary: "角色第一次明确注意到{{user}}、催眠APP或当前关系里的异常，并因此对{{user}}产生额外关注。" },
+	    { title: "主动靠近", summary: "角色找理由和{{user}}单独接触，试探对方意图，也暴露一点自己的兴趣、弱点或欲望。" },
+	    { title: "关系越界", summary: "角色在信任、好奇、依赖或被影响的状态下跨过原本的社交距离，做出比平时更亲近的选择。" },
+	    { title: "秘密共享", summary: "角色把一个秘密、请求或重要情绪交给{{user}}，两人的关系因此变得难以回到普通距离。" },
+	    { title: "关键选择", summary: "角色在重要场景中主动选择站到{{user}}这边，承认关系已经改变，并留下后续更深事件的钩子。" }
+	  ];
+	  const encounterAffectionFallbackSummary = (index) => {
+	    const generic = ENCOUNTER_GENERIC_AFFECTION_CHAIN[Math.max(0, Math.min(4, Number(index) || 0))] || {};
+	    return String(generic.summary || "角色围绕本阶段关系变化与{{user}}发生一次明确推进关系的事件。");
+	  };
   const ENCOUNTER_EVENT_NUMERALS = ["壹", "貳", "參", "肆", "伍"];
   const ENCOUNTER_WORLDBOOK_VARIABLE_START_COMMENT = "[mvu_update]⬇️⬇️⬇️ 变量列表从此开始 ⬇️⬇️⬇️";
   const ENCOUNTER_WORLDBOOK_VARIABLE_END_COMMENT = "[mvu_update]⬆️⬆️⬆️ 变量列表到此结束 ⬆️⬆️⬆️";
@@ -17322,13 +17336,13 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       "- 本条是该角色的五段好感事件提案。只有本轮人物档案的触发角色事件操作指定该角色和对应事件时，才写成正式事件；其他时候只可自然铺垫。",
       "- /角色/" + name + "/事件记录是前端只读维护的五位字符串，从左到右对应事件壹到伍；前端已写入对应位后，AI只写事件剧情，不得再replace、补写、回退或清空事件记录。",
       "- 前端可按事件序号读取对应的事件名和事件描述拼入本轮提示词；AI生成剧情时优先使用被触发事件块，不要改写其他事件块。",
-      "- 事件正式触发后，回复末尾输出<人物档案事件记录>块，字段包含角色名、事件序号、标题、概要、关键场面、关系变化和后续钩子；该块只供前端本地保存回忆摘要，不写入MVU变量。"
+      "- 事件正式触发后，回复末尾输出完整闭合的<人物档案事件记录>块，字段包含角色名、事件序号、标题、概要、关键场面、关系变化和后续钩子；最后必须单独一行写</人物档案事件记录>。该块只供前端本地保存回忆摘要，不写入MVU变量。"
     ];
     for (const item of chain) {
       lines.push("- 事件" + item.numeral + ":");
       lines.push("  好感阈值: " + item.threshold);
       lines.push("  事件名: " + (item.title || "事件" + item.numeral));
-      lines.push("  事件描述: " + (item.summary || "由AI按当前角色状态生成。"));
+      lines.push("  事件描述: " + (item.summary || encounterAffectionFallbackSummary((Number(item.index) || 1) - 1)));
     }
     lines.push("</" + name + "好感链>");
     return lines.join("\\n");
@@ -19978,7 +19992,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	          '<div class="st-encounter-affection-mark"><b>' + escapeHtml(item.numeral) + '</b><small>好感 ' + item.threshold + '</small></div>' +
 	          '<div class="st-encounter-affection-fields">' +
 	            '<label class="st-encounter-field"><span>短标题</span><input name="roleAffectionTitle-' + index + '" value="' + escapeAttr(item.title) + '" placeholder="' + escapeAttr("通用：" + (ENCOUNTER_GENERIC_AFFECTION_CHAIN[index]?.title || "按当前关系生成")) + '"></label>' +
-	            '<label class="st-encounter-field"><span>事件梗概</span><textarea name="roleAffectionSummary-' + index + '" placeholder="' + escapeAttr("通用：" + (ENCOUNTER_GENERIC_AFFECTION_CHAIN[index]?.summary || "由AI按当前角色状态生成。")) + '">' + escapeHtml(item.summary) + '</textarea></label>' +
+	            '<label class="st-encounter-field"><span>事件梗概</span><textarea name="roleAffectionSummary-' + index + '" placeholder="' + escapeAttr("通用：" + encounterAffectionFallbackSummary(index)) + '">' + escapeHtml(item.summary) + '</textarea></label>' +
 	          '</div>' +
 	        '</article>'
 	      )).join("") +
@@ -20870,25 +20884,57 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 
   const ROLE_EVENT_HINT_CONFIG = [
     {
-      role: "西园寺爱丽莎",
-      valueKey: "好感度",
-      thresholds: [
-        { value: 40, bit: 0, label: "40 聊动漫" },
-        { value: 70, bit: 1, label: "70 漫展邀请" },
-        { value: 100, bit: 2, label: "100 巧克力/准入证" },
-        { value: 140, bit: 3, label: "140 示爱" },
-        { value: 200, bit: 4, label: "200 公开恋情" }
-      ]
-    }
-  ];
+	      role: "西园寺爱丽莎",
+	      valueKey: "好感度",
+	      thresholds: [
+	        {
+	          value: 40,
+	          bit: 0,
+	          label: "40 动漫私语",
+	          title: "动漫私语",
+	          summary: "爱丽莎开始主动找{{user}}聊动漫，用大小姐式的矜持包装兴趣，或因为怕被班级圈层发现而压低声音；重点是她主动把隐藏兴趣分享给{{user}}。"
+	        },
+	        {
+	          value: 70,
+	          bit: 1,
+	          label: "70 两人漫展邀请",
+	          title: "两人漫展邀请",
+	          summary: "爱丽莎只邀请{{user}}一起去漫展，把隐藏兴趣、路线安排或偷偷准备的票交给{{user}}；阿宅最多作为知情旁观者或被支开的人出现，不能成为共同事件对象。"
+	        },
+	        {
+	          value: 100,
+	          bit: 2,
+	          label: "100 巧克力/准入证",
+	          title: "巧克力与准入证",
+	          summary: "爱丽莎向{{user}}送出巧克力，并通过西园寺家的渠道交给{{user}}两张校内特殊地点准入证；若已持有对应准入证，则只描写她确认通行资格或补上纪念说明。"
+	        },
+	        {
+	          value: 140,
+	          bit: 3,
+	          label: "140 大小姐的告白",
+	          title: "大小姐的告白",
+	          summary: "爱丽莎向{{user}}示爱。告白可以骄傲、笨拙、强势或带有不安，取决于当前变量和剧情冲突；不要强行一次解决所有矛盾。"
+	        },
+	        {
+	          value: 200,
+	          bit: 4,
+	          label: "200 公开恋情",
+	          title: "全班面前的公开恋情",
+	          summary: "爱丽莎在全班面前宣布和{{user}}的恋情并亲吻{{user}}，并有意识地让阿宅看见两人的亲密关系；可对阿宅炫耀{{user}}已是自己的恋人，或在阿宅已有绿帽倾向时轻蔑刺激他被排除的位置。"
+	        }
+	      ]
+	    }
+	  ];
 
   function normalizedRoleEventRecord(value) {
     const text = String(value ?? "").trim();
     return /^[01]{5}$/.test(text) ? text : "00000";
   }
 
-  const PROFILE_EVENT_MEMORY_STORAGE_PREFIX = "hypnoos.profile.eventMemories.v1:";
-  const PROFILE_EVENT_MEMORY_BLOCK_RE = /<人物档案事件记录>([\\s\\S]*?)<\\/人物档案事件记录>/g;
+	  const PROFILE_EVENT_MEMORY_STORAGE_PREFIX = "hypnoos.profile.eventMemories.v1:";
+	  const PROFILE_EVENT_MEMORY_OPEN_TAG = "<人物档案事件记录>";
+	  const PROFILE_EVENT_MEMORY_CLOSE_TAG = "</人物档案事件记录>";
+	  const PROFILE_EVENT_MEMORY_BLOCK_RE = /<人物档案事件记录>([\\s\\S]*?)<\\/人物档案事件记录>/g;
 
   function profileEventMemoryScopeText(value) {
     const text = String(value ?? "").trim();
@@ -21067,11 +21113,34 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     };
   }
 
-  function profileEventMemoryMessageBody(message) {
+	  function profileEventMemoryMessageBody(message) {
     if (typeof message === "string") return message;
     if (!message || typeof message !== "object") return "";
-    return String(message.message ?? message.mes ?? message.text ?? message.content ?? message.raw ?? "");
-  }
+	    return String(message.message ?? message.mes ?? message.text ?? message.content ?? message.raw ?? "");
+	  }
+
+	  function profileEventMemoryExtractBlocks(body) {
+	    const text = String(body ?? "");
+	    const blocks = [];
+	    let searchFrom = 0;
+	    while (searchFrom < text.length) {
+	      const openIndex = text.indexOf(PROFILE_EVENT_MEMORY_OPEN_TAG, searchFrom);
+	      if (openIndex < 0) break;
+	      const contentStart = openIndex + PROFILE_EVENT_MEMORY_OPEN_TAG.length;
+	      const closeIndex = text.indexOf(PROFILE_EVENT_MEMORY_CLOSE_TAG, contentStart);
+	      const nextOpenIndex = text.indexOf(PROFILE_EVENT_MEMORY_OPEN_TAG, contentStart);
+	      const hasCloseBeforeNext = closeIndex >= 0 && (nextOpenIndex < 0 || closeIndex < nextOpenIndex);
+	      const contentEnd = hasCloseBeforeNext
+	        ? closeIndex
+	        : (nextOpenIndex >= 0 ? nextOpenIndex : text.length);
+	      const block = text.slice(contentStart, contentEnd);
+	      if (profileEventMemoryCleanText(block, 80)) blocks.push(block);
+	      searchFrom = hasCloseBeforeNext
+	        ? closeIndex + PROFILE_EVENT_MEMORY_CLOSE_TAG.length
+	        : Math.max(contentEnd, contentStart + 1);
+	    }
+	    return blocks;
+	  }
 
   function profileEventMemoryMessageId(message, index = 0) {
     if (message && typeof message === "object") {
@@ -21127,25 +21196,21 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 
   function syncProfileEventMemoriesFromChat() {
     try {
-      const messages = profileEventMemoryChatMessages().filter((item) => {
-        PROFILE_EVENT_MEMORY_BLOCK_RE.lastIndex = 0;
-        return !item.isUser && PROFILE_EVENT_MEMORY_BLOCK_RE.test(item.body);
-      });
-      PROFILE_EVENT_MEMORY_BLOCK_RE.lastIndex = 0;
-      const signature = messages.map((item) => item.id + ":" + profileEventMemoryHash(item.body)).join("|");
+	      const messages = profileEventMemoryChatMessages()
+	        .map((item) => ({ ...item, memoryBlocks: item.isUser ? [] : profileEventMemoryExtractBlocks(item.body) }))
+	        .filter((item) => item.memoryBlocks.length);
+	      const signature = messages.map((item) => item.id + ":" + profileEventMemoryHash(item.body)).join("|");
       if (globalThis.__ST_PROFILE_EVENT_MEMORY_SCAN_SIGNATURE__ === signature) return false;
       globalThis.__ST_PROFILE_EVENT_MEMORY_SCAN_SIGNATURE__ = signature;
       if (!messages.length) return false;
       const store = readProfileEventMemoryStore();
       store.events = store.events && typeof store.events === "object" && !Array.isArray(store.events) ? store.events : {};
-      let changed = false;
-      for (const message of messages) {
-        PROFILE_EVENT_MEMORY_BLOCK_RE.lastIndex = 0;
-        let match;
-        while ((match = PROFILE_EVENT_MEMORY_BLOCK_RE.exec(message.body))) {
-          const record = normalizeProfileEventMemoryRecord(match[1], message);
-          if (!record) continue;
-          const roleBucket = store.events[record.roleName] && typeof store.events[record.roleName] === "object" && !Array.isArray(store.events[record.roleName])
+	      let changed = false;
+	      for (const message of messages) {
+	        for (const block of message.memoryBlocks) {
+	          const record = normalizeProfileEventMemoryRecord(block, message);
+	          if (!record) continue;
+	          const roleBucket = store.events[record.roleName] && typeof store.events[record.roleName] === "object" && !Array.isArray(store.events[record.roleName])
             ? store.events[record.roleName]
             : {};
           const key = String(record.bit);
