@@ -7675,6 +7675,12 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 		    return String(generic.summary || "角色围绕本阶段关系变化与{{user}}发生一次明确推进关系的事件。");
 		  }
 
+		  function roleEventGenericNameInstruction(eventItem, bit) {
+		    const index = Math.max(0, Math.min(4, Number(eventItem?.bit ?? bit) || 0));
+		    const generic = ENCOUNTER_GENERIC_AFFECTION_CHAIN[index] || {};
+		    return String(generic.nameInstruction || "由AI根据当前角色状态、地点、关系氛围和事件主题生成一个贴合该角色的具体事件名。");
+		  }
+
 		  function roleEventThresholds(roleName) {
 		    const specific = ROLE_EVENT_HINT_CONFIG.find((config) => String(config.role || "") === String(roleName || ""));
 		    if (specific?.thresholds?.length) {
@@ -7691,8 +7697,10 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	      return {
 	        value,
 	        bit: index,
-	        label: String(generic.title || ""),
-	        title: String(generic.title || ""),
+	        label: String(generic.label || generic.topic || generic.title || ""),
+	        title: String(generic.title || "由AI生成事件名"),
+	        topic: String(generic.topic || generic.label || generic.title || ""),
+	        nameInstruction: String(generic.nameInstruction || ""),
 	        summary: String(generic.summary || ""),
 	        generic: true
 	      };
@@ -7783,8 +7791,12 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
           事件序号: eventIndex,
 	          事件位: bit,
 	          事件标记: numeral,
-	          事件名: String(eventItem?.title || eventItem?.label || "通用事件" + numeral),
-		          事件描述: String(eventItem?.summary || roleEventFallbackSummary(bit)),
+	          事件名: String(eventItem?.generic ? "由AI根据角色状态生成事件名" : (eventItem?.title || eventItem?.label || "通用事件" + numeral)),
+	          ...(eventItem?.generic ? {
+	            通用事件主题: String(eventItem?.topic || eventItem?.label || ""),
+	            事件命名要求: roleEventGenericNameInstruction(eventItem, bit)
+	          } : {}),
+			          事件描述: String(eventItem?.summary || roleEventFallbackSummary(bit)),
 	          好感链来源: eventItem?.generic ? "通用好感链（未生成专属世界书条目）" : "角色专属好感链或事件配置",
 	          当前好感度: statValue(target, "好感度"),
 	          建议好感条件: "好感度≥" + Number(eventItem?.value || 0),
@@ -7792,7 +7804,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	          前端写入前事件记录: currentRecord,
 	          前端写入后事件记录: writtenRecord,
 	          变量写入路径: ["/角色/" + roleName + "/事件记录"],
-		          AI执行规范: "这是用户在人物档案主动选择触发角色事件；事件记录位图已由前端直接写入并锁定暂存。优先使用本操作里的事件名/事件描述生成该阶段事件剧情；若角色专属好感链/事件世界书存在，可结合对应序号条目。若没有专属世界书，则使用通用好感链并根据当前角色人设、好感/服从/警戒/性欲/快感值、心理、地点、关系进展和近期剧情自然生成。AI不得再次replace /角色/" + roleName + "/事件记录，不得重复触发已完成事件，也不要自动发奖。回复末尾必须输出完整闭合的<人物档案事件记录>块，最后单独一行写</人物档案事件记录>。",
+			          AI执行规范: "这是用户在人物档案主动选择触发角色事件；事件记录位图已由前端直接写入并锁定暂存。优先使用本操作里的事件名/事件描述生成该阶段事件剧情；若角色专属好感链/事件世界书存在，可结合对应序号条目。若没有专属世界书，则使用通用好感链，并根据通用事件主题、当前角色人设、好感/服从/警戒/性欲/快感值、心理、地点、关系进展和近期剧情自然生成；通用链的事件名不得照抄“由AI根据角色状态生成事件名”，必须生成一个贴合该角色的具体标题。AI不得再次replace /角色/" + roleName + "/事件记录，不得重复触发已完成事件，也不要自动发奖。回复末尾必须输出完整闭合的<人物档案事件记录>块，最后单独一行写</人物档案事件记录>。",
 	          不可删除: true
 	        }
 	      };
@@ -12423,13 +12435,43 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	  const ENCOUNTER_ROLE_PAGE_SIZE = 4;
 	  const ENCOUNTER_ROLE_IMAGE_SLOT_COUNT = 4;
   const ENCOUNTER_AFFECTION_CHAIN_THRESHOLDS = [40, 70, 100, 140, 200];
-	  const ENCOUNTER_GENERIC_AFFECTION_CHAIN = [
-	    { title: "注意到异常", summary: "角色第一次明确注意到{{user}}、催眠APP或当前关系里的异常，并因此对{{user}}产生额外关注。" },
-	    { title: "主动靠近", summary: "角色找理由和{{user}}单独接触，试探对方意图，也暴露一点自己的兴趣、弱点或欲望。" },
-	    { title: "关系越界", summary: "角色在信任、好奇、依赖或被影响的状态下跨过原本的社交距离，做出比平时更亲近的选择。" },
-	    { title: "秘密共享", summary: "角色把一个秘密、请求或重要情绪交给{{user}}，两人的关系因此变得难以回到普通距离。" },
-	    { title: "关键选择", summary: "角色在重要场景中主动选择站到{{user}}这边，承认关系已经改变，并留下后续更深事件的钩子。" }
-	  ];
+		  const ENCOUNTER_GENERIC_AFFECTION_CHAIN = [
+		    {
+		      label: "40 牵手",
+		      topic: "牵手",
+		      title: "由AI生成事件名",
+		      nameInstruction: "围绕角色第一次主动或半主动与{{user}}牵手，生成贴合角色性格、地点和当下关系的具体事件名。",
+		      summary: "通用好感40事件。角色与{{user}}发生一次明确的牵手事件：可以是试探性伸手、被危机或拥挤人流迫近后没有松开、主动牵起{{user}}带路，或在害羞/强势/笨拙/自然的反应中承认这份亲近。重点是牵手成为两人关系从普通距离迈向亲密距离的标志。"
+		    },
+		    {
+		      label: "70 出门约会",
+		      topic: "出门约会",
+		      title: "由AI生成事件名",
+		      nameInstruction: "围绕角色根据自身兴趣、身份、资源或性格选择约会地点，生成贴合角色的具体事件名。",
+		      summary: "通用好感70事件。角色主动或接受与{{user}}出门约会，约会地点由该角色根据自身人设选择，例如咖啡店、书店、游戏厅、海边、商场、展会、神社、练习场、秘密据点或她熟悉的特殊场所。重点是通过地点选择体现角色性格，并让两人在公共或半私密场景中推进关系。"
+		    },
+		    {
+		      label: "100 接吻",
+		      topic: "接吻",
+		      title: "由AI生成事件名",
+		      nameInstruction: "围绕角色与{{user}}第一次或关键性的接吻，生成贴合角色情绪与场景的具体事件名。",
+		      summary: "通用好感100事件。角色与{{user}}发生一次明确的接吻事件：可以由角色主动、由{{user}}引导后接受，或在冲动、告别、感谢、占有欲、羞怯试探等情绪中自然发生。重点是接吻需要改变两人的关系认知，并留下可被日后回忆的具体场面。"
+		    },
+		    {
+		      label: "140 示爱",
+		      topic: "示爱",
+		      title: "由AI生成事件名",
+		      nameInstruction: "围绕角色以符合自身性格的方式向{{user}}表达恋爱感情，生成贴合角色的具体事件名。",
+		      summary: "通用好感140事件。角色向{{user}}示爱，形式应符合该角色性格：可以是直白告白、别扭承认、用行动代替语言、写信、礼物、约定、独占宣言或在危机后的真心流露。重点是她明确把{{user}}视为恋爱对象，而不是普通朋友、临时同伴或暧昧对象。"
+		    },
+		    {
+		      label: "200 公开恋情",
+		      topic: "公开恋情",
+		      title: "由AI生成事件名",
+		      nameInstruction: "围绕角色公开承认与{{user}}的恋人关系，生成贴合角色身份、社交圈和公开方式的具体事件名。",
+		      summary: "通用好感200事件。角色公开承认与{{user}}的恋情，公开范围和方式由角色身份决定：可以是在班级、社团、工作场所、朋友圈、家族圈、人群面前，或通过牵手、介绍、声明、亲吻、共同出席等方式让他人知道。重点是这段关系从私下确认变成会影响周围人态度和后续剧情的公开事实。"
+		    }
+		  ];
 	  const encounterAffectionFallbackSummary = (index) => {
 	    const generic = ENCOUNTER_GENERIC_AFFECTION_CHAIN[Math.max(0, Math.min(4, Number(index) || 0))] || {};
 	    return String(generic.summary || "角色围绕本阶段关系变化与{{user}}发生一次明确推进关系的事件。");
