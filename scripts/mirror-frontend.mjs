@@ -586,7 +586,6 @@ html.st-hypnoos-booting.st-hypnoos-boot-failed body::after{content:"前端加载
 	      copyField("当前地点", "当前地点");
 	      copyField("_当前日程", "_当前日程", "当前日程");
 	      copyField("_当前特殊日期", "_当前特殊日期", "当前特殊日期");
-	      copyField("当天课程表", "当天课程表");
 	      copyField("当天原课程表", "当天原课程表");
 	      copyField("当天魔改课程表", "当天魔改课程表");
 	      copyField("派遣岗位", "派遣岗位");
@@ -628,7 +627,7 @@ html.st-hypnoos-booting.st-hypnoos-boot-failed body::after{content:"前端加载
 	      }
 	      if (/购买角色包|角色包/.test(action)) addOperationVariableFields(fields, ["星光点"]);
 	      if (/^邂逅$/.test(source) && /兑换星光点|购买校规修改券|购买课程表魔改券|购买特殊地点准入证/.test(action)) addOperationVariableFields(fields, ["星光点", "持有零花钱", "持有物品"]);
-	      if (/^课程表$/.test(source) && /课程表魔改券/.test(action)) addOperationVariableFields(fields, ["持有物品", "当天课程表", "当天原课程表", "当天魔改课程表"]);
+	      if (/^课程表$/.test(source) && /课程表魔改券/.test(action)) addOperationVariableFields(fields, ["持有物品", "当天原课程表", "当天魔改课程表"]);
 	      if (/^地图$/.test(source) && /^解锁特殊地点$/.test(action)) addOperationVariableFields(fields, ["星光点", "特殊地点解锁"]);
 	      if (/资源兑换/.test(action)) {
 	        if (/提升MC能量上限/.test(item) || /MC能量上限/.test(text)) addOperationVariableFields(fields, ["持有零花钱", "MC能量上限"]);
@@ -3172,9 +3171,9 @@ async function getMvuData() {
             const scheduleName = String(dailySchedule?.当前课段?.名称 ?? dailySchedule?.当前日程 ?? '').trim() || '无';
             const scheduleDetail = String(dailySchedule?.当前课段?.时间 ?? '').trim();
             const specialText = String(dailySchedule?.当前特殊日期 ?? '').trim();
-	            const timetableRows = Array.isArray(dailySchedule?.课表) ? dailySchedule.课表 : [];
-	            const originalTimetableRows = Array.isArray(dailySchedule?.原课程表) ? dailySchedule.原课程表 : timetableRows;
-	            const modifiedTimetableRows = Array.isArray(dailySchedule?.魔改课程表) ? dailySchedule.魔改课程表 : timetableRows;
+		            const fallbackTimetableRows = Array.isArray(dailySchedule?.课表) ? dailySchedule.课表 : [];
+		            const originalTimetableRows = Array.isArray(dailySchedule?.原课程表) ? dailySchedule.原课程表 : fallbackTimetableRows;
+		            const modifiedTimetableRows = Array.isArray(dailySchedule?.魔改课程表) ? dailySchedule.魔改课程表 : fallbackTimetableRows;
 	            const signature = [
 	                String(option?.type || 'message'),
 	                String(option?.message_id ?? 'latest'),
@@ -3183,17 +3182,19 @@ async function getMvuData() {
 	                scheduleName,
 	                scheduleDetail,
 	                specialText,
-	                JSON.stringify(timetableRows),
-	                JSON.stringify(originalTimetableRows),
-	                JSON.stringify(modifiedTimetableRows)
-	            ].join('\\u0001');
+		                JSON.stringify(originalTimetableRows),
+		                JSON.stringify(modifiedTimetableRows)
+		            ].join('\\u0001');
 	            if (signature && globalThis.__ST_HYPNOOS_DAILY_SCHEDULE_SYNC_SIGNATURE__ === signature)
-	                return false;
-	            let changed = false;
-	            if (await setIfChanged(mvu, '系统.当天课程表', timetableRows))
-	                changed = true;
-	            if (await setIfChanged(mvu, '系统.当天原课程表', originalTimetableRows))
-	                changed = true;
+		                return false;
+		            let changed = false;
+		            const system = mvu?.stat_data?.["系统"];
+		            if (system && Object.prototype.hasOwnProperty.call(system, "当天课程表")) {
+		                delete system["当天课程表"];
+		                changed = true;
+		            }
+		            if (await setIfChanged(mvu, '系统.当天原课程表', originalTimetableRows))
+		                changed = true;
 	            if (await setIfChanged(mvu, '系统.当天魔改课程表', modifiedTimetableRows))
 	                changed = true;
             if (await setIfChanged(mvu, '系统._当前周几', weekdayText || ''))
@@ -5811,7 +5812,7 @@ function chooseUserResourcesFromSystems(systems) {
                     await _mvuBridge__WEBPACK_IMPORTED_MODULE_3__.MvuBridge.syncDailySchedule(clock.dailySchedule);
             }
             catch (err) {
-                console.warn('[HypnoOS] 同步当天课程表变量失败', err);
+	                console.warn('[HypnoOS] 同步只读日程变量失败', err);
             }
             return clock;
         };
@@ -7967,6 +7968,20 @@ function injectInternalMchanApp(html, staticSeed, encounterBuiltinPackages = [])
 .st-timetable-app .st-tt-period.is-modified{border-color:rgba(14,116,144,.34);background:linear-gradient(135deg,rgba(224,247,250,.7),rgba(254,243,199,.48));box-shadow:inset 0 0 0 1px rgba(14,116,144,.08)}
 .st-timetable-app .st-tt-period .st-tt-original{display:block;margin-top:2px;color:rgba(14,116,144,.72);font-size:9px;font-style:normal;font-weight:900;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .st-timetable-app .st-tt-status{margin:0;border:1px solid rgba(14,116,144,.14);border-radius:8px;background:rgba(224,247,250,.42);color:rgba(49,67,70,.78);padding:7px 8px;font-size:10px;font-weight:850;line-height:1.45}
+.st-timetable-app .st-tt-period.is-selectable{border-color:rgba(146,64,14,.42);background:linear-gradient(135deg,rgba(254,243,199,.78),rgba(255,255,255,.54));cursor:pointer;box-shadow:0 8px 18px rgba(146,64,14,.12)}
+.st-timetable-app .st-tt-period.is-renamable{cursor:pointer}
+.st-timetable-app .st-tt-period.is-disabled{opacity:.48}
+.st-timetable-app .st-tt-period button{width:100%;min-height:58px;border:0;background:transparent;color:inherit;text-align:inherit;padding:0;display:grid;gap:1px;align-content:start;cursor:pointer;font:inherit}
+.st-timetable-app .st-tt-period button:disabled{cursor:not-allowed}
+.st-timetable-app .st-tt-dialog{position:absolute;inset:0;z-index:8;display:grid;place-items:center;padding:18px;background:rgba(61,47,37,.34);backdrop-filter:blur(2px)}
+.st-timetable-app .st-tt-dialog-card{width:min(100%,304px);border:1px solid rgba(92,64,38,.24);border-radius:8px;background:#fffaf0;color:#3d2f25;box-shadow:0 18px 38px rgba(59,42,25,.24),inset 0 0 0 1px rgba(255,255,255,.62);padding:14px;display:grid;gap:10px}
+.st-timetable-app .st-tt-dialog-card h3{margin:0;color:#33291f;font-size:16px;font-weight:950;line-height:1.25}
+.st-timetable-app .st-tt-dialog-card p{margin:0;color:rgba(61,47,37,.66);font-size:11px;font-weight:850;line-height:1.45}
+.st-timetable-app .st-tt-dialog-card input{width:100%;min-width:0;border:1px solid rgba(92,64,38,.22);border-radius:7px;background:rgba(255,255,255,.74);color:#33291f;font-size:14px;font-weight:900;line-height:1.2;padding:9px 10px;outline:none}
+.st-timetable-app .st-tt-dialog-card input:focus{border-color:rgba(146,64,14,.48);box-shadow:0 0 0 2px rgba(146,64,14,.1)}
+.st-timetable-app .st-tt-dialog-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.st-timetable-app .st-tt-dialog-actions button{height:34px;border:1px solid rgba(92,64,38,.18);border-radius:8px;background:rgba(255,255,255,.62);color:rgba(61,47,37,.76);font-size:12px;font-weight:950;cursor:pointer}
+.st-timetable-app .st-tt-dialog-actions button.primary{border-color:rgba(146,64,14,.28);background:rgba(254,243,199,.72);color:#5b341f}
 .st-timetable-app .st-tt-rhythm{padding:8px;border-radius:8px}
 .st-timetable-app .st-tt-rhythm-item b,.st-timetable-app .st-tt-rhythm-item i{color:rgba(61,47,37,.68)}
 .st-timetable-app .st-tt-rhythm-item span:before,.st-timetable-app .st-tt-rhythm-item span:after{background:rgba(146,64,14,.34)}
@@ -12940,18 +12955,16 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	        system["_当前周几"],
 	        system["_当前日程"],
 	        system["_当前特殊日期"],
-	        system["当天课程表"],
-	        system["当天原课程表"],
-	        system["当天魔改课程表"]
+		        system["当天原课程表"],
+		        system["当天魔改课程表"]
 	      ]);
 	      workApplyReadonlySchedule(system, dateText, timeText);
 	      const after = JSON.stringify([
 	        system["_当前周几"],
 	        system["_当前日程"],
 	        system["_当前特殊日期"],
-	        system["当天课程表"],
-	        system["当天原课程表"],
-	        system["当天魔改课程表"]
+		        system["当天原课程表"],
+		        system["当天魔改课程表"]
 	      ]);
 	      return before === after
 	        ? { ok: false, message: "只读课程表变量无需同步。" }
@@ -12986,6 +12999,73 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     return count;
   }
 
+  function timetableCurrentContext() {
+    const system = getSystemState();
+    const dateText = system["当前日期"] || "4月9日";
+    const timeText = storyTimeOnly(system["当前时间"], "12:00");
+    const parsedDate = parseStoryDate(dateText);
+    const weekday = weekdayForStoryDate(dateText) || String(system["_当前周几"] || system["当前周几"] || "").trim() || "星期三";
+    const activeDay = ST_WEEKDAY_INDEX[weekday] || 0;
+    const minutes = minutesFromTimeText(timeText);
+    const special = specialDayForDate(parsedDate);
+    const blocksClass = Boolean(special && (special.holiday || special.exam || !/普通授课/.test(special.detail || "")));
+    const canModifyToday = Boolean(activeDay >= 1 && activeDay <= 5 && !blocksClass);
+    const remainingPeriods = new Set(canModifyToday
+      ? ST_CLASS_PERIODS.filter((period) => Number.isFinite(minutes) && period.end > minutes).map((period) => period.index)
+      : []);
+    return { system, dateText, timeText, parsedDate, weekday, activeDay, minutes, special, blocksClass, canModifyToday, remainingPeriods };
+  }
+
+  function timetableCanUseCouponForCell(day, period, context = timetableCurrentContext()) {
+    return Boolean(context.canModifyToday && Number(day) === context.activeDay && context.remainingPeriods.has(Number(period)));
+  }
+
+  function timetableWeekdayShortName(day) {
+    return ({ 1: "周一", 2: "周二", 3: "周三", 4: "周四", 5: "周五" })[Number(day)] || ("周" + day);
+  }
+
+  function timetableDialogState(page) {
+    const day = Number(page?.dataset?.timetableDialogDay || 0);
+    const period = Number(page?.dataset?.timetableDialogPeriod || 0);
+    if (!day || !period) return null;
+    const periodInfo = ST_CLASS_PERIODS.find((item) => item.index === period);
+    const label = timetableWeekdayShortName(day) + " " + (periodInfo?.label || (period + "限"));
+    const originalSubject = weeklyTimetableOriginalSubject(day, period);
+    const currentSubject = weeklyTimetableSubject(day, period);
+    const isModified = weeklyTimetableIsModified(day, period);
+    const consumeCoupon = page?.dataset?.timetableDialogConsumeCoupon === "true";
+    return { day, period, label, originalSubject, currentSubject, isModified, consumeCoupon };
+  }
+
+  function renderTimetableDialog(page) {
+    const state = timetableDialogState(page);
+    if (!state) return "";
+    const title = state.consumeCoupon ? "使用课程表魔改券" : "重命名魔改课程";
+    const note = state.consumeCoupon
+      ? "保存后消耗1张课程表魔改券，只修改这一节。"
+      : "已魔改格子可随时重命名，不额外消耗课程表魔改券。";
+    return '<div class="st-tt-dialog" data-timetable-dialog>' +
+      '<section class="st-tt-dialog-card" role="dialog" aria-modal="true" aria-label="修改课程名">' +
+        '<h3>' + escapeHtml(title) + '</h3>' +
+        '<p>' + escapeHtml(state.label + " / 原课程：" + state.originalSubject) + '</p>' +
+        '<input data-timetable-dialog-input maxlength="24" value="' + escapeAttr(state.currentSubject) + '" aria-label="课程名">' +
+        '<p>' + escapeHtml(note) + '</p>' +
+        '<div class="st-tt-dialog-actions">' +
+          '<button type="button" data-timetable-dialog-cancel>取消</button>' +
+          '<button type="button" class="primary" data-timetable-dialog-save>保存</button>' +
+        '</div>' +
+      '</section>' +
+    '</div>';
+  }
+
+  function closeTimetableDialog(page, notice = "") {
+    delete page.dataset.timetableDialogDay;
+    delete page.dataset.timetableDialogPeriod;
+    delete page.dataset.timetableDialogConsumeCoupon;
+    if (notice) page.dataset.timetableNotice = notice;
+    renderTimetablePage(page);
+  }
+
   function timetableModificationCouponCount(stat = getLatestStatDataSync()) {
     try {
       return encounterInventoryItemCount(TIMETABLE_MOD_COUPON_ITEM, stat);
@@ -12994,7 +13074,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     }
   }
 
-  async function consumeTimetableModificationCoupon() {
+  async function consumeTimetableModificationCoupon(details = {}) {
     const data = encounterCurrentMvuData();
     if (!data) return { ok: false, reason: "MVU变量接口未就绪，无法使用课程表魔改券。" };
     data.stat["系统"] = data.stat["系统"] && typeof data.stat["系统"] === "object" && !Array.isArray(data.stat["系统"]) ? data.stat["系统"] : {};
@@ -13008,8 +13088,12 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       不可删除: true,
       消耗物品: TIMETABLE_MOD_COUPON_ITEM + " x1",
       前端写入后剩余魔改券: Math.max(0, beforeCount - 1),
-      前端处理: "已由前端扣除课程表魔改券，并允许本次编辑魔改课程表。",
-	      AI执行规范: "课程表魔改券已由前端扣除；AI不得再次扣券或扣星光点。课程表内容由前端本地保存，并同步当天课程表、当天原课程表和当天魔改课程表等只读日程字段。"
+      修改范围: "仅当天剩余课程中的一节",
+      修改课节: details.label || "",
+      原课程名: details.originalSubject || "",
+      魔改课程名: details.nextSubject || "",
+      前端处理: "已由前端扣除课程表魔改券，并把本次单格修改保存到本聊天本地魔改课程表。",
+	      AI执行规范: "课程表魔改券已由前端扣除；AI不得再次扣券或扣星光点。本券一次只能修改当天剩余课程中的一节，课程表内容由前端本地保存，并同步当天原课程表和当天魔改课程表等只读日程字段。"
     });
     return { ok: true, remaining: Math.max(0, beforeCount - 1) };
   }
@@ -13531,20 +13615,13 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       { index: 4, short: "周四", full: "星期四" },
       { index: 5, short: "周五", full: "星期五" }
     ];
-    const system = getSystemState();
-    const dateText = system["当前日期"] || "4月9日";
-    const timeText = storyTimeOnly(system["当前时间"], "12:00");
-    const parsedDate = parseStoryDate(dateText);
-    const weekday = weekdayForStoryDate(dateText) || String(system["_当前周几"] || system["当前周几"] || "").trim() || "星期三";
-    const activeDay = ST_WEEKDAY_INDEX[weekday];
-    const minutes = minutesFromTimeText(timeText);
+    const context = timetableCurrentContext();
+    const { dateText, timeText, parsedDate, weekday, activeDay, minutes, special, blocksClass } = context;
     const activePeriod = ST_CLASS_PERIODS.find((period) => minutes >= period.start && minutes < period.end)?.index || 0;
-    const special = specialDayForDate(parsedDate);
-    const blocksClass = special && (special.holiday || special.exam || !/普通授课/.test(special.detail || ""));
     const slot = routineSlot(minutes, weekday, parsedDate);
     const mode = page.dataset.timetableMode === "original" ? "original" : "modified";
     if (mode !== "modified") page.dataset.timetableEdit = "";
-    const editing = mode === "modified" && page.dataset.timetableEdit === "true";
+    const selecting = mode === "modified" && page.dataset.timetableEdit === "select";
     const timetable = readWeeklyTimetable();
     const displayTable = mode === "original" ? normalizeWeeklyTimetable(ST_WEEKLY_TIMETABLE) : timetable;
     const changeCount = weeklyTimetableChangeCount(timetable);
@@ -13559,15 +13636,19 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	        const parts = splitSubject(subject);
 	        const current = !blocksClass && day.index === activeDay && period.index === activePeriod;
 	        const canRenameCell = mode === "modified" && modified;
-	        const cellEditable = editing || canRenameCell;
+	        const canUseCouponCell = mode === "modified" && selecting && timetableCanUseCouponForCell(day.index, period.index, context);
+	        const cellAction = canUseCouponCell ? "coupon" : canRenameCell ? "rename" : "";
 	        const compareText = modified
 	          ? (mode === "original" ? ("魔改：" + modifiedSubject) : ("原：" + originalSubject))
 	          : "";
-	        return '<div class="st-tt-period ' + (current ? "is-current " : "") + (modified ? "is-modified" : "") + '">' +
-	          '<small>' + escapeHtml(period.label) + '</small>' +
-	          (cellEditable
-	            ? '<input class="st-tt-subject-input" data-timetable-subject data-timetable-day="' + day.index + '" data-timetable-period="' + period.index + '" value="' + escapeAttr(subject) + '" aria-label="' + escapeAttr(day.short + " " + period.label) + '">'
-	            : '<strong>' + escapeHtml(parts.main) + '</strong>' + (parts.sub ? '<em>' + escapeHtml(parts.sub) + '</em>' : '') + (compareText ? '<em class="st-tt-original">' + escapeHtml(compareText) + '</em>' : '')) +
+	        const cellBody = '<small>' + escapeHtml(period.label) + '</small>' +
+	          '<strong>' + escapeHtml(parts.main) + '</strong>' +
+	          (parts.sub ? '<em>' + escapeHtml(parts.sub) + '</em>' : '') +
+	          (compareText ? '<em class="st-tt-original">' + escapeHtml(compareText) + '</em>' : '');
+	        return '<div class="st-tt-period ' + (current ? "is-current " : "") + (modified ? "is-modified " : "") + (canUseCouponCell ? "is-selectable " : "") + (canRenameCell ? "is-renamable " : "") + (selecting && !canUseCouponCell && !canRenameCell ? "is-disabled" : "") + '">' +
+	          (cellAction
+	            ? '<button type="button" data-timetable-cell-action="' + cellAction + '" data-timetable-day="' + day.index + '" data-timetable-period="' + period.index + '" aria-label="' + escapeAttr((cellAction === "coupon" ? "修改 " : "重命名 ") + day.short + " " + period.label) + '">' + cellBody + '</button>'
+	            : cellBody) +
 	        '</div>';
       }).join("");
       return '<section class="st-tt-day ' + (day.index === activeDay ? "is-active" : "") + '">' +
@@ -13587,9 +13668,8 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
           '<button type="button" class="' + (mode === "modified" ? "active" : "") + '" data-timetable-mode="modified">魔改课程表</button>' +
         '</section>' +
         '<section class="st-tt-actions">' +
-          (mode === "modified" ? '<button type="button" class="primary" data-timetable-edit-toggle>' + (editing ? "完成" : "修改课程表") + '</button>' : '') +
-          (editing ? '<button type="button" data-timetable-reset>恢复默认</button>' : '') +
-          '<span>' + escapeHtml((editing ? "编辑中 / " : "") + "已改 " + changeCount + " 格 / " + TIMETABLE_MOD_COUPON_ITEM + " " + couponCount + " 张") + '</span>' +
+          (mode === "modified" ? '<button type="button" class="primary" data-timetable-edit-toggle>' + (selecting ? "取消选择" : "修改课程表") + '</button>' : '') +
+          '<span>' + escapeHtml((selecting ? "选择今天剩余一节 / " : "") + "已改 " + changeCount + " 格 / " + TIMETABLE_MOD_COUPON_ITEM + " " + couponCount + " 张") + '</span>' +
         '</section>' +
         (notice ? '<p class="st-tt-status">' + escapeHtml(notice) + '</p>' : '') +
         '<section class="st-tt-week">' + weekHtml + '</section>' +
@@ -13600,7 +13680,8 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
           '<div class="st-tt-rhythm-item"><b>15:25</b><span>清扫</span><i>15:40</i></div>' +
           '<div class="st-tt-rhythm-item"><b>15:45</b><span>放学</span><i>16:00</i></div>' +
         '</section>' +
-      '</main>';
+      '</main>' +
+      renderTimetableDialog(page);
     bindLiteHeader(page, () => renderTimetablePage(page));
     page.querySelector('[data-lite-action="back"]')?.addEventListener("click", () => {
       setPhoneActiveApp(page.parentElement, "");
@@ -13616,9 +13697,9 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     });
     page.querySelector("[data-timetable-edit-toggle]")?.addEventListener("click", async (event) => {
       event.preventDefault();
-      if (page.dataset.timetableEdit === "true") {
+      if (page.dataset.timetableEdit === "select") {
         page.dataset.timetableEdit = "";
-        page.dataset.timetableNotice = "魔改课程表已保存到本聊天本地课表。";
+        page.dataset.timetableNotice = "已取消本次课程表修改。";
         renderTimetablePage(page);
         return;
       }
@@ -13628,40 +13709,79 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
         renderTimetablePage(page);
         return;
       }
-      const ok = window.confirm("修改魔改课程表会消耗1张「" + TIMETABLE_MOD_COUPON_ITEM + "」。\\n\\n确认进入编辑？");
-      if (!ok) return;
-      page.dataset.timetableNotice = "正在使用" + TIMETABLE_MOD_COUPON_ITEM + "...";
-      renderTimetablePage(page);
-      const result = await consumeTimetableModificationCoupon();
-      if (!result.ok) {
-        page.dataset.timetableNotice = result.reason || "课程表魔改券使用失败。";
+      if (!context.canModifyToday || !context.remainingPeriods.size) {
+        page.dataset.timetableNotice = "当前没有可修改的当天剩余课程。课程表魔改券只能用于今天还没结束的一节课。";
         renderTimetablePage(page);
         return;
       }
       page.dataset.timetableMode = "modified";
-      page.dataset.timetableEdit = "true";
-      page.dataset.timetableNotice = "已消耗1张" + TIMETABLE_MOD_COUPON_ITEM + "，本次可编辑魔改课程表。";
+      page.dataset.timetableEdit = "select";
+      page.dataset.timetableNotice = "请选择今天剩余课程中的一节。保存弹窗后才会消耗1张" + TIMETABLE_MOD_COUPON_ITEM + "。";
       renderTimetablePage(page);
     });
-    page.querySelector("[data-timetable-reset]")?.addEventListener("click", (event) => {
+    page.querySelectorAll("[data-timetable-cell-action]").forEach((button) => {
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const day = Math.max(1, Math.min(5, Number(button.getAttribute("data-timetable-day")) || 1));
+        const period = Math.max(1, Math.min(6, Number(button.getAttribute("data-timetable-period")) || 1));
+        const action = button.getAttribute("data-timetable-cell-action") || "";
+        if (action === "coupon" && !timetableCanUseCouponForCell(day, period, timetableCurrentContext())) {
+          page.dataset.timetableNotice = "只能选择今天剩余课程中的一节。";
+          renderTimetablePage(page);
+          return;
+        }
+        page.dataset.timetableDialogDay = String(day);
+        page.dataset.timetableDialogPeriod = String(period);
+        page.dataset.timetableDialogConsumeCoupon = action === "coupon" ? "true" : "";
+        page.dataset.timetableNotice = "";
+        renderTimetablePage(page);
+      });
+    });
+    const dialogInput = page.querySelector("[data-timetable-dialog-input]");
+    if (dialogInput) {
+      try { dialogInput.focus(); dialogInput.select(); } catch {}
+    }
+    page.querySelector("[data-timetable-dialog-cancel]")?.addEventListener("click", (event) => {
       event.preventDefault();
-      resetWeeklyTimetable();
-      page.dataset.timetableNotice = "魔改课程表已恢复为原课程表。";
-      renderTimetablePage(page);
+      closeTimetableDialog(page, page.dataset.timetableEdit === "select" ? "请选择今天剩余课程中的一节。" : "");
     });
-	    page.querySelectorAll("[data-timetable-subject]").forEach((input) => {
-	      input.addEventListener("input", () => {
-	        const day = Math.max(1, Math.min(5, Number(input.getAttribute("data-timetable-day")) || 1));
-	        const period = Math.max(1, Math.min(6, Number(input.getAttribute("data-timetable-period")) || 1));
-	        const table = readWeeklyTimetable();
-	        table[day] = Array.isArray(table[day]) ? table[day].slice() : normalizeWeeklyTimetable()[day].slice();
-	        table[day][period - 1] = String(input.value || "").trim() || "自习";
-	        writeWeeklyTimetable(table);
-	      });
-	      input.addEventListener("change", () => {
-	        rerenderLitePagePreservingBodyScroll(page, () => renderTimetablePage(page));
-	      });
-	    });
+    page.querySelector("[data-timetable-dialog]")?.addEventListener("click", (event) => {
+      if (event.target === event.currentTarget) closeTimetableDialog(page, page.dataset.timetableEdit === "select" ? "请选择今天剩余课程中的一节。" : "");
+    });
+    page.querySelector("[data-timetable-dialog-save]")?.addEventListener("click", async (event) => {
+      event.preventDefault();
+      const state = timetableDialogState(page);
+      if (!state) return;
+      const nextSubject = String(page.querySelector("[data-timetable-dialog-input]")?.value || "").trim() || "自习";
+      if (nextSubject === state.currentSubject) {
+        closeTimetableDialog(page, state.consumeCoupon ? "未修改课程名，未消耗课程表魔改券。" : "课程名未变化。");
+        return;
+      }
+      if (state.consumeCoupon && !timetableCanUseCouponForCell(state.day, state.period, timetableCurrentContext())) {
+        closeTimetableDialog(page, "只能修改今天剩余课程中的一节。");
+        return;
+      }
+      if (state.consumeCoupon) {
+        const result = await consumeTimetableModificationCoupon({
+          label: state.label,
+          originalSubject: state.originalSubject,
+          nextSubject
+        });
+        if (!result.ok) {
+          closeTimetableDialog(page, result.reason || "课程表魔改券使用失败。");
+          return;
+        }
+      }
+      const table = readWeeklyTimetable();
+      table[state.day] = Array.isArray(table[state.day]) ? table[state.day].slice() : normalizeWeeklyTimetable()[state.day].slice();
+      table[state.day][state.period - 1] = nextSubject;
+      writeWeeklyTimetable(table);
+      page.dataset.timetableEdit = "";
+      closeTimetableDialog(page, state.consumeCoupon
+        ? "已消耗1张" + TIMETABLE_MOD_COUPON_ITEM + "，修改了" + state.label + "。"
+        : "已重命名" + state.label + "。");
+    });
   }
 
   const PERSON_PROFILE_INFO_FIELDS = [
@@ -15231,7 +15351,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	        目标日期: info.targetDateText,
 	        目标时间: suggested,
 	        时间解释: "前端已由用户选择目标日期和目标时间，并校验目标不早于当前变量时间、且不超过当前变量时间后2天。",
-	        AI执行规范: "这是用户设置的强制剧情时间锚点，不是可忽略建议。AI必须让本轮剧情从目标日期与目标时间开始或推进到该时间点；除非用户最新正文明确取消或改时间，不得绕开、忽略或另选时间。前端已经判断目标日期：直接按/目标日期和/目标时间执行，不要重新判断是否跨天。只更新/系统/当前时间和必要的/系统/当前事件；目标日期不同于当前日期时同步更新/系统/当前日期。/系统/_当前周几、/系统/_当前日程、/系统/_当前特殊日期、/系统/当天课程表、/系统/当天原课程表和/系统/当天魔改课程表为前端只读同步字段，AI不要手写这些字段。"
+	        AI执行规范: "这是用户设置的强制剧情时间锚点，不是可忽略建议。AI必须让本轮剧情从目标日期与目标时间开始或推进到该时间点；除非用户最新正文明确取消或改时间，不得绕开、忽略或另选时间。前端已经判断目标日期：直接按/目标日期和/目标时间执行，不要重新判断是否跨天。只更新/系统/当前时间和必要的/系统/当前事件；目标日期不同于当前日期时同步更新/系统/当前日期。/系统/_当前周几、/系统/_当前日程、/系统/_当前特殊日期、/系统/当天原课程表和/系统/当天魔改课程表为前端只读同步字段，AI不要手写这些字段。"
 	      })).then(() => renderClockPage(page));
 	    });
     updateClockFace(page);
@@ -15982,8 +16102,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
   }
 
   function workEncounterDelayHours(job, roll) {
-    const seed = [job?.id || "", roll?.roleName || "", roll?.createdAt || ""].join("|");
-    return 1 + (workStableHash(seed) % 4);
+    return 3;
   }
 
   function workCurrentStamp() {
@@ -16407,9 +16526,9 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 		    system["_当前周几"] = String(dailySchedule.星期 || "");
 		    system["_当前日程"] = String(dailySchedule.当前课段?.名称 || dailySchedule.当前日程 || "无");
 		    system["_当前特殊日期"] = String(dailySchedule.当前特殊日期 || "");
-		    system["当天课程表"] = Array.isArray(dailySchedule.课表) ? dailySchedule.课表 : [];
-		    system["当天原课程表"] = Array.isArray(dailySchedule.原课程表) ? dailySchedule.原课程表 : [];
-		    system["当天魔改课程表"] = Array.isArray(dailySchedule.魔改课程表) ? dailySchedule.魔改课程表 : [];
+			    if (Object.prototype.hasOwnProperty.call(system, "当天课程表")) delete system["当天课程表"];
+			    system["当天原课程表"] = Array.isArray(dailySchedule.原课程表) ? dailySchedule.原课程表 : [];
+			    system["当天魔改课程表"] = Array.isArray(dailySchedule.魔改课程表) ? dailySchedule.魔改课程表 : [];
 		    return dailySchedule;
 		  }
 
@@ -16423,7 +16542,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 
 	  function workFrontendSettledPrompt(hasEncounter) {
 	    return hasEncounter
-	      ? "本条锁定暂存只告知AI发生了打工途中偶遇；变量结算以<相关变量>中的前端处理后数值为准。AI只描写偶遇互动并在互动后收束到预计结束时间。"
+	      ? "本条锁定暂存只告知AI前端已把打工结算推进到开始后3小时的偶遇节点；变量结算以<相关变量>中的前端处理后数值为准。本轮先处理打工偶遇（剧情进行中），不要直接跳到预计结束时间。"
 	      : "本条锁定暂存只告知AI本轮发生了打工事实；变量结算以<相关变量>中的前端处理后数值为准。AI只承认该事实，不重复安排第二次打工。";
 	  }
 
@@ -16466,7 +16585,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	      if (writeParts.timeText) system["当前时间"] = writeParts.timeText;
 	      system["当前事件"] = encounterRole ? ("打工偶遇（剧情进行中）：" + encounterRole) : ("打工结束：" + job.title);
 	      const dailySchedule = writeParts.dateText && writeParts.timeText ? workApplyReadonlySchedule(system, writeParts.dateText, writeParts.timeText) : null;
-		      const variablePaths = ["/系统/持有零花钱", "/系统/社畜值", "/系统/当前日期", "/系统/当前时间", "/系统/当前事件", "/系统/_当前周几", "/系统/_当前日程", "/系统/_当前特殊日期", "/系统/当天课程表", "/系统/当天原课程表", "/系统/当天魔改课程表"];
+			      const variablePaths = ["/系统/持有零花钱", "/系统/社畜值", "/系统/当前日期", "/系统/当前时间", "/系统/当前事件", "/系统/_当前周几", "/系统/_当前日程", "/系统/_当前特殊日期", "/系统/当天原课程表", "/系统/当天魔改课程表"];
 	      if (timingInfo.buff || timingInfo.currentBuffExpiredAtStart) variablePaths.push("/系统/buff", "/系统/buff结束时间");
 	      if (timingInfo.buff === "全盛出击") variablePaths.push("/系统/MC能量");
 	      return {
@@ -16501,6 +16620,25 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	    });
 	    if (!result?.ok) return result || { ok: false, message: "打工结算失败。" };
 	    const added = await appendAppOperation(result.payload);
+	    if (added && String(result.payload?.["偶遇女角色"] || "无").trim() !== "无") {
+	      const encounterRoleName = String(result.payload["偶遇女角色"] || "").trim();
+	      window.__ST_SET_WORK_STATUS_REMINDER__?.({
+	        来源: "打工",
+	        操作: "打工偶遇（剧情进行中）",
+	        工作: result.payload["工作"] || "未记录",
+	        工作地点: result.payload["工作地点"] || "未记录",
+	        开始时间: result.payload["开始时间"] || "未记录",
+	        预计结束时间: result.payload["预计结束时间"] || "未记录",
+	        暂存摘要: "打工偶遇（剧情进行中）｜" + encounterRoleName + "｜收束至 " + (result.payload["预计结束时间"] || "未记录"),
+	        偶遇女角色: encounterRoleName,
+	        偶遇发生时间: result.payload["偶遇发生时间"] || "未记录",
+	        前端处理: "打工工资、社畜值、buff、buff结束时间和当前时间已由前端处理；本条锁定暂存只提醒AI先处理开始后3小时发生的打工偶遇。",
+	        AI执行规范: "本轮只处理打工途中偶遇互动，暂停在偶遇剧情进行中；不要跳过偶遇直接写完整打工结束。互动完成后再把剧情收束到预计结束时间；不得再次发工资、增加社畜值、改buff或重复结算打工。",
+	        不可删除: true,
+	        locked: true,
+	        forceLocked: true
+	      });
+	    }
 	    return { ok: Boolean(added), message: added ? result.message : "已在暂存区。" };
 	  }
 
@@ -16683,11 +16821,14 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	      工作地点: latest["工作地点"] || "未记录",
 	      开始时间: latest["开始时间"] || "未记录",
 	      预计结束时间: endText,
-		      暂存摘要: "打工偶遇（剧情进行中）｜" + encounterRole + "｜收束至 " + endText,
+	      暂存摘要: "打工偶遇（剧情进行中）｜" + encounterRole + "｜收束至 " + endText,
 	      偶遇女角色: encounterRole,
 	      偶遇发生时间: latest["偶遇发生时间"] || workEffectiveCurrentTimeText(),
-	      前端处理: "打工工资、社畜值、buff、buff结束时间和当前时间已由前端处理；本条只提醒AI处理偶遇后收束。",
-	      AI执行规范: "本轮只处理打工途中偶遇互动，并在互动后把剧情收束到预计结束时间；不得再次发工资、增加社畜值、改buff或重复结算打工。"
+	      前端处理: "打工工资、社畜值、buff、buff结束时间和当前时间已由前端处理；本条锁定暂存只提醒AI处理偶遇后收束。",
+	      AI执行规范: "本轮只处理打工途中偶遇互动，并在互动后把剧情收束到预计结束时间；不得再次发工资、增加社畜值、改buff或重复结算打工。",
+	      不可删除: true,
+	      locked: true,
+	      forceLocked: true
 	    });
 	  }
 
@@ -16719,10 +16860,13 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	      暂存摘要: buff + "｜持续至 " + endText,
 	      当前buff: buff,
 	      buff结束时间: endText,
-		      前端处理: "当前buff和buff结束时间由前端只读维护；本条状态提醒只告知AI buff仍在持续。",
+		      前端处理: "当前buff和buff结束时间由前端只读维护；本条锁定暂存告知AI buff仍在持续。",
 		      AI执行规范: "本条只提醒打工buff持续到结束时间，不是新的打工或结算。AI不得重复结算打工，不得改写buff或buff结束时间；到达buff结束时间后由前端清空/系统/buff和/系统/buff结束时间。",
 		      提醒: "当前buff持续至" + endText + "，按世界书规则影响相关操作；到达buff结束时间后由前端清空。",
-		      状态提醒: "仅显示当前buff结束时间，不作为打工锁。"
+		      状态提醒: "锁定显示当前buff结束时间；到期后前端从暂存区撤下并清空变量。",
+		      不可删除: true,
+		      locked: true,
+		      forceLocked: true
 		    };
     window.__ST_SET_WORK_BUFF_STATUS_REMINDER__?.(reminderPayload);
   }
@@ -19486,7 +19630,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       return;
     }
     data.stat["系统"]["星光点"] = current - cost;
-    encounterAddInventoryItemDetailed(data.stat, TIMETABLE_MOD_COUPON_ITEM, count, "用于在课程表APP中启用一次魔改课程表编辑。前端扣券后本地保存修改，并同步当天课程表、当天原课程表和当天魔改课程表等只读日程字段。");
+    encounterAddInventoryItemDetailed(data.stat, TIMETABLE_MOD_COUPON_ITEM, count, "用于在课程表APP中修改当天剩余课程中的一节。前端保存单格修改时扣券，并同步当天原课程表和当天魔改课程表等只读日程字段。");
     await globalThis.Mvu.replaceMvuData(data.mvu, data.option);
     await appendAppOperation({
       来源: "邂逅",
@@ -20227,7 +20371,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       '</article>' +
       '<article class="st-encounter-shop-card">' +
         '<h3>课程表魔改券</h3>' +
-        '<p>VIP6可用100星光点购买1张课程表魔改券；课程表APP进入修改模式会消耗1张，并把本聊天的魔改课程表保存到本地。</p>' +
+        '<p>VIP6可用100星光点购买1张课程表魔改券；课程表APP保存当天剩余课程中的一节修改时消耗1张，并把本聊天的魔改课程表保存到本地。</p>' +
         '<div class="st-encounter-shop-row">' +
           '<input type="number" min="1" step="1" max="' + (state.vip6 ? timetableCouponMax : 0) + '" value="' + (state.vip6 && timetableCouponMax ? 1 : 0) + '" data-encounter-shop-timetable-coupon-qty aria-label="购买课程表魔改券数量"' + (state.vip6 ? "" : " disabled") + '>' +
           '<button type="button" class="st-encounter-button primary" data-encounter-action="shop-buy-timetable-coupon"' + (timetableCouponDisabled ? " disabled" : "") + '>' + (!state.vip6 ? "需要VIP6" : (timetableCouponMax <= 0 ? "星光点不足" : "购买")) + '</button>' +
@@ -24719,7 +24863,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
             描述: location.info || point.info || "暂无地点信息。",
             地图类型: "主教学楼案内図"
           },
-          AI执行规范: "这只是用户希望剧情地点设在这里的建议；前端不能直接改当前地点。AI应按剧情、时间和移动条件判断是否成立，成立时更新/系统/当前地点和/系统/当前事件；/系统/_当前周几、/系统/_当前日程、/系统/_当前特殊日期、/系统/当天课程表、/系统/当天原课程表和/系统/当天魔改课程表为前端只读同步字段，AI不要手写这些字段。不合理时可拒绝或延后。"
+          AI执行规范: "这只是用户希望剧情地点设在这里的建议；前端不能直接改当前地点。AI应按剧情、时间和移动条件判断是否成立，成立时更新/系统/当前地点和/系统/当前事件；/系统/_当前周几、/系统/_当前日程、/系统/_当前特殊日期、/系统/当天原课程表和/系统/当天魔改课程表为前端只读同步字段，AI不要手写这些字段。不合理时可拒绝或延后。"
         })).then(() => renderCampusPage(page));
       });
     });
@@ -24912,7 +25056,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
             描述: location.info || "暂无地点信息。",
             地图类型: graph.title
           },
-	          AI执行规范: "这只是用户希望剧情地点设在这里的建议；前端不能直接改当前地点。AI应按剧情、时间和移动条件判断是否成立，成立时更新/系统/当前地点和/系统/当前事件；/系统/_当前周几、/系统/_当前日程、/系统/_当前特殊日期、/系统/当天课程表、/系统/当天原课程表和/系统/当天魔改课程表为前端只读同步字段，AI不要手写这些字段。不合理时可拒绝或延后。"
+	          AI执行规范: "这只是用户希望剧情地点设在这里的建议；前端不能直接改当前地点。AI应按剧情、时间和移动条件判断是否成立，成立时更新/系统/当前地点和/系统/当前事件；/系统/_当前周几、/系统/_当前日程、/系统/_当前特殊日期、/系统/当天原课程表和/系统/当天魔改课程表为前端只读同步字段，AI不要手写这些字段。不合理时可拒绝或延后。"
 	        })).then(() => {
 	          rerenderGraphHost(page);
 	        });
@@ -24969,10 +25113,14 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       input.value = "";
     });
     page.querySelectorAll("[data-school-rule-delete]").forEach((button) => {
-      button.addEventListener("click", () => {
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const body = page.querySelector(".st-lite-body");
+        const scrollTop = body?.scrollTop || 0;
         const ruleName = button.getAttribute("data-school-rule-delete") || "";
         const isDefaultRule = button.getAttribute("data-school-rule-default") === "true";
-        appendAppOperation({
+        Promise.resolve(appendAppOperation({
           来源: "学校",
           操作: isDefaultRule ? "废止初始校规" : "删除校规",
           校规名: ruleName,
@@ -24981,6 +25129,12 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
           AI执行规范: isDefaultRule
             ? "这是废止初始默认校规；成功时扣除10星光点并remove /校规/校规名。任一条件不足则失败，不扣费、不删除。"
             : "这是删除后续自建校规；成功时只remove /校规/校规名，不扣费、不返还资源。"
+        })).finally(() => {
+          if (!body) return;
+          body.scrollTop = scrollTop;
+          window.requestAnimationFrame(() => {
+            if (body.isConnected) body.scrollTop = scrollTop;
+          });
         });
       });
     });
@@ -25318,7 +25472,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       },
       AI执行规范: specialLocation
         ? "这只是用户希望剧情进入该校内特殊地点的建议；前端不能直接改当前地点。AI应按剧情、时间、权限和世界观判断是否成立，成立时更新/系统/当前地点并展开对应特殊地点剧情；不合理时可拒绝、延后或给出进入条件。"
-        : "这只是用户希望剧情地点设在这里的建议；前端不能直接改当前地点。AI应按剧情、时间和移动条件判断是否成立，成立时更新/系统/当前地点和/系统/当前事件；/系统/_当前周几、/系统/_当前日程、/系统/_当前特殊日期、/系统/当天课程表、/系统/当天原课程表和/系统/当天魔改课程表为前端只读同步字段，AI不要手写这些字段。不合理时可拒绝或延后。"
+        : "这只是用户希望剧情地点设在这里的建议；前端不能直接改当前地点。AI应按剧情、时间和移动条件判断是否成立，成立时更新/系统/当前地点和/系统/当前事件；/系统/_当前周几、/系统/_当前日程、/系统/_当前特殊日期、/系统/当天原课程表和/系统/当天魔改课程表为前端只读同步字段，AI不要手写这些字段。不合理时可拒绝或延后。"
     })).then(() => renderCityMapPage(page));
   }
 
@@ -26740,14 +26894,6 @@ const __stDefaultVariables = () => ({
     "当前时间": "12:30",
     "_当前日程": "午休",
     "_当前特殊日期": "",
-	    "当天课程表": [
-	      { "课节": "1限", "科目": "英语" },
-	      { "课节": "2限", "科目": "世界史" },
-	      { "课节": "3限", "科目": "生物" },
-	      { "课节": "4限", "科目": "现代文" },
-	      { "课节": "5限", "科目": "体育（游泳）" },
-	      { "课节": "6限", "科目": "信息" }
-	    ],
 	    "当天原课程表": [
 	      { "课节": "1限", "科目": "英语" },
 	      { "课节": "2限", "科目": "世界史" },
