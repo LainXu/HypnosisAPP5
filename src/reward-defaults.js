@@ -145,7 +145,7 @@ export const DEFAULT_REWARD_DATABASE = {
     ["quest_Four_great", "青龙朱雀白虎玄武", "让犬冢夏美、西园寺爱丽莎、月咏深雪、阿宅（女）一起摸你的阴茎", "other"],
     ["quest_Cain", "该隐", "让一名角色主动帮助你对她的亲人出手", "other"],
     ["quest_gay_gay", "！？给给？！", "让阿宅（无论男女都行）向你表白", "role"],
-    ["quest_Human_Joystick", "人体摇杆", "让一名角色自我认知为摇杆，她的乳头是摇杆，肚脐眼是按键，小穴是大招键", "other"],
+    ["quest_Human_Joystick", "人体摇杆", "让一名角色自我认知为手柄，她的乳头是摇杆，肚脐眼是按键，小穴是大招键", "other"],
     ["quest_Adult_pacifier", "成人奶嘴", "让月咏深雪含住你的睾丸，当成奶嘴吮吸", "role"],
     ["quest_delicious_drink", "可口饮料", "让月咏深雪把你的精液当作可口饮料喝下", "role"],
     ["quest_cuckold_request", "绿帽请求", "让阿宅君请求你跟爱丽莎发生关系。", "role"],
@@ -167,6 +167,16 @@ export const DEFAULT_REWARD_DATABASE = {
     scope,
     reward: starlightReward(),
   })).concat({
+    id: "quest_naked_double_standard",
+    title: "赤身裸体与裸体赤身",
+    description: "让两个角色在公共场合都不穿衣服，但是指责对方不穿衣服不知廉耻。",
+    condition: "让两个角色在公共场合都不穿衣服，但是指责对方不穿衣服不知廉耻。",
+    scope: "other",
+    reward: {
+      starlight: 0,
+      items: [starlightVoucher(2)],
+    },
+  }, {
     id: "quest_orgasm_strongest",
     title: "最强绝顶",
     description: "让角色的快感值到达500后高潮。",

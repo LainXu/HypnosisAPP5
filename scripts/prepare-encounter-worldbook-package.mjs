@@ -320,7 +320,7 @@ function buildPackage(roles, options, templates, outDir) {
   const encounterPrompt = String(options.encounterPrompt || previousPrompt || "");
   const manifestRoles = [];
   const report = {
-    source: path.resolve(options.input),
+    source: path.basename(options.input),
     packageName: options.packageName,
     excludedDefaults: Array.from(DEFAULT_ROLE_NAMES),
     templateLayouts: {
@@ -382,7 +382,7 @@ function buildPackage(roles, options, templates, outDir) {
     format: ENCOUNTER_FORMAT,
     version: 1,
     name: options.packageName,
-    intro: "由静态世界书 JSON 抽取生成的邂逅角色包草稿。图片、出场提示词和整体剧情提示词可在打包前补充。",
+    intro: "由静态世界书 JSON 抽取生成的邂逅角色包草稿。图片和整体剧情提示词可在打包前补充。",
     encounterPrompt,
     price: manifestRoles.length * 4,
     variableWorldbook: "人物变量世界书",
@@ -392,7 +392,7 @@ function buildPackage(roles, options, templates, outDir) {
   writeJson(path.join(outDir, "package.json"), manifest);
   writeJson(path.join(outDir, "layout", "worldbook-layout-report.json"), report);
   writeText(path.join(outDir, "prompts", "role-image-prompts-oneline.txt"), roles.map(imagePromptForRole).join("\n") + "\n");
-  writeText(path.join(outDir, "prompts", "encounter-plot-oneline-template.txt"), "请基于这些角色的人设与各自出场提示词，生成一行可放入邂逅角色包 encounterPrompt 的整体剧情串联提示词；要求自然引出所有角色，避免重复新增已存在角色，并留给 AI 按当前剧情微调。\n");
+  writeText(path.join(outDir, "prompts", "encounter-plot-oneline-template.txt"), "请基于这些角色的人设，生成一行可放入邂逅角色包 encounterPrompt 的整体剧情串联提示词；要求自然引出所有角色，只写邂逅场景与剧情钩子，角色变量与世界书写入由前端处理。\n");
   writeText(path.join(outDir, "README.md"), [
     "# 邂逅角色包草稿",
     "",

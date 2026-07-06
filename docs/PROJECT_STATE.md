@@ -1,12 +1,13 @@
-# 催眠app二改MVU v1.9.9 项目状态
+# 催眠app二改MVU v2.3 项目状态
 
 这份文档是新对话的唯一交接入口。接手时先读这里，再按任务只打开相关文件，不要靠旧聊天记录恢复上下文。
 
 ## 当前真源
 
-- 当前版本：`v1.9.9`
-- 唯一卡文件：`public/cards/催眠app二改MVU v1.9.9.png`
+- 当前版本：`v2.3`
+- 唯一卡文件：`public/cards/催眠app二改MVU v2.3.png`
 - 本地前端镜像：`public/frontends/hypnosis-app/`
+- 手机前端镜像：`public/frontends/hypnosis-app-phone/`
 - 前端生成脚本：`scripts/mirror-frontend.mjs`
 - 卡片封装脚本：`scripts/finalize-card-v1_6.mjs`
 - 一键发布脚本：`scripts/publish-card.mjs`
@@ -43,16 +44,18 @@
 4. **生成本地前端一次**
    - 需要前端变化时运行 `node --check scripts/mirror-frontend.mjs`。
    - 再运行 `node scripts/mirror-frontend.mjs`。
+   - 手机端由桌面端镜像派生；前端变化后运行 `node --check scripts/build-phone-frontend.mjs` 和 `node scripts/build-phone-frontend.mjs`。
    - 生成后用 `rg` 检查关键函数/类名是否进入 `public/frontends/hypnosis-app/index.html` 和 `st-load-inline.html`。
 
-5. **发布只用一个命令**
-   - 需要远程卡时运行 `npm run publish:card`。
-   - 这个脚本会生成前端、同步 dist、提交并推送远程 dist、取得 commit、回写唯一 PNG。
-   - 不手动复制第二张本地卡，不手动维护无版本 PNG。
+5. **封装和结构抽检**
+   - 改变量、世界书、正则、默认变量或远程 commit 时，运行 `node --check scripts/finalize-card-v1_6.mjs` 和 `node scripts/finalize-card-v1_6.mjs`。
+   - 发布前运行 `npm run verify:card` 做轻量 PNG/前端结构检查：确认世界书 comment 无重复、初始化变量顺序为 `系统 -> 校规 -> 成就 -> 任务 -> 角色`、默认四名初始角色存在、默认校规 5 条、旧式跨日恢复半管 MC 能量和聊天世界书自动创建入口不存在。
 
-6. **不抽检 PNG**
-   - 默认不解析 PNG 做人工抽检。
-   - 只有用户明确说“检查卡内容/抽检 PNG/验证导出”时才读 PNG。
+6. **发布只用一个命令**
+   - 需要远程卡时运行 `npm run publish:card` 或 `node scripts/publish-card.mjs`。
+   - 这个脚本默认发布当前已经生成好的桌面端和手机端前端；它会构建手机端、同步 dist、提交并推送远程 dist、取得 commit、用该 commit 回写唯一 PNG。
+   - 脚本默认不重新运行 `scripts/mirror-frontend.mjs`，避免把未验证的前端补丁混入发布。只有确实需要发布时顺便重新生成桌面端，才使用 `HYPNOOS_RUN_MIRROR=1 node scripts/publish-card.mjs`。
+   - 不手动复制第二张本地卡，不手动维护无版本 PNG。
 
 ## 酒馆 / 酒馆助手接口
 
@@ -77,7 +80,7 @@
 - 主界面已有应用：催眠APP、人物档案、日历、课程表、时钟、成就和任务、库存、MC匿名版、地图、学校、监控、打工、邂逅、帮助。
 - `催眠APP`：选择白名单催眠命令、补给、VIP买断；启动/追加会暂存，并播放只覆盖手机界面的催眠动画。
 - `人物档案`：查看角色衣着、信息、状态、敏感度、效果；桌面档案和详情页都由变量驱动。
-- `成就和任务`：前端判断静态成就，AI生成每日任务内容；完成任务由 AI 发奖，前端进入页面时清理已完成条目。
+- `成就和任务`：前端判断静态成就和领取状态；AI生成每日任务内容并只标记完成，奖励由前端手动领取发放。
 - `库存`：展示持有物品和数量，点击物品查看描述。
 - `地图/学校/特殊地点`：地图显示当前地点变量，不要求地点存在于前端列表；地点列表只有明确更新时才变。
 - `监控`：学校男厕门位与派遣操作。
@@ -87,7 +90,7 @@
 
 ## 暂存区规则
 
-- 前端只提交操作意图到暂存区；变量由 AI 通过 MVU 更新。
+- 前端通常提交操作意图到暂存区；补给、VIP、奖励领取、准入证购买、打工结算、角色事件等明确标注为前端处理的操作会由前端直接写变量并锁定本轮事实。
 - `<相关变量>` 是给 AI 的一次性余额/状态快照，不是 MVU 路径。
 - 锁定操作不能从暂存区删除，例如已购买角色包、进行中的打工/派遣。
 - “确认写入后不清空暂存”由暂存区复选框控制。
@@ -96,18 +99,21 @@
 
 `npm run publish:card` 固定做这些事：
 
-1. 运行 `scripts/mirror-frontend.mjs`。
-2. 准备 `/tmp/hypnosisapp5-dist`，没有就 clone，有就 fast-forward 到 `origin/main`。
-3. 用当前 `public/frontends/hypnosis-app/` 覆盖 dist 仓库 `dist/webview/`，排除 `source.html`。
-4. 若 dist 有变化，则提交并推送。
-5. 读取 dist 的 HEAD commit。
-6. 用 `HYPNOOS_REMOTE_COMMIT=<commit>` 运行 `scripts/finalize-card-v1_6.mjs`。
-7. 只回写唯一卡文件。
+1. 默认跳过桌面端 mirror，发布当前 `public/frontends/hypnosis-app/`；若设置 `HYPNOOS_RUN_MIRROR=1` 才先运行 `scripts/mirror-frontend.mjs`。
+2. 运行 `scripts/build-phone-frontend.mjs` 生成手机端。
+3. 准备 `/tmp/hypnosisapp5-dist`，没有就 clone，有就 fast-forward 到 `origin/main`。
+4. 用当前 `public/frontends/hypnosis-app/` 覆盖 dist 仓库 `dist/webview/`，排除 `source.html`。
+5. 用当前 `public/frontends/hypnosis-app-phone/` 覆盖 dist 仓库 `dist/phone/`。
+6. 若 dist 有变化，则提交并推送。
+7. 读取 dist 的 HEAD commit。
+8. 用 `HYPNOOS_REMOTE_COMMIT=<commit>` 运行 `scripts/finalize-card-v1_6.mjs`。
+9. 只回写唯一卡文件。
+10. 发布后运行 `npm run verify:card`，确认唯一卡已经写入 commit-pinned CDN URL。
 
 ## 新对话建议开场
 
 可以直接这样说：
 
 ```text
-读取 docs/PROJECT_STATE.md，按里面的一次性工作流继续。当前版本是 v1.9.9。
+读取 docs/PROJECT_STATE.md，按里面的一次性工作流继续。当前版本是 v2.3。
 ```

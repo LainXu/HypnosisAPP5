@@ -74,16 +74,19 @@ The main card data lives under `stat_data`.
 Common paths:
 
 - `/系统/当前日期`
+- `/系统/_当前周几`
 - `/系统/当前时间`
-- `/系统/当前日程`
-- `/系统/当前或下个特殊日期`
-- `/系统/当前/待上课程`
+- `/系统/_当前日程`
+- `/系统/_当前特殊日期`
 - `/系统/当前事件`
 - `/系统/当前地点`
 - `/系统/催眠APP订阅等级`
 - `/系统/MC能量`
 - `/系统/MC能量上限`
 - `/系统/持有零花钱`
+- `/系统/星光点`
+- `/系统/持有物品`
+- `/系统/特殊地点解锁`
 - `/角色/<角色名>`
 - `/角色/<角色名>/档案`
 - `/任务`
@@ -103,16 +106,17 @@ The UI can display `localStorage` state for convenience, but the authoritative p
 Frontend operations are queued, then written into the user's input once confirmed. The outer container is:
 
 ```xml
-<本轮APP操作>
+<本轮操作>
   <相关变量>...</相关变量>
-  <催眠APP>...</催眠APP>
+  <催眠命令>...</催眠命令>
+  <催眠资源>...</催眠资源>
   <成就和任务>...</成就和任务>
-</本轮APP操作>
+</本轮操作>
 ```
 
 Rules:
 
-- Do not append multiple top-level `<本轮APP操作>` containers for one turn.
+- Do not append multiple top-level `<本轮操作>` containers for one turn.
 - Deduplicate repeated clicks in the queue.
 - Time and location suggestions should stay at the top of the queue.
 - `<相关变量>` is a readout for the AI, not a variable path to write back.
@@ -120,12 +124,15 @@ Rules:
 
 ## AI Authority Pattern
 
-The user wants AI to be the variable writer. Frontend operations should:
+The user usually wants AI to judge plot success and write MVU variables, but several locked economy/UI actions are now intentionally frontend-written.
+
+Frontend operations should:
 
 - Calculate costs and collect target/time/person counts.
 - Send compact operation payloads to the input.
-- Avoid directly changing MVU for resources, VIP, role stats, achievements, or quests.
-- Let AI apply JSON Patch to MVU after judging success/failure.
+- Avoid direct MVU writes for hypnosis command results, role stats, and plot-dependent success/failure.
+- Directly write MVU only for explicitly locked frontend facts such as MC supply, MC max, VIP purchase, achievement/task reward claim, encounter shop exchange/pass purchase, work settlement, and selected role event records.
+- Let AI apply JSON Patch after judging success/failure for everything else.
 
 Exceptions are local UI-only state:
 

@@ -1,5 +1,6 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { buildDefaultRewardDatabase } from "../src/reward-defaults.js";
 
 const REMOTE_SOURCE =
   "https://testingcf.jsdelivr.net/gh/Ramiel-s/HypnosisAPP5/dist/%E5%82%AC%E7%9C%A0APP%E5%89%8D%E7%AB%AF/index.html";
@@ -7,15 +8,24 @@ const DEFAULT_SOURCE = "public/frontends/hypnosis-app/source.html";
 const DEFAULT_OUTPUT = "public/frontends/hypnosis-app/index.html";
 const MCHAN_STATIC_SOURCE = "public/frontends/mchan/index.html";
 const DEFAULT_FRONTEND_REWARD_STARLIGHT = 5;
+const DEFAULT_FRONTEND_REWARD_DATABASE = buildDefaultRewardDatabase();
 const SCAN_ROLE_COST_STARLIGHT = 6;
 const ENCOUNTER_SHOP_MONEY_PER_STARLIGHT = 10000;
 const ENCOUNTER_SHOP_RULE_COUPON_PRICE = 100;
+const TIMETABLE_MOD_COUPON_PRICE = ENCOUNTER_SHOP_RULE_COUPON_PRICE;
 const ENCOUNTER_SHOP_STARLIGHT_VOUCHER = "星光点兑换券";
 const SCHOOL_RULE_COUPON_ITEM = "校规修改券";
+const TIMETABLE_MOD_COUPON_ITEM = "课程表魔改券";
+const SPECIAL_LOCATION_PASS_PRICE = 20;
+const SPECIAL_LOCATION_PASS_ITEM_NAMES = {
+  "tropical-rainforest": "第1生物特别温室准入证",
+  "babel": "旧图书馆塔楼“巴别”准入证"
+};
 const ENCOUNTER_BUILTIN_PACKAGE_SOURCES = [
   "public/frontends/hypnosis-app/assets/encounter/orjenrn/package.json",
   "public/frontends/hypnosis-app/assets/encounter/akashi-maho/package.json",
   "public/frontends/hypnosis-app/assets/encounter/wangfeng/package.json",
+  "public/frontends/hypnosis-app/assets/encounter/baikai/package.json",
   "public/frontends/hypnosis-app/assets/encounter/sdz-aser/package.json"
 ];
 const MCHAN_BOARD_DEFINITIONS = [
@@ -25,157 +35,6 @@ const MCHAN_BOARD_DEFINITIONS = [
   { id: "showcase", name: "成果展示区", description: "可公开查看的进展记录。" },
   { id: "help", name: "求助区", description: "问题、委托和反馈。" }
 ];
-const DEFAULT_PREVIEW_ROLES = {
-  "西园寺爱丽莎": {
-    "好感度": 0,
-	    "警戒度": 0,
-		    "服从度": 0,
-		    "性欲": 0,
-		    "快感值": 0,
-		    "是否派遣中": false,
-		    "工作价值": 10,
-		    "绰号": "",
-		    "绰号已认可": false,
-		    "档案": {
-		      "照片": "",
-		      "姓名": "西园寺爱丽莎",
-		      "年龄": "17",
-		      "社团/职业": "归宅部 / 西园寺财团千金",
-		      "身高": "168cm",
-		      "体重": "55kg",
-		      "三围": "B104 / W58 / H88（L罩杯）",
-		      "头发": "金色双马尾用昂贵发饰束起，发尾卷出柔软弧度，刘海刻意露出额头与耳侧小发卡，近看能闻到淡淡花果香。",
-		      "面部": "宝蓝色上挑猫眼、睫毛浓密，妆容精致但不显厚重；笑时像在审视别人，生气时下巴会微微抬高。",
-		      "上衣": "私改制服外套与贴身白衬衫，领口丝带端正，胸前布料被丰满曲线撑紧，袖口和胸针都带着大小姐式讲究。",
-		      "下衣": "高腰短裙停在大腿中段，裙褶整齐，黑色过膝袜包住修长双腿，皮鞋擦得发亮。"
-		    },
-		    "心理": "我当然是这个班级最耀眼的人，大家看着我也是理所当然。{{user}}那边暂时没什么值得在意的，我只要继续保持完美就好。",
-	    "阴蒂敏感度": 100,
-    "小穴敏感度": 100,
-    "菊穴敏感度": 100,
-    "尿道敏感度": 100,
-    "乳头敏感度": 100,
-    "临时催眠效果": {},
-    "永久催眠效果": {},
-    "阴蒂高潮次数": 0,
-    "小穴高潮次数": 0,
-    "菊穴高潮次数": 0,
-    "尿道高潮次数": 0,
-    "乳头高潮次数": 0
-  },
-  "月咏深雪": {
-    "好感度": 0,
-	    "警戒度": 0,
-		    "服从度": 0,
-		    "性欲": 0,
-		    "快感值": 0,
-		    "是否派遣中": false,
-		    "工作价值": 5,
-		    "绰号": "",
-		    "绰号已认可": false,
-		    "档案": {
-		      "照片": "",
-		      "姓名": "月咏深雪",
-		      "年龄": "17",
-		      "社团/职业": "班级委员长 / 图书委员",
-		      "身高": "165cm",
-		      "体重": "52kg",
-		      "三围": "B88 / W56 / H90",
-		      "头发": "黑色长发顺直垂到背中，发梢微微内扣，刘海整齐分开，耳侧碎发总被她无意识地撩到耳后。",
-		      "面部": "白皙端正的清楚系脸庞，深色眼睛安静温和，鼻梁秀气，嘴角常保持礼貌弧度，疲惫时眼下会有很淡阴影。",
-		      "上衣": "制服衬衫扣到最上方，深色领结系得规整，外套没有多余褶皱，怀里常抱着讲义、文库本或班级资料。",
-		      "下衣": "及膝百褶裙线条平整，黑色连裤袜包住纤细双腿，站姿端庄保守，整体带着安静的书卷气。"
-		    },
-		    "心理": "我先把讲义和班务处理妥当，不要让课堂秩序乱掉。{{user}}看起来只是普通同学，我保持礼貌就好，没必要给出多余的私人距离。",
-	    "阴蒂敏感度": 100,
-    "小穴敏感度": 100,
-    "菊穴敏感度": 150,
-    "尿道敏感度": 100,
-    "乳头敏感度": 100,
-    "临时催眠效果": {},
-    "永久催眠效果": {},
-    "阴蒂高潮次数": 0,
-    "小穴高潮次数": 0,
-    "菊穴高潮次数": 0,
-    "尿道高潮次数": 0,
-    "乳头高潮次数": 0
-  },
-  "犬冢夏美": {
-    "好感度": 0,
-	    "警戒度": 0,
-		    "服从度": 0,
-		    "性欲": 0,
-		    "快感值": 0,
-		    "是否派遣中": false,
-		    "工作价值": 3,
-		    "绰号": "",
-		    "绰号已认可": false,
-		    "档案": {
-		      "照片": "",
-		      "姓名": "犬冢夏美",
-		      "年龄": "17",
-		      "社团/职业": "田径部",
-		      "身高": "148cm",
-		      "体重": "40kg",
-		      "三围": "B72 / W52 / H76（A罩杯）",
-		      "头发": "黑色短发随意扎成低马尾，额前碎发总被汗水弄乱，发绳朴素，跑动时发尾会轻快地甩起来。",
-		      "面部": "圆亮的眼睛像小型犬一样直率，鼻尖和脸颊常带运动后的红，笑起来露出虎牙感，不高兴时表情也藏不住。",
-		      "上衣": "校服衬衫常穿得松散，领口微开，袖口挽起，外套经常系在腰间或搭在肩上，带着运动后的热气。",
-		      "下衣": "短裙下是紧实有力的腿线，常搭运动短袜或跑鞋，膝盖和小腿偶尔有训练留下的细小擦痕。"
-		    },
-		    "心理": "我好饿，炒面面包要是又卖光我真的会生气。{{user}}在旁边的话顺手闹一下也没关系吧，反正他看起来挺耐拍的。",
-	    "阴蒂敏感度": 100,
-    "小穴敏感度": 100,
-    "菊穴敏感度": 100,
-    "尿道敏感度": 100,
-    "乳头敏感度": 150,
-    "临时催眠效果": {},
-    "永久催眠效果": {},
-    "阴蒂高潮次数": 0,
-    "小穴高潮次数": 0,
-    "菊穴高潮次数": 0,
-    "尿道高潮次数": 0,
-    "乳头高潮次数": 0
-  },
-  "阿宅": {
-    "好感度": 0,
-	    "警戒度": 0,
-		    "服从度": 0,
-		    "性欲": 0,
-		    "快感值": 0,
-		    "是否派遣中": false,
-		    "工作价值": 0,
-		    "绰号": "",
-		    "绰号已认可": false,
-		    "档案": {
-		      "照片": "",
-		      "姓名": "阿宅",
-		      "年龄": "17",
-		      "社团/职业": "归宅部 / 二次元爱好者",
-		      "身高": "171cm",
-		      "体重": "59kg",
-		      "阴茎长度": "7cm",
-		      "头发": "黑色乱发总是压不平，刘海和发梢都缺少打理，像是刚从通宵补番的桌前抬起头。",
-		      "面部": "戴黑框眼镜，眼神平时木讷躲闪，眼下有淡淡熬夜痕迹；只有聊到动画、漫画或游戏时才会突然发亮。",
-		      "上衣": "普通校服外套穿得有些松垮，领带歪斜，衬衫皱褶明显，口袋里常塞着小型周边或耳机。",
-		      "下衣": "制服长裤和普通皮鞋，裤脚略皱，站姿微微缩着肩，整体显得低调、不起眼。"
-		    },
-		    "心理": "别、别突然看我啊。只要不聊动画我就保持普通背景板好了，等有人提到新番我再认真纠正他们的错误。",
-	    "阴茎敏感度": 100,
-    "龟头敏感度": 100,
-    "睾丸敏感度": 100,
-    "前列腺敏感度": 100,
-    "乳头敏感度": 100,
-    "临时催眠效果": {},
-    "永久催眠效果": {},
-    "阴茎高潮次数": 0,
-    "龟头高潮次数": 0,
-    "睾丸高潮次数": 0,
-    "前列腺高潮次数": 0,
-    "乳头高潮次数": 0
-  }
-};
-
 const sourceArg = process.argv[2] || process.env.HYPNOOS_FRONTEND_SOURCE || DEFAULT_SOURCE;
 const source = sourceArg === "remote" ? REMOTE_SOURCE : sourceArg;
 const output = process.argv[3] || DEFAULT_OUTPUT;
@@ -231,18 +90,139 @@ async function readSource(input) {
 
 function prepareFrontendHtml(html, baseUrl, options = {}) {
   const charset = /<meta[^>]+charset=/i.test(String(html || "")) ? "" : `<meta charset="utf-8">`;
+  const storageGuard = `<script>
+(() => {
+  if (window.__ST_HYPNOOS_STORAGE_GUARD_READY__) return;
+  window.__ST_HYPNOOS_STORAGE_GUARD_READY__ = true;
+  const memoryFallback = new Map();
+  const getLocalStorage = () => {
+    try { return window.localStorage || null; } catch { return null; }
+  };
+  const storage = getLocalStorage();
+  if (!storage || !window.Storage || !Storage.prototype) return;
+  const proto = Storage.prototype;
+  if (proto.__stHypnoosStorageGuardPatched) return;
+  const originalGetItem = proto.getItem;
+  const originalSetItem = proto.setItem;
+  const originalRemoveItem = proto.removeItem;
+  const originalKey = proto.key;
+  const originalClear = proto.clear;
+  const lowerKey = (key) => String(key ?? "").toLowerCase();
+  const isLocalStorageTarget = (target) => {
+    try { return target === window.localStorage; } catch { return false; }
+  };
+  const isQuotaError = (error) => {
+    const name = String(error?.name || "");
+    const message = String(error?.message || "");
+    return name === "QuotaExceededError" || name === "NS_ERROR_DOM_QUOTA_REACHED" || error?.code === 22 || error?.code === 1014 || message.toLowerCase().includes("quota");
+  };
+  const isAcuSnapshotKey = (key) => {
+    const text = lowerKey(key);
+    return text.includes("acu_data_snapshot") ||
+      text.includes("data_snapshot_v") ||
+      (text.includes("snapshot") && (text.includes("acu") || text.includes("dice")));
+  };
+  const isAcuKey = (key) => {
+    const text = lowerKey(key);
+    return text === "acu" ||
+      text.startsWith("acu_") ||
+      text.startsWith("acu.") ||
+      text.startsWith("acu-") ||
+      text.startsWith("acu:") ||
+      text.includes("acu store") ||
+      isAcuSnapshotKey(text);
+  };
+  const isLargeValue = (value) => String(value ?? "").length > 160000;
+  const putMemoryFallback = (key, value) => {
+    const textKey = String(key ?? "");
+    memoryFallback.set(textKey, String(value ?? ""));
+    try { originalRemoveItem.call(storage, textKey); } catch {}
+  };
+  const pruneAcuSnapshots = () => {
+    const target = getLocalStorage();
+    if (!target) return 0;
+    const keys = [];
+    try {
+      for (let index = 0; index < target.length; index += 1) {
+        const key = originalKey.call(target, index);
+        if (key && (isAcuSnapshotKey(key) || (isAcuKey(key) && lowerKey(key).includes("snapshot")))) keys.push(key);
+      }
+    } catch {}
+    let removed = 0;
+    for (const key of keys) {
+      try {
+        originalRemoveItem.call(target, key);
+        removed += 1;
+      } catch {}
+    }
+    return removed;
+  };
+  try {
+    Object.defineProperty(proto, "__stHypnoosStorageGuardPatched", { value: true, configurable: true });
+  } catch {}
+  try {
+    proto.setItem = function(key, value) {
+      if (!isLocalStorageTarget(this)) return originalSetItem.call(this, key, value);
+      const textKey = String(key ?? "");
+      const textValue = String(value ?? "");
+      if (isAcuSnapshotKey(textKey) || (isAcuKey(textKey) && isLargeValue(textValue))) {
+        putMemoryFallback(textKey, textValue);
+        return undefined;
+      }
+      try {
+        originalSetItem.call(this, textKey, textValue);
+        memoryFallback.delete(textKey);
+        return undefined;
+      } catch (error) {
+        if (!isQuotaError(error)) throw error;
+        pruneAcuSnapshots();
+        try {
+          originalSetItem.call(this, textKey, textValue);
+          memoryFallback.delete(textKey);
+          return undefined;
+        } catch (secondError) {
+          if (isQuotaError(secondError) && (isAcuKey(textKey) || isLargeValue(textValue))) {
+            putMemoryFallback(textKey, textValue);
+            return undefined;
+          }
+          throw secondError;
+        }
+      }
+    };
+    proto.getItem = function(key) {
+      if (isLocalStorageTarget(this)) {
+        const textKey = String(key ?? "");
+        if (memoryFallback.has(textKey)) return memoryFallback.get(textKey);
+      }
+      return originalGetItem.call(this, key);
+    };
+    proto.removeItem = function(key) {
+      if (isLocalStorageTarget(this)) memoryFallback.delete(String(key ?? ""));
+      return originalRemoveItem.call(this, key);
+    };
+    proto.clear = function() {
+      if (isLocalStorageTarget(this)) memoryFallback.clear();
+      return originalClear.call(this);
+    };
+  } catch {}
+  window.__ST_HYPNOOS_PRUNE_LOCAL_STORAGE__ = pruneAcuSnapshots;
+  pruneAcuSnapshots();
+})();
+</script>`;
   const bootGuard = `<style id="st-hypnoos-boot-style">
 html.st-hypnoos-booting body{background:#05070f}
 html.st-hypnoos-booting #app{opacity:0!important;visibility:hidden!important;pointer-events:none!important}
 html.st-hypnoos-booting body::before{content:"";position:fixed;inset:0;z-index:2147483646;background:#05070f}
 html.st-hypnoos-booting.st-hypnoos-boot-failed body::after{content:"前端加载失败，请刷新或检查控制台错误";position:fixed;left:50%;top:50%;z-index:2147483647;transform:translate(-50%,-50%);max-width:min(320px,calc(100vw - 40px));border:1px solid rgba(244,114,182,.35);border-radius:16px;background:rgba(15,23,42,.96);box-shadow:0 20px 50px rgba(0,0,0,.45);padding:14px 16px;color:#f8fafc;font:600 13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;text-align:center}
-</style><script>
-document.documentElement.classList.add("st-hypnoos-booting");
-window.__ST_HYPNOOS_PATCH_READY__ = false;
-window.setTimeout(() => {
-  if (!window.__ST_HYPNOOS_PATCH_READY__) document.documentElement.classList.add("st-hypnoos-boot-failed");
-}, 6000);
-</script>`;
+	</style><script>
+	if (!window.__ST_HYPNOOS_PATCH_READY__) {
+	  document.documentElement.classList.add("st-hypnoos-booting");
+	  window.__ST_HYPNOOS_PATCH_READY__ = false;
+	  window.setTimeout(() => {
+	    if (!window.__ST_HYPNOOS_PATCH_READY__) document.documentElement.classList.add("st-hypnoos-boot-failed");
+	  }, 6000);
+	}
+	</script>`;
   const shim = `<script>
     const __hypnoosLocalHost = ["localhost", "127.0.0.1", "::1", ""].includes(window.location.hostname);
     let __hypnoosTopLevel = true;
@@ -389,6 +369,17 @@ window.setTimeout(() => {
 	      const current = __stHypnoosCurrentMessageId() || window.__ST_HYPNOOS_LATEST_FRONTEND_MESSAGE_ID__?.() || "current";
 	      return __stHypnoosFrontendScopeForId(current);
 	    };
+	    window.__ST_HYPNOOS_EXISTING_FRONTEND_MESSAGE_SCOPES__ = () => {
+	      if (window.__ST_LOCAL_PREVIEW__) return ["frontend:preview"];
+	      const scopes = [];
+	      for (const item of __stHypnoosFrontendMessages()) {
+	        const id = __stHypnoosIdText(item?.id);
+	        if (!id) continue;
+	        const scope = __stHypnoosFrontendScopeForId(id);
+	        if (scope && !scopes.includes(scope)) scopes.push(scope);
+	      }
+	      return scopes;
+	    };
 	    window.__ST_HYPNOOS_PREVIOUS_FRONTEND_MESSAGE_SCOPE__ = () => {
 	      if (window.__ST_LOCAL_PREVIEW__) return "";
 	      const messages = __stHypnoosFrontendMessages();
@@ -406,6 +397,19 @@ window.setTimeout(() => {
 	        if (text && !scopes.includes(text)) scopes.push(text);
 	      }
 	      return scopes;
+	    };
+	    window.__ST_HYPNOOS_CHAT_STORAGE_SCOPE__ = () => __stHypnoosChatScope();
+	    window.__ST_HYPNOOS_FRONTEND_POSITION__ = () => {
+	      const currentId = __stHypnoosCurrentMessageId() || window.__ST_HYPNOOS_LATEST_FRONTEND_MESSAGE_ID__?.() || "";
+	      const current = String(window.__ST_HYPNOOS_FRONTEND_MESSAGE_SCOPE__?.() || "").trim();
+	      const scopes = Array.isArray(window.__ST_HYPNOOS_EXISTING_FRONTEND_MESSAGE_SCOPES__?.())
+	        ? window.__ST_HYPNOOS_EXISTING_FRONTEND_MESSAGE_SCOPES__().map((scope) => String(scope || "").trim()).filter(Boolean)
+	        : [];
+	      let index = current ? scopes.indexOf(current) : -1;
+	      if (index < 0) index = scopes.length ? scopes.length - 1 : 0;
+	      const numericId = Number(currentId);
+	      const floor = Number.isFinite(numericId) ? Math.max(0, Math.trunc(numericId)) : index;
+	      return { scope: current, currentId, index: floor, scopeIndex: index, total: scopes.length, scopes };
 	    };
 	    window.__ST_HYPNOOS_FRONTEND_SLOT_SCOPE__ = () => window.__ST_HYPNOOS_FRONTEND_MESSAGE_SCOPE__?.() || "frontend:" + __stHypnoosChatScope();
 	    window.__ST_HYPNOOS_IS_LATEST_MESSAGE_FRONTEND__ = () => {
@@ -429,8 +433,16 @@ window.setTimeout(() => {
     const OPERATION_SOURCE_KEYS = ["来源", "应用", "模块", "source", "app"];
     const OPERATION_ACTION_KEYS = ["操作", "动作", "类型", "action", "type"];
     const OPERATION_KEEP_AFTER_FLUSH_KEY = "hypnoos.operation.keepAfterFlush.v1";
+    const OPERATION_NOTE_STORAGE_PREFIX = "hypnoos.operation.note.v1:";
     window.__ST_OPERATION_INPUT_LOG__ = Array.isArray(window.__ST_OPERATION_INPUT_LOG__) ? window.__ST_OPERATION_INPUT_LOG__ : [];
     let persistLockedOperationInputLog = () => {};
+    const operationScopedStorageKey = (prefix) => {
+      let scope = "";
+      try {
+        scope = String(window.__ST_HYPNOOS_FRONTEND_MESSAGE_SCOPE__?.() || window.__ST_HYPNOOS_FRONTEND_SLOT_SCOPE__?.() || "frontend:unknown");
+      } catch {}
+      return String(prefix || "") + (scope || "frontend:unknown");
+    };
     const readOperationKeepAfterFlush = () => {
       try {
         return localStorage.getItem(OPERATION_KEEP_AFTER_FLUSH_KEY) === "1";
@@ -442,6 +454,22 @@ window.setTimeout(() => {
       try {
         localStorage.setItem(OPERATION_KEEP_AFTER_FLUSH_KEY, value ? "1" : "0");
       } catch {}
+    };
+    const operationNoteStorageKey = () => operationScopedStorageKey(OPERATION_NOTE_STORAGE_PREFIX);
+    const readOperationNote = () => {
+      try {
+        return String(localStorage.getItem(operationNoteStorageKey()) || "").trim();
+      } catch {
+        return "";
+      }
+    };
+    const writeOperationNote = (value, options = {}) => {
+      const text = String(value || "").trim();
+      try {
+        if (text) localStorage.setItem(operationNoteStorageKey(), text);
+        else localStorage.removeItem(operationNoteStorageKey());
+      } catch {}
+      if (!options || options.emit !== false) emitOperationQueueChanged();
     };
 	    const cleanOperationText = (value) => String(value ?? "").replace(/[<>]/g, "").trim();
 	    const cleanOperationFieldText = (value) => cleanOperationText(value).replace(/[。．.，,、；;：:！？!?]+$/u, "");
@@ -534,10 +562,11 @@ window.setTimeout(() => {
 	        const minute = Math.max(0, Math.min(59, Number(match[2]) || 0));
 	        return String(hour).padStart(2, "0") + ":" + String(minute).padStart(2, "0");
 	      };
+	      const operationDateOnly = (value) => String(value ?? "").replace(/\\s*(?:星期|周)[一二三四五六日天]\\s*/g, "").trim();
 	      const copyField = (label, ...keys) => {
 	        for (const key of keys) {
 	          if (system[key] !== undefined && system[key] !== null && system[key] !== "") {
-	            snapshot[label] = label === "当前时间" ? operationTimeOnly(system[key]) : system[key];
+	            snapshot[label] = label === "当前时间" ? operationTimeOnly(system[key]) : label === "当前日期" ? operationDateOnly(system[key]) : system[key];
 	            return;
 	          }
 	        }
@@ -549,15 +578,20 @@ window.setTimeout(() => {
 	      copyField("持有物品", "持有物品");
 	      copyField("社畜值", "社畜值");
 	      copyField("buff", "buff");
+	      copyField("buff结束时间", "buff结束时间");
 	      copyField("阿宅性别", "阿宅性别", "阿宅性別", "阿宅身体性别");
 	      copyField("当前日期", "当前日期");
+	      copyField("_当前周几", "_当前周几", "当前周几");
 	      copyField("当前时间", "当前时间");
 	      copyField("当前地点", "当前地点");
-	      copyField("当前日程", "当前日程");
-	      copyField("当前或待上课程", "当前或待上课程", "当前/待上课程");
+	      copyField("_当前日程", "_当前日程", "当前日程");
+	      copyField("_当前特殊日期", "_当前特殊日期", "当前特殊日期");
 	      copyField("当天课程表", "当天课程表");
+	      copyField("当天原课程表", "当天原课程表");
+	      copyField("当天魔改课程表", "当天魔改课程表");
 	      copyField("派遣岗位", "派遣岗位");
 	      copyField("主角可疑度", "主角可疑度");
+	      copyField("特殊地点解锁", "特殊地点解锁", "特殊地点权限", "已解锁特殊地点");
 	      copyField("催眠APP订阅等级", "催眠APP订阅等级", "_催眠APP订阅等级");
 	      const alisaFavor = roles?.["西园寺爱丽莎"]?.["好感度"];
 	      if (alisaFavor !== undefined && alisaFavor !== null) snapshot["西园寺爱丽莎好感度"] = alisaFavor;
@@ -574,18 +608,23 @@ window.setTimeout(() => {
 	      const item = cleanOperationText(payload?.["项目"] ?? payload?.["功能"] ?? payload?.["命令"] ?? "");
 	      const text = operationValueToDenseText({ action, item, payload });
 	      const fields = new Set();
-	      if (/^(时钟|地图|学校地图)$/.test(source)) addOperationVariableFields(fields, ["当前日期", "当前时间", "当前地点", "当前日程", "当前或待上课程"]);
+	      if (/^(时钟|地图|学校地图)$/.test(source)) addOperationVariableFields(fields, ["当前日期", "_当前周几", "当前时间", "当前地点", "_当前日程", "_当前特殊日期"]);
 	      if (/启动催眠|追加催眠/.test(action)) addOperationVariableFields(fields, ["MC能量"]);
 	      if (/购买VIP等级/.test(action)) addOperationVariableFields(fields, ["持有零花钱", "星光点", "催眠APP订阅等级"]);
-	      if (/领取成就|领取奖励|完成任务|任务完成|成就奖励|任务奖励/.test(action)) addOperationVariableFields(fields, ["星光点", "持有物品"]);
+	      if (/领取成就|领取任务奖励|领取奖励|完成任务|任务完成|成就奖励|任务奖励/.test(action)) addOperationVariableFields(fields, ["星光点", "持有物品"]);
 	      if (/派遣结束提醒|取消派遣/.test(action)) addOperationVariableFields(fields, ["当前日期", "当前时间", "星光点", "派遣岗位"]);
 	      if (/派遣角色/.test(action)) addOperationVariableFields(fields, ["当前日期", "当前时间", "主角可疑度", "派遣岗位"]);
-	      if (/开始打工|打工/.test(action)) addOperationVariableFields(fields, ["当前日期", "当前时间", "当前地点", "当前日程", "当前或待上课程", "持有零花钱", "社畜值", "buff", "MC能量", "MC能量上限"]);
+	      if (/开始打工|打工/.test(action)) addOperationVariableFields(fields, ["当前日期", "_当前周几", "当前时间", "当前地点", "_当前日程", "_当前特殊日期", "持有零花钱", "社畜值", "buff", "buff结束时间", "MC能量", "MC能量上限"]);
 	      if (/购买角色包|角色包/.test(action)) addOperationVariableFields(fields, ["星光点"]);
+	      if (/^邂逅$/.test(source) && /兑换星光点|购买校规修改券|购买课程表魔改券|购买特殊地点准入证/.test(action)) addOperationVariableFields(fields, ["星光点", "持有零花钱", "持有物品"]);
+	      if (/^课程表$/.test(source) && /课程表魔改券/.test(action)) addOperationVariableFields(fields, ["持有物品", "当天课程表", "当天原课程表", "当天魔改课程表"]);
+	      if (/^地图$/.test(source) && /^解锁特殊地点$/.test(action)) addOperationVariableFields(fields, ["星光点", "特殊地点解锁"]);
 	      if (/资源兑换/.test(action)) {
 	        if (/提升MC能量上限/.test(item) || /MC能量上限/.test(text)) addOperationVariableFields(fields, ["持有零花钱", "MC能量上限"]);
-	        if (/补充MC能量/.test(item) || (/MC能量/.test(text) && /资金|零花钱|円|¥/.test(text))) addOperationVariableFields(fields, ["持有零花钱", "MC能量", "MC能量上限", "buff"]);
+	        if (/补充MC能量/.test(item) || (/MC能量/.test(text) && /资金|零花钱|円|¥/.test(text))) addOperationVariableFields(fields, ["持有零花钱", "MC能量", "MC能量上限", "buff", "buff结束时间"]);
+	        if (/定制趣味物品|库存物品|衣物|性道具/.test(item + text)) addOperationVariableFields(fields, ["星光点", "催眠APP订阅等级", "持有物品"]);
 	      }
+	      if (/^库存$/.test(source) && /使用物品|删除物品/.test(action)) addOperationVariableFields(fields, ["当前日期", "当前时间", "当前地点", "持有物品", "主角可疑度"]);
 	      if (/申请立校规|废止初始校规/.test(action)) addOperationVariableFields(fields, ["催眠APP订阅等级", "星光点", "持有物品", "当前校规数"]);
 	      return [...fields];
 	    };
@@ -595,12 +634,14 @@ window.setTimeout(() => {
 	      "变量余额",
 	      "当前时间",
 	      "当前日期",
+	      "_当前周几",
 	      "当前地点",
 	      "当前地点变量",
-	      "当前日程",
-	      "当前或待上课程",
+	      "_当前日程",
+	      "_当前特殊日期",
 	      "当前社畜值",
 	      "当前buff",
+	      "当前buff结束时间",
 	      "当前MC能量",
 	      "当前MC能量上限",
 	      "当前可疑度",
@@ -611,14 +652,75 @@ window.setTimeout(() => {
 	      "当前是否派遣中",
 	      "当前工作价值"
 	    ]);
-	    const operationShouldHideDetail = (record, key) => {
-	      const source = operationTagName(record?.source || "");
+	    const OPERATION_GROUP_NOTICE_DETAIL_KEYS = new Set([
+	      "结算提示",
+	      "AI执行规范"
+	    ]);
+	    const OPERATION_PROMPT_INTERNAL_DETAIL_KEYS = new Set([
+	      "暂存摘要",
+	      "不可删除",
+	      "前端处理",
+	      "前端成就任务计数",
+	      "任务来源",
+	      "初始状态",
+	      "生成规则",
+	      "首次回馈说明",
+	      "时间范围说明",
+	      "开始时间来源",
+	      "暂存区时间选择规则",
+	      "结算后时间处理",
+	      "buff判定规则",
+	      "前端写入前事件记录",
+	      "前端写入后事件记录",
+	      "事件位",
+	      "社畜值上限",
+	      "结算后社畜值上限预览",
+	      "剧情设定",
+	      "角色变量补全要求",
+	      "变量补全重点",
+	      "角色处理",
+	      "前端创建角色变量",
+	      "初始变量覆盖角色",
+	      "初始变量跳过角色",
+	      "世界书写入条目数",
+	      "世界书新增条目数",
+	      "当前对话世界书",
+	      "世界书写入方式",
+	      "变量写入路径",
+	      "合并次数",
+	      "locked",
+	      "forceLocked"
+	    ]);
+	    const operationShouldHideDetail = (record, key, mode = "prompt") => {
 	      const name = cleanOperationText(key);
 	      if (OPERATION_CURRENT_DETAIL_KEYS.has(name)) return true;
+	      if (OPERATION_GROUP_NOTICE_DETAIL_KEYS.has(name)) return true;
+	      const source = cleanOperationText(record?.source || "");
+	      const action = cleanOperationText(record?.action || "");
+	      if (mode !== "prompt") return false;
+	      const details = record?.details || {};
+	      if (OPERATION_PROMPT_INTERNAL_DETAIL_KEYS.has(name)) return true;
+	      if (/^前端写入后/.test(name)) return true;
+	      if (/^成就和任务$/.test(source)) {
+	        if (/^(奖励星光点|奖励物品)$/.test(name) && details["奖励"] !== undefined) return true;
+	        if (/^新增任务$/.test(action) && /^(变量日期|每日任务种子|当前已接任务数|暂存区新增任务数)$/.test(name)) return true;
+	      }
+	      if (/^催眠APP$/.test(source) && /^资源兑换$/.test(action)) {
+	        if (/^(购买数量|消耗零花钱|消耗星光点|基础获得MC能量|实际获得MC能量|获得MC能量|获得MC能量上限|当前VIP等级|当前星光点)$/.test(name)) return true;
+	      }
+	      if (/^催眠APP$/.test(source) && /^购买VIP等级$/.test(action)) {
+	        if (/^消耗零花钱$/.test(name) && details["买断价格"] !== undefined) return true;
+	      }
+	      if (/^地图$/.test(source) && /^解锁特殊地点$/.test(action)) {
+	        if (/^星光点花费$/.test(name) && details["消耗星光点"] !== undefined) return true;
+	      }
+	      if (/^监控$/.test(source) && /^(派遣结束提醒|取消派遣)$/.test(action)) {
+	        if (/^(前端计算|经过分钟数|经过小时数|工作价值|每日星光点)$/.test(name)) return true;
+	      }
 	      return false;
 	    };
-	    const operationVisibleDetailEntries = (record) => Object.entries(record?.details || {})
-	      .filter(([key]) => !operationShouldHideDetail(record, key));
+	    const operationVisibleDetailEntries = (record, mode = "prompt") => Object.entries(record?.details || {})
+	      .filter(([key]) => !operationShouldHideDetail(record, key, mode));
 	    const operationVisibleValueToDenseText = (value, depth = 0) => {
 	      if (value === null || value === undefined || value === "") return "";
 	      if (Array.isArray(value)) {
@@ -627,7 +729,8 @@ window.setTimeout(() => {
 	      if (typeof value === "object") {
 	        const parts = [];
 	        for (const [key, item] of Object.entries(value)) {
-	          if (OPERATION_CURRENT_DETAIL_KEYS.has(cleanOperationText(key))) continue;
+	          const name = cleanOperationText(key);
+	          if (OPERATION_CURRENT_DETAIL_KEYS.has(name) || OPERATION_GROUP_NOTICE_DETAIL_KEYS.has(name)) continue;
 	          const text = operationVisibleValueToDenseText(item, depth + 1);
 	          if (text) parts.push(cleanOperationText(key) + "=" + text);
 	        }
@@ -635,8 +738,87 @@ window.setTimeout(() => {
 	      }
 	      return cleanOperationFieldText(value);
 	    };
-	    const operationGroupNoticeLines = (source, records) => {
+	    const operationHasAction = (records, pattern) => (records || []).some((record) => pattern.test(cleanOperationText(record?.action || "")));
+	    const operationCompactGroupNoticeLines = (source, records) => {
+	      const text = cleanOperationText(source);
+	      if (text === "催眠命令") {
+	        const parts = [];
+	        if (operationHasAction(records, /启动催眠|追加催眠/)) parts.push("启动/追加催眠代表{{user}}已实际施术；条件满足则成功，条件不足/越级/强阻碍才失败或部分失败；不得写看屏不足、系统警告或事前劝退，失败需承担相应后果");
+	        if (operationHasAction(records, /取消催眠/)) parts.push("取消催眠只结束当前临时催眠状态，不移除永久催眠效果");
+	        return parts.length ? ["- AI执行规范｜" + parts.join("；") + "。"] : [];
+	      }
+	      if (text === "催眠资源") {
+	        return ["- AI执行规范｜购买VIP、补充MC能量、提升MC能量上限只承载资源事实；标明前端处理的操作只承认结果，不二次扣费、加能量/上限或改VIP，也不自动产生催眠效果。"];
+	      }
+	      if (text === "催眠道具") {
+	        return ["- AI执行规范｜定制趣味物品仅暂存需求；AI按VIP2、星光点、物品限制和当前剧情判定，成功扣5星光点并新增库存，失败不扣不新增。"];
+	      }
+	      if (text === "成就和任务") {
+	        const parts = [];
+	        if (operationHasAction(records, /领取/)) parts.push("领取奖励已由前端发放并记录/删除，AI不得二次发奖或写成就变量");
+	        if (operationHasAction(records, /接取|取消|新增任务/)) parts.push("接取、取消、新增任务只按本条字段维护任务状态");
+	        return parts.length ? ["- AI执行规范｜" + parts.join("；") + "。"] : [];
+	      }
+	      if (text === "库存") {
+	        return ["- AI执行规范｜库存使用/删除只按本条物品和备注判定；成功扣1个，失败不扣，不扩大物品能力。"];
+	      }
+	      if (text === "人物档案") {
+	        const parts = ["人物档案是纸质资料操作；设置绰号、删除角色或效果只改目标路径，不连带改催眠APP、真实姓名或其他变量；固定初始角色永远不能删除"];
+	        if (operationHasAction(records, /触发角色事件/)) parts.push("事件记录位图已由前端写入，AI只写对应事件剧情，不得二次改事件记录或重复触发；本次回复末尾必须输出<人物档案事件记录>块，包含角色名、事件序号、标题、概要、关键场面、关系变化和后续钩子，供前端本地保存回忆摘要，不写入MVU变量");
+	        if (operationHasAction(records, /回忆角色事件/)) parts.push("回忆角色事件已由前端把本地保存的事件摘要写入对应角色的至关重要记忆；AI读取该字段让对应角色围绕该事件自然聊天，不改事件记录、不当作新事件触发");
+	        return ["- AI执行规范｜" + parts.join("；") + "。"];
+	      }
+	      if (text === "时钟") {
+	        return ["- AI执行规范｜强制时间锚点不可忽略；前端已判断目标日期和跨天，AI按目标日期/时间推进，只改当前日期、时间、事件等必要字段。"];
+	      }
+	      if (text === "监控") {
+	        return ["- AI执行规范｜派遣按字段和目标条件判定；结束/取消按前端完整天数收益结算，成功解除派遣并按工作风险处理主角可疑度。"];
+	      }
+	      if (text === "打工") {
+	        return ["- AI执行规范｜打工只承载本轮已发生的工作事实；有偶遇时只处理互动并收束到预计结束时间，不要把打工写成催眠APP效果或角色赠送资源。"];
+	      }
+	      if (text === "邂逅") {
+	        return ["- AI执行规范｜前端已扣星光点、创建/覆盖初始角色变量并写入当前对话Chat Lorebook；AI只按AI邂逅提示词安排登场和补未记录变量，不再创建或补写角色/世界书。"];
+	      }
+	      if (/^(地图|学校地图|主教学楼地图)$/.test(text)) {
+	        return ["- AI执行规范｜地点建议不是瞬移；请求新增地点需输出完整地点列表JSON；特殊地点需持有对应准入证，未持证时不要写成普通通行成功。"];
+	      }
+	      if (text === "学校") {
+	        return ["- AI执行规范｜校规按VIP、券、星光点和数量限制判定；校规不是催眠效果，禁止写入角色临时/永久催眠效果。"];
+	      }
 	      return [];
+	    };
+	    const operationGroupNoticeCovered = (source, record, noticeKey) => {
+	      const text = cleanOperationText(source);
+	      const key = cleanOperationText(noticeKey);
+	      const action = cleanOperationText(record?.action || "");
+	      if (!OPERATION_GROUP_NOTICE_DETAIL_KEYS.has(key)) return false;
+	      if (/^(催眠命令|催眠资源|催眠道具|库存|人物档案|时钟|监控|打工|邂逅|学校)$/.test(text)) return true;
+	      if (text === "成就和任务" && /领取|接取|取消|新增任务/.test(action)) return true;
+	      if (/^(地图|学校地图)$/.test(text)) return true;
+	      return false;
+	    };
+	    const operationGroupNoticeLines = (source, records) => {
+	      const lines = operationCompactGroupNoticeLines(source, records);
+	      const seenLines = new Set(lines);
+	      for (const noticeKey of OPERATION_GROUP_NOTICE_DETAIL_KEYS) {
+	        const seenValues = new Set();
+	        for (const record of records || []) {
+	          for (const [key, value] of Object.entries(record?.details || {})) {
+	            if (cleanOperationText(key) !== noticeKey) continue;
+	            if (operationGroupNoticeCovered(source, record, noticeKey)) continue;
+	            const text = operationVisibleValueToDenseText(value);
+	            const compact = cleanOperationText(text);
+	            if (!compact || seenValues.has(compact)) continue;
+	            seenValues.add(compact);
+	            const line = "- " + noticeKey + "｜" + text;
+	            if (seenLines.has(line)) continue;
+	            seenLines.add(line);
+	            lines.push(line);
+	          }
+	        }
+	      }
+	      return lines;
 	    };
 	    const stripOperationVariableFields = (payload) => {
 	      if (!payload || typeof payload !== "object" || Array.isArray(payload)) return payload;
@@ -660,6 +842,24 @@ window.setTimeout(() => {
       }
       return { source, action, details };
     };
+    const operationIsHypnosisCustomItemRecord = (record) => {
+      const details = record?.details && typeof record.details === "object" ? record.details : {};
+      const item = cleanOperationText(details["项目"] ?? details["功能"] ?? details["名称"] ?? "");
+      const text = operationValueToDenseText(details);
+      return /定制趣味物品|库存物品|衣物|性道具/.test(item + " " + text);
+    };
+    const operationDisplaySource = (record) => {
+      const source = cleanOperationText(record?.source || "APP") || "APP";
+      const action = cleanOperationText(record?.action || "");
+      if (/^催眠APP$/.test(source)) {
+        if (/^(启动催眠|追加催眠|取消催眠)$/.test(action)) return "催眠命令";
+        if (/^(购买VIP等级|查看VIP买断状态)$/.test(action)) return "催眠资源";
+        if (/^资源兑换$/.test(action)) {
+          return operationIsHypnosisCustomItemRecord(record) ? "催眠道具" : "催眠资源";
+        }
+      }
+      return source;
+    };
     const operationTagName = (value) => cleanOperationText(value).replace(/\\s+/g, "") || "APP";
     const formatOperationLine = (record) => {
       const fields = operationVisibleDetailEntries(record)
@@ -670,18 +870,19 @@ window.setTimeout(() => {
         .filter(Boolean);
       return "- " + cleanOperationText(record.action || "操作") + (fields.length ? "｜" + fields.join("｜") : "");
     };
-    const operationEntryPayload = (entry) => entry && typeof entry === "object" && Object.prototype.hasOwnProperty.call(entry, "payload") ? entry.payload : entry;
+    const rawOperationEntryPayload = (entry) => entry && typeof entry === "object" && Object.prototype.hasOwnProperty.call(entry, "payload") ? entry.payload : entry;
+    const operationEntryPayload = (entry) => rawOperationEntryPayload(entry);
     const operationTopPriority = (entry) => {
-      const payload = operationEntryPayload(entry);
+      const payload = rawOperationEntryPayload(entry);
       const record = normalizeOperationPayload(payload);
       const source = cleanOperationText(record.source || "");
       const action = cleanOperationText(record.action || "");
       const detailText = operationValueToDenseText(record.details || {});
       const haystack = [source, action, detailText].join(" ");
       if (/^监控$/.test(source) && /派遣中提醒/.test(action)) return 0;
-      if (/^打工$/.test(source) && /打工中提醒|打工buff提醒/.test(action)) return 0;
+      if (/^打工$/.test(source) && /有偶遇|打工buff提醒/.test(action)) return 0;
       if (/^(时钟|地图|学校地图)$/.test(source)) return 0;
-      if (/建议剧情开始时间|建议时间|当前时间|推进到该时间|建议剧情地点|请求新增地点|当前地点变量|建议地点/.test(haystack)) return 0;
+      if (/强制剧情开始时间|强制时间|目标时间|建议剧情开始时间|建议时间|当前时间|推进到该时间|建议剧情地点|请求新增地点|当前地点变量|建议地点/.test(haystack)) return 0;
       return 10;
     };
     const sortOperationEntries = (entries) => (Array.isArray(entries) ? entries.slice() : [])
@@ -714,6 +915,11 @@ window.setTimeout(() => {
           const title = cleanOperationText(object["成就"] ?? object.title ?? object.name ?? "");
           return "reward:claim-achievement:" + (id || title);
         }
+        if (/领取任务奖励/.test(action)) {
+          const id = cleanOperationText(object["任务ID"] ?? object.id ?? "");
+          const title = cleanOperationText(object["任务"] ?? object.title ?? object.name ?? "");
+          return "reward:claim-quest:" + (id || title);
+        }
         if (/新增任务/.test(action)) {
           const date = cleanOperationText(object["每日任务日期"] ?? object["变量日期"] ?? object.dateKey ?? "");
           const chatName = cleanOperationText(object["每日任务聊天"] ?? object["聊天名"] ?? object.dailyQuestChatName ?? object.chatName ?? "");
@@ -732,8 +938,8 @@ window.setTimeout(() => {
           return "reward:cancel-quest:" + (id || title);
         }
       }
-	      if (/^打工$/.test(source) && /^(开始打工|打工中提醒)$/.test(action)) return "work:active";
-	      if (/^时钟$/.test(source) && /建议剧情开始时间|建议时间|当前时间|推进到该时间/.test(action)) return "clock:suggest-time";
+		      if (/^打工$/.test(source) && /^(开始打工|有偶遇|打工中提醒)$/.test(action)) return "work:active";
+	      if (/^时钟$/.test(source) && /强制剧情开始时间|强制时间|目标时间|建议剧情开始时间|建议时间|当前时间|推进到该时间/.test(action)) return "clock:suggest-time";
 	      if (/^(地图|学校地图)$/.test(source)) {
 	        if (/^建议剧情地点$/.test(action)) return "map:suggest-location";
 	        if (/^请求新增地点$/.test(action)) return "map:add-location:" + (/^学校地图$/.test(source) ? "school" : "world");
@@ -743,10 +949,20 @@ window.setTimeout(() => {
 	          return "map:unlock-special:" + (id || title);
 	        }
 	      }
-      if (/^人物档案$/.test(source) && /^设置绰号$/.test(action)) {
-        const role = cleanOperationText(object["角色名"] ?? object["目标角色"] ?? "");
-        return "profile:nickname:" + role;
-      }
+	      if (/^人物档案$/.test(source) && /^设置绰号$/.test(action)) {
+	        const role = cleanOperationText(object["角色名"] ?? object["目标角色"] ?? "");
+	        return "profile:nickname:" + role;
+	      }
+	      if (/^人物档案$/.test(source) && /^回忆角色事件$/.test(action)) {
+	        const role = cleanOperationText(object["角色名"] ?? object["目标角色"] ?? "");
+	        const bit = cleanOperationText(object["事件位"] ?? object["事件序号"] ?? "");
+	        return "profile:event-recall:" + role + ":" + bit;
+	      }
+	      if (/^库存$/.test(source)) {
+	        const itemName = cleanOperationText(object["物品名"] ?? object["物品"] ?? object["名称"] ?? "");
+	        if (/^删除物品$/.test(action)) return "inventory:delete:" + itemName;
+		        if (/^使用物品$/.test(action)) return "inventory:use:" + itemName;
+	      }
 	      if (/^催眠APP$/.test(source)) {
         if (/^(启动催眠|追加催眠)$/.test(action)) return "hypnosis:session";
         if (/^资源兑换$/.test(action)) {
@@ -761,24 +977,82 @@ window.setTimeout(() => {
       }
       return "";
     };
-		    const makeOperationEntry = (payload) => {
-		      const locked = Boolean(payload && typeof payload === "object" && (payload["不可删除"] || payload.locked || payload.forceLocked));
-		      const cleanPayload = stripOperationVariableFields(payload);
-		      const key = operationRecordKey(cleanPayload);
+			    const makeOperationEntry = (payload) => {
+			      const locked = Boolean(payload && typeof payload === "object" && (payload["不可删除"] || payload.locked || payload.forceLocked));
+			      const cleanPayload = stripOperationVariableFields(payload);
+			      const key = operationRecordKey(cleanPayload);
 		      return {
 		        id: "op-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8),
 		        at: Date.now(),
 		        key,
 		        payload: cleanPayload,
-		        locked
-		      };
+			        locked
+			      };
+			    };
+		    const OPERATION_INPUT_LOG_STORAGE_PREFIX = "hypnoos.operation.inputLog.v2:";
+		    const OPERATION_LEGACY_STORAGE_PREFIXES = [
+		      "hypnoos.operation.inputLog.v1:",
+		      "hypnoos.operation.lockedInputLog.v2:"
+		    ];
+		    const operationCurrentStorageScope = () => {
+		      let scope = "";
+		      try { scope = String(window.__ST_HYPNOOS_FRONTEND_MESSAGE_SCOPE__?.() || "").trim(); } catch {}
+		      if (!scope) {
+		        try { scope = "chat:" + __stHypnoosChatScope(); } catch {}
+		      }
+		      return scope || "frontend:unknown";
 		    };
-    const OPERATION_LOCKED_LOG_STORAGE_PREFIX = "hypnoos.operation.lockedInputLog.v2:";
-    const operationLockedStorageKey = () => {
-      let scope = "";
-      try { scope = String(window.__ST_HYPNOOS_FRONTEND_MESSAGE_SCOPE__?.() || "frontend:unknown"); } catch {}
-      return OPERATION_LOCKED_LOG_STORAGE_PREFIX + (scope || "frontend:unknown");
-    };
+		    const operationInputStorageKey = () => OPERATION_INPUT_LOG_STORAGE_PREFIX + operationCurrentStorageScope();
+	    const normalizeStoredPendingOperationEntry = (entry) => {
+	      const payload = operationEntryPayload(entry);
+	      if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
+	      const locked = Boolean(entry?.locked || payload?.["不可删除"] || payload?.locked || payload?.forceLocked);
+	      const next = makeOperationEntry(locked ? { ...payload, 不可删除: true } : payload);
+	      if (entry?.id) next.id = String(entry.id);
+	      if (Number.isFinite(Number(entry?.at))) next.at = Number(entry.at);
+	      next.locked = locked;
+	      return next;
+	    };
+	    const readStoredOperationInputLog = () => {
+	      try {
+	        const raw = sessionStorage.getItem(operationInputStorageKey());
+	        const parsed = JSON.parse(raw || "[]");
+	        if (!Array.isArray(parsed)) return [];
+	        return parsed.map(normalizeStoredPendingOperationEntry).filter(Boolean);
+	      } catch {
+	        return [];
+	      }
+	    };
+	    const persistOperationInputLog = () => {
+	      try {
+	        const key = operationInputStorageKey();
+	        if (!Array.isArray(window.__ST_OPERATION_INPUT_LOG__) || !window.__ST_OPERATION_INPUT_LOG__.length) {
+	          sessionStorage.removeItem(key);
+	          return;
+	        }
+	        sessionStorage.setItem(key, JSON.stringify(window.__ST_OPERATION_INPUT_LOG__.map((entry) => ({
+	          id: entry.id,
+	          at: entry.at,
+	          payload: entry.payload,
+	          locked: Boolean(entry.locked)
+	        }))));
+	      } catch {}
+	    };
+	    const restoreOperationInputLog = () => {
+	      const stored = readStoredOperationInputLog();
+	      if (!stored.length) return;
+	      const seen = new Set(window.__ST_OPERATION_INPUT_LOG__.map((entry) => entry.key || operationRecordKey(rawOperationEntryPayload(entry))));
+	      for (const entry of stored) {
+	        const key = entry.key || operationRecordKey(rawOperationEntryPayload(entry));
+	        if (seen.has(key)) continue;
+	        seen.add(key);
+	        window.__ST_OPERATION_INPUT_LOG__.push(entry);
+	      }
+	    };
+		    const OPERATION_LOCKED_LOG_STORAGE_PREFIX = "hypnoos.operation.lockedInputLog.v3:";
+	    const operationLockedStorageKey = () => {
+	      return OPERATION_LOCKED_LOG_STORAGE_PREFIX + operationCurrentStorageScope();
+	    };
     const normalizeStoredOperationEntry = (entry) => {
       const payload = operationEntryPayload(entry);
       if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
@@ -814,22 +1088,61 @@ window.setTimeout(() => {
         }))));
       } catch {}
     };
-    const restoreLockedOperationInputLog = () => {
-      const stored = readLockedOperationInputLog();
-      if (!stored.length) return;
-      const seen = new Set(window.__ST_OPERATION_INPUT_LOG__.map((entry) => entry.key || operationRecordKey(operationEntryPayload(entry))));
+    const pruneStaleLockedOperationInputLogs = () => {
+      try {
+        const scopes = window.__ST_HYPNOOS_EXISTING_FRONTEND_MESSAGE_SCOPES__?.();
+        if (!Array.isArray(scopes) || !scopes.length) return;
+        const currentScope = String(window.__ST_HYPNOOS_FRONTEND_MESSAGE_SCOPE__?.() || "").trim();
+        if (!currentScope) return;
+        const marker = ":message-";
+        const markerIndex = currentScope.lastIndexOf(marker);
+        const scopeFamily = markerIndex >= 0 ? currentScope.slice(0, markerIndex + marker.length) : currentScope;
+        const storageFamilyPrefix = OPERATION_LOCKED_LOG_STORAGE_PREFIX + scopeFamily;
+        const validKeys = new Set(scopes.map((scope) => OPERATION_LOCKED_LOG_STORAGE_PREFIX + String(scope || "").trim()).filter(Boolean));
+        for (let index = localStorage.length - 1; index >= 0; index -= 1) {
+          const key = localStorage.key(index);
+          if (!key || !key.startsWith(storageFamilyPrefix) || validKeys.has(key)) continue;
+          localStorage.removeItem(key);
+        }
+      } catch {}
+    };
+	    const restoreLockedOperationInputLog = () => {
+	      const stored = readLockedOperationInputLog();
+	      if (!stored.length) return;
+      const seen = new Set(window.__ST_OPERATION_INPUT_LOG__.map((entry) => entry.key || operationRecordKey(rawOperationEntryPayload(entry))));
       for (const entry of stored) {
-        const key = entry.key || operationRecordKey(operationEntryPayload(entry));
+        const key = entry.key || operationRecordKey(rawOperationEntryPayload(entry));
         if (seen.has(key)) continue;
         seen.add(key);
-        window.__ST_OPERATION_INPUT_LOG__.push(entry);
+	        window.__ST_OPERATION_INPUT_LOG__.push(entry);
+	      }
+	    };
+	    const pruneLegacyOperationInputLogs = () => {
+	      const removeMatching = (storage) => {
+	        try {
+	          for (let index = storage.length - 1; index >= 0; index -= 1) {
+	            const key = storage.key(index);
+	            if (!key || !OPERATION_LEGACY_STORAGE_PREFIXES.some((prefix) => key.startsWith(prefix))) continue;
+	            storage.removeItem(key);
+	          }
+	        } catch {}
+	      };
+	      try { removeMatching(sessionStorage); } catch {}
+	      try { removeMatching(localStorage); } catch {}
+	    };
+    const operationEntryIsClockSuggestionLocked = (entry) => {
+      try {
+        const checker = window.__ST_IS_CLOCK_SUGGESTION_LOCKED_BY_PENDING_WORK_BUFF__;
+        return typeof checker === "function" ? Boolean(checker(entry)) : false;
+      } catch {
+        return false;
       }
     };
     const describeOperationEntry = (entry) => {
       const payload = operationEntryPayload(entry);
       const record = normalizeOperationPayload(payload);
       const key = entry?.key || operationRecordKey(payload);
-      const fields = operationVisibleDetailEntries(record)
+      const fields = operationVisibleDetailEntries(record, "panel")
         .map(([name, value]) => {
           const text = operationVisibleValueToDenseText(value);
           return text ? cleanOperationText(name) + "=" + text : "";
@@ -839,7 +1152,7 @@ window.setTimeout(() => {
         id: String(entry?.id || key),
         key: String(key),
         at: Number(entry?.at || 0),
-        locked: Boolean(entry?.locked),
+        locked: Boolean(entry?.locked || operationEntryIsClockSuggestionLocked(entry)),
         source: cleanOperationText(record.source || "APP"),
         action: cleanOperationText(record.action || "操作"),
         summary: fields.join("｜") || "无附加信息",
@@ -866,27 +1179,35 @@ window.setTimeout(() => {
 	      if (/^监控$/.test(source) && /派遣角色/.test(action)) {
 	        addOperationRoleVariableFields(selected, variables, roleName, ["好感度", "服从度", "是否派遣中", "工作价值"]);
 	      }
-	      if (/^监控$/.test(source) && /派遣结束提醒|取消派遣/.test(action)) {
+      if (/^监控$/.test(source) && /派遣结束提醒|取消派遣/.test(action)) {
 		        addOperationRoleVariableFields(selected, variables, roleName, ["是否派遣中", "工作价值"]);
 		      }
+      if (/^人物档案$/.test(source) && /触发角色事件|回忆角色事件/.test(action)) {
+        addOperationRoleVariableFields(selected, variables, roleName, ["好感度", "服从度", "警戒度", "性欲", "快感值", "事件记录", "至关重要记忆"]);
+      }
 		    };
 		    const operationFrontendDeductedStarlightNotice = (entries) => {
 		      let cost = 0;
 		      let hasEncounterPurchase = false;
+		      let hasEncounterShopSettled = false;
 		      for (const entry of entries || []) {
 		        const payload = operationEntryPayload(entry);
 		        const record = normalizeOperationPayload(payload);
 		        const source = cleanOperationText(record.source || "");
 		        const action = cleanOperationText(record.action || "");
-		        if (!/^邂逅$/.test(source) || !/购买角色包|角色包已使用/.test(action)) continue;
-		        hasEncounterPurchase = true;
+		        if (!/^邂逅$/.test(source)) continue;
+		        const isEncounterPurchase = /购买角色包|角色包已使用/.test(action);
+		        const isEncounterShopSettled = /兑换星光点|购买校规修改券|购买课程表魔改券|购买特殊地点准入证/.test(action);
+		        if (!isEncounterPurchase && !isEncounterShopSettled) continue;
+		        if (isEncounterPurchase) hasEncounterPurchase = true;
+		        if (isEncounterShopSettled) hasEncounterShopSettled = true;
 		        const value = Number(record.details?.["消耗星光点"] ?? payload?.["消耗星光点"] ?? payload?.price ?? 0);
 		        if (Number.isFinite(value) && value > 0) cost += Math.floor(value);
 		      }
-		      if (!hasEncounterPurchase) return "";
-		      return "已扣除本次邂逅" + (cost > 0 ? cost + "点" : "") + "消耗，这是扣除后的余额；AI不得再次扣除星光点";
+		      if (!hasEncounterPurchase && !hasEncounterShopSettled) return "";
+		      return "已由前端处理本次邂逅" + (cost > 0 ? cost + "，合计扣除" + cost + "点星光点" : "") + "，这是处理后的余额；AI不得再次扣费、发券或发放准入证";
 		    };
-		    const operationFrontendSettledHypnosisNotice = (entries) => {
+			    const operationFrontendSettledHypnosisNotice = (entries) => {
 		      const settled = [];
 		      for (const entry of entries || []) {
 		        const payload = operationEntryPayload(entry);
@@ -895,11 +1216,60 @@ window.setTimeout(() => {
 		        const action = cleanOperationText(record.action || "");
 		        if (!/^催眠APP$/.test(source)) continue;
 		        if (!/^(资源兑换|购买VIP等级)$/.test(action)) continue;
+		        if (/^资源兑换$/.test(action) && /定制趣味物品/.test(cleanOperationText(payload?.["项目"] || ""))) continue;
 		        if (!/前端直接|已由前端/.test(operationValueToDenseText(record.details || {}))) continue;
 		        settled.push(action === "资源兑换" ? cleanOperationText(payload?.["项目"] || "补给") : cleanOperationText(payload?.["等级"] || "VIP购买"));
 		      }
-		      if (!settled.length) return "";
-		      return "已由前端直接处理本次" + settled.join("、") + "并写入变量，这是处理后的余额/等级；AI不得再次扣费、加能量、加上限或改VIP";
+			      if (!settled.length) return "";
+			      return "已由前端直接处理本次" + settled.join("、") + "并写入变量，这是处理后的余额/等级；AI不得再次扣费、加能量、加上限或改VIP";
+			    };
+			    const operationFrontendSettledWorkNotice = (entries) => {
+			      let hasSettledWork = false;
+			      for (const entry of entries || []) {
+			        const payload = operationEntryPayload(entry);
+			        const record = normalizeOperationPayload(payload);
+			        const source = cleanOperationText(record.source || "");
+			        const action = cleanOperationText(record.action || "");
+			        if (!/^打工$/.test(source)) continue;
+			        const detailText = operationValueToDenseText(record.details || {});
+			        if (/^开始打工$/.test(action) || (/有偶遇|打工中提醒/.test(action) && /前端处理|前端直接|已由前端/.test(detailText))) {
+			          hasSettledWork = true;
+			          break;
+			        }
+			      }
+			      if (!hasSettledWork) return "";
+			      return "本次打工已由前端直接结算并写入变量，这是处理后的值；社畜值为前端只读结算变量，AI不得再次发钱、增加社畜值、改buff或重复结算打工";
+			    };
+		    const operationNoHypnosisCommandReminderLine = (entries) => {
+		      if (!Array.isArray(entries) || !entries.length) return "";
+		      let hasHypnosisAppOperation = false;
+		      let hasSchoolRuleOperation = false;
+		      for (const entry of entries) {
+		        const payload = operationEntryPayload(entry);
+		        const record = normalizeOperationPayload(payload);
+		        const source = cleanOperationText(record.source || "");
+		        const action = cleanOperationText(record.action || "");
+		        if (/^催眠APP$/.test(source)) hasHypnosisAppOperation = true;
+		        if (/申请立校规|废止初始校规/.test(action) || /^校规$/.test(source)) hasSchoolRuleOperation = true;
+		      }
+		      if (hasHypnosisAppOperation || hasSchoolRuleOperation) return "";
+		      return "- AI提醒｜本轮没有催眠APP或校规操作；AI不得自行新增催眠命令、催眠成功或催眠效果。";
+		    };
+		    const operationGroupPriority = (source) => {
+		      const text = cleanOperationText(source);
+		      if (text === "时钟") return 0;
+		      if (/^(地图|学校地图)$/.test(text)) return 5;
+		      if (text === "学校") return 8;
+		      if (text === "催眠命令") return 10;
+		      if (text === "催眠资源") return 20;
+		      if (text === "催眠道具") return 25;
+		      if (text === "成就和任务") return 30;
+		      if (text === "打工") return 35;
+		      if (text === "监控") return 40;
+		      if (text === "邂逅") return 45;
+		      if (text === "人物档案") return 50;
+		      if (text === "库存") return 55;
+		      return 100;
 		    };
 		    const selectOperationVariables = (entries) => {
 		      const variablesRoot = readOperationStatData();
@@ -919,22 +1289,30 @@ window.setTimeout(() => {
 		      if (starlightNotice && selected["星光点"] !== undefined && selected["星光点"] !== null && selected["星光点"] !== "") {
 		        selected["星光点"] = String(selected["星光点"]) + "（" + starlightNotice + "）";
 		      }
-		      const settledHypnosisNotice = operationFrontendSettledHypnosisNotice(entries);
-		      if (settledHypnosisNotice) {
-		        for (const key of ["持有零花钱", "星光点", "MC能量", "MC能量上限", "催眠APP订阅等级"]) {
-		          if (selected[key] !== undefined && selected[key] !== null && selected[key] !== "") {
-		            selected[key] = String(selected[key]) + "（" + settledHypnosisNotice + "）";
-		          }
-		        }
-		      }
-		      return Object.keys(selected).length ? selected : null;
-		    };
+			      const settledHypnosisNotice = operationFrontendSettledHypnosisNotice(entries);
+			      if (settledHypnosisNotice) {
+			        for (const key of ["持有零花钱", "星光点", "MC能量", "MC能量上限", "催眠APP订阅等级"]) {
+			          if (selected[key] !== undefined && selected[key] !== null && selected[key] !== "") {
+			            selected[key] = String(selected[key]) + "（" + settledHypnosisNotice + "）";
+			          }
+			        }
+			      }
+			      const settledWorkNotice = operationFrontendSettledWorkNotice(entries);
+			      if (settledWorkNotice) {
+			        for (const key of ["持有零花钱", "社畜值", "buff", "buff结束时间", "当前日期", "当前时间", "_当前周几", "_当前日程", "_当前特殊日期", "MC能量"]) {
+			          if (selected[key] !== undefined && selected[key] !== null && selected[key] !== "") {
+			            selected[key] = String(selected[key]) + "（" + settledWorkNotice + "）";
+			          }
+			        }
+			      }
+			      return Object.keys(selected).length ? selected : null;
+			    };
 	    const buildOperationBlock = (entries = window.__ST_OPERATION_INPUT_LOG__) => {
 	      const groups = new Map();
 	      const sortedEntries = sortOperationEntries(entries);
 	      for (const entry of sortedEntries) {
 	        const record = normalizeOperationPayload(operationEntryPayload(entry));
-	        const source = record.source || "APP";
+	        const source = operationDisplaySource(record);
 	        if (!groups.has(source)) groups.set(source, []);
 	        groups.get(source).push(record);
 	      }
@@ -948,7 +1326,13 @@ window.setTimeout(() => {
 	        }
 	        lines.push("</相关变量>");
 	      }
-	      for (const [source, records] of groups) {
+	      const noHypnosisReminder = operationNoHypnosisCommandReminderLine(sortedEntries);
+	      if (noHypnosisReminder) lines.push(noHypnosisReminder);
+	      const orderedGroups = Array.from(groups.entries()).sort((a, b) => {
+	        const priority = operationGroupPriority(a[0]) - operationGroupPriority(b[0]);
+	        return priority || 0;
+	      });
+	      for (const [source, records] of orderedGroups) {
 	        const tag = operationTagName(source);
 	        lines.push("<" + tag + ">");
 	        for (const noticeLine of operationGroupNoticeLines(source, records)) lines.push(noticeLine);
@@ -957,6 +1341,13 @@ window.setTimeout(() => {
       }
       lines.push("</本轮操作>");
       return lines.join("\\n");
+    };
+    const buildPendingOperationText = (entries = window.__ST_OPERATION_INPUT_LOG__) => {
+      const parts = [];
+      if (Array.isArray(entries) && entries.length) parts.push(buildOperationBlock(entries));
+      const note = readOperationNote();
+      if (note) parts.push(note);
+      return parts.join("\\n");
     };
     const stripOperationBlocks = (value) => String(value || "").replace(OPERATION_BLOCK_RE, "").replace(/[ \\t]*\\n{3,}/g, "\\n\\n").trim();
     const writeOperationBlockToInput = (input, block) => {
@@ -968,13 +1359,14 @@ window.setTimeout(() => {
       input.dispatchEvent(new Event("input", { bubbles: true }));
       input.dispatchEvent(new Event("change", { bubbles: true }));
     };
-    const emitOperationQueueChanged = () => {
-      persistLockedOperationInputLog();
-      try {
+	    const emitOperationQueueChanged = () => {
+	      persistOperationInputLog();
+	      persistLockedOperationInputLog();
+	      try {
         window.dispatchEvent(new CustomEvent("HYPNOOS_OPERATION_QUEUE_CHANGED", {
           detail: {
             count: window.__ST_OPERATION_INPUT_LOG__.length,
-            block: window.__ST_OPERATION_INPUT_LOG__.length ? buildOperationBlock() : ""
+            block: buildPendingOperationText()
           }
         }));
       } catch {}
@@ -1058,14 +1450,43 @@ window.setTimeout(() => {
       });
       document.body.appendChild(overlay);
     });
-    restoreLockedOperationInputLog();
-    window.__ST_CLEAR_OPERATION_INPUT_LOG__ = () => {
-      window.__ST_OPERATION_INPUT_LOG__ = window.__ST_OPERATION_INPUT_LOG__.filter((entry) => Boolean(entry?.locked));
-      emitOperationQueueChanged();
+		    pruneLegacyOperationInputLogs();
+		    restoreOperationInputLog();
+		    pruneStaleLockedOperationInputLogs();
+	    restoreLockedOperationInputLog();
+	    const pruneExpiredWorkOperationsIfReady = () => {
+	      try { window.__ST_PRUNE_EXPIRED_WORK_OPERATIONS__?.(); } catch {}
+	    };
+	    const clearOperationInputLog = (options = {}) => {
+	      pruneExpiredWorkOperationsIfReady();
+	      const force = Boolean(options === true || options?.force || options?.includeLocked);
+	      const clearNote = options?.clearNote !== false;
+	      const before = window.__ST_OPERATION_INPUT_LOG__.length;
+	      const hadNote = clearNote && Boolean(readOperationNote());
+	      window.__ST_OPERATION_INPUT_LOG__ = force
+	        ? []
+	        : window.__ST_OPERATION_INPUT_LOG__.filter((entry) => Boolean(describeOperationEntry(entry).locked));
+	      if (clearNote) writeOperationNote("", { emit: false });
+	      const changed = before !== window.__ST_OPERATION_INPUT_LOG__.length || hadNote;
+	      if (changed) emitOperationQueueChanged();
+	      return changed;
+	    };
+	    window.__ST_CLEAR_OPERATION_INPUT_LOG__ = clearOperationInputLog;
+	    window.__ST_FORCE_CLEAR_OPERATION_INPUT_LOG__ = () => clearOperationInputLog({ force: true });
+    window.__ST_GET_PENDING_OPERATION_INPUT_LOG__ = () => {
+      pruneExpiredWorkOperationsIfReady();
+      return sortOperationEntries(window.__ST_OPERATION_INPUT_LOG__);
     };
-    window.__ST_GET_PENDING_OPERATION_INPUT_LOG__ = () => sortOperationEntries(window.__ST_OPERATION_INPUT_LOG__);
-    window.__ST_GET_PENDING_OPERATION_VIEW__ = () => sortOperationEntries(window.__ST_OPERATION_INPUT_LOG__).map(describeOperationEntry);
-    window.__ST_BUILD_PENDING_OPERATION_BLOCK__ = () => window.__ST_OPERATION_INPUT_LOG__.length ? buildOperationBlock() : "";
+    window.__ST_GET_PENDING_OPERATION_VIEW__ = () => {
+      pruneExpiredWorkOperationsIfReady();
+      return sortOperationEntries(window.__ST_OPERATION_INPUT_LOG__).map(describeOperationEntry);
+    };
+    window.__ST_GET_PENDING_OPERATION_NOTE__ = () => readOperationNote();
+    window.__ST_SET_PENDING_OPERATION_NOTE__ = (value, options) => writeOperationNote(value, options);
+    window.__ST_BUILD_PENDING_OPERATION_BLOCK__ = () => {
+      pruneExpiredWorkOperationsIfReady();
+      return buildPendingOperationText();
+    };
     window.__ST_BUILD_OPERATION_BLOCK_FROM_PAYLOADS__ = (payloads) => {
       const list = Array.isArray(payloads) ? payloads : [payloads];
       return buildOperationBlock(list.filter((payload) => payload !== undefined).map(makeOperationEntry));
@@ -1102,11 +1523,11 @@ window.setTimeout(() => {
       emitOperationQueueChanged();
       return true;
     };
-    window.__ST_SET_WORK_STATUS_REMINDER__ = (payload) => {
-      const isTarget = (entry) => {
-        const item = operationEntryPayload(entry);
-        return item?.["来源"] === "打工" && item?.["操作"] === "打工中提醒";
-      };
+	    window.__ST_SET_WORK_STATUS_REMINDER__ = (payload) => {
+	      const isTarget = (entry) => {
+	        const item = operationEntryPayload(entry);
+	        return item?.["来源"] === "打工" && /^(有偶遇|打工中提醒)$/.test(String(item?.["操作"] || ""));
+	      };
       if (!payload) {
         const before = window.__ST_OPERATION_INPUT_LOG__.length;
         window.__ST_OPERATION_INPUT_LOG__ = window.__ST_OPERATION_INPUT_LOG__.filter((entry) => !isTarget(entry));
@@ -1151,6 +1572,12 @@ window.setTimeout(() => {
       const number = Number(value) || 0;
       return Number.isInteger(number) ? String(number) : String(Math.round(number * 100) / 100);
     };
+    const formatHypnosisSupplySummary = (item, gainText, costText) => {
+      const name = cleanOperationText(item || "资源兑换");
+      const gain = cleanOperationText(gainText || "");
+      const cost = cleanOperationText(costText || "");
+      return [name, gain, cost].filter(Boolean).join("｜");
+    };
     const mergeHypnosisSupplyOperationEntry = (targetEntry, incomingEntry) => {
       const target = targetEntry?.payload;
       const incoming = incomingEntry?.payload;
@@ -1174,11 +1601,13 @@ window.setTimeout(() => {
         target["实际获得MC能量"] = totalGain;
         target["获得MC能量"] = totalGain;
         target["获得资源"] = "MC能量 +" + formatOperationAmount(totalGain) + "点";
+        target["暂存摘要"] = formatHypnosisSupplySummary(item, target["获得资源"], target["消耗资源"]);
         target["前端写入后MC能量"] = incoming["前端写入后MC能量"];
       } else {
         const totalGain = operationNumericValue(target["获得MC能量上限"] ?? target["获得资源"]) + operationNumericValue(incoming["获得MC能量上限"] ?? incoming["获得资源"]);
         target["获得MC能量上限"] = totalGain;
         target["获得资源"] = "MC能量上限 +" + formatOperationAmount(totalGain) + "点";
+        target["暂存摘要"] = formatHypnosisSupplySummary(item, target["获得资源"], target["消耗资源"]);
         target["前端写入后MC能量上限"] = incoming["前端写入后MC能量上限"];
       }
       target["前端处理"] = incoming["前端处理"] || target["前端处理"] || "已由前端直接写入变量";
@@ -1219,11 +1648,12 @@ window.setTimeout(() => {
       return true;
     };
     window.__ST_FLUSH_OPERATION_TO_INPUT__ = async () => {
-      if (!window.__ST_OPERATION_INPUT_LOG__.length) {
+      pruneExpiredWorkOperationsIfReady();
+      const block = buildPendingOperationText();
+      if (!block) {
         emitOperationQueueChanged();
         return false;
       }
-      const block = buildOperationBlock();
       const input = findOperationInput();
       if (input) {
         if (shouldWarnDuplicateOperation(input)) {
@@ -1232,22 +1662,18 @@ window.setTimeout(() => {
         }
         writeOperationBlockToInput(input, block);
         try { globalThis.__HYPNOOS_MARK_SENT_REWARD_OPERATIONS__?.(window.__ST_OPERATION_INPUT_LOG__); } catch {}
-        if (!readOperationKeepAfterFlush()) {
-          window.__ST_OPERATION_INPUT_LOG__ = window.__ST_OPERATION_INPUT_LOG__.filter((entry) => Boolean(entry?.locked));
-        }
-        emitOperationQueueChanged();
-        return true;
+	        if (!readOperationKeepAfterFlush()) clearOperationInputLog();
+	        else emitOperationQueueChanged();
+	        return true;
       }
       try {
         const target = window.parent && window.parent !== window ? window.parent : window.top;
         if (target && target !== window) {
           target.postMessage({ type: "HYPNOOS_APPEND_OPERATION", block }, "*");
           try { globalThis.__HYPNOOS_MARK_SENT_REWARD_OPERATIONS__?.(window.__ST_OPERATION_INPUT_LOG__); } catch {}
-          if (!readOperationKeepAfterFlush()) {
-            window.__ST_OPERATION_INPUT_LOG__ = window.__ST_OPERATION_INPUT_LOG__.filter((entry) => Boolean(entry?.locked));
-          }
-          emitOperationQueueChanged();
-          return true;
+		          if (!readOperationKeepAfterFlush()) clearOperationInputLog();
+		          else emitOperationQueueChanged();
+	          return true;
         }
       } catch {}
       console.info("[HypnoOS] 已记录APP操作", block);
@@ -1257,9 +1683,9 @@ window.setTimeout(() => {
   const base = "";
   let outputHtml = String(html || "");
   if (/<head[^>]*>/i.test(outputHtml)) {
-    outputHtml = outputHtml.replace(/<head([^>]*)>/i, `<head$1>${charset}${base}${bootGuard}${shim}`);
+    outputHtml = outputHtml.replace(/<head([^>]*)>/i, `<head$1>${charset}${base}${storageGuard}${bootGuard}${shim}`);
   } else {
-    outputHtml = `${charset}${base}${bootGuard}${shim}${outputHtml}`;
+    outputHtml = `${charset}${base}${storageGuard}${bootGuard}${shim}${outputHtml}`;
   }
   outputHtml = patchKnownGlobals(outputHtml);
   outputHtml = patchBundledHypnosisApp(outputHtml);
@@ -1481,6 +1907,30 @@ function patchLegacyCurrencyModule(code) {
   output = output.replace(
     "        id: 'vip4_fetish_implant',\n        title: '性癖植入',\n        description: '永久性地给被催眠者植入一个性癖.',\n        tier: 'VIP4',\n        costType: 'ONE_TIME',\n        costValue: 800,",
     "        id: 'vip5_fetish_implant',\n        title: '性癖植入',\n        description: '永久性地给被催眠者植入一个性癖倾向。',\n        tier: 'VIP5',\n        costType: 'ONE_TIME',\n        costValue: 2000,"
+  );
+  output = output.replace(
+    "            case 'vip4_closed_space_common_sense': {\n                amount = feature.costValue * persons * duration;\n                break;\n            }",
+    "            case 'vip4_closed_space_common_sense':\n            case 'vip4_closed_space_cognitive_block': {\n                amount = feature.costValue * duration;\n                break;\n            }"
+  );
+  output = output.replace(
+    "            if (feature.id === 'vip4_closed_space_common_sense')\n                return `每人每分钟: ${feature.costValue} ${currency}`;",
+    "            if (feature.id === 'vip4_closed_space_common_sense' || feature.id === 'vip4_closed_space_cognitive_block')\n                return `每分钟（不按人数）: ${feature.costValue} ${currency}`;"
+  );
+  output = output.replace(
+    "    {\n        id: 'vip4_closed_space_common_sense',\n        title: '封闭空间常识修改',\n        description: '修改封闭空间内的规则或常识.',\n        tier: 'VIP4',\n        costType: 'PER_MINUTE',\n        costValue: 2,\n        costCurrency: 'MC_ENERGY',\n        isEnabled: false,\n        notePlaceholder: '输入空间人数（数字）+ 要修改的规则/常识',\n    },",
+    "    {\n        id: 'vip4_closed_space_common_sense',\n        title: '封闭空间常识修改',\n        description: '修改单一封闭空间内类似校规的规矩或场内规定，不受人数限制。',\n        tier: 'VIP4',\n        costType: 'PER_MINUTE',\n        costValue: 40,\n        costCurrency: 'MC_ENERGY',\n        isEnabled: false,\n        notePlaceholder: '封闭空间与规矩',\n    },"
+  );
+  output = output.replace(
+    "    {\n        id: 'vip4_excretion_control',\n        title: '排泄控制',\n        description: '必须在指定条件下才能排泄.',\n        tier: 'VIP4',\n        costType: 'ONE_TIME',\n        costValue: 300,\n        costCurrency: 'MC_POINTS',\n        isEnabled: false,\n        notePlaceholder: '输入排泄条件...',\n    },",
+    "    {\n        id: 'vip4_closed_space_cognitive_block',\n        title: '封闭空间认知障碍',\n        description: '让单一封闭空间内被命令覆盖的人意识不到使用者存在，不受人数限制。',\n        tier: 'VIP4',\n        costType: 'PER_MINUTE',\n        costValue: 240,\n        costCurrency: 'MC_ENERGY',\n        isEnabled: false,\n        notePlaceholder: '封闭空间',\n    },"
+  );
+  output = output.replace(
+    "    {\n        id: 'vip4_cognitive_block',\n        title: '认知妨碍',\n        description: '心理学隐身, 不会被他人意识到存在.',\n        tier: 'VIP4',\n        costType: 'PER_MINUTE',\n        costValue: 60,\n        costCurrency: 'MC_ENERGY',\n        isEnabled: false,\n    },",
+    "    {\n        id: 'vip4_cognitive_block',\n        title: '认知妨碍',\n        description: '仅让催眠对象意识不到使用者存在；不影响未被催眠者。',\n        tier: 'VIP4',\n        costType: 'PER_MINUTE',\n        costValue: 60,\n        costCurrency: 'MC_ENERGY',\n        isEnabled: false,\n    },"
+  );
+  output = output.replace(
+    "    {\n        id: 'vip4_lactation',\n        title: '泌乳诱导',\n        description: '修改内分泌系统，让非哺乳期女性分泌乳汁.',\n        tier: 'VIP4',\n        costType: 'ONE_TIME',\n        costValue: 500,\n        costCurrency: 'MC_ENERGY',\n        isEnabled: false,\n    },\n    // VIP 5\n    {",
+    "    // VIP 5\n    {\n        id: 'vip5_excretion_control',\n        title: '排泄控制',\n        description: '必须在指定条件下才能排泄。',\n        tier: 'VIP5',\n        costType: 'ONE_TIME',\n        costValue: 900,\n        costCurrency: 'MC_ENERGY',\n        isEnabled: false,\n        notePlaceholder: '条件',\n    },\n    {\n        id: 'vip5_lactation',\n        title: '泌乳诱导',\n        description: '修改内分泌系统，让非哺乳期女性分泌乳汁。',\n        tier: 'VIP5',\n        costType: 'ONE_TIME',\n        costValue: 1500,\n        costCurrency: 'MC_ENERGY',\n        isEnabled: false,\n    },\n    {"
   );
   output = output.replaceAll("userData.mcPoints < purchasePricePoints", "false");
   output = output.replaceAll("feature.purchasePricePoints", "0");
@@ -1763,6 +2213,19 @@ function patchAchievementAppModule(code) {
             setNotice('该成就已在本轮操作暂存区');
             return;
         }
+        const claim = globalThis.__HYPNOOS_CLAIM_REWARD_DIRECT__;
+        if (typeof claim === 'function') {
+            const result = await claim('achievement', {
+                id: ach.id,
+                title: ach.title,
+                description: ach.description,
+                rewardStarlight: getRewardStarlight(ach),
+                rewardItems: getRewardItems(ach),
+            });
+            setNotice(result?.message || '成就奖励已领取');
+            requestRefresh();
+            return;
+        }
         recordOperationIntent(withFirstRewardHint({
             来源: '成就和任务',
             操作: '领取成就',
@@ -1770,8 +2233,9 @@ function patchAchievementAppModule(code) {
             成就: ach.title,
             条件: ach.description,
             ...getRewardPayload(ach),
+            前端处理: '当前运行环境无法直接写变量，仅暂存领取事实；AI不得写入/成就变量，也不得补记历史成就。',
         }, 'achievement'));
-        setNotice('成就领取已暂存，AI写入完成变量后前端会隐藏该成就');
+        setNotice('成就领取已暂存');
     };
     const handleAcceptQuest = async (quest) => {
         if (occupiedQuestCount >= 3) {
@@ -1806,7 +2270,27 @@ function patchAchievementAppModule(code) {
         });
     };
 	    const handleClaimQuest = async (quest) => {
-	        return;
+	        if (!quest || quest.status !== 'COMPLETED')
+	            return;
+	        if (hasPendingRewardOperation('领取任务奖励', quest.id, quest.title)) {
+	            setNotice('该任务奖励已在本轮操作暂存区');
+	            return;
+	        }
+	        const claim = globalThis.__HYPNOOS_CLAIM_REWARD_DIRECT__;
+	        if (typeof claim === 'function') {
+	            const result = await claim('quest', {
+	                id: quest.id,
+	                title: quest.title,
+	                description: quest.description,
+	                rewardStarlight: getRewardStarlight(quest),
+	                rewardItems: getRewardItems(quest),
+	                dailyQuestDate: quest.dailyQuestDate,
+	                dailyQuestTarget: quest.dailyQuestTarget,
+	                dailyQuestChatName: quest.dailyQuestChatName,
+	            });
+	            setNotice(result?.message || '任务奖励已领取');
+	            requestRefresh();
+	        }
 	    };
 	    const pendingTaskAddCount = () => {
 	        const seen = new Set();
@@ -1955,11 +2439,11 @@ function patchAchievementAppModule(code) {
     `const statusLabel = q.status === 'COMPLETED'
                                     ? '可提交'`,
     `const statusLabel = q.status === 'COMPLETED'
-                                    ? '待自动结算'`
+                                    ? '可领取'`
   );
   output = output.replace(
     `const canClaim = q.status === 'COMPLETED';`,
-    `const canClaim = false;`
+    `const canClaim = q.status === 'COMPLETED';`
   );
   output = output.replace(
     `const canCancel = q.status === 'ACTIVE' || q.status === 'COMPLETED';`,
@@ -2170,6 +2654,7 @@ function patchAppRootModule(code) {
     money: 6000,
     shachiku: 0,
     buff: '',
+    buffEndTime: '',
     suspicion: 0,
 };`
   );
@@ -2208,7 +2693,7 @@ function withTimeout`
     const [systemWeekdayText, setSystemWeekdayText] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(undefined);
     const [systemDateOnlyText, setSystemDateOnlyText] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(undefined);
     const [homeHypnosisInfo, setHomeHypnosisInfo] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(null);
-    const [localNow, setLocalNow] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(() => new Date());`
+    const localNow = null;`
   );
   output = output.replace(
     `                setSystemDateText(clock.dateText);
@@ -2246,12 +2731,7 @@ function withTimeout`
     `    (0,react__WEBPACK_IMPORTED_MODULE_1__.useEffect)(() => {
         if (currentApp !== _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.HOME)
             return;
-        if (typeof globalThis.__ST_HYPNOOS_IS_LATEST_MESSAGE_FRONTEND__ === 'function' && !globalThis.__ST_HYPNOOS_IS_LATEST_MESSAGE_FRONTEND__())
-            return;
-        if (systemTimeText)
-            return;
-        const timer = setInterval(() => setLocalNow(new Date()), 1000);
-        return () => clearInterval(timer);
+        return undefined;
     }, [currentApp, systemTimeText]);`
   );
   output = output.replace(
@@ -2292,13 +2772,10 @@ function withTimeout`
     const displayDate = systemDateText || localNow.toLocaleDateString('zh-CN', { weekday: 'long', month: 'long', day: 'numeric' });
     const [notice, setNotice] = (0,react__WEBPACK_IMPORTED_MODULE_1__.useState)(null);`,
     `const HomeScreen = ({ onLaunchApp, bodyStatsUnlocked, systemTimeText, systemDateText, systemScheduleText, systemScheduleDetailText, systemWeekdayText, systemDateOnlyText, localNow, homeHypnosisInfo, homeBuff, }) => {
-    const isLatestFrontend = typeof globalThis.__ST_HYPNOOS_IS_LATEST_MESSAGE_FRONTEND__ !== 'function' || globalThis.__ST_HYPNOOS_IS_LATEST_MESSAGE_FRONTEND__();
-    const localDisplayTime = \`\${localNow.getHours()}:\${localNow.getMinutes().toString().padStart(2, '0')}\`;
-    const localDisplayDate = localNow.toLocaleDateString('zh-CN', { weekday: 'long', month: 'long', day: 'numeric' });
-    const displayTime = systemTimeText || (isLatestFrontend ? localDisplayTime : '--:--');
-    const displayDate = systemDateText || (isLatestFrontend ? localDisplayDate : '');
+    const displayTime = systemTimeText || '--:--';
+    const displayDate = systemDateText || '';
     const displayDateOnly = systemDateOnlyText || displayDate.replace(/\\s*(?:星期|周)[一二三四五六日天]\\s*/g, '').trim() || displayDate;
-    const displayWeekday = systemWeekdayText || displayDate.match(/星期[一二三四五六日天]/)?.[0] || displayDate.match(/周[一二三四五六日天]/)?.[0] || (isLatestFrontend ? '星期三' : '');
+    const displayWeekday = systemWeekdayText || displayDate.match(/星期[一二三四五六日天]/)?.[0] || displayDate.match(/周[一二三四五六日天]/)?.[0] || '';
     const displaySchedule = systemScheduleText || '当前日程';
     const displayScheduleDetail = systemScheduleDetailText || '';
     const islandScrollRef = (0,react__WEBPACK_IMPORTED_MODULE_1__.useRef)(null);
@@ -2381,12 +2858,6 @@ function withTimeout`
     `    const openInternalApp = (name) => () => {
         if (name === 'hypnosis') window.__ST_OPEN_HYPNOSIS_LITE_APP__?.();
         else if (name === 'achievements') {
-            try {
-                globalThis.__HYPNOOS_SCAN_FRONTEND_REWARD_VARIABLES__?.();
-            }
-            catch (err) {
-                console.warn('[HypnoOS] 打开成就和任务前扫描变量失败', err);
-            }
             window.__ST_OPEN_REWARD_APP__?.();
         }
         else if (name === 'inventory') window.__ST_OPEN_INVENTORY_APP__?.();
@@ -2412,7 +2883,7 @@ function withTimeout`
         { id: 'inventory', name: '库存', icon: lucide_react__WEBPACK_IMPORTED_MODULE_13__["default"], color: 'bg-emerald-600', mode: _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.HOME, disabled: false, action: openInternalApp('inventory') },
         { id: 'mc-anon', name: 'MC匿名版', icon: lucide_react__WEBPACK_IMPORTED_MODULE_12__["default"], color: 'bg-blue-900', mode: _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.HOME, disabled: false, action: openInternalApp('mchan') },
         { id: 'map', name: '地图', icon: MapIcon, color: 'bg-emerald-500', mode: _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.HOME, disabled: false, action: openInternalApp('map') },
-        { id: 'school', name: '学校', icon: SchoolIcon, color: 'bg-slate-600', mode: _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.HOME, disabled: false, action: openInternalApp('school') },
+        { id: 'school', name: '校规', icon: SchoolIcon, color: 'bg-slate-600', mode: _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.HOME, disabled: false, action: openInternalApp('school') },
         { id: 'monitor', name: '监控', icon: MonitorIcon, color: 'bg-slate-900', mode: _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.HOME, disabled: false, action: openInternalApp('monitor') },
         { id: 'work', name: '打工', icon: WorkIcon, color: 'bg-amber-600', mode: _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.HOME, disabled: false, action: openInternalApp('work') },
         { id: 'encounter', name: '邂逅', icon: EncounterIcon, color: 'bg-rose-500', mode: _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.HOME, disabled: false, action: openInternalApp('encounter') },
@@ -2681,18 +3152,44 @@ async function getMvuData() {
             if (!data)
                 return false;
             const { mvu, option } = data;
-            let changed = false;
-            if (await setIfChanged(mvu, '系统.当天课程表', dailySchedule))
+            const weekdayText = String(dailySchedule?.星期 ?? '').trim();
+            const scheduleName = String(dailySchedule?.当前课段?.名称 ?? dailySchedule?.当前日程 ?? '').trim() || '无';
+            const scheduleDetail = String(dailySchedule?.当前课段?.时间 ?? '').trim();
+            const specialText = String(dailySchedule?.当前特殊日期 ?? '').trim();
+	            const timetableRows = Array.isArray(dailySchedule?.课表) ? dailySchedule.课表 : [];
+	            const originalTimetableRows = Array.isArray(dailySchedule?.原课程表) ? dailySchedule.原课程表 : timetableRows;
+	            const modifiedTimetableRows = Array.isArray(dailySchedule?.魔改课程表) ? dailySchedule.魔改课程表 : timetableRows;
+	            const signature = [
+	                String(option?.type || 'message'),
+	                String(option?.message_id ?? 'latest'),
+	                String(dailySchedule?.日期 ?? ''),
+	                weekdayText,
+	                scheduleName,
+	                scheduleDetail,
+	                specialText,
+	                JSON.stringify(timetableRows),
+	                JSON.stringify(originalTimetableRows),
+	                JSON.stringify(modifiedTimetableRows)
+	            ].join('\\u0001');
+	            if (signature && globalThis.__ST_HYPNOOS_DAILY_SCHEDULE_SYNC_SIGNATURE__ === signature)
+	                return false;
+	            let changed = false;
+	            if (await setIfChanged(mvu, '系统.当天课程表', timetableRows))
+	                changed = true;
+	            if (await setIfChanged(mvu, '系统.当天原课程表', originalTimetableRows))
+	                changed = true;
+	            if (await setIfChanged(mvu, '系统.当天魔改课程表', modifiedTimetableRows))
+	                changed = true;
+            if (await setIfChanged(mvu, '系统._当前周几', weekdayText || ''))
                 changed = true;
-            const courseText = String(dailySchedule?.当前或待上课程 ?? '').trim() || '无';
-            if (await setIfChanged(mvu, '系统.当前/待上课程', courseText))
+            if (await setIfChanged(mvu, '系统._当前日程', scheduleName))
                 changed = true;
-            const specialText = String(dailySchedule?.当前或下个特殊日期 ?? '').trim();
-            if (specialText && await setIfChanged(mvu, '系统.当前或下个特殊日期', specialText))
+            if (await setIfChanged(mvu, '系统._当前特殊日期', specialText))
                 changed = true;
             if (changed) {
                 await Mvu.replaceMvuData(mvu, option);
             }
+            globalThis.__ST_HYPNOOS_DAILY_SCHEDULE_SYNC_SIGNATURE__ = signature;
             return changed;
         });
     },
@@ -2818,7 +3315,7 @@ const featureUsesPartCount = (feature) => feature.id === 'vip1_temp_sensitivity'
 const featureUsesPersonCount = (feature) => {
     if (!feature || feature.id === 'vip1_stats')
         return false;
-    if (feature.id === 'vip5_open_space_common_sense')
+    if (feature.id === 'vip4_closed_space_common_sense' || feature.id === 'vip4_closed_space_cognitive_block' || feature.id === 'vip5_open_space_common_sense')
         return false;
     if (feature.costValue <= 0)
         return false;
@@ -3134,13 +3631,14 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
             vip3_temp_false_memory: '临时植入一段虚假记忆；到期可恢复或产生违和',
             vip3_pseudo_time_stop: '暂停目标状态/意识；结束时释放累计快感',
             vip4_advanced: '目标无意识遵循行为指令；仍按风险和目标状态判定',
-            vip4_closed_space_common_sense: '只修改封闭空间内规则/常识；按范围和时限生效',
-            vip4_excretion_control: '按指定条件控制排泄；写入对应效果',
+            vip4_closed_space_common_sense: '封闭空间校规类规矩修改；不改大道法则或物理定律，不乘人数',
+            vip5_excretion_control: '按指定条件控制排泄；写入对应效果',
             vip4_control_body_keep_conscious: '保留意识但控制身体；心理可清醒抵抗',
             vip4_control_body_no_conscious: '在无意识状态下控制身体行动',
-            vip4_cognitive_block: '心理学隐身；他人不会意识到存在，不等于物理消失',
+            vip4_cognitive_block: '只对催眠对象形成心理隐身；未被催眠者仍可看见，不等于物理消失',
+            vip4_closed_space_cognitive_block: '封闭空间范围内的心理隐身；只影响该封闭空间内被命令覆盖的人，不等于物理消失',
             vip4_temp_personality: '临时植入人格；到期还原或失效',
-            vip4_lactation: '诱导泌乳；按生理变化写入效果',
+            vip5_lactation: '诱导泌乳；按生理变化写入效果',
             vip5_permanent: '永久修改目标一项常识',
             vip5_fetish_implant: '植入性癖倾向；不瞬间失控或人格崩坏，通常需诱发条件',
             vip5_permanent_false_memory: '永久植入一段虚假记忆',
@@ -3251,6 +3749,7 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
             来源: '催眠APP',
             操作: '资源兑换',
             项目: '补充MC能量',
+            暂存摘要: '补充MC能量｜MC能量 +' + actualAmount + '点｜资金 ¥' + costMoney.toLocaleString(),
             数量: String(actualAmount) + '点',
             兑换规则: '10円 = 1点MC能量',
             消耗资源: '资金 ¥' + costMoney.toLocaleString(),
@@ -3266,6 +3765,7 @@ const HypnosisApp = ({ userData, onUpdateUser, onExit }) => {
             来源: '催眠APP',
             操作: '资源兑换',
             项目: '提升MC能量上限',
+            暂存摘要: '提升MC能量上限｜MC能量上限 +' + amount + '点｜资金 ¥' + (amount * 100).toLocaleString(),
             数量: String(amount) + '点',
             兑换规则: '100円 = 1点MC能量上限',
             消耗资源: '资金 ¥' + (amount * 100).toLocaleString(),
@@ -3614,6 +4114,7 @@ function patchHypnosisDataServiceModule(code) {
     星光点: zod__WEBPACK_IMPORTED_MODULE_0__.z.coerce.number().default(0),
     社畜值: zod__WEBPACK_IMPORTED_MODULE_0__.z.coerce.number().default(DEFAULT_USER_DATA.shachiku),
     buff: zod__WEBPACK_IMPORTED_MODULE_0__.z.string().default(DEFAULT_USER_DATA.buff),
+    buff结束时间: zod__WEBPACK_IMPORTED_MODULE_0__.z.string().default(DEFAULT_USER_DATA.buffEndTime),
     持有零花钱: zod__WEBPACK_IMPORTED_MODULE_0__.z.coerce.number().default(DEFAULT_USER_DATA.money),`
   );
   output = output.replace(
@@ -3661,10 +4162,11 @@ function patchHypnosisDataServiceModule(code) {
     };
 }`,
     `function getSystemClockFrom(system) {
-    const dateText = typeof system?.当前日期 === 'string' ? system.当前日期 : undefined;
+    const rawDateText = typeof system?.当前日期 === 'string' ? system.当前日期 : undefined;
+    const dateText = rawDateText?.replace(/\\s*(?:星期|周)[一二三四五六日天]\\s*/g, '').trim() || rawDateText;
     const timeText = typeof system?.当前时间 === 'string' ? system.当前时间 : undefined;
-    const dateOnlyText = dateText?.replace(/\\s*(?:星期|周)[一二三四五六日天]\\s*/g, '').trim();
-    const explicitWeekday = dateText?.match(/星期[一二三四五六日天]/)?.[0] ?? dateText?.match(/周[一二三四五六日天]/)?.[0]?.replace('周', '星期');
+    const dateOnlyText = dateText;
+    const storedWeekday = String(system?._当前周几 ?? system?.当前周几 ?? '').trim();
     const parsedDate = dateText?.match(/(\\d{1,2})\\s*月\\s*(\\d{1,2})\\s*日/);
     const weekdayNames = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
     const monthDays = { 1: 31, 2: 28, 3: 31, 4: 30, 5: 31, 6: 30, 7: 31, 8: 31, 9: 30, 10: 31, 11: 30, 12: 31 };
@@ -3678,22 +4180,52 @@ function patchHypnosisDataServiceModule(code) {
         }
         return day;
     };
-    const weekdayText = explicitWeekday || (parsedDate
-        ? weekdayNames[((3 + schoolDay(Number(parsedDate[1]), Number(parsedDate[2])) - schoolDay(4, 9)) % 7 + 7) % 7]
-        : undefined);
+    const storyCalendarKey = (month, day) => month + '-' + day;
+    const storyCalendarCached = Boolean(globalThis.__ST_HYPNOOS_FIXED_STORY_CALENDAR__);
+    const storyCalendar = globalThis.__ST_HYPNOOS_FIXED_STORY_CALENDAR__ || {};
+    if (!storyCalendarCached) {
+        for (const month of monthOrder) {
+            const daysInMonth = monthDays[month] || 30;
+            for (let day = 1; day <= daysInMonth; day += 1) {
+                const index = ((3 + schoolDay(month, day) - schoolDay(4, 9)) % 7 + 7) % 7;
+                storyCalendar[storyCalendarKey(month, day)] = {
+                    日期: month + '月' + day + '日',
+                    星期: weekdayNames[index],
+                    当前特殊日期: '',
+                };
+            }
+        }
+    }
+    const currentMonth = parsedDate ? Number(parsedDate[1]) : 4;
+    const currentDay = parsedDate ? Number(parsedDate[2]) : 9;
+    const currentCalendarKey = storyCalendarKey(currentMonth, currentDay);
+    const computedWeekday = storyCalendar[currentCalendarKey]?.星期;
+    const weekdayText = computedWeekday || storedWeekday || undefined;
     const minutes = (() => {
         const match = String(timeText || '').match(/(\\d{1,2})\\s*[:：]\\s*(\\d{1,2})/);
         return match ? Number(match[1]) * 60 + Number(match[2]) : 12 * 60;
     })();
     const fmt = value => String(Math.floor(value / 60)).padStart(2, '0') + ':' + String(value % 60).padStart(2, '0');
     const weekdayIndex = { '星期日': 0, '星期天': 0, '星期一': 1, '星期二': 2, '星期三': 3, '星期四': 4, '星期五': 5, '星期六': 6 }[weekdayText ?? ''];
-    const timetable = {
-        1: ['现代文', '数学', '英语', '日本史', '体育（田径）', '家庭科'],
-        2: ['古典', '化学', '数学', '英语', '美术', '班会'],
-        3: ['英语', '世界史', '生物', '现代文', '体育（游泳）', '信息'],
-        4: ['数学', '古典', '英语', '化学', '音乐', '保健'],
-        5: ['现代文', '日本史', '生物', '英语', '体育（球技）', '综合探究'],
-    };
+	    const originalTimetable = {
+	        1: ['现代文', '数学', '英语', '日本史', '体育（田径）', '家庭科'],
+	        2: ['古典', '化学', '数学', '英语', '美术', '班会'],
+	        3: ['英语', '世界史', '生物', '现代文', '体育（游泳）', '信息'],
+	        4: ['数学', '古典', '英语', '化学', '音乐', '保健'],
+	        5: ['现代文', '日本史', '生物', '英语', '体育（球技）', '综合探究'],
+	    };
+	    const timetable = Object.fromEntries(Object.entries(originalTimetable).map(([key, row]) => [key, row.slice()]));
+	    try {
+	        const customTimetable = globalThis.__ST_HYPNOOS_GET_TIMETABLE__?.();
+	        if (customTimetable && typeof customTimetable === 'object') {
+	            for (const key of [1, 2, 3, 4, 5]) {
+	                if (Array.isArray(customTimetable[key]))
+                    timetable[key] = customTimetable[key].slice(0, 6);
+            }
+        }
+    }
+    catch {
+    }
     const periods = [
         { index: 1, start: 520, end: 570, label: '1限' },
         { index: 2, start: 580, end: 630, label: '2限' },
@@ -3702,8 +4234,6 @@ function patchHypnosisDataServiceModule(code) {
         { index: 5, start: 800, end: 850, label: '5限' },
         { index: 6, start: 860, end: 910, label: '6限' },
     ];
-	    const currentMonth = parsedDate ? Number(parsedDate[1]) : 4;
-	    const currentDay = parsedDate ? Number(parsedDate[2]) : 9;
 	    const specialDays = [
 	        { m: 4, d: 1, title: '愚人节' },
 	        { m: 4, d: 8, title: '入学式/始业式' },
@@ -3770,15 +4300,79 @@ function patchHypnosisDataServiceModule(code) {
 	        const end = item.to ?? start;
 	        return start === end ? item.m + '月' + start + '日' : item.m + '月' + start + '-' + end + '日';
 	    };
-	    const currentOrNextSpecialDate = (() => {
-	        const today = schoolDay(currentMonth, currentDay);
-	        const nextSpecial = specialDays
-	            .map(item => ({ item, start: specialDateStart(item), end: specialDateEnd(item) }))
-	            .filter(item => item.end >= today)
-	            .sort((a, b) => a.start - b.start || a.end - b.end)[0];
-	        return nextSpecial ? specialDateLabel(nextSpecial.item) + ' ' + nextSpecial.item.title : '无';
-	    })();
-	    const weekdayForDate = (month, day) => weekdayNames[((3 + schoolDay(month, day) - schoolDay(4, 9)) % 7 + 7) % 7];
+	    const specialDetails = {
+	        '愚人节': '普通授课 / 谣言高发',
+	        '入学式/始业式': '特别日程',
+	        '社团招新周': '普通课后招新',
+	        '社团说明会': '下午特别活动',
+	        '身体检查': '保健特别日程',
+	        '黄金周假期': '无固定课程',
+	        '第一学期中考': '按考试安排',
+	        '球技大会': '全日活动',
+	        '全校体力测验': '体育测定日',
+	        '学生会选举': '下午特别日程',
+	        '夜间试胆大会': '夜间活动日',
+	        '七夕': '普通授课 / 节日气氛',
+	        '第一学期末考': '按考试安排',
+	        '海之日': '祝日',
+	        '第一学期结业式': '上午特别日程',
+	        '暑假': '自由/社团/补习',
+	        '社团夏季合宿': '校外活动',
+	        '全校返校日': '短日程',
+	        '山之日': '祝日',
+	        '盂兰盆节': '假期',
+	        '夏Comi': '校外事件',
+	        '补习/作业冲刺': '补习日',
+	        '第二学期始业式': '特别日程',
+	        '敬老之日': '祝日',
+	        '校庆准备': '班会/班级项目',
+	        '秋分之日': '祝日',
+	        '体育祭': '全日活动',
+	        '衣更': '换冬装/普通授课',
+	        '运动之日': '祝日',
+	        '第二学期中考': '按考试安排',
+	        '万圣节': '放学后活动',
+	        '文化祭': '全日活动',
+	        '文化之日/后夜祭': '祝日/后夜祭',
+	        '勤劳感谢日': '祝日',
+	        '振替休日': '补假',
+	        '修学旅行': '校外特别日程',
+	        '第二学期末考': '按考试安排',
+	        '第二学期结业式': '上午特别日程/平安夜',
+	        '寒假': '自由行动',
+	        '第三学期始业式': '特别日程',
+	        '成人之日': '祝日',
+	        '大学入学共通测试': '校内禁声',
+	        '马拉松大会': '耐力跑',
+	        '节分': '普通授课/节日气氛',
+	        '建国纪念日': '祝日',
+	        '情人节': '普通授课/节日气氛',
+	        '天皇诞辰': '祝日',
+	        '学年末考试': '按考试安排',
+	        '女儿节': '普通授课/节日气氛',
+	        '白色情人节': '普通授课/节日气氛',
+	        '春分之日': '祝日',
+	        '修业式': '年度结束/特别日程',
+	        '春假': '自由行动',
+	    };
+	    if (!storyCalendarCached) for (const item of specialDays) {
+	        const start = item.from ?? item.d;
+	        const end = item.to ?? start;
+	        const span = end - start;
+	        for (let day = start; day <= end; day += 1) {
+	            const entry = storyCalendar[storyCalendarKey(item.m, day)];
+	            if (!entry)
+	                continue;
+	            if (!entry._special || span < entry._special.span) {
+	                entry._special = { span, start: specialDateStart(item), label: specialDateLabel(item), item };
+	                entry.当前特殊日期 = specialDateLabel(item) + ' ' + item.title + '：' + (specialDetails[item.title] || '特别日程');
+	            }
+	        }
+	    }
+	    if (!storyCalendarCached)
+	        globalThis.__ST_HYPNOOS_FIXED_STORY_CALENDAR__ = storyCalendar;
+	    const currentSpecialDate = storyCalendar[currentCalendarKey]?.当前特殊日期 || '';
+	    const weekdayForDate = (month, day) => storyCalendar[storyCalendarKey(month, day)]?.星期 || weekdayNames[((3 + schoolDay(month, day) - schoolDay(4, 9)) % 7 + 7) % 7];
     const weekdayIndexForDate = (month, day) => ({ '星期日': 0, '星期天': 0, '星期一': 1, '星期二': 2, '星期三': 3, '星期四': 4, '星期五': 5, '星期六': 6 }[weekdayForDate(month, day)] ?? 0);
     const nextDate = (month, day) => {
         const maxDay = monthDays[month] || 30;
@@ -3787,16 +4381,21 @@ function patchHypnosisDataServiceModule(code) {
         const nextMonth = monthOrder[(monthOrder.indexOf(month) + 1) % monthOrder.length] || (month % 12) + 1;
         return { month: nextMonth, day: 1 };
     };
-    const courseRowsForDate = (month, day) => {
-        const index = weekdayIndexForDate(month, day);
-        if (index === 0 || index === 6)
-            return [];
-        return periods.map(period => ({
-            课节: period.label,
-            时间: fmt(period.start) + '-' + fmt(period.end),
-            科目: timetable[index]?.[period.index - 1] || '自习',
-        }));
+    const noCourseDate = (month, day) => {
+        const entry = storyCalendar[storyCalendarKey(month, day)];
+        const item = entry?._special?.item;
+        const text = String(entry?.当前特殊日期 || '');
+        return Boolean(item && (item.holiday || item.exam || !/普通授课/.test(text)));
     };
+	    const courseRowsForDate = (month, day, table = timetable) => {
+	        const index = weekdayIndexForDate(month, day);
+	        if (index === 0 || index === 6 || noCourseDate(month, day))
+	            return [];
+	        return periods.map(period => ({
+	            课节: period.label,
+	            科目: table[index]?.[period.index - 1] || '自习',
+	        }));
+	    };
     const firstClassForDate = (month, day) => {
         const index = weekdayIndexForDate(month, day);
         const weekday = weekdayForDate(month, day);
@@ -3842,11 +4441,13 @@ function patchHypnosisDataServiceModule(code) {
         日期: currentMonth + '月' + currentDay + '日',
         星期: weekdayText || weekdayForDate(currentMonth, currentDay),
         当前课段: { 名称: scheduleText, 时间: scheduleDetailText },
-	        当前或待上课程: courseSlot.title,
-	        当前或下个特殊日期: currentOrNextSpecialDate,
-	        课表: courseRowsForDate(currentMonth, currentDay),
-        次日第一节: firstClassForDate(tomorrow.month, tomorrow.day),
-    };
+        当前日程: scheduleText,
+        当前特殊日期: currentSpecialDate,
+	        课表: courseRowsForDate(currentMonth, currentDay, timetable),
+	        原课程表: courseRowsForDate(currentMonth, currentDay, originalTimetable),
+	        魔改课程表: courseRowsForDate(currentMonth, currentDay, timetable),
+	        次日第一节: firstClassForDate(tomorrow.month, tomorrow.day),
+	    };
     return {
         dateText,
         dateOnlyText,
@@ -3904,7 +4505,6 @@ function scoreStatDataCandidate(value) {
     let score = 0;
     const system = value['系统'];
     const roles = value['角色'];
-    const achievements = value['成就'];
     const tasks = value['任务'];
 	    if (isPlainVariableObject(system)) {
 	        score += 20;
@@ -3916,7 +4516,7 @@ function scoreStatDataCandidate(value) {
 	            score += 4;
 	        if (system['当前事件'] != null || system['当前场景'] != null || system['事件'] != null)
 	            score += 3;
-	        if (system['当前日程'] != null)
+	        if (system['_当前日程'] != null || system['当前日程'] != null)
 	            score += 3;
         if (system['持有零花钱'] != null)
             score += 5;
@@ -3928,8 +4528,6 @@ function scoreStatDataCandidate(value) {
     }
     if (isPlainVariableObject(roles))
         score += 30 + Object.keys(roles).length * 5;
-    if (isPlainVariableObject(achievements))
-        score += 4 + Object.keys(achievements).length;
     if (isPlainVariableObject(tasks))
         score += 8 + Object.keys(tasks).length;
     return score;
@@ -4085,7 +4683,6 @@ function getVariableSnapshotsForOptionsSync(options, includeImplicit = false) {
 	            candidate['系统']?.['MC能量'] ?? candidate['系统']?.['_MC能量'] ?? '',
 	            candidate['系统']?.['持有零花钱'] ?? '',
             Object.keys(candidate['角色'] ?? {}).join(','),
-            Object.keys(candidate['成就'] ?? {}).join(','),
             Object.keys(candidate['任务'] ?? {}).join(','),
         ].join('\\u0001');
         if (seen.has(key))
@@ -4109,7 +4706,8 @@ function getLatestVariablesSync() {
 function getLatestChatVariables() {
     return normalizeChatVariables(getLatestVariablesSync());
 }
-const FRONTEND_REWARD_STATE_VERSION = 5;
+const FRONTEND_REWARD_STATE_VERSION = 6;
+const FRONTEND_REWARD_SHARED_STORAGE_PREFIX = 'hypnoos.frontend-rewards.common.v1:';
 const FRONTEND_REWARD_FALLBACK_SCOPE = 'session:' + Math.random().toString(36).slice(2);
 let frontendRewardVariableSyncSignature = '';
 function frontendRewardScopeHash(value) {
@@ -4184,13 +4782,126 @@ function frontendRewardStateScope() {
     }
     return FRONTEND_REWARD_FALLBACK_SCOPE;
 }
+function frontendRewardSharedScope() {
+    try {
+        const chatScope = globalThis.__ST_HYPNOOS_CHAT_STORAGE_SCOPE__?.();
+        if (chatScope)
+            return String(chatScope);
+    }
+    catch {
+        // ignore
+    }
+    try {
+        const chatId = globalThis.SillyTavern?.getCurrentChatId?.();
+        if (chatId !== undefined && chatId !== null && String(chatId).trim())
+            return 'chat:' + frontendRewardScopeText(chatId);
+    }
+    catch {
+        // ignore
+    }
+    try {
+        const context = typeof getContext === 'function' ? getContext() : null;
+        const candidates = [
+            context?.chatId,
+            context?.chat_id,
+            context?.chatFile,
+            context?.chat_file,
+            context?.chat?.id,
+            context?.chat?.chatId,
+            context?.chat?.file_name,
+            context?.chat?.filename,
+            context?.chatMetadata?.chat_id,
+            context?.chatMetadata?.file_name,
+            context?.chatMetadata?.filename,
+            context?.characterId,
+            context?.groupId,
+        ].map(frontendRewardScopeText).filter(Boolean);
+        if (candidates.length)
+            return 'ctx:' + candidates.join(':');
+    }
+    catch {
+        // ignore
+    }
+    try {
+        const messages = typeof getChatMessages === 'function' ? getChatMessages(-1) : null;
+        if (Array.isArray(messages) && messages.length) {
+            const first = messages[0] || {};
+            const raw = [
+                first.message_id ?? first.mesid ?? first.id ?? '',
+                first.send_date ?? first.date ?? '',
+                first.name ?? '',
+                String(first.mes ?? first.message ?? '').slice(0, 240),
+            ].join('|');
+            const hash = frontendRewardScopeHash(raw);
+            if (hash)
+                return 'messages:' + hash;
+        }
+    }
+    catch {
+        // ignore
+    }
+    return FRONTEND_REWARD_FALLBACK_SCOPE;
+}
 globalThis.__HYPNOOS_FRONTEND_REWARD_SCOPE__ = frontendRewardStateScope;
+globalThis.__HYPNOOS_FRONTEND_REWARD_SHARED_SCOPE__ = frontendRewardSharedScope;
 function frontendRewardStateKeyForScope(scope) {
     return 'hypnoos.frontend-rewards.v1:' + String(scope || frontendRewardStateScope());
 }
+function frontendRewardSharedStateKey() {
+    return FRONTEND_REWARD_SHARED_STORAGE_PREFIX + frontendRewardSharedScope();
+}
 function frontendRewardStateKey() {
     ensureFrontendRewardMemoryScope();
-    return frontendRewardStateKeyForScope(frontendRewardStateScope());
+    return frontendRewardSharedStateKey();
+}
+function frontendRewardCurrentPosition() {
+    try {
+        const position = globalThis.__ST_HYPNOOS_FRONTEND_POSITION__?.();
+        const index = Number(position?.index);
+        return {
+            index: Number.isFinite(index) ? Math.max(0, Math.trunc(index)) : 0,
+            scope: String(position?.scope ?? '').trim(),
+        };
+    }
+    catch {
+        return { index: 0, scope: '' };
+    }
+}
+function frontendRewardClaimRecord() {
+    const position = frontendRewardCurrentPosition();
+    const record = { claimed: true, position: position.index, at: Date.now() };
+    if (position.scope)
+        record.scope = position.scope;
+    return record;
+}
+function normalizeFrontendRewardClaimRecord(value) {
+    if (!value)
+        return null;
+    if (typeof value === 'object' && !Array.isArray(value)) {
+        const rawPosition = value.position ?? value.floor ?? value.messageIndex ?? value.claimPosition ?? value['领取位置'] ?? value['领取楼层'];
+        const position = Number(rawPosition);
+        const record = { claimed: true };
+        if (Number.isFinite(position))
+            record.position = Math.max(0, Math.trunc(position));
+        const scope = String(value.scope ?? value.messageScope ?? value['楼层标识'] ?? '').trim();
+        if (scope)
+            record.scope = scope;
+        const at = Number(value.at ?? value.timestamp ?? value['时间戳']);
+        if (Number.isFinite(at))
+            record.at = at;
+        return record;
+    }
+    return { claimed: true };
+}
+function frontendRewardClaimRecordIsFuture(value, current = frontendRewardCurrentPosition()) {
+    const record = normalizeFrontendRewardClaimRecord(value);
+    if (!record)
+        return false;
+    return typeof record.position === 'number' && current.index < record.position;
+}
+function frontendRewardClaimRecordIsActive(value, current = frontendRewardCurrentPosition()) {
+    const record = normalizeFrontendRewardClaimRecord(value);
+    return Boolean(record && !frontendRewardClaimRecordIsFuture(record, current));
 }
 function normalizeFrontendRewardState(input) {
     const base = { version: FRONTEND_REWARD_STATE_VERSION, achievements: {}, achievementNames: {}, quests: {}, questNames: {}, dynamicAchievements: {}, dynamicQuests: {}, dailyQuestDates: {}, dailyQuestKeys: {} };
@@ -4201,8 +4912,9 @@ function normalizeFrontendRewardState(input) {
         if (!source || typeof source !== 'object')
             continue;
         for (const [id, value] of Object.entries(source)) {
-            if (value)
-                base[key][String(id)] = true;
+            const record = normalizeFrontendRewardClaimRecord(value);
+            if (record)
+                base[key][String(id)] = record;
         }
     }
     for (const [key, normalizer] of Object.entries({ dynamicAchievements: normalizeStoredAchievementRecord, dynamicQuests: normalizeStoredQuestRecord })) {
@@ -4266,16 +4978,53 @@ function frontendRewardStateReadScopes() {
         scopes.push(current);
     return scopes;
 }
+function pruneFutureFrontendRewardStateRecords(state) {
+    const current = frontendRewardCurrentPosition();
+    let changed = false;
+    for (const key of ['achievements', 'achievementNames', 'quests', 'questNames', 'dailyQuestDates', 'dailyQuestKeys']) {
+        const source = state?.[key];
+        if (!source || typeof source !== 'object')
+            continue;
+        for (const id of Object.keys(source)) {
+            if (frontendRewardClaimRecordIsFuture(source[id], current)) {
+                delete source[id];
+                changed = true;
+            }
+        }
+    }
+    return changed;
+}
+function writeFrontendRewardStateStored(state) {
+    const normalized = normalizeFrontendRewardState(state);
+    try {
+        globalThis.localStorage?.setItem(frontendRewardStateKey(), JSON.stringify(normalized));
+    }
+    catch {
+        // localStorage may be blocked in some embedded browsers.
+    }
+    return normalized;
+}
 function readFrontendRewardStateStored() {
     ensureFrontendRewardMemoryScope();
     try {
         const states = [];
+        let shouldRewriteSharedState = false;
         for (const scope of frontendRewardStateReadScopes()) {
             const raw = globalThis.localStorage?.getItem(frontendRewardStateKeyForScope(scope));
-            if (raw)
+            if (raw) {
                 states.push(JSON.parse(raw));
+                shouldRewriteSharedState = true;
+            }
         }
-        return states.length ? mergeFrontendRewardStates(...states) : normalizeFrontendRewardState(null);
+        const sharedRaw = globalThis.localStorage?.getItem(frontendRewardSharedStateKey());
+        if (sharedRaw)
+            states.push(JSON.parse(sharedRaw));
+        const merged = states.length ? mergeFrontendRewardStates(...states) : normalizeFrontendRewardState(null);
+        if (pruneFutureFrontendRewardStateRecords(merged))
+            shouldRewriteSharedState = true;
+        if (shouldRewriteSharedState)
+            writeFrontendRewardStateStored(merged);
+        return merged;
     }
     catch {
         return normalizeFrontendRewardState(null);
@@ -4287,12 +5036,7 @@ function writeFrontendRewardState(state) {
     for (const key of Object.keys(frontendRewardMemoryState))
         delete frontendRewardMemoryState[key];
     Object.assign(frontendRewardMemoryState, normalized);
-    try {
-        globalThis.localStorage?.setItem(frontendRewardStateKey(), JSON.stringify(normalized));
-    }
-    catch {
-        // localStorage may be blocked in some embedded browsers.
-    }
+    writeFrontendRewardStateStored(normalized);
 }
 function readFrontendRewardStateRaw() {
     ensureFrontendRewardMemoryScope();
@@ -4342,7 +5086,7 @@ function withDefaultStarlightReward(item) {
     return {
         ...item,
         rewardMoney: ${DEFAULT_FRONTEND_REWARD_STARLIGHT},
-        rewardStarlight: ${DEFAULT_FRONTEND_REWARD_STARLIGHT},
+        rewardStarlight: Math.max(0, Math.trunc(rewardNumber(raw["奖励星光点"] ?? raw.rewardStarlight ?? raw["星光点"], ${DEFAULT_FRONTEND_REWARD_STARLIGHT}))),
     };
 }
 function getConfiguredRewardDatabase() {
@@ -4589,24 +5333,23 @@ function looksLikeQuestRecord(value) {
 }
 function markStoredAchievement(state, record) {
     const normalized = normalizeStoredAchievementRecord(record, record?.key);
+    const claim = frontendRewardClaimRecord();
     if (normalized.id)
-        state.achievements[normalized.id] = true;
+        state.achievements[normalized.id] = claim;
     if (normalized.title) {
-        state.achievements[normalized.title] = true;
-        state.achievementNames[normalized.title] = true;
+        state.achievements[normalized.title] = claim;
+        state.achievementNames[normalized.title] = claim;
     }
 }
 function markStoredQuest(state, record) {
     const normalized = normalizeStoredQuestRecord(record, record?.key);
+    const claim = frontendRewardClaimRecord();
     if (normalized.id)
-        state.quests[normalized.id] = true;
+        state.quests[normalized.id] = claim;
     if (normalized.title) {
-        state.quests[normalized.title] = true;
-        state.questNames[normalized.title] = true;
+        state.quests[normalized.title] = claim;
+        state.questNames[normalized.title] = claim;
     }
-    const dailyQuestDate = String(normalized.dailyQuestDate ?? '').trim();
-    if (dailyQuestDate)
-        markDailyQuestDate(state, dailyQuestDate, normalized.dailyQuestChatName);
     if (normalized.id)
         state.dynamicQuests[normalized.id] = normalized;
 }
@@ -4616,18 +5359,7 @@ function dailyQuestStateKey(dateKey, chatName) {
     return cleanDate && cleanChat ? cleanDate + '\\u0001' + cleanChat : cleanDate;
 }
 function markDailyQuestDate(state, dateKey, chatName = '') {
-    const clean = String(dateKey ?? '').trim();
-    if (!clean)
-        return false;
-    const chat = String(chatName ?? '').trim();
-    if (chat) {
-        state.dailyQuestKeys ??= {};
-        state.dailyQuestKeys[dailyQuestStateKey(clean, chat)] = true;
-    }
-    else {
-        state.dailyQuestDates[clean] = true;
-    }
-    return true;
+    return false;
 }
 globalThis.__HYPNOOS_MARK_FRONTEND_ACHIEVEMENT_HANDLED__ = (achievement) => {
     const state = readFrontendRewardStateRaw();
@@ -4667,18 +5399,7 @@ globalThis.__HYPNOOS_MARK_FRONTEND_QUEST_HANDLED__ = (quest) => {
     }
 };
 globalThis.__HYPNOOS_MARK_DAILY_QUEST_ACCEPTED__ = (dateKey, chatName = '') => {
-    const state = readFrontendRewardStateRaw();
-    const changed = markDailyQuestDate(state, dateKey, chatName);
-    if (!changed)
-        return false;
-    writeFrontendRewardState(state);
-    try {
-        window.dispatchEvent(new CustomEvent('HYPNOOS_REWARD_STATE_CHANGED', { detail: { source: 'daily-quest-accepted', dateKey, chatName } }));
-    }
-    catch {
-        // ignore
-    }
-    return true;
+    return false;
 };
 function rewardOperationPayload(entry) {
     return entry && typeof entry === 'object' && Object.prototype.hasOwnProperty.call(entry, 'payload') ? entry.payload : entry;
@@ -4704,6 +5425,19 @@ globalThis.__HYPNOOS_MARK_SENT_REWARD_OPERATIONS__ = (entries) => {
             });
             changed = true;
         }
+        if (/领取任务奖励/.test(action)) {
+            markStoredQuest(state, {
+                任务ID: payload.任务ID,
+                任务: payload.任务,
+                完成条件: payload.条件,
+                奖励星光点: payload.奖励星光点,
+                奖励物品: payload.奖励物品,
+                每日任务日期: payload.每日任务日期 ?? payload.变量日期,
+                任务目标: payload.任务目标,
+                每日任务聊天: payload.每日任务聊天,
+            });
+            changed = true;
+        }
         if (/取消任务/.test(action)) {
             markStoredQuest(state, {
                 任务ID: payload.任务ID,
@@ -4716,7 +5450,7 @@ globalThis.__HYPNOOS_MARK_SENT_REWARD_OPERATIONS__ = (entries) => {
             changed = true;
         }
         if (/新增任务/.test(action)) {
-            changed = markDailyQuestDate(state, payload.每日任务日期 ?? payload.变量日期, payload.每日任务聊天) || changed;
+            // 新增任务只以变量里的 /任务 为准，不用本地记录遮挡。
         }
     }
     if (!changed)
@@ -4733,12 +5467,12 @@ globalThis.__HYPNOOS_MARK_SENT_REWARD_OPERATIONS__ = (entries) => {
 function isFrontendAchievementClaimed(state, achievement) {
     const id = String(achievement?.id ?? '').trim();
     const title = String(achievement?.title ?? achievement?.name ?? '').trim();
-    return Boolean((id && state.achievements[id]) || (title && (state.achievements[title] || state.achievementNames[title])));
+    return Boolean((id && frontendRewardClaimRecordIsActive(state.achievements[id])) || (title && (frontendRewardClaimRecordIsActive(state.achievements[title]) || frontendRewardClaimRecordIsActive(state.achievementNames[title]))));
 }
 function isFrontendQuestClaimed(state, quest) {
     const id = String(quest?.id ?? '').trim();
     const title = String(quest?.title ?? quest?.name ?? '').trim();
-    return Boolean((id && state.quests[id]) || (title && (state.quests[title] || state.questNames[title])));
+    return Boolean((id && frontendRewardClaimRecordIsActive(state.quests[id])) || (title && (frontendRewardClaimRecordIsActive(state.quests[title]) || frontendRewardClaimRecordIsActive(state.questNames[title]))));
 }
 function isCompletedFrontendRewardRecord(value) {
     if (value === true)
@@ -4866,46 +5600,12 @@ function clearCompletedFrontendRewardVariables(records) {
     }
 }
 function syncFrontendRewardStateFromVariables() {
-    try {
-        if (!isLatestFrontendRewardLayer())
-            return;
-        const variables = getLatestVariablesSync();
-        if (!isPlainVariableObject(variables))
-            return;
-        const records = collectCompletedFrontendRewardVariables(variables);
-        const signature = frontendRewardVariableSignature(records);
-        if (!signature)
-            return;
-        const alreadySyncedInMemory = signature === frontendRewardVariableSyncSignature;
-        frontendRewardVariableSyncSignature = signature;
-        const state = readFrontendRewardStateRaw();
-        for (const item of records.achievements)
-            markStoredAchievement(state, coerceRewardVariableRecord(item));
-        for (const item of records.quests)
-            markStoredQuest(state, coerceRewardVariableRecord(item));
-        for (const record of records.dailyQuestRecords || [])
-            markDailyQuestDate(state, record.dateKey, record.chatName);
-        writeFrontendRewardState(state);
-        if (!alreadySyncedInMemory) {
-            try {
-                window.dispatchEvent(new CustomEvent('HYPNOOS_REWARD_STATE_CHANGED', { detail: { signature } }));
-            }
-            catch {
-                // ignore
-            }
-        }
-        clearCompletedFrontendRewardVariables(records);
-    }
-    catch (err) {
-        console.warn('[HypnoOS] 同步任务/成就状态失败', err);
-    }
+    return readFrontendRewardStateRaw();
 }
 globalThis.__HYPNOOS_SCAN_FRONTEND_REWARD_VARIABLES__ = () => {
-    syncFrontendRewardStateFromVariables();
     return readFrontendRewardStateRaw();
 };
 function readFrontendRewardState() {
-    syncFrontendRewardStateFromVariables();
     return readFrontendRewardStateRaw();
 }
 globalThis.__HYPNOOS_READ_FRONTEND_REWARD_STATE__ = readFrontendRewardState;
@@ -4999,6 +5699,8 @@ function normalizeSystemAliases(systemRaw) {
     }
     if (system.buff === undefined || system.buff === null)
         system.buff = '';
+    if (system.buff结束时间 === undefined || system.buff结束时间 === null)
+        system.buff结束时间 = '';
     return system;
 }`
   );
@@ -5119,11 +5821,11 @@ function chooseUserResourcesFromSystems(systems) {
         for (const system of systems) {
             if (!isPlainVariableObject(system))
                 continue;
-            if (system['当前日期'] == null && system['当前时间'] == null && system['当前日程'] == null)
+            if (system['当前日期'] == null && system['当前时间'] == null && system['_当前日程'] == null && system['当前日程'] == null)
                 continue;
             const clock = getSystemClockFrom(system);
             fallbackClock ??= clock;
-            if (clock.dateText !== '4月9日 星期三' || clock.timeText !== '12:00' || clock.scheduleText !== '4限 · 现代文')
+            if (clock.dateText !== '4月9日' || clock.timeText !== '12:00' || clock.scheduleText !== '4限 · 现代文')
                 return await maybeSync(clock);
         }
         return await maybeSync(fallbackClock ?? getSystemClockFrom({}));
@@ -5288,9 +5990,11 @@ function chooseUserResourcesFromSystems(systems) {
 	                rewardMoney: q.rewardStarlight ?? q.rewardMoney,
 	                rewardStarlight: q.rewardStarlight ?? q.rewardMoney,
 	                rewardItems: q.rewardItems ?? [],
-                status: claimedDone || completed
+                status: claimedDone
                     ? 'CLAIMED'
-                    : active
+                    : completed
+                        ? 'COMPLETED'
+                        : active
                         ? 'ACTIVE'
                         : 'AVAILABLE',
             };
@@ -5307,14 +6011,14 @@ function chooseUserResourcesFromSystems(systems) {
 	                rewardMoney: ${DEFAULT_FRONTEND_REWARD_STARLIGHT},
 	                rewardStarlight: ${DEFAULT_FRONTEND_REWARD_STARLIGHT},
 	                rewardItems: normalizeRewardItems(taskState.奖励物品 ?? taskState.rewardItems),
-                status: taskState.已完成 === true ? 'CLAIMED' : 'ACTIVE',
+                status: taskState.已完成 === true ? 'COMPLETED' : 'ACTIVE',
             });
             seenQuestKeys.add(\`dynamic:\${name}\`);
             seenQuestKeys.add(String(name));
         }
-        const order = { ACTIVE: 0, AVAILABLE: 1, CLAIMED: 2, COMPLETED: 2 };
+        const order = { COMPLETED: 0, ACTIVE: 1, AVAILABLE: 2, CLAIMED: 3 };
         quests.sort((a, b) => order[a.status] - order[b.status]);
-        return quests.filter(q => q.status !== 'CLAIMED' && q.status !== 'COMPLETED');
+        return quests.filter(q => q.status !== 'CLAIMED');
     },`
   );
   output = output.replace(
@@ -5463,9 +6167,11 @@ function getEffectiveSubscription(store, system) {
                 rewardMoney: q.rewardStarlight ?? q.rewardMoney,
                 rewardStarlight: q.rewardStarlight ?? q.rewardMoney,
                 rewardItems: q.rewardItems ?? [],
-                status: frontendCompleted || completed
+                status: frontendCompleted
                     ? 'CLAIMED'
-                    : active
+                    : completed
+                        ? 'COMPLETED'
+                        : active
                         ? 'ACTIVE'
                         : 'AVAILABLE',
             };
@@ -5475,8 +6181,6 @@ function getEffectiveSubscription(store, system) {
                 continue;
             if (!taskState || typeof taskState !== 'object' || typeof taskState.已完成 !== 'boolean')
                 continue;
-            if (taskState.已完成 === true)
-                continue;
             quests.push({
                 id: \`dynamic:\${name}\`,
                 title: name,
@@ -5484,12 +6188,12 @@ function getEffectiveSubscription(store, system) {
                 rewardMoney: ${DEFAULT_FRONTEND_REWARD_STARLIGHT},
                 rewardStarlight: ${DEFAULT_FRONTEND_REWARD_STARLIGHT},
                 rewardItems: normalizeRewardItems(taskState.奖励物品 ?? taskState.rewardItems),
-                status: 'ACTIVE',
+                status: taskState.已完成 === true ? 'COMPLETED' : 'ACTIVE',
             });
         }
-        const order = { ACTIVE: 0, AVAILABLE: 1, CLAIMED: 2, COMPLETED: 2 };
+        const order = { COMPLETED: 0, ACTIVE: 1, AVAILABLE: 2, CLAIMED: 3 };
         quests.sort((a, b) => order[a.status] - order[b.status]);
-        return quests.filter(q => q.status !== 'CLAIMED' && q.status !== 'COMPLETED');
+        return quests.filter(q => q.status !== 'CLAIMED');
     },
 `
   );
@@ -5653,6 +6357,12 @@ function normalizeEncounterBuiltinPackageAssetPaths(pkg, source) {
       const roleNext = { ...role };
       if (roleNext.image) roleNext.image = encounterPackageRelativeAssetPath(source, roleNext.image);
       if (roleNext.imageDataUrl) roleNext.imageDataUrl = encounterPackageRelativeAssetPath(source, roleNext.imageDataUrl);
+      if (Array.isArray(roleNext.images)) {
+        roleNext.images = roleNext.images.map((image) => image ? encounterPackageRelativeAssetPath(source, image) : "");
+      }
+      if (Array.isArray(roleNext.imageDataUrls)) {
+        roleNext.imageDataUrls = roleNext.imageDataUrls.map((image) => image ? encounterPackageRelativeAssetPath(source, image) : "");
+      }
       return roleNext;
     });
   }
@@ -6080,6 +6790,7 @@ function upgradeInternalMchanApp(html) {
   }
 
   function refreshPhoneVariableViews() {
+    syncWorkBuffStatusReminder();
     patchHomeTile();
     updatePhoneDarkTheme();
   }
@@ -6110,11 +6821,10 @@ function upgradeInternalMchanApp(html) {
 function injectInternalMchanApp(html, staticSeed, encounterBuiltinPackages = []) {
   if (html.includes("__ST_INTERNAL_MCHAN_APP__")) return upgradeInternalMchanApp(html);
   const defaultBoards = jsonForInlineScript(staticSeed?.boards?.length ? staticSeed.boards : MCHAN_BOARD_DEFINITIONS);
+  const defaultRewardDatabase = jsonForInlineScript(DEFAULT_FRONTEND_REWARD_DATABASE);
   const extraEncounterPackages = jsonForInlineScript(Array.isArray(encounterBuiltinPackages) ? encounterBuiltinPackages : []);
-  const defaultRoleNames = jsonForInlineScript(Object.keys(DEFAULT_PREVIEW_ROLES));
-  const defaultRoleProfiles = jsonForInlineScript(Object.fromEntries(
-    Object.entries(DEFAULT_PREVIEW_ROLES).map(([name, role]) => [name, role["档案"] || {}])
-  ));
+  const defaultRoleNames = jsonForInlineScript([]);
+  const defaultRoleProfiles = jsonForInlineScript({});
   const defaultThreads = jsonForInlineScript(staticSeed?.threads?.length ? staticSeed.threads : [
     {
       id: "thread-mchan-static",
@@ -6138,6 +6848,7 @@ function injectInternalMchanApp(html, staticSeed, encounterBuiltinPackages = [])
   const DEFAULT_THREADS = ${defaultThreads};
   const DEFAULT_ROLE_NAMES = ${defaultRoleNames};
   const DEFAULT_ROLE_PROFILES = ${defaultRoleProfiles};
+  const DEFAULT_REWARD_DATABASE = ${defaultRewardDatabase};
   const EXTRA_ENCOUNTER_BUILTIN_PACKAGES = ${extraEncounterPackages};
   function stDefaultAssetBase() {
     try {
@@ -6145,10 +6856,19 @@ function injectInternalMchanApp(html, staticSeed, encounterBuiltinPackages = [])
       if (pathname.includes("/public/frontends/hypnosis-app/") || pathname.includes("/dist/催眠APP前端/")) {
         return new URL("assets/", window.location.href).href;
       }
+      if (pathname.includes("/public/frontends/hypnosis-app-phone/")) {
+        return new URL("../hypnosis-app/assets/", window.location.href).href;
+      }
+      if (pathname.includes("/dist/phone/")) {
+        return new URL("../webview/assets/", window.location.href).href;
+      }
     } catch {}
     return "/public/frontends/hypnosis-app/assets/";
   }
   const ST_ASSET_BASE = window.__ST_HYPNOOS_ASSET_BASE__ || stDefaultAssetBase();
+  if (!window.__ST_HYPNOOS_REWARD_DATABASE__ || typeof window.__ST_HYPNOOS_REWARD_DATABASE__ !== "object") {
+    window.__ST_HYPNOOS_REWARD_DATABASE__ = DEFAULT_REWARD_DATABASE;
+  }
   function stAssetUrl(path) {
     const value = String(path || "");
     if (/^(?:https?:|data:|blob:)/i.test(value)) return value;
@@ -6165,6 +6885,7 @@ function injectInternalMchanApp(html, staticSeed, encounterBuiltinPackages = [])
     timetable: stInlineAppIcon("#2563eb", '<rect x="17" y="18" width="38" height="38" rx="5"/><path d="M17 29h38"/><path d="M27 15v8"/><path d="M45 15v8"/><path d="M27 39h18"/><path d="M27 48h11"/>'),
     clock: stInlineAppIcon("#0ea5e9", '<circle cx="36" cy="36" r="20"/><path d="M36 24v13l9 6"/><path d="M24 18l-5-5"/><path d="M48 18l5-5"/>'),
     map: stInlineAppIcon("#10b981", '<path d="M18 51V22l13-5 13 5 10-4v29l-10 4-13-5-13 5Z"/><path d="M31 17v29"/><path d="M44 22v29"/><circle cx="36" cy="34" r="3"/>'),
+    cityMap: stInlineAppIcon("#14b8a6", '<path d="M14 52h44"/><path d="M19 52V31l10-7 10 7v21"/><path d="M39 52V22h15v30"/><path d="M24 52V40h10v12"/><path d="M45 29h4"/><path d="M45 37h4"/><path d="M45 45h4"/><path d="M18 22c7-6 25-9 38-4"/>'),
     school: stInlineAppIcon("#475569", '<path d="M15 32l21-12 21 12"/><path d="M20 32v22h32V32"/><path d="M29 54V39h14v15"/><path d="M27 32h18"/><path d="M36 20v-6"/>'),
     specialLocation: stInlineAppIcon("#7c3aed", '<path d="M36 13l5 12 13 1-10 8 3 13-11-7-11 7 3-13-10-8 13-1 5-12Z"/><path d="M22 55c7-5 21-5 28 0"/><path d="M25 45c6-3 16-3 22 0"/>'),
     monitor: stInlineAppIcon("#0f172a", '<rect x="15" y="19" width="42" height="28" rx="4"/><path d="M26 55h20"/><path d="M36 47v8"/><path d="M23 34h7l4-7 6 14 4-7h5"/>'),
@@ -6176,6 +6897,20 @@ function injectInternalMchanApp(html, staticSeed, encounterBuiltinPackages = [])
     "月咏深雪": stAssetUrl("profiles/tsukuyomi-miyuki.png"),
     "犬冢夏美": stAssetUrl("profiles/inuzuka-natsumi.png"),
     "阿宅": stAssetUrl("profiles/otaku.png")
+  };
+  const ST_DEFAULT_PROFILE_PHOTO_SLOTS = {
+    "西园寺爱丽莎": [
+      stAssetUrl("profiles/saionji-alisa.png"),
+      stAssetUrl("profiles/saionji-alisa-old.png")
+    ],
+    "月咏深雪": [
+      stAssetUrl("profiles/tsukuyomi-miyuki.png"),
+      stAssetUrl("profiles/tsukuyomi-miyuki-old.png")
+    ],
+    "犬冢夏美": [
+      stAssetUrl("profiles/inuzuka-natsumi.png"),
+      stAssetUrl("profiles/inuzuka-natsumi-old.png")
+    ]
   };
   const ST_OTAKU_FEMALE_PROFILE_PHOTO = stAssetUrl("profiles/otaku-female.png");
   const ST_OTAKU_FEMALE_TRANSFORM_TRIGGER = "HYPNOOS_OTAKU_FEMALE_TRANSFORM_ACCEPT_V1";
@@ -6216,8 +6951,8 @@ function injectInternalMchanApp(html, staticSeed, encounterBuiltinPackages = [])
         pinned: Boolean(thread.pinned),
         postNo: Number.isFinite(Number(thread.postNo)) ? Number(thread.postNo) : undefined,
         source: String(thread.source || "local"),
-        createdAt: Number(thread.createdAt || Date.now()),
-        updatedAt: Number(thread.updatedAt || thread.createdAt || Date.now()),
+        createdAt: Number(thread.createdAt || 0),
+        updatedAt: Number(thread.updatedAt || thread.createdAt || 0),
         replies: Array.isArray(thread.replies)
           ? thread.replies.map((reply) => ({
               id: String(reply.id || makeId("reply")),
@@ -6226,7 +6961,7 @@ function injectInternalMchanApp(html, staticSeed, encounterBuiltinPackages = [])
               floorNo: Number.isFinite(Number(reply.floorNo)) ? Number(reply.floorNo) : undefined,
               source: String(reply.source || "local"),
               originKey: typeof reply.originKey === "string" ? reply.originKey : undefined,
-              createdAt: Number(reply.createdAt || Date.now())
+              createdAt: Number(reply.createdAt || 0)
             }))
           : []
       }));
@@ -6277,7 +7012,7 @@ function injectInternalMchanApp(html, staticSeed, encounterBuiltinPackages = [])
     const boardId = BOARD_ID_BY_NAME[post?.board] || BOARD_ID_BY_NAME[boardName];
     if (!boardId) return null;
     const postNo = Number(post?.postNo || 0);
-    const createdAt = Number(post?.createdAtMs || Date.now());
+    const createdAt = Number(post?.createdAtMs || 0);
     const updatedAt = Number(post?.updatedAtMs || createdAt);
     return {
       id: "legacy-" + boardId + "-" + (Number.isFinite(postNo) && postNo > 0 ? postNo : makeId("post")),
@@ -6359,9 +7094,9 @@ function injectInternalMchanApp(html, staticSeed, encounterBuiltinPackages = [])
       for (const floor of inner.matchAll(floorRe)) {
         const floorNo = Number(floor.groups?.no || 0);
         const content = cleanTagText(floor.groups?.inner || "");
-        if (content) floors.push({ floorNo, content, createdAtMs: Date.now(), source: "ai", originKey: "tag:" + boardName + ":" + no + ":" + floorNo });
+        if (content) floors.push({ floorNo, content, createdAtMs: 0, source: "ai", originKey: "tag:" + boardName + ":" + no + ":" + floorNo });
       }
-      posts.push({ board: boardName, postNo: no, title, body, createdAtMs: Date.now(), updatedAtMs: Date.now(), floors });
+      posts.push({ board: boardName, postNo: no, title, body, createdAtMs: 0, updatedAtMs: 0, floors });
     }
     return posts;
   }
@@ -6478,7 +7213,9 @@ function injectInternalMchanApp(html, staticSeed, encounterBuiltinPackages = [])
   }
 
   function formatTime(value) {
-    const date = new Date(Number(value || Date.now()));
+    const timeValue = Number(value || 0);
+    if (!Number.isFinite(timeValue) || timeValue <= 0) return "--:--";
+    const date = new Date(timeValue);
     if (Number.isNaN(date.getTime())) return "--:--";
     return date.toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
   }
@@ -6702,6 +7439,85 @@ function injectInternalMchanApp(html, staticSeed, encounterBuiltinPackages = [])
 .st-map-app .st-lite-back,.st-school-app .st-lite-back,.st-special-location-app .st-lite-back,.st-reward-app .st-lite-back,.st-hypnosis-lite-app .st-lite-back,.st-inventory-app .st-lite-back{border-color:rgba(92,64,38,.24);background:rgba(255,250,240,.78);color:#6b3f22;box-shadow:0 8px 18px rgba(92,64,38,.14),inset 0 1px 0 rgba(255,255,255,.5)}
 .st-map-app .st-app-island,.st-school-app .st-app-island,.st-special-location-app .st-app-island,.st-reward-app .st-app-island,.st-hypnosis-lite-app .st-app-island,.st-inventory-app .st-app-island{border-color:rgba(255,255,255,.12);background:linear-gradient(180deg,rgba(7,10,24,.92),rgba(2,5,16,.82));color:#f8fafc;box-shadow:0 12px 28px rgba(0,0,0,.2),inset 0 1px 0 rgba(255,255,255,.06)}
 .st-map-app .st-app-island strong,.st-school-app .st-app-island strong,.st-special-location-app .st-app-island strong,.st-reward-app .st-app-island strong,.st-hypnosis-lite-app .st-app-island strong,.st-inventory-app .st-app-island strong{color:#fff}
+.st-city-map-app{background:linear-gradient(180deg,#fff6e8 0%,#f8e7ce 48%,#eed2af 100%);color:#3d2f25}
+.st-city-map-app .st-lite-body{padding:10px 12px 14px;gap:9px;overflow:auto;display:flex;flex-direction:column}
+.st-city-map-app .st-lite-back{border-color:rgba(92,64,38,.22);background:rgba(255,250,240,.84);color:#6b3f22;box-shadow:0 8px 18px rgba(92,64,38,.14),inset 0 1px 0 rgba(255,255,255,.55)}
+.st-city-map-app .st-app-island{border-color:rgba(255,255,255,.12);background:linear-gradient(180deg,rgba(7,10,24,.92),rgba(2,5,16,.82));color:#f8fafc;box-shadow:0 12px 28px rgba(0,0,0,.2),inset 0 1px 0 rgba(255,255,255,.06)}
+.st-campus-map-app .st-lite-body{display:flex;flex-direction:column;overflow:auto;gap:10px}
+.st-city-map-stage{position:relative;min-height:0;border:1px solid rgba(92,64,38,.18);border-radius:18px;overflow:hidden;background:linear-gradient(180deg,rgba(255,252,236,.98),rgba(238,248,227,.96) 52%,rgba(232,242,235,.98));box-shadow:0 18px 36px rgba(80,57,34,.14),inset 0 0 0 1px rgba(255,255,255,.62);touch-action:manipulation}
+.st-city-map-stage::before{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(105,91,64,.042) 1px,transparent 1px),linear-gradient(90deg,rgba(105,91,64,.042) 1px,transparent 1px);background-size:44px 44px;opacity:.72;pointer-events:none}
+.st-city-map-stage::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(187,247,208,.26),transparent 18%,transparent 82%,rgba(187,247,208,.22)),radial-gradient(circle at 50% 50%,rgba(255,255,255,.5),transparent 36%);pointer-events:none}
+.st-city-road{position:absolute;left:var(--x);top:var(--y);width:var(--w);height:var(--h);border-radius:6px;background:linear-gradient(180deg,#f8f3e8,#dfd7c6);box-shadow:0 1px 0 rgba(92,64,38,.12),inset 0 0 0 1px rgba(92,64,38,.12),inset 0 0 0 4px rgba(255,255,255,.28);pointer-events:none;z-index:1}
+.st-city-road::after{content:"";position:absolute;left:8px;right:8px;top:50%;height:1px;background:repeating-linear-gradient(90deg,rgba(148,128,95,.45) 0 7px,transparent 7px 15px);transform:translateY(-50%)}
+.st-city-road.is-v::after{left:50%;right:auto;top:8px;bottom:8px;width:1px;height:auto;background:repeating-linear-gradient(180deg,rgba(148,128,95,.45) 0 7px,transparent 7px 15px);transform:translateX(-50%)}
+.st-city-greenery{position:absolute;left:var(--x);top:var(--y);width:var(--w);height:var(--h);display:flex;align-items:center;justify-content:space-around;gap:2px;pointer-events:none;z-index:2;color:#4d9d58;font-size:12px;line-height:1;filter:drop-shadow(0 1px 0 rgba(255,255,255,.75))}
+.st-city-greenery.is-v{flex-direction:column;font-size:11px}
+.st-city-greenery span{display:block;transform:translateY(var(--dy,0))}
+.st-city-point{position:absolute;left:var(--x);top:var(--y);width:74px;border:0;background:transparent;color:#3d2f25;display:grid;justify-items:center;gap:4px;transform:translate(-50%,-50%);cursor:pointer;z-index:3;text-align:center}
+.st-city-point:focus-visible{outline:3px solid rgba(20,184,166,.36);outline-offset:4px;border-radius:14px}
+.st-city-point:hover .st-city-landmark,.st-city-point.active .st-city-landmark{transform:translateY(-3px) scale(1.05);border-color:rgba(20,184,166,.55);box-shadow:0 14px 24px rgba(20,184,166,.22),0 0 0 5px rgba(45,212,191,.13),inset 0 1px 0 rgba(255,255,255,.74)}
+.st-city-point.active .st-city-name{color:#0f766e}
+.st-city-point.is-current .st-city-landmark{border-color:rgba(20,184,166,.62);box-shadow:0 14px 24px rgba(20,184,166,.2),0 0 0 4px rgba(20,184,166,.22),inset 0 1px 0 rgba(255,255,255,.74)}
+.st-city-point.is-current .st-city-name{color:#0f766e;border-color:rgba(20,184,166,.34)}
+.st-city-landmark{position:relative;width:42px;height:42px;border:1px solid rgba(92,64,38,.18);border-radius:13px;background:linear-gradient(180deg,#fffef8,#f6e5c8);box-shadow:0 10px 20px rgba(92,64,38,.15),inset 0 1px 0 rgba(255,255,255,.72);transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease}
+.st-city-landmark-symbol{position:absolute;left:50%;top:-12px;z-index:3;display:grid;place-items:center;width:23px;height:23px;border:1px solid rgba(92,64,38,.16);border-radius:999px;background:rgba(255,253,247,.94);font-size:14px;line-height:1;transform:translateX(-50%);box-shadow:0 4px 10px rgba(92,64,38,.14)}
+.st-city-landmark::before{content:"";position:absolute;left:9px;right:9px;bottom:8px;height:22px;border-radius:4px 4px 3px 3px;background:linear-gradient(180deg,var(--city-c1,#fca5a5),var(--city-c2,#fb7185));box-shadow:inset 0 0 0 1px rgba(92,64,38,.14)}
+.st-city-landmark::after{content:"";position:absolute;left:15px;right:15px;bottom:8px;height:10px;border-radius:3px 3px 0 0;background:rgba(255,255,255,.72);box-shadow:0 -9px 0 -5px rgba(255,255,255,.86),-8px -8px 0 -5px rgba(255,255,255,.72),8px -8px 0 -5px rgba(255,255,255,.72)}
+.st-city-point[data-city-icon="school"] .st-city-landmark{--city-c1:#93c5fd;--city-c2:#3b82f6}
+.st-city-point[data-city-icon="university"] .st-city-landmark{--city-c1:#c4b5fd;--city-c2:#8b5cf6}
+.st-city-point[data-city-icon="company"] .st-city-landmark{--city-c1:#fdba74;--city-c2:#f97316}
+.st-city-point[data-city-icon="home"] .st-city-landmark{--city-c1:#fda4af;--city-c2:#fb7185}
+.st-city-point[data-city-icon="company"] .st-city-landmark::before{left:11px;right:11px;height:27px;border-radius:3px}
+.st-city-point[data-city-icon="company"] .st-city-landmark::after{left:16px;right:16px;height:4px;bottom:12px;box-shadow:0 -7px 0 rgba(255,255,255,.72),0 -14px 0 rgba(255,255,255,.72)}
+.st-city-point[data-city-icon="school"] .st-city-landmark::before,.st-city-point[data-city-icon="university"] .st-city-landmark::before{left:8px;right:8px;height:18px}
+.st-city-point[data-city-icon="school"] .st-city-landmark::after,.st-city-point[data-city-icon="university"] .st-city-landmark::after{left:13px;right:13px;height:7px;box-shadow:0 -9px 0 -4px rgba(255,255,255,.86)}
+.st-city-point[data-city-icon="home"] .st-city-landmark::before{clip-path:polygon(50% 0,100% 32%,100% 100%,0 100%,0 32%)}
+.st-city-point[data-city-icon="home"] .st-city-landmark::after{height:9px}
+.st-city-name{max-width:78px;border:1px solid rgba(92,64,38,.13);border-radius:999px;background:rgba(255,250,240,.82);padding:3px 7px;color:rgba(61,47,37,.78);font-size:10px;font-weight:950;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 5px 12px rgba(92,64,38,.08)}
+.st-city-info-panel{min-height:118px;border:1px solid rgba(92,64,38,.22);border-radius:14px;background:linear-gradient(180deg,rgba(255,250,240,.95),rgba(248,236,216,.92));box-shadow:0 12px 26px rgba(80,57,34,.13),inset 0 1px 0 rgba(255,255,255,.62);padding:11px;display:grid;gap:8px;align-content:start}
+.st-city-info-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.st-city-info-head strong{color:#2f241c;font-size:16px;line-height:1.25}
+.st-city-info-head small{border:1px solid rgba(146,64,14,.18);border-radius:999px;background:rgba(254,243,199,.65);color:#92400e;font-size:10px;font-weight:850;padding:3px 7px;white-space:nowrap}
+.st-city-info-panel p{margin:0;color:rgba(61,47,37,.72);font-size:12px;line-height:1.55;white-space:pre-wrap}
+.st-city-actions{display:flex;gap:7px;flex-wrap:wrap}
+.st-city-enter{border:1px solid rgba(20,184,166,.34);border-radius:10px;background:linear-gradient(135deg,rgba(20,184,166,.18),rgba(34,197,94,.14));color:#0f766e;font-size:12px;font-weight:900;padding:8px 12px;cursor:pointer}
+.st-city-extra-list{display:flex;gap:6px;flex-wrap:wrap}
+.st-city-extra-list button{border:1px solid rgba(92,64,38,.13);border-radius:999px;background:rgba(255,255,255,.52);color:rgba(61,47,37,.64);font-size:10px;font-weight:850;padding:4px 8px;cursor:pointer}
+.st-city-extra-list button.active{border-color:rgba(20,184,166,.34);background:rgba(204,251,241,.58);color:#0f766e}
+.st-map-layer-mark{position:absolute;right:-8px;top:-8px;z-index:5;display:grid;place-items:center;width:19px;height:19px;border:1px solid rgba(20,184,166,.34);border-radius:999px;background:linear-gradient(180deg,#f0fdfa,#ccfbf1);color:#0f766e;font-size:12px;font-weight:950;line-height:1;box-shadow:0 5px 10px rgba(20,184,166,.18)}
+.st-city-point.has-enter .st-city-name,.st-campus-point.has-enter .st-campus-label{border-color:rgba(20,184,166,.28);color:#0f766e}
+.st-board-map-stage{position:relative;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(var(--rows,5),82px);gap:7px;width:min(100%,430px);margin:0 auto;border:1px solid rgba(92,64,38,.2);border-radius:18px;overflow:hidden;background:linear-gradient(135deg,#fff8e8,#edf8df 56%,#e2f1ea);box-shadow:0 18px 36px rgba(80,57,34,.14),inset 0 0 0 1px rgba(255,255,255,.62);padding:10px;touch-action:manipulation}
+.st-board-map-stage::before{content:"";position:absolute;inset:10px;border:1px solid rgba(92,64,38,.12);border-radius:13px;box-shadow:inset 0 0 0 2px rgba(255,255,255,.28);pointer-events:none}
+.st-board-cell{border:1px solid rgba(92,64,38,.08);border-radius:9px;background:rgba(255,250,240,.34);box-shadow:inset 0 1px 0 rgba(255,255,255,.36);z-index:0;pointer-events:none}
+.st-board-cell.alt{background:rgba(238,246,222,.46)}
+.st-board-node{position:relative;z-index:3;grid-column:var(--col);grid-row:var(--row);align-self:center;justify-self:center;width:min(96%,112px);min-height:68px;border:1px solid rgba(92,64,38,.18);border-radius:13px;background:linear-gradient(180deg,#fffdf6,#f4e6cd);box-shadow:0 12px 20px rgba(80,57,34,.16),inset 0 1px 0 rgba(255,255,255,.72);display:grid;grid-template-rows:auto 1fr auto;justify-items:center;gap:4px;padding:6px 7px;color:#3d2f25;cursor:pointer;transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease}
+.st-board-node:hover,.st-board-node.active{transform:translateY(-3px);border-color:rgba(20,184,166,.48);box-shadow:0 15px 24px rgba(20,184,166,.18),0 0 0 4px rgba(45,212,191,.12),inset 0 1px 0 rgba(255,255,255,.72)}
+.st-board-node.is-current{border-color:rgba(20,184,166,.62);box-shadow:0 14px 24px rgba(20,184,166,.18),0 0 0 4px rgba(20,184,166,.22),inset 0 1px 0 rgba(255,255,255,.74)}
+.st-board-node.is-locked{filter:saturate(.45) grayscale(.2);background:linear-gradient(180deg,#f4efe4,#ded5c5)}
+.st-board-node.has-enter::after{content:"↘";position:absolute;right:5px;top:5px;width:18px;height:18px;border:1px solid rgba(20,184,166,.34);border-radius:999px;background:#ecfdf5;color:#0f766e;display:grid;place-items:center;font-size:11px;font-weight:950;box-shadow:0 4px 9px rgba(20,184,166,.16)}
+.st-board-symbol{display:grid;place-items:center;width:26px;height:26px;border:1px solid rgba(92,64,38,.14);border-radius:999px;background:linear-gradient(180deg,var(--c1,#fde68a),var(--c2,#f59e0b));font-size:14px;line-height:1;box-shadow:inset 0 1px 0 rgba(255,255,255,.62),0 4px 10px rgba(92,64,38,.12)}
+.st-board-name{max-width:100%;color:#3d2f25;font-size:11px;font-weight:950;line-height:1.15;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.st-board-node.has-enter .st-board-name,.st-board-node.active .st-board-name{color:#0f766e}
+.st-board-tag{border:1px solid rgba(146,64,14,.13);border-radius:999px;background:rgba(254,243,199,.5);color:rgba(146,64,14,.72);font-size:8px;font-weight:900;line-height:1;padding:3px 5px;white-space:nowrap}
+.st-board-map-toolbar{display:flex;justify-content:flex-end;margin-top:2px;margin-bottom:-12px;z-index:12}
+.st-board-drawer-toggle{position:relative;border:1px solid rgba(92,64,38,.18);border-radius:999px;background:rgba(255,250,240,.88);box-shadow:0 8px 18px rgba(92,64,38,.13),inset 0 1px 0 rgba(255,255,255,.68);color:#6b3f22;font-size:12px;font-weight:950;padding:7px 10px;cursor:pointer}
+.st-board-drawer-toggle.active{border-color:rgba(20,184,166,.36);background:linear-gradient(135deg,rgba(236,253,245,.94),rgba(255,251,235,.92));color:#0f766e}
+.st-board-drawer{border:1px solid rgba(92,64,38,.2);border-radius:14px;background:linear-gradient(180deg,rgba(255,250,240,.96),rgba(246,236,218,.94));box-shadow:0 12px 24px rgba(80,57,34,.12),inset 0 1px 0 rgba(255,255,255,.62);padding:10px;display:grid;gap:8px}
+.st-board-drawer-head{display:flex;align-items:center;justify-content:space-between;gap:8px;color:#3d2f25;font-size:12px;font-weight:950}
+.st-board-drawer-head small{color:rgba(61,47,37,.54);font-size:10px;font-weight:850}
+.st-board-drawer-list{display:grid;gap:6px;max-height:132px;overflow:auto;padding-right:2px;scrollbar-width:thin}
+.st-board-drawer-row{display:grid;grid-template-columns:28px minmax(0,1fr);align-items:center;gap:6px;border:1px solid rgba(92,64,38,.12);border-radius:11px;background:rgba(255,255,255,.48);padding:6px;color:#3d2f25}
+.st-board-drawer-row.active{border-color:rgba(20,184,166,.36);background:rgba(204,251,241,.42)}
+.st-board-drawer-fav{width:24px;height:24px;border:1px solid rgba(92,64,38,.13);border-radius:999px;background:rgba(255,250,240,.72);color:rgba(107,63,34,.48);font-size:13px;font-weight:950;cursor:pointer}
+.st-board-drawer-fav.active{color:#b45309;background:rgba(254,243,199,.86);border-color:rgba(180,83,9,.24)}
+.st-board-drawer-name{min-width:0;border:0;background:transparent;color:inherit;text-align:left;font-size:12px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.st-board-drawer-empty{margin:0;color:rgba(61,47,37,.58);font-size:11px;line-height:1.45}
+.st-board-drawer-add{height:34px;border:1px dashed rgba(20,184,166,.34);border-radius:12px;background:rgba(240,253,250,.58);color:#0f766e;font-size:18px;font-weight:950;line-height:1;cursor:pointer}
+.st-map-add-layer{position:absolute;inset:0;z-index:80;display:grid;place-items:center;padding:16px;background:rgba(32,24,16,.32);backdrop-filter:blur(3px)}
+.st-map-add-dialog{position:relative;width:min(96%,440px);max-height:88%;overflow:auto;border:1px solid rgba(92,64,38,.2);border-radius:16px;background:linear-gradient(180deg,#fffaf0,#f3e4ca);box-shadow:0 24px 60px rgba(61,47,37,.28);padding:12px}
+.st-map-add-dialog .st-graph-add{margin:0;border-radius:13px}
+.st-map-add-close{position:absolute;right:10px;top:10px;z-index:2;width:30px;height:30px;border:1px solid rgba(92,64,38,.16);border-radius:999px;background:rgba(255,250,240,.86);color:#7c2d12;font-size:18px;font-weight:950;cursor:pointer}
+.st-map-add-dialog .st-graph-add-summary{padding-right:34px}
 .st-clock-card{display:grid;gap:14px;justify-items:center;text-align:center}
 .st-clock-face{position:relative;width:min(66vw,250px);aspect-ratio:1;border-radius:50%;border:1px solid rgba(125,211,252,.28);background:radial-gradient(circle at 50% 42%,rgba(34,211,238,.16),transparent 34%),linear-gradient(145deg,rgba(15,23,42,.96),rgba(2,6,23,.94));box-shadow:inset 0 0 0 8px rgba(255,255,255,.035),0 18px 46px rgba(0,0,0,.28);user-select:none}
 .st-clock-face::before{content:"";position:absolute;inset:14px;border-radius:50%;border:1px dashed rgba(226,232,240,.13)}
@@ -6712,6 +7528,12 @@ function injectInternalMchanApp(html, staticSeed, encounterBuiltinPackages = [])
 .st-clock-hand.minute{height:35%;margin-left:-2px;margin-top:-35%;background:#67e8f9}
 .st-clock-center{position:absolute;left:50%;top:50%;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:999px;background:#f9a8d4;box-shadow:0 0 18px rgba(249,168,212,.48)}
 .st-clock-time{font-size:34px;font-weight:900;letter-spacing:.02em;font-variant-numeric:tabular-nums;color:#f8fafc}
+.st-clock-date-options{width:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.st-clock-date-options label{min-width:0;cursor:pointer}
+.st-clock-date-options input{position:absolute;opacity:0;pointer-events:none}
+.st-clock-date-options span{height:43px;border:1px solid rgba(255,255,255,.1);border-radius:13px;background:rgba(2,6,23,.38);color:rgba(226,232,240,.64);display:grid;place-items:center;padding:5px 4px;font-size:11px;line-height:1.2;font-weight:900;text-align:center}
+.st-clock-date-options small{display:block;color:rgba(226,232,240,.46);font-size:9px;font-weight:850}
+.st-clock-date-options input:checked+span{border-color:rgba(34,211,238,.5);background:linear-gradient(135deg,rgba(8,145,178,.48),rgba(124,58,237,.32));color:#fff;box-shadow:0 10px 20px rgba(34,211,238,.12)}
 .st-clock-inputs{width:100%;display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:end}
 .st-clock-inputs label{display:grid;gap:5px;text-align:left;color:rgba(226,232,240,.68);font-size:11px;font-weight:850}
 .st-clock-inputs input{width:100%;border:1px solid rgba(255,255,255,.1);border-radius:13px;background:rgba(2,6,23,.48);color:#f8fafc;outline:none;padding:11px 12px;font-size:20px;font-weight:900;text-align:center;font-variant-numeric:tabular-nums}
@@ -6806,6 +7628,47 @@ function injectInternalMchanApp(html, staticSeed, encounterBuiltinPackages = [])
 .st-graph-add button{border:1px solid rgba(146,64,14,.28);border-radius:8px;background:linear-gradient(135deg,rgba(146,64,14,.16),rgba(217,119,6,.14));color:#5b341f;font-size:12px;font-weight:850;padding:9px 10px;cursor:pointer}
 .st-graph-add button:disabled{opacity:.48;cursor:not-allowed;filter:saturate(.65);box-shadow:none}
 .st-graph-add-hint{margin:0;color:rgba(61,47,37,.55);font-size:10px;line-height:1.45}
+.st-campus-card{position:relative;display:grid;gap:10px}
+.st-campus-stage{position:relative;min-height:310px;aspect-ratio:1/1.04;border:1px solid rgba(92,64,38,.2);border-radius:16px;overflow:hidden;background:linear-gradient(180deg,#fff9e9,#eef8df 58%,#e2f1e7);box-shadow:0 15px 34px rgba(59,42,25,.13),inset 0 0 0 1px rgba(255,255,255,.64);touch-action:manipulation}
+.st-campus-stage::before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(255,255,255,.26) 1px,transparent 1px),linear-gradient(rgba(255,255,255,.22) 1px,transparent 1px);background-size:40px 40px;opacity:.58;pointer-events:none}
+.st-campus-stage.is-building{aspect-ratio:1/.88;background:linear-gradient(180deg,#fffaf0,#f5ebd9 55%,#ede1cd)}
+.st-campus-path{position:absolute;left:var(--x);top:var(--y);width:var(--w);height:var(--h);border-radius:7px;background:linear-gradient(180deg,#f7eedc,#d9ccb5);box-shadow:inset 0 0 0 1px rgba(92,64,38,.12),inset 0 0 0 3px rgba(255,255,255,.24),0 1px 0 rgba(92,64,38,.12);z-index:1;pointer-events:none}
+.st-campus-field{position:absolute;left:var(--x);top:var(--y);width:var(--w);height:var(--h);border:1px solid rgba(34,197,94,.24);border-radius:var(--radius,14px);background:repeating-linear-gradient(90deg,rgba(134,239,172,.22) 0 9px,rgba(187,247,208,.28) 9px 18px);box-shadow:inset 0 0 0 3px rgba(255,255,255,.18);z-index:0;pointer-events:none}
+.st-campus-point{position:absolute;left:var(--x);top:var(--y);width:var(--w);border:0;background:transparent;color:#3d2f25;display:grid;justify-items:center;gap:4px;transform:translate(-50%,-50%);cursor:pointer;z-index:3;text-align:center}
+.st-campus-point:focus-visible{outline:3px solid rgba(20,184,166,.34);outline-offset:4px;border-radius:12px}
+.st-campus-block{position:relative;display:grid;place-items:center;width:100%;height:var(--h);border:1px solid rgba(92,64,38,.2);border-radius:7px;background:linear-gradient(180deg,var(--c1,#fde68a),var(--c2,#f59e0b));box-shadow:0 10px 16px rgba(92,64,38,.14),inset 0 1px 0 rgba(255,255,255,.52);transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease}
+.st-campus-block::before{content:"";position:absolute;left:5px;right:5px;top:7px;height:4px;border-radius:999px;background:rgba(255,255,255,.54);box-shadow:0 9px 0 rgba(255,255,255,.34),0 18px 0 rgba(255,255,255,.24)}
+.st-campus-block::after{content:"";position:absolute;right:-5px;top:6px;bottom:-4px;width:5px;border-radius:0 6px 6px 0;background:linear-gradient(180deg,rgba(92,64,38,.16),rgba(92,64,38,.06));transform:skewY(28deg);transform-origin:left top}
+.st-campus-symbol{position:relative;z-index:2;display:grid;place-items:center;width:25px;height:25px;border:1px solid rgba(92,64,38,.15);border-radius:999px;background:rgba(255,253,247,.88);font-size:14px;line-height:1;box-shadow:0 4px 10px rgba(92,64,38,.13)}
+.st-campus-label{max-width:92px;border:1px solid rgba(92,64,38,.13);border-radius:999px;background:rgba(255,250,240,.86);padding:3px 7px;color:rgba(61,47,37,.78);font-size:10px;font-weight:950;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 5px 12px rgba(92,64,38,.08)}
+.st-campus-point:hover .st-campus-block,.st-campus-point.active .st-campus-block{transform:translateY(-3px);border-color:rgba(20,184,166,.52);box-shadow:0 16px 24px rgba(20,184,166,.2),0 0 0 5px rgba(45,212,191,.11),inset 0 1px 0 rgba(255,255,255,.58)}
+.st-campus-point.is-locked .st-campus-block{filter:saturate(.42) grayscale(.25);border-color:rgba(82,63,49,.2);box-shadow:0 10px 15px rgba(62,49,39,.12),inset 0 0 0 999px rgba(47,37,31,.08)}
+.st-campus-point.is-locked .st-campus-label{color:rgba(87,70,56,.55);border-color:rgba(87,70,56,.18);background:rgba(255,250,240,.62)}
+.st-campus-point.is-current .st-campus-label{color:#0f766e;border-color:rgba(20,184,166,.34)}
+.st-campus-point.is-current .st-campus-block{box-shadow:0 16px 24px rgba(20,184,166,.2),0 0 0 4px rgba(20,184,166,.24),inset 0 1px 0 rgba(255,255,255,.58)}
+.st-campus-info{display:grid;gap:8px;border:1px solid rgba(92,64,38,.2);border-radius:13px;background:linear-gradient(180deg,rgba(255,250,240,.96),rgba(248,236,216,.94));padding:10px;box-shadow:0 12px 26px rgba(80,57,34,.12),inset 0 1px 0 rgba(255,255,255,.62)}
+.st-campus-info-head{display:flex;align-items:flex-start;justify-content:space-between;gap:9px}
+.st-campus-info-head strong{font-size:15px;line-height:1.25;color:#2f241c}
+.st-campus-info-head small{border:1px solid rgba(146,64,14,.18);border-radius:999px;background:rgba(254,243,199,.65);color:#92400e;font-size:10px;font-weight:850;padding:3px 7px;white-space:nowrap}
+.st-campus-info p{margin:0;color:rgba(61,47,37,.72);font-size:12px;line-height:1.55;white-space:pre-wrap}
+.st-campus-actions{display:flex;gap:7px;flex-wrap:wrap}
+.st-campus-extra{display:grid;gap:6px}
+.st-campus-extra-title{color:rgba(61,47,37,.58);font-size:10px;font-weight:900}
+.st-campus-extra-list{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+.st-campus-extra-list::-webkit-scrollbar{display:none}
+.st-campus-extra-list button{flex:0 0 auto;border:1px solid rgba(92,64,38,.14);border-radius:999px;background:rgba(255,255,255,.54);color:rgba(61,47,37,.68);font-size:10px;font-weight:850;padding:5px 9px;cursor:pointer}
+.st-campus-extra-list button.active{border-color:rgba(20,184,166,.36);background:rgba(204,251,241,.58);color:#0f766e}
+.st-campus-enter,.st-campus-up{border:1px solid rgba(146,64,14,.2);border-radius:999px;background:rgba(255,255,255,.64);color:#6b3f22;font-size:11px;font-weight:900;padding:7px 10px;cursor:pointer;white-space:nowrap}
+.st-campus-enter{border-color:rgba(20,184,166,.25);background:rgba(204,251,241,.58);color:#0f766e}
+.st-campus-enter.is-gate{border-color:rgba(190,18,60,.18);background:rgba(255,228,230,.68);color:#9f1239}
+.st-campus-gate-layer{position:absolute;inset:0;z-index:20;display:grid;place-items:center;padding:18px;background:rgba(48,38,30,.28);backdrop-filter:blur(5px)}
+.st-campus-gate-card{width:min(310px,100%);border:1px solid rgba(92,64,38,.18);border-radius:14px;background:linear-gradient(180deg,#fffaf0,#f7ead4);box-shadow:0 22px 48px rgba(59,42,25,.22),inset 0 1px 0 rgba(255,255,255,.68);padding:14px;display:grid;gap:9px}
+.st-campus-gate-card h3{margin:0;color:#3d2f25;font-size:17px;line-height:1.3}
+.st-campus-gate-card p{margin:0;color:rgba(61,47,37,.72);font-size:12px;line-height:1.55;white-space:pre-wrap}
+.st-campus-gate-status{border:1px solid rgba(20,184,166,.18);border-radius:9px;background:rgba(204,251,241,.48);padding:7px 8px;color:#0f766e!important;font-weight:850}
+.st-campus-gate-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.st-campus-gate-actions button{height:34px;border:1px solid rgba(92,64,38,.16);border-radius:9px;background:rgba(255,255,255,.7);color:#6b3f22;font-size:12px;font-weight:950;cursor:pointer}
+.st-campus-gate-actions button.primary{border-color:rgba(20,184,166,.25);background:linear-gradient(135deg,#14b8a6,#f59e0b);color:white;box-shadow:0 10px 18px rgba(20,184,166,.16)}
 .st-rule-paper{border-color:rgba(92,64,38,.24)!important;background:linear-gradient(180deg,#fffaf0,#f8ecd8)!important;color:#3d2f25!important;box-shadow:0 15px 34px rgba(59,42,25,.14),inset 0 0 0 1px rgba(255,255,255,.55)!important}
 .st-rule-paper-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;border-bottom:2px double rgba(92,64,38,.22);padding-bottom:8px;margin-bottom:9px}
 .st-rule-paper-title{display:grid;gap:3px}
@@ -6839,6 +7702,7 @@ function injectInternalMchanApp(html, staticSeed, encounterBuiltinPackages = [])
 .st-reward-badge,.st-hypnosis-badge{display:inline-flex;align-items:center;justify-content:center;border:1px solid rgba(146,64,14,.18);border-radius:999px;background:rgba(254,243,199,.55);color:#92400e;font-size:10px;font-weight:950;padding:3px 7px;white-space:nowrap}
 .st-reward-actions,.st-hypnosis-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px}
 .st-reward-button,.st-hypnosis-button{border:1px solid rgba(146,64,14,.28);border-radius:8px;background:linear-gradient(135deg,rgba(146,64,14,.16),rgba(217,119,6,.14));color:#5b341f;font-size:12px;font-weight:900;padding:9px 10px;cursor:pointer}
+.st-hypnosis-button small{display:inline-block;margin-left:5px;color:rgba(91,52,31,.72);font-size:10px;font-weight:950;line-height:1;white-space:nowrap}
 .st-reward-button.secondary,.st-hypnosis-button.secondary{background:rgba(255,255,255,.45);color:rgba(61,47,37,.72)}
 .st-reward-button:disabled,.st-hypnosis-button:disabled{opacity:.48;cursor:not-allowed;filter:saturate(.7)}
 .st-reward-notice,.st-hypnosis-notice{margin:0;border:1px solid rgba(146,64,14,.14);border-radius:8px;background:rgba(255,255,255,.34);padding:8px 9px;color:rgba(61,47,37,.65);font-size:11px;line-height:1.45}
@@ -6850,8 +7714,13 @@ function injectInternalMchanApp(html, staticSeed, encounterBuiltinPackages = [])
 .st-reward-daily-target small{font-size:10px;color:rgba(61,47,37,.52);font-weight:800}
 .st-reward-filter select,.st-reward-new input,.st-reward-new textarea,.st-hypnosis-form input,.st-hypnosis-form textarea{width:100%;min-width:0;border:1px solid rgba(92,64,38,.16);border-radius:8px;background:rgba(255,255,255,.52);color:#3d2f25;outline:none;padding:9px 10px;font-size:12px;line-height:1.45;font-family:inherit}
 .st-reward-new,.st-hypnosis-form{display:grid;gap:8px}
+.st-reward-choice-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.st-reward-choice-grid .st-reward-button{min-height:48px}
 .st-reward-new textarea,.st-hypnosis-form textarea{min-height:82px;resize:vertical}
 .st-hypnosis-form-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.st-hypnosis-custom-item{border:1px solid rgba(146,64,14,.18);border-radius:8px;background:rgba(255,255,255,.38);padding:10px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:9px;align-items:center}
+.st-hypnosis-custom-item strong{display:block;color:#2f241c;font-size:13px;line-height:1.25;font-weight:950}
+.st-hypnosis-custom-item p{margin:4px 0 0;color:rgba(61,47,37,.68);font-size:11px;line-height:1.45}
 .st-hypnosis-command-toggle{display:flex;align-items:center;gap:8px;cursor:pointer}
 .st-hypnosis-command-toggle input{width:18px;height:18px;accent-color:#92400e}
 .st-hypnosis-command.is-active{border-color:rgba(146,64,14,.44);background:linear-gradient(135deg,rgba(254,243,199,.62),rgba(255,255,255,.48));box-shadow:0 0 0 3px rgba(146,64,14,.08)}
@@ -6873,10 +7742,27 @@ function injectInternalMchanApp(html, staticSeed, encounterBuiltinPackages = [])
 .st-hypnosis-lite-app .st-graph-head strong,.st-hypnosis-lite-app .st-hypnosis-summary strong,.st-hypnosis-lite-app .st-hypnosis-command strong,.st-hypnosis-lite-app .st-hypnosis-vip-row strong{color:#fff}
 .st-hypnosis-lite-app .st-graph-head span,.st-hypnosis-lite-app .st-hypnosis-command p,.st-hypnosis-lite-app .st-hypnosis-vip-row small{color:rgba(253,242,248,.62)}
 .st-hypnosis-lite-app .st-hypnosis-button{border-color:rgba(244,114,182,.32);background:linear-gradient(135deg,rgba(168,85,247,.42),rgba(236,72,153,.34));color:#fff}
+.st-hypnosis-lite-app .st-hypnosis-button small{color:rgba(255,255,255,.78)}
 .st-hypnosis-lite-app .st-hypnosis-button.secondary{background:rgba(255,255,255,.08);color:rgba(253,242,248,.8)}
 .st-hypnosis-lite-app .st-hypnosis-notice{border-color:rgba(244,114,182,.18);background:rgba(255,255,255,.07);color:rgba(253,242,248,.72)}
 .st-hypnosis-lite-app .st-hypnosis-form input,.st-hypnosis-lite-app .st-hypnosis-form textarea{border-color:rgba(244,114,182,.18);background:rgba(9,4,18,.5);color:#fff}
 .st-hypnosis-lite-app .st-hypnosis-form input::placeholder,.st-hypnosis-lite-app .st-hypnosis-form textarea::placeholder{color:rgba(253,242,248,.34)}
+.st-hypnosis-lite-app .st-hypnosis-custom-item{border-color:rgba(244,114,182,.2);background:linear-gradient(135deg,rgba(124,58,237,.2),rgba(219,39,119,.12));color:#fdf2f8}
+.st-hypnosis-lite-app .st-hypnosis-custom-item strong{color:#fff}
+.st-hypnosis-lite-app .st-hypnosis-custom-item p{color:rgba(253,242,248,.62)}
+.st-hypnosis-dialog-layer{position:absolute;inset:0;z-index:320;display:grid;place-items:center;padding:18px;background:rgba(18,5,28,.62);backdrop-filter:blur(5px)}
+.st-hypnosis-dialog-card{width:min(100%,318px);border:1px solid rgba(244,114,182,.32);border-radius:14px;background:linear-gradient(180deg,rgba(53,18,70,.98),rgba(22,8,34,.98));box-shadow:0 22px 52px rgba(0,0,0,.46),0 0 0 1px rgba(255,255,255,.05) inset;color:#fdf2f8;padding:14px;display:grid;gap:10px}
+.st-hypnosis-dialog-card h3{margin:0;color:#fff;font-size:16px;line-height:1.25;font-weight:950}
+.st-hypnosis-dialog-card p{margin:0;color:rgba(253,242,248,.66);font-size:11px;line-height:1.55}
+.st-hypnosis-dialog-card label{display:grid;gap:6px;color:rgba(253,242,248,.8);font-size:11px;font-weight:900}
+.st-hypnosis-dialog-card input,.st-hypnosis-dialog-card textarea{width:100%;min-width:0;border:1px solid rgba(244,114,182,.22);border-radius:10px;background:rgba(9,4,18,.68);color:#fff;outline:none;padding:10px;font-size:12px;line-height:1.45;font-family:inherit}
+.st-hypnosis-dialog-card textarea{min-height:88px;resize:vertical}
+.st-hypnosis-dialog-card input::placeholder,.st-hypnosis-dialog-card textarea::placeholder{color:rgba(253,242,248,.34)}
+.st-hypnosis-dialog-chips{display:flex;flex-wrap:wrap;gap:6px;max-height:74px;overflow:auto;scrollbar-width:none}
+.st-hypnosis-dialog-chips button{border:1px solid rgba(244,114,182,.22);border-radius:999px;background:rgba(255,255,255,.07);color:rgba(253,242,248,.84);padding:5px 8px;font-size:10px;font-weight:900;cursor:pointer}
+.st-hypnosis-dialog-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.st-hypnosis-dialog-actions button{border:1px solid rgba(244,114,182,.22);border-radius:10px;background:rgba(255,255,255,.07);color:rgba(253,242,248,.78);padding:9px 10px;font-size:12px;font-weight:950;cursor:pointer}
+.st-hypnosis-dialog-actions button.primary{border-color:rgba(244,114,182,.48);background:linear-gradient(135deg,#7c3aed,#db2777);color:#fff;box-shadow:0 10px 24px rgba(219,39,119,.18)}
 .st-hypnosis-lite-app .st-hypnosis-command-toggle input{appearance:none;-webkit-appearance:none;width:20px;height:20px;min-width:20px;padding:0;border:1px solid rgba(244,114,182,.34);border-radius:7px;background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.02));box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 0 0 3px rgba(236,72,153,0);display:grid;place-items:center;position:relative;transition:border-color .16s ease,background .16s ease,box-shadow .16s ease}
 .st-hypnosis-lite-app .st-hypnosis-command-toggle input::after{content:"";position:absolute;width:9px;height:5px;border-left:2px solid #fff;border-bottom:2px solid #fff;transform:rotate(-45deg) scale(.72);opacity:0;top:5px;left:4px}
 .st-hypnosis-lite-app .st-hypnosis-command-toggle input:checked{border-color:rgba(244,114,182,.75);background:linear-gradient(135deg,#a855f7,#ec4899);box-shadow:0 0 0 3px rgba(236,72,153,.12),0 0 16px rgba(236,72,153,.24)}
@@ -6948,7 +7834,11 @@ function injectInternalMchanApp(html, staticSeed, encounterBuiltinPackages = [])
 /* 库存坐标记录：19:51 截图中下层袋子逐层偏低；按背景图五个袋面中心重算 top，不再使用等距外推。 */
 .st-inventory-note{position:absolute;z-index:2;left:65.2%;top:20.8%;width:23.4%;height:26.5%;padding:8px 8px 10px;display:grid;align-content:start;gap:8px;color:#3b2a18;font-family:"STKaiti","KaiTi","Noto Serif SC",serif;text-align:left;transform:rotate(.2deg);pointer-events:auto;background:transparent;border:0;box-shadow:none}
 .st-inventory-note strong{display:block;color:#2e2115;font-size:17px;line-height:1.24;font-weight:950;word-break:break-word;text-shadow:0 1px 0 rgba(255,255,255,.38)}
-.st-inventory-note p{margin:0;color:rgba(46,33,21,.9);font-size:12px;line-height:1.55;white-space:pre-wrap;word-break:break-word}
+.st-inventory-note p{margin:0;color:rgba(46,33,21,.9);font-size:12px;line-height:1.55;white-space:pre-wrap;word-break:break-word;max-height:84px;overflow:auto;scrollbar-width:none}
+.st-inventory-note-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px;align-self:end}
+.st-inventory-note-actions button{min-width:0;border:1px solid rgba(73,53,33,.18);border-radius:7px;background:rgba(255,255,255,.58);color:#3b2a18;padding:6px 4px;font-size:11px;font-weight:950;cursor:pointer;box-shadow:0 1px 0 rgba(255,255,255,.4) inset}
+.st-inventory-note-actions button.danger{border-color:rgba(127,29,29,.22);background:rgba(254,226,226,.54);color:#7f1d1d}
+.st-inventory-status{position:absolute;z-index:6;left:50%;bottom:7.5%;transform:translateX(-50%);max-width:70%;border:1px solid rgba(191,219,254,.24);border-radius:999px;background:rgba(15,23,42,.78);color:#e0f2fe;padding:6px 10px;font-size:11px;font-weight:950;text-align:center;box-shadow:0 8px 22px rgba(0,0,0,.32)}
 .st-inventory-locker-pager{position:absolute;z-index:4;left:16.2%;bottom:2.4%;width:30.5%;display:flex;align-items:center;justify-content:center;gap:8px;pointer-events:auto;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 .st-inventory-locker-pager button{width:25px;height:25px;border:1px solid rgba(191,219,254,.32);border-radius:999px;background:rgba(15,23,42,.62);color:#f8fbff;font-size:17px;font-weight:950;line-height:1;cursor:pointer;box-shadow:0 3px 8px rgba(0,0,0,.34)}
 .st-inventory-locker-pager span{min-width:40px;border:1px solid rgba(191,219,254,.22);border-radius:999px;background:rgba(15,23,42,.52);color:#e0f2fe;padding:4px 8px;font-size:10px;font-weight:950;text-align:center;text-shadow:0 1px 3px rgba(0,0,0,.75)}
@@ -7048,6 +7938,19 @@ function injectInternalMchanApp(html, staticSeed, encounterBuiltinPackages = [])
 .st-timetable-app .st-tt-period.is-current{border-color:rgba(146,64,14,.45);background:linear-gradient(135deg,rgba(254,243,199,.72),rgba(217,119,6,.14));box-shadow:0 8px 18px rgba(92,64,38,.12)}
 .st-timetable-app .st-tt-period em,.st-timetable-app .st-tt-badge,.st-timetable-app .st-tt-rhythm-item span{color:#92400e}
 .st-timetable-app .st-tt-badge{border-color:rgba(146,64,14,.22);background:rgba(254,243,199,.56)}
+.st-timetable-app .st-tt-segments{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;border:1px solid rgba(92,64,38,.16);border-radius:8px;background:rgba(255,250,240,.56);padding:5px}
+.st-timetable-app .st-tt-segments button{min-width:0;border:1px solid transparent;border-radius:7px;background:transparent;color:rgba(61,47,37,.62);font-size:11px;font-weight:950;padding:7px 6px;cursor:pointer}
+.st-timetable-app .st-tt-segments button.active{border-color:rgba(146,64,14,.28);background:linear-gradient(135deg,rgba(254,243,199,.72),rgba(255,255,255,.46));color:#5b341f;box-shadow:0 8px 18px rgba(92,64,38,.1)}
+.st-timetable-app .st-tt-actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap;border:1px solid rgba(92,64,38,.16);border-radius:8px;background:rgba(255,250,240,.56);padding:8px}
+.st-timetable-app .st-tt-actions button{border:1px solid rgba(146,64,14,.28);border-radius:8px;background:rgba(254,243,199,.62);color:#6b3f22;font-size:11px;font-weight:900;padding:7px 10px;cursor:pointer}
+.st-timetable-app .st-tt-actions button:disabled{cursor:not-allowed;opacity:.55}
+.st-timetable-app .st-tt-actions button.primary{background:linear-gradient(135deg,rgba(146,64,14,.16),rgba(217,119,6,.14));color:#5b341f}
+.st-timetable-app .st-tt-actions span{color:rgba(61,47,37,.58);font-size:10px;font-weight:850;line-height:1.35}
+.st-timetable-app .st-tt-subject-input{width:100%;min-width:0;border:1px solid rgba(92,64,38,.18);border-radius:6px;background:rgba(255,255,255,.62);color:#33291f;text-align:center;font-size:10px;font-weight:900;line-height:1.2;padding:5px 4px;outline:none}
+.st-timetable-app .st-tt-subject-input:focus{border-color:rgba(146,64,14,.45);box-shadow:0 0 0 2px rgba(146,64,14,.1)}
+.st-timetable-app .st-tt-period.is-modified{border-color:rgba(14,116,144,.34);background:linear-gradient(135deg,rgba(224,247,250,.7),rgba(254,243,199,.48));box-shadow:inset 0 0 0 1px rgba(14,116,144,.08)}
+.st-timetable-app .st-tt-period .st-tt-original{display:block;margin-top:2px;color:rgba(14,116,144,.72);font-size:9px;font-style:normal;font-weight:900;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.st-timetable-app .st-tt-status{margin:0;border:1px solid rgba(14,116,144,.14);border-radius:8px;background:rgba(224,247,250,.42);color:rgba(49,67,70,.78);padding:7px 8px;font-size:10px;font-weight:850;line-height:1.45}
 .st-timetable-app .st-tt-rhythm{padding:8px;border-radius:8px}
 .st-timetable-app .st-tt-rhythm-item b,.st-timetable-app .st-tt-rhythm-item i{color:rgba(61,47,37,.68)}
 .st-timetable-app .st-tt-rhythm-item span:before,.st-timetable-app .st-tt-rhythm-item span:after{background:rgba(146,64,14,.34)}
@@ -7123,11 +8026,33 @@ button.st-work-notice{cursor:pointer}
 .st-work-button:disabled{opacity:.48;cursor:not-allowed;filter:grayscale(.35);box-shadow:none}
 .st-work-button:not(:disabled):active,.st-work-wall-button:active,.st-work-focus-nav:active{transform:scale(.96)}
 .st-work-note{position:relative;z-index:1;margin:0;color:rgba(226,232,240,.62);font-size:10.5px;line-height:1.45;text-align:center}
+.st-work-time-backdrop{position:absolute;inset:0;z-index:14;display:grid;place-items:center;padding:18px;background:rgba(15,23,42,.46);backdrop-filter:blur(3px)}
+.st-work-time-dialog{width:min(100%,330px);border:1px solid rgba(105,72,45,.24);border-radius:16px;background:linear-gradient(180deg,#fff8e9,#f4e3c6);color:#33261b;box-shadow:0 24px 60px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.62);padding:14px;display:grid;gap:10px}
+.st-work-time-head{display:flex;justify-content:space-between;gap:10px;align-items:start}
+.st-work-time-head strong{font-size:17px;line-height:1.2;color:#2f241c}
+.st-work-time-head span{display:block;margin-top:2px;color:rgba(60,43,29,.62);font-size:11px;font-weight:850}
+.st-work-time-close{width:30px;height:30px;border:1px solid rgba(105,72,45,.18);border-radius:999px;background:rgba(255,255,255,.52);color:#6b3f22;font-size:20px;font-weight:950;line-height:1;cursor:pointer}
+.st-work-time-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.st-work-time-options label{min-width:0;cursor:pointer}
+.st-work-time-options input{position:absolute;opacity:0;pointer-events:none}
+.st-work-time-options span{height:42px;border:1px solid rgba(105,72,45,.16);border-radius:11px;background:rgba(255,255,255,.42);color:rgba(60,43,29,.66);display:grid;place-items:center;padding:5px 3px;font-size:11px;line-height:1.15;font-weight:950;text-align:center}
+.st-work-time-options small{display:block;color:rgba(60,43,29,.5);font-size:9px;font-weight:850}
+.st-work-time-options input:checked+span{border-color:rgba(217,119,6,.42);background:linear-gradient(135deg,rgba(251,191,36,.34),rgba(14,165,233,.16));color:#4b3827;box-shadow:0 9px 18px rgba(217,119,6,.12)}
+.st-work-time-inputs{display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:end}
+.st-work-time-inputs label{display:grid;gap:4px;color:rgba(60,43,29,.6);font-size:10px;font-weight:900}
+.st-work-time-inputs input{width:100%;border:1px solid rgba(105,72,45,.18);border-radius:11px;background:rgba(255,255,255,.58);color:#33261b;outline:none;padding:10px 8px;font-size:20px;font-weight:950;text-align:center;font-variant-numeric:tabular-nums}
+.st-work-time-inputs b{padding:0 0 8px;color:rgba(60,43,29,.62);font-size:24px}
+.st-work-time-status{margin:0;color:rgba(60,43,29,.66);font-size:11px;line-height:1.45;white-space:pre-wrap}
+.st-work-time-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.st-work-time-actions button{border:1px solid rgba(105,72,45,.2);border-radius:12px;background:rgba(255,255,255,.48);color:#5b341f;font-size:12px;font-weight:950;padding:10px;cursor:pointer}
+.st-work-time-actions button.primary{border-color:rgba(14,165,233,.28);background:linear-gradient(135deg,#0ea5e9,#d97706);color:white;box-shadow:0 12px 22px rgba(14,165,233,.15)}
+.st-work-time-actions button:disabled{opacity:.48;cursor:not-allowed;filter:saturate(.7);box-shadow:none}
 .st-encounter-app{background:linear-gradient(180deg,#fff9f3 0%,#f6fbf5 48%,#edf7ff 100%)!important;color:#352b25}
 .st-encounter-app .st-lite-header{padding:9px 12px 7px;background:transparent;border-bottom:0;color:#352b25}
 .st-encounter-app .st-lite-title{display:none!important}
 .st-encounter-app .st-lite-back{color:#8a3a1c;border-color:rgba(138,58,28,.2);background:rgba(255,255,255,.74)}
 .st-encounter-app .st-lite-body{gap:8px;padding:9px 12px 15px}
+.st-encounter-app.is-encounter-confirm-open .st-lite-body{overflow:hidden}
 .st-encounter-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;border:1px solid rgba(127,88,47,.13);border-radius:8px;background:rgba(255,255,255,.58);padding:3px;box-shadow:0 8px 20px rgba(75,54,35,.07)}
 .st-encounter-tab{height:29px;border:0;border-radius:6px;background:transparent;color:rgba(70,57,47,.64);font-size:12px;font-weight:950;cursor:pointer}
 .st-encounter-tab.active{background:linear-gradient(135deg,#ef6f61,#d99b37);color:#fff;box-shadow:0 8px 16px rgba(217,115,70,.2)}
@@ -7152,8 +8077,9 @@ button.st-work-notice{cursor:pointer}
 .st-encounter-package.is-used{opacity:.68;cursor:default;filter:saturate(.72)}
 .st-encounter-package.is-conflict{border-color:rgba(225,29,72,.22);background:rgba(255,241,242,.74)}
 .st-encounter-package.is-used .st-encounter-package-open:active{transform:none}
-.st-encounter-card-manage{position:absolute;right:7px;bottom:6px;z-index:2}
+.st-encounter-card-manage{position:absolute;right:7px;bottom:6px;z-index:2;display:flex;align-items:center;gap:5px}
 .st-encounter-card-manage button{height:22px;border:1px solid rgba(127,88,47,.14);border-radius:999px;background:rgba(255,250,243,.82);color:rgba(70,57,47,.62);padding:0 8px;font-size:9px;font-weight:950;cursor:pointer;box-shadow:0 4px 10px rgba(75,54,35,.08)}
+.st-encounter-card-manage button.danger{border-color:rgba(190,18,60,.18);background:rgba(255,241,242,.88);color:#be123c}
 .st-encounter-card-manage button:active{transform:scale(.96)}
 .st-encounter-card-manage.is-role{position:static;justify-self:start}
 .st-encounter-cover{height:100%;min-height:98px;background:linear-gradient(135deg,#fff6ed,#e8f7f2);display:grid;place-items:center;overflow:hidden;color:rgba(70,57,47,.46);font-size:11px;font-weight:900}
@@ -7175,7 +8101,7 @@ button.st-work-notice{cursor:pointer}
 .st-encounter-random button{height:31px;border:1px solid rgba(217,155,55,.28);border-radius:8px;background:linear-gradient(135deg,#ef6f61,#d99b37);color:#fff;font-size:12px;font-weight:950;cursor:pointer;box-shadow:0 8px 16px rgba(217,115,70,.18)}
 .st-encounter-random button:disabled{opacity:.45;cursor:not-allowed;filter:grayscale(.32);box-shadow:none}
 .st-encounter-random span{min-width:0;color:rgba(70,57,47,.64);font-size:10px;font-weight:900;line-height:1.35;text-align:right}
-.st-encounter-confirm{position:absolute;inset:0;z-index:30;display:grid;place-items:center;padding:18px;background:rgba(44,28,18,.38);backdrop-filter:blur(3px)}
+.st-encounter-confirm{position:absolute;inset:0;z-index:260;display:grid;place-items:center;padding:18px;background:rgba(44,28,18,.38);backdrop-filter:blur(3px)}
 .st-encounter-confirm-card{width:min(100%,304px);border:1px solid rgba(127,88,47,.24);border-radius:8px;background:linear-gradient(180deg,#fffaf0,#f6ead7);box-shadow:0 18px 38px rgba(24,14,9,.34),inset 0 1px 0 rgba(255,255,255,.58);padding:13px;display:grid;gap:10px;color:#352b25}
 .st-encounter-confirm-card h3{margin:0;color:#352b25;font-size:16px;line-height:1.22;font-weight:950}
 .st-encounter-confirm-copy{display:grid;gap:7px;max-height:220px;overflow:auto;scrollbar-width:none}
@@ -7221,7 +8147,9 @@ button.st-work-notice{cursor:pointer}
 .st-encounter-name-option{width:100%;height:30px;border:1px solid rgba(127,88,47,.14);border-radius:8px;background:rgba(255,250,243,.66);color:rgba(70,57,47,.72);padding:0 9px;text-align:left;font-size:12px;font-weight:900;display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer}
 .st-encounter-name-option.active{border-color:rgba(14,116,144,.25);background:rgba(224,247,244,.75);color:#244c4a}
 .st-encounter-role-preview{display:grid;grid-template-columns:78px minmax(0,1fr);gap:9px;align-items:start}
+.st-encounter-role-preview-images{width:78px;display:grid;grid-template-columns:1fr 1fr;gap:4px}
 .st-encounter-role-preview-image{width:78px;height:96px;border:1px solid rgba(127,88,47,.14);border-radius:8px;background:#fff;display:grid;place-items:center;overflow:hidden;color:rgba(70,57,47,.46);font-size:10px;font-weight:900}
+.st-encounter-role-preview-images .st-encounter-role-preview-image{width:auto;height:auto;aspect-ratio:4/5;border-radius:6px;font-size:9px}
 .st-encounter-role-preview-image img{width:100%;height:100%;object-fit:cover;display:block}
 .st-encounter-role-preview-body{min-width:0;display:grid;gap:6px}
 .st-encounter-role-preview-body strong{color:#352b25;font-size:14px;line-height:1.25}
@@ -7235,11 +8163,21 @@ button.st-work-notice{cursor:pointer}
 .st-encounter-edit-tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .st-encounter-edit-tabs button{height:30px;border:1px solid rgba(127,88,47,.14);border-radius:8px;background:rgba(255,255,255,.66);color:rgba(70,57,47,.66);font-size:11px;font-weight:950;cursor:pointer}
 .st-encounter-edit-tabs button.active{border-color:rgba(217,155,55,.28);background:linear-gradient(135deg,rgba(217,155,55,.16),rgba(14,116,144,.12));color:#4b3b24}
-.st-encounter-role-content-tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.st-encounter-role-content-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
 .st-encounter-role-content-tabs button{height:30px;border:1px solid rgba(127,88,47,.14);border-radius:8px;background:rgba(255,255,255,.62);color:rgba(70,57,47,.62);font-size:11px;font-weight:950;cursor:pointer}
 .st-encounter-role-content-tabs button.active{border-color:rgba(14,116,144,.24);background:linear-gradient(135deg,rgba(14,116,144,.14),rgba(217,155,55,.12));color:#244c4a}
 .st-encounter-role-pane{display:none;gap:8px}
 .st-encounter-role-pane.active{display:grid}
+.st-encounter-affection-chain{display:grid;gap:8px;border:1px solid rgba(217,155,55,.18);border-radius:8px;background:linear-gradient(135deg,rgba(255,250,243,.76),rgba(255,255,255,.48));padding:8px}
+.st-encounter-affection-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.st-encounter-affection-head strong{color:#352b25;font-size:12px;font-weight:950}
+.st-encounter-affection-head span{color:rgba(70,57,47,.56);font-size:10px;font-weight:850;text-align:right}
+.st-encounter-affection-card{display:grid;grid-template-columns:58px minmax(0,1fr);gap:8px;border:1px solid rgba(127,88,47,.12);border-radius:8px;background:rgba(255,251,235,.72);padding:7px;align-items:start}
+.st-encounter-affection-mark{min-height:70px;border:1px solid rgba(217,155,55,.18);border-radius:8px;background:radial-gradient(circle at 50% 22%,rgba(255,255,255,.86),rgba(255,240,213,.74));display:grid;place-items:center;align-content:center;gap:4px;color:#8a3f1f;box-shadow:inset 0 1px 0 rgba(255,255,255,.72)}
+.st-encounter-affection-mark b{font-family:KaiTi,"STKaiti","Songti SC",serif;font-size:24px;line-height:1;font-weight:950}
+.st-encounter-affection-mark small{color:rgba(124,50,25,.62);font-size:9px;line-height:1.15;font-weight:950;white-space:nowrap}
+.st-encounter-affection-fields{min-width:0;display:grid;gap:7px}
+.st-encounter-affection-fields textarea{min-height:72px}
 .st-encounter-role-select-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:6px;align-items:center}
 .st-encounter-role-select{min-width:0;height:31px;border:1px solid rgba(127,88,47,.16);border-radius:8px;background:rgba(255,250,243,.78);color:#352b25;padding:0 8px;font-size:12px;font-weight:900;outline:none}
 .st-encounter-role-select:focus{border-color:rgba(217,155,55,.42);box-shadow:0 0 0 3px rgba(217,155,55,.12)}
@@ -7247,6 +8185,7 @@ button.st-work-notice{cursor:pointer}
 .st-encounter-actions.is-single{grid-template-columns:1fr}
 .st-encounter-button{height:33px;border:1px solid rgba(127,88,47,.16);border-radius:8px;background:rgba(255,255,255,.72);color:#7c3219;font-size:11px;font-weight:950;cursor:pointer;box-shadow:inset 0 1px 0 rgba(255,255,255,.8)}
 .st-encounter-button.primary{background:linear-gradient(135deg,#ef6f61,#d99b37);border-color:rgba(255,255,255,.38);color:white;box-shadow:0 10px 18px rgba(217,115,70,.2)}
+.st-encounter-button.danger{border-color:rgba(190,18,60,.2);background:rgba(255,241,242,.78);color:#be123c}
 .st-encounter-button:disabled{opacity:.45;cursor:not-allowed;filter:grayscale(.35);box-shadow:none}
 .st-encounter-button:not(:disabled):active{transform:scale(.98)}
 .st-encounter-status{min-height:16px;color:#0f766e;font-size:10px;line-height:1.45;font-weight:850}
@@ -7282,9 +8221,17 @@ button.st-work-notice{cursor:pointer}
 .st-encounter-role-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .st-encounter-role-head strong{color:#352b25;font-size:12px}
 .st-encounter-role-head button{height:24px;border:1px solid rgba(225,29,72,.2);border-radius:999px;background:rgba(255,228,230,.72);color:#be123c;font-size:10px;font-weight:900;padding:0 8px;cursor:pointer}
-.st-encounter-role-image-row{display:grid;grid-template-columns:58px 1fr;gap:8px;align-items:center}
+.st-encounter-role-image-row{display:grid;grid-template-columns:1fr;gap:8px;align-items:start}
 .st-encounter-role-image{width:58px;height:58px;border:1px solid rgba(127,88,47,.14);border-radius:8px;background:#fff;overflow:hidden;display:grid;place-items:center;color:rgba(70,57,47,.46);font-size:9px;font-weight:900;text-align:center}
 .st-encounter-role-image img{width:100%;height:100%;object-fit:cover;display:block}
+.st-encounter-role-image-slots{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.st-encounter-role-image-slot{min-width:0;border:1px solid rgba(127,88,47,.13);border-radius:8px;background:rgba(255,250,243,.68);padding:7px;display:grid;gap:6px}
+.st-encounter-role-image-slot-preview{aspect-ratio:4/5;border:1px solid rgba(127,88,47,.14);border-radius:6px;background:#fff;display:grid;place-items:center;overflow:hidden;color:rgba(70,57,47,.42);font-size:10px;font-weight:900;text-align:center}
+.st-encounter-role-image-slot-preview img{width:100%;height:100%;object-fit:cover;display:block}
+.st-encounter-role-image-slot-actions{display:grid;grid-template-columns:1fr auto;gap:5px;align-items:center}
+.st-encounter-role-image-slot-actions label{min-width:0;height:25px;border:1px solid rgba(127,88,47,.16);border-radius:6px;background:rgba(255,255,255,.7);color:#7c3219;font-size:10px;font-weight:950;display:grid;place-items:center;cursor:pointer}
+.st-encounter-role-image-slot-actions button{height:25px;border:1px solid rgba(225,29,72,.18);border-radius:6px;background:rgba(255,228,230,.68);color:#be123c;font-size:10px;font-weight:950;padding:0 7px;cursor:pointer}
+.st-encounter-role-image-slot-actions button:disabled{opacity:.38;cursor:not-allowed}
 .st-encounter-pager{display:grid;grid-template-columns:34px 1fr 34px;gap:7px;align-items:center}
 .st-encounter-pager button{height:30px;border:1px solid rgba(127,88,47,.14);border-radius:8px;background:rgba(255,255,255,.72);color:#7c3219;font-size:15px;font-weight:950;cursor:pointer}
 .st-encounter-pager button:disabled{opacity:.35;cursor:not-allowed}
@@ -7301,7 +8248,14 @@ button.st-work-notice{cursor:pointer}
 .st-encounter-shop-row{display:grid;grid-template-columns:92px minmax(0,1fr);gap:7px}
 .st-encounter-shop-row input{min-width:0;height:33px;border:1px solid rgba(127,88,47,.14);border-radius:8px;background:rgba(255,251,235,.75);color:#352b25;padding:0 9px;font-size:12px;font-weight:900;outline:none}
 .st-encounter-shop-row button{min-height:33px}
-@media (max-width:420px){.st-encounter-grid2{grid-template-columns:1fr}.st-encounter-package{grid-template-columns:88px minmax(0,1fr)}.st-encounter-detail-hero{grid-template-columns:100px minmax(0,1fr)}.st-encounter-actions{grid-template-columns:1fr}.st-encounter-kv{grid-template-columns:1fr}.st-encounter-role-preview{grid-template-columns:70px minmax(0,1fr)}.st-encounter-role-preview-image{width:70px;height:88px}}
+.st-encounter-shop-pass-list{display:grid;gap:7px}
+.st-encounter-shop-pass{display:grid;grid-template-columns:minmax(0,1fr) auto 72px;gap:7px;align-items:center;border:1px solid rgba(127,88,47,.12);border-radius:8px;background:rgba(255,250,243,.68);padding:8px}
+.st-encounter-shop-pass div{min-width:0;display:grid;gap:2px}
+.st-encounter-shop-pass strong{min-width:0;color:#352b25;font-size:12px;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.st-encounter-shop-pass small{min-width:0;color:rgba(70,57,47,.56);font-size:10px;font-weight:850;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.st-encounter-shop-pass>span{border:1px solid rgba(14,116,144,.14);border-radius:999px;background:rgba(224,247,244,.55);color:#244c4a;font-size:10px;font-weight:900;padding:4px 7px;white-space:nowrap}
+.st-encounter-shop-pass button{height:30px}
+@media (max-width:420px){.st-encounter-grid2{grid-template-columns:1fr}.st-encounter-package{grid-template-columns:88px minmax(0,1fr)}.st-encounter-detail-hero{grid-template-columns:100px minmax(0,1fr)}.st-encounter-actions{grid-template-columns:1fr}.st-encounter-kv{grid-template-columns:1fr}.st-encounter-role-preview{grid-template-columns:70px minmax(0,1fr)}.st-encounter-role-preview-image{width:70px;height:88px}.st-encounter-role-preview-images{width:70px}.st-encounter-role-preview-images .st-encounter-role-preview-image{width:auto;height:auto}}
 @media (max-width:420px){.st-location-summary{grid-template-columns:minmax(0,1fr) 32px 18px}.st-location-suggest{grid-column:1 / -1}.st-graph-delete{justify-self:stretch}.st-location-title{flex-wrap:wrap}}
 #st-operation-workspace{box-sizing:border-box;width:100%;max-width:680px;min-height:0;margin:0;display:grid;grid-template-columns:minmax(320px,420px) minmax(150px,1fr);gap:8px;align-items:start;justify-content:start;padding:4px 0 4px 4px}
 #st-operation-workspace>#app{min-width:0;width:100%}
@@ -7329,6 +8283,13 @@ button.st-work-notice{cursor:pointer}
 .st-operation-panel-advice{flex:0 0 auto;margin:0 9px 8px;border:1px solid rgba(250,204,21,.16);border-radius:12px;background:rgba(250,204,21,.065);color:rgba(253,230,138,.78);padding:7px 8px;font-size:10px;line-height:1.45}
 .st-operation-panel-advice strong{color:rgba(254,240,138,.96);font-weight:950}
 .st-operation-panel-advice.is-strong{border-color:rgba(251,113,133,.2);background:rgba(251,113,133,.07);color:rgba(254,205,211,.82)}
+.st-operation-panel-advice.is-event{border-color:rgba(244,114,182,.2);background:rgba(236,72,153,.075);color:rgba(251,207,232,.86)}
+.st-operation-panel-advice.is-event strong{color:#fbcfe8}
+.st-operation-note{flex:0 0 auto;margin:0 9px 8px;border:1px solid rgba(148,163,184,.14);border-radius:12px;background:rgba(15,23,42,.32);display:grid;gap:5px;padding:7px 8px}
+.st-operation-note span{color:rgba(203,213,225,.64);font-size:10px;font-weight:900;line-height:1}
+.st-operation-note textarea{width:100%;min-height:46px;max-height:92px;resize:vertical;border:1px solid rgba(255,255,255,.08);border-radius:10px;background:rgba(2,6,23,.46);color:rgba(241,245,249,.9);outline:none;padding:7px 8px;font:11px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.st-operation-note textarea:focus{border-color:rgba(56,189,248,.5);box-shadow:0 0 0 3px rgba(56,189,248,.12)}
+.st-operation-note textarea::placeholder{color:rgba(148,163,184,.48)}
 .st-operation-item{min-width:0;border:1px solid rgba(255,255,255,.1);border-radius:13px;background:rgba(255,255,255,.055);padding:8px;box-shadow:0 8px 18px rgba(0,0,0,.13);display:grid;gap:5px}
 .st-operation-item-top{display:flex;align-items:flex-start;justify-content:space-between;gap:6px}
 .st-operation-item-main{min-width:0;display:grid;gap:3px}
@@ -7350,7 +8311,19 @@ button.st-work-notice{cursor:pointer}
 .st-operation-panel-actions button.primary{background:linear-gradient(135deg,#8b5cf6,#ec4899);border-color:rgba(255,255,255,.18);color:white;box-shadow:0 10px 22px rgba(131,24,67,.22)}
 .st-operation-panel-actions button:disabled{opacity:.42;cursor:not-allowed;box-shadow:none;filter:grayscale(.35)}
 .st-operation-panel-actions button:not(:disabled):active{transform:scale(.98)}
+.st-operation-float-toggle{border-color:rgba(125,211,252,.2)!important;background:rgba(14,165,233,.1)!important;color:#bae6fd!important}
+#st-operation-float-ball{position:fixed;left:var(--st-operation-float-left,calc(100vw - 72px));top:var(--st-operation-float-top,62vh);z-index:2147482600;width:54px;height:54px;border:1px solid rgba(94,234,212,.42);border-radius:999px;background:linear-gradient(180deg,rgba(15,23,42,.96),rgba(17,34,64,.96));color:#dff7ff;box-shadow:0 16px 34px rgba(0,0,0,.42),inset 0 0 0 1px rgba(255,255,255,.08);display:none;grid-template-rows:auto auto;align-content:center;align-items:center;justify-items:center;gap:1px;padding:5px;font:850 10px/1.05 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:0;cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none}
+#st-operation-float-ball .st-operation-float-label{display:block;color:rgba(223,247,255,.82);font-size:9px;font-weight:900}
+#st-operation-float-ball .st-operation-float-count{min-width:24px;height:20px;border-radius:999px;display:grid;place-items:center;background:rgba(34,211,238,.2);color:#a5f3fc;font-size:13px;font-weight:950;line-height:1}
+#st-operation-float-ball.is-open{background:linear-gradient(180deg,rgba(30,41,59,.98),rgba(8,47,73,.98));border-color:rgba(125,211,252,.72)}
+#st-operation-float-ball.is-dragging{transition:none;box-shadow:0 18px 38px rgba(0,0,0,.5),0 0 0 4px rgba(34,211,238,.12),inset 0 0 0 1px rgba(255,255,255,.1)}
+body.st-operation-floating #st-operation-workspace{max-width:430px;grid-template-columns:minmax(320px,420px);padding-right:4px}
+body.st-operation-floating #st-operation-side-panel{position:fixed!important;left:auto!important;top:12px!important;right:calc(-1 * min(360px,calc(100vw - 62px)) - 16px)!important;z-index:2147482500;width:min(360px,calc(100vw - 62px))!important;max-width:min(360px,calc(100vw - 62px))!important;height:calc(100vh - 24px)!important;max-height:calc(100vh - 24px)!important;min-height:0!important;border-radius:18px 0 0 18px!important;opacity:0;pointer-events:none;transition:right 180ms ease,opacity 160ms ease}
+body.st-operation-floating.st-operation-floating-open #st-operation-side-panel{right:10px!important;opacity:1;pointer-events:auto}
+body.st-operation-floating #st-operation-float-ball{display:grid}
+html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .st-operation-float-toggle{display:none!important}
 @media (max-width:500px){#st-operation-workspace{width:min(100%,430px);grid-template-columns:1fr;gap:8px;padding:6px;min-height:0}#st-operation-side-panel{height:auto!important;max-height:320px!important;border-radius:18px}.st-operation-panel-actions{grid-template-columns:1fr 1.2fr}.st-operation-panel-preview pre{max-height:82px}}
+@media (max-width:500px){body.st-operation-floating #st-operation-side-panel{height:calc(100vh - 24px)!important;max-height:calc(100vh - 24px)!important;border-radius:18px 0 0 18px!important}.st-operation-floating .st-operation-panel-actions{grid-template-columns:1fr}}
 .st-operation-warning{position:fixed;inset:0;z-index:2147483647;display:grid;place-items:center;background:rgba(2,6,23,.58);backdrop-filter:blur(8px);padding:22px}
 .st-operation-warning-card{width:min(340px,calc(100vw - 44px));border:1px solid rgba(244,114,182,.35);border-radius:20px;background:linear-gradient(180deg,rgba(15,23,42,.98),rgba(2,6,23,.96));box-shadow:0 24px 70px rgba(0,0,0,.48);padding:16px;color:#f8fafc}
 .st-operation-warning-card strong{display:block;font-size:15px;line-height:1.25}
@@ -7400,9 +8373,11 @@ button.st-work-notice{cursor:pointer}
 .st-hypnosis-redrawer-head strong{font-size:13px;color:#fff}
 .st-hypnosis-redrawer-head span{font-size:10px;color:rgba(203,213,225,.6);font-weight:850}
 .st-hypnosis-redrawer-grid{display:grid;grid-template-columns:82px minmax(0,1fr) minmax(0,1fr);gap:8px}
+.st-hypnosis-redrawer-grid .st-hypnosis-drawer-wide{grid-column:1 / -1}
 .st-hypnosis-redrawer input{min-width:0;border:1px solid rgba(255,255,255,.1);border-radius:12px;background:rgba(2,6,23,.62);color:#f8fafc;padding:9px 10px;font-size:13px;font-weight:900;outline:none}
 .st-hypnosis-redrawer button{min-width:0;border:1px solid rgba(255,255,255,.1);border-radius:12px;background:rgba(255,255,255,.07);color:#e5e7eb;padding:9px 10px;font-size:11px;font-weight:950;cursor:pointer}
 .st-hypnosis-redrawer button.primary{border-color:rgba(56,189,248,.26);background:linear-gradient(135deg,rgba(14,165,233,.34),rgba(168,85,247,.28));color:white}
+.st-hypnosis-redrawer button small{display:inline-block;margin-left:5px;color:rgba(226,232,240,.76);font-size:9px;font-weight:950;line-height:1;white-space:nowrap}
 .st-hypnosis-redrawer button:disabled{opacity:.42;cursor:not-allowed;filter:grayscale(.28)}
 .st-hypnosis-vips{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
 .st-hypnosis-vip{display:grid;gap:2px;text-align:left}
@@ -7438,12 +8413,12 @@ button.st-work-notice{cursor:pointer}
 .st-profile-app .st-lite-back{border-color:rgba(81,64,49,.14);background:rgba(247,241,229,.2);color:#5a4737;box-shadow:none}
 .st-profile-app .st-app-island{max-width:300px}
 .st-profile-body{padding:0;display:grid;place-items:stretch;background:radial-gradient(circle at 22% 10%,rgba(255,238,184,.18),transparent 30%),linear-gradient(135deg,#6f4428,#3f2619 58%,#21140e)}
-.st-profile-body.is-desk{padding:58px 18px 18px;align-content:center}
+.st-profile-body.is-desk{position:relative;padding:58px 18px 42px;align-content:center}
 .st-profile-body.is-detail{padding:34px 14px 4px;place-items:center;overflow:hidden}
 .st-profile-desk{position:relative;width:100%;height:100%;min-height:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr));gap:12px 14px;align-items:center}
 .st-profile-desk-wrap{position:relative;min-width:0;min-height:0;width:min(100%,128px);justify-self:center;align-self:center;aspect-ratio:336/520;transform:rotate(var(--rot,0deg))}
 .st-profile-desk-wrap:nth-child(1){--rot:-5deg}.st-profile-desk-wrap:nth-child(2){--rot:4deg}.st-profile-desk-wrap:nth-child(3){--rot:2deg}.st-profile-desk-wrap:nth-child(4){--rot:-3deg}.st-profile-desk-wrap:nth-child(5){--rot:5deg}.st-profile-desk-wrap:nth-child(6){--rot:-2deg}
-.st-profile-desk-card{position:absolute;inset:0;width:100%;height:100%;min-width:0;border:1px solid rgba(81,64,49,.28);border-radius:5px;background:#f7f1e5;color:#403126;padding:8px 7px 7px;box-shadow:0 14px 25px rgba(24,14,9,.28),inset 0 0 0 3px rgba(255,255,255,.34);font-family:"Songti SC","STSong","Noto Serif SC",serif;text-align:left;cursor:pointer;overflow:hidden;display:grid;grid-template-rows:auto auto minmax(0,1fr) auto auto;gap:4px}
+.st-profile-desk-card{position:absolute;inset:0;width:100%;height:100%;min-width:0;border:1px solid rgba(81,64,49,.28);border-radius:5px;background:#f7f1e5;color:#403126;padding:8px 7px 7px;box-shadow:0 14px 25px rgba(24,14,9,.28),inset 0 0 0 3px rgba(255,255,255,.34);font-family:"Songti SC","STSong","Noto Serif SC",serif;text-align:left;cursor:pointer;overflow:hidden;display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;gap:4px}
 .st-profile-mini-head{text-align:center;color:#403126;font-size:10px;font-weight:950;letter-spacing:.08em;line-height:1}
 .st-profile-mini-picker{height:18px;border:1px solid rgba(81,64,49,.18);border-radius:999px;background:rgba(247,241,229,.8);display:grid;grid-template-columns:minmax(0,1fr) 16px;align-items:center;padding:0 5px;gap:4px}
 .st-profile-mini-picker strong{min-width:0;color:#403126;font-size:10px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -7458,17 +8433,23 @@ button.st-work-notice{cursor:pointer}
 .st-profile-renamed-new.is-private,.st-person-picker-nickname.is-private,.st-profile-info-nickname.is-private{color:#803727}
 .st-profile-renamed-new.is-recognized,.st-person-picker-nickname.is-recognized,.st-profile-info-nickname.is-recognized{color:#2f6d62}
 .st-profile-mini-name{font-size:inherit}
-.st-profile-mini-photo{min-height:0;width:70%;max-width:76px;aspect-ratio:4/5;justify-self:center;border:2px double rgba(81,64,49,.38);background:#eee8dc;display:grid;place-items:center;overflow:hidden}
+.st-profile-mini-photo-tabs{min-height:0;display:grid;grid-template-columns:18px minmax(0,1fr) 18px;align-items:center;gap:2px}
+.st-profile-mini-photo{min-height:0;width:100%;max-width:76px;aspect-ratio:4/5;justify-self:center;border:2px double rgba(81,64,49,.38);background:#eee8dc;display:grid;place-items:center;overflow:hidden}
 .st-profile-mini-photo img{width:100%;height:100%;object-fit:cover;display:block}
 .st-profile-mini-photo span{font-size:8px;color:rgba(68,54,42,.42);text-align:center;line-height:1.25}
-.st-profile-mini-tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:2px}
-.st-profile-mini-tabs span{height:15px;border:1px solid rgba(81,64,49,.16);border-radius:999px;background:rgba(247,241,229,.74);color:rgba(68,54,42,.52);font-size:7px;font-weight:900;line-height:13px;text-align:center;overflow:hidden}
-.st-profile-mini-tabs span:first-child{background:#5c4839;color:#fff;border-color:#5c4839}
+.st-profile-mini-tabs{display:grid;grid-template-columns:1fr;gap:2px;width:18px;margin:0}
+.st-profile-mini-tabs-left{justify-self:end}
+.st-profile-mini-tabs-right{justify-self:start}
+.st-profile-mini-tabs span{height:14px;border:1px solid rgba(81,64,49,.16);border-radius:999px;background:rgba(247,241,229,.74);color:rgba(68,54,42,.52);font-size:7px;font-weight:900;line-height:12px;text-align:center;overflow:hidden}
+.st-profile-mini-tabs-left span:first-child{background:#5c4839;color:#fff;border-color:#5c4839}
 .st-profile-mini-lines{display:grid;gap:3px;min-width:0}
 .st-profile-mini-line{display:grid;grid-template-columns:22px minmax(0,1fr);gap:4px;align-items:start;min-width:0}
 .st-profile-mini-line b{color:#403126;font-size:7px;line-height:1.25;white-space:nowrap}
 .st-profile-mini-line span{color:rgba(68,54,42,.66);font-size:7px;line-height:1.25;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
 .st-profile-desk-empty{align-self:center;justify-self:center;color:rgba(255,248,237,.72);font-size:13px;font-weight:850}
+.st-profile-desk-pager{position:absolute;z-index:5;left:50%;bottom:10px;transform:translateX(-50%);display:flex;align-items:center;justify-content:center;gap:8px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;pointer-events:none}
+.st-profile-desk-pager button{width:27px;height:27px;border:1px solid rgba(247,241,229,.28);border-radius:999px;background:rgba(247,241,229,.18);color:#fff8ed;font-size:18px;font-weight:950;line-height:1;cursor:pointer;box-shadow:0 8px 18px rgba(24,14,9,.2),inset 0 1px 0 rgba(255,255,255,.18);backdrop-filter:blur(3px);pointer-events:auto}
+.st-profile-desk-pager span{min-width:44px;border:1px solid rgba(247,241,229,.22);border-radius:999px;background:rgba(34,21,15,.36);color:#fff8ed;padding:5px 9px;font-size:10px;font-weight:950;text-align:center;box-shadow:0 8px 18px rgba(24,14,9,.18)}
 .st-profile-detail-stage{position:relative;width:100%;height:100%;display:grid;place-items:start center}
 .st-profile-paper-stack{position:absolute;inset:12px -4px 8px -4px;pointer-events:none;z-index:0}
 .st-profile-paper-stack::before,.st-profile-paper-stack::after,.st-profile-paper-stack span{content:"";position:absolute;border:1px solid rgba(81,64,49,.22);border-radius:5px;background:#eee4d3;box-shadow:0 12px 26px rgba(24,14,9,.24);pointer-events:none}
@@ -7488,8 +8469,10 @@ button.st-work-notice{cursor:pointer}
 .st-person-desk-return span{font-size:12px;line-height:1}
 .st-person-desk-return:hover{background:rgba(247,241,229,.9);color:rgba(61,47,37,.92)}
 .st-person-desk-return:active{transform:scale(.96)}
+.st-person-photo-tabs-wrap{position:relative;z-index:1;display:grid;grid-template-columns:48px minmax(0,1fr) 48px;align-items:center;gap:4px;width:100%;max-width:306px;margin:0 auto 10px}
 .st-person-photo-wrap{position:relative;z-index:1;width:60%;max-width:190px;margin:0 auto 6px}
 .st-profile-app .st-person-photo-wrap{position:static;width:60%;max-width:190px;margin:0 auto 6px}
+.st-person-photo-tabs-wrap .st-person-photo-wrap,.st-profile-app .st-person-photo-tabs-wrap .st-person-photo-wrap{width:100%;max-width:190px;margin:0 auto}
 .st-person-paper-nav{top:50%;width:28px;height:54px;border-radius:999px;font-size:30px;line-height:1;transform:translateY(-50%)}
 .st-person-paper-nav[data-profile-action="prev"]{left:-33px}
 .st-person-paper-nav[data-profile-action="next"]{right:-33px}
@@ -7534,15 +8517,19 @@ button.st-work-notice{cursor:pointer}
 .st-person-photo.is-static{cursor:default}
 .st-person-photo img{width:100%;height:100%;object-fit:cover;display:block}
 .st-person-photo-empty{width:100%;height:100%;display:grid;place-items:center;text-align:center;color:rgba(68,54,42,.42);font-size:12px;font-weight:900;letter-spacing:.1em;background:linear-gradient(135deg,rgba(255,255,255,.42),rgba(220,211,195,.45))}
-.st-person-tabs{position:relative;z-index:1;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;width:92%;max-width:300px;margin:0 auto 10px}
-.st-person-tab{min-width:0;height:28px;border:1px solid rgba(81,64,49,.32);border-radius:999px;background:rgba(247,241,229,.58);color:rgba(68,54,42,.68);font-size:11px;font-weight:900;letter-spacing:0;cursor:pointer;box-shadow:0 2px 8px rgba(60,45,32,.08);padding:0 4px;white-space:nowrap}
+.st-person-tabs{position:relative;z-index:1;display:grid;grid-template-columns:1fr;gap:9px;width:48px;margin:0}
+.st-person-tabs-left{justify-self:end}
+.st-person-tabs-right{justify-self:start}
+.st-person-tab{min-width:0;height:29px;border:1px solid rgba(81,64,49,.32);border-radius:999px;background:rgba(247,241,229,.58);color:rgba(68,54,42,.68);font-size:11px;font-weight:900;letter-spacing:0;cursor:pointer;box-shadow:0 2px 8px rgba(60,45,32,.08);padding:0 4px;white-space:nowrap}
 .st-person-tab.active{background:rgba(81,64,49,.9);color:#fff8ed;border-color:rgba(81,64,49,.7)}
 .st-person-lines{position:relative;z-index:1;display:grid;gap:0}
-.st-person-line{display:grid;grid-template-columns:76px minmax(0,1fr);gap:8px;align-items:start;min-height:29px;border-bottom:1px dashed rgba(81,64,49,.35);padding:5px 0}
+.st-person-line{position:relative;display:grid;grid-template-columns:76px minmax(0,1fr);gap:8px;align-items:start;min-height:29px;border-bottom:1px dashed rgba(81,64,49,.35);padding:5px 0}
 .st-person-line span{color:#33291f;font-size:15px;font-weight:900;letter-spacing:.12em;white-space:nowrap}
 .st-person-line strong{min-width:0;color:#30261d;font-size:15px;font-weight:650;line-height:1.36;white-space:pre-wrap;overflow-wrap:anywhere}
-.st-person-line.is-name{position:relative;align-items:start}
+.st-person-line.is-name{position:relative;z-index:2;align-items:start;overflow:visible}
+.st-person-line.is-name.has-nickname{height:48px;min-height:48px;align-items:center;overflow:hidden}
 .st-person-line.is-name strong{white-space:normal;overflow:visible;text-overflow:clip;font-size:15px;line-height:1.36;letter-spacing:0}
+.st-person-line.is-name.has-nickname strong{height:42px;display:flex;align-items:center;overflow:hidden}
 .st-profile-nickname-edit{position:absolute;left:-21px;top:5px;width:17px;height:17px;border:1px solid rgba(128,55,43,.26);border-radius:999px;background:rgba(247,241,229,.72);color:#7c2d24;display:grid;place-items:center;padding:0;cursor:pointer;box-shadow:0 2px 6px rgba(60,45,32,.1),inset 0 1px 0 rgba(255,255,255,.5)}
 .st-profile-nickname-edit::before{content:"✎";font-family:"HanziPen SC","Kaiti SC","STKaiti","YuKyokasho","Noto Serif SC",cursive;font-size:12px;font-weight:900;line-height:1;transform:rotate(-10deg)}
 .st-profile-nickname-edit:active{transform:scale(.94)}
@@ -7552,7 +8539,9 @@ button.st-work-notice{cursor:pointer}
 .st-profile-nickname-card p{margin:0;color:rgba(68,54,42,.64);font-size:11px;line-height:1.45}
 .st-profile-nickname-card label{display:grid;gap:5px;color:rgba(68,54,42,.68);font-size:11px;font-weight:900}
 .st-profile-nickname-card input[type="text"]{height:34px;border:1px solid rgba(81,64,49,.24);border-radius:7px;background:rgba(255,251,241,.78);color:#33291f;padding:0 9px;font:850 16px/1.2 "HanziPen SC","Kaiti SC","STKaiti","YuKyokasho","Noto Serif SC",cursive;outline:none;box-shadow:inset 0 1px 0 rgba(255,255,255,.52)}
-.st-profile-nickname-card input[type="text"]:focus{border-color:rgba(128,55,43,.44);box-shadow:0 0 0 3px rgba(128,55,43,.08),inset 0 1px 0 rgba(255,255,255,.52)}
+.st-profile-nickname-card textarea{width:100%;min-width:0;min-height:82px;border:1px solid rgba(81,64,49,.24);border-radius:7px;background:rgba(255,251,241,.78);color:#33291f;padding:8px 9px;font:800 13px/1.45 "Songti SC","STSong","Noto Serif SC",serif;outline:none;resize:vertical;box-shadow:inset 0 1px 0 rgba(255,255,255,.52)}
+.st-profile-nickname-card input[type="text"]:focus,.st-profile-nickname-card textarea:focus{border-color:rgba(128,55,43,.44);box-shadow:0 0 0 3px rgba(128,55,43,.08),inset 0 1px 0 rgba(255,255,255,.52)}
+.st-profile-nickname-card textarea::placeholder{color:rgba(68,54,42,.36)}
 .st-profile-nickname-modes{display:grid;grid-template-columns:1fr 1fr;gap:7px}
 .st-profile-nickname-mode{min-width:0;border:1px solid rgba(81,64,49,.16);border-radius:8px;background:rgba(255,251,241,.5);padding:7px 6px;cursor:pointer}
 .st-profile-nickname-mode input{position:absolute;opacity:0;pointer-events:none}
@@ -7563,15 +8552,38 @@ button.st-work-notice{cursor:pointer}
 .st-profile-nickname-actions button{height:32px;border:1px solid rgba(81,64,49,.18);border-radius:8px;background:rgba(255,251,241,.64);color:rgba(68,54,42,.78);font-size:12px;font-weight:950;cursor:pointer}
 .st-profile-nickname-actions button.primary{border-color:rgba(81,64,49,.42);background:#5c4839;color:#fff8ed}
 .st-profile-nickname-actions button:active{transform:scale(.98)}
+.st-profile-photo-dialog{position:absolute;inset:0;z-index:8;display:grid;place-items:center;padding:18px;background:rgba(44,28,18,.42);backdrop-filter:blur(2px)}
+.st-profile-photo-card{width:min(100%,316px);border:1px solid rgba(81,64,49,.34);border-radius:8px;background:#f7f1e5;color:#33291f;padding:13px;box-shadow:0 18px 36px rgba(24,14,9,.38),inset 0 0 0 2px rgba(255,255,255,.34);font-family:"Songti SC","STSong","Noto Serif SC",serif;display:grid;gap:10px}
+.st-profile-photo-card h3{margin:0;color:#403126;font-size:17px;line-height:1.2;font-weight:950;letter-spacing:.06em}
+.st-profile-photo-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.st-profile-photo-slot{position:relative;border:1px solid rgba(81,64,49,.18);border-radius:8px;background:rgba(255,251,241,.58);padding:7px;display:grid;gap:6px;min-width:0}
+.st-profile-photo-slot.is-selected{border-color:rgba(47,109,98,.46);box-shadow:0 0 0 2px rgba(47,109,98,.1),inset 0 1px 0 rgba(255,255,255,.52)}
+.st-profile-photo-preview{aspect-ratio:4/5;border:2px double rgba(81,64,49,.28);background:#eee8dc;display:grid;place-items:center;overflow:hidden;border-radius:4px;color:rgba(68,54,42,.42);font-size:11px;font-weight:900;text-align:center}
+.st-profile-photo-preview img{width:100%;height:100%;object-fit:cover;display:block}
+.st-profile-photo-slot.is-selected .st-profile-photo-preview::after{content:"选中";position:absolute;right:9px;top:9px;border:1px solid rgba(47,109,98,.34);border-radius:999px;background:rgba(247,241,229,.9);color:#2f6d62;padding:2px 6px;font-size:9px;font-weight:950;box-shadow:0 3px 8px rgba(47,109,98,.12)}
+.st-profile-photo-actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px}
+.st-profile-photo-actions button{min-width:0;height:24px;border:1px solid rgba(81,64,49,.18);border-radius:6px;background:rgba(255,251,241,.72);color:rgba(68,54,42,.78);font-size:10px;font-weight:950;cursor:pointer;padding:0 4px}
+.st-profile-photo-actions button.primary{border-color:rgba(47,109,98,.34);background:rgba(47,109,98,.1);color:#2f6d62}
+.st-profile-photo-actions button.danger{border-color:rgba(137,69,54,.22);background:rgba(137,69,54,.08);color:#7d3025}
+.st-profile-photo-actions button:disabled{opacity:.38;cursor:not-allowed}
+.st-profile-photo-footer{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.st-profile-photo-footer button{height:31px;border:1px solid rgba(81,64,49,.18);border-radius:8px;background:rgba(255,251,241,.64);color:rgba(68,54,42,.78);font-size:12px;font-weight:950;cursor:pointer}
+.st-profile-photo-footer button.danger{border-color:rgba(137,69,54,.22);background:rgba(137,69,54,.08);color:#7d3025}
+.st-profile-photo-warning{border:1px solid rgba(137,69,54,.22);border-radius:8px;background:rgba(137,69,54,.08);padding:8px;display:grid;gap:7px}
+.st-profile-photo-warning p{margin:0;color:#7d3025;font-size:11px;line-height:1.45;font-weight:900}
+.st-profile-photo-warning .st-profile-photo-footer{grid-template-columns:1fr 1fr}
 .st-person-line strong .st-profile-renamed{font-size:16px}
 .st-person-line.is-name strong .st-profile-renamed{display:inline-flex;align-items:baseline;gap:8px;max-width:100%;min-width:0;overflow:hidden;white-space:nowrap}
 .st-person-line.is-name strong .st-profile-renamed-old{flex:0 1 auto;max-width:62%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .st-person-line.is-name strong .st-profile-renamed-new{flex:0 0 auto;max-width:38%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.st-person-line.is-name strong .st-profile-info-name{display:grid;grid-template-columns:max-content minmax(0,1fr);align-items:start;column-gap:14px;max-width:100%;min-width:0;overflow:visible}
-.st-person-line.is-name strong .st-profile-info-nickname{display:block;min-width:0;color:#763126;font-family:"HanziPen SC","Kaiti SC","STKaiti","YuKyokasho","Noto Serif SC",cursive;font-size:18px;font-weight:850;line-height:1.16;white-space:normal;overflow-wrap:anywhere;word-break:break-word;transform:rotate(-.7deg);text-shadow:0 1px 0 rgba(255,255,255,.55)}
+.st-person-line.is-name strong .st-profile-info-name{display:grid;grid-template-columns:minmax(0,46%) minmax(0,1fr);align-items:center;column-gap:14px;width:100%;max-width:100%;min-width:0;height:42px;overflow:hidden}
+.st-person-line.is-name strong .st-profile-info-nickname{display:-webkit-box;min-width:0;max-height:38px;color:#763126;font-family:"HanziPen SC","Kaiti SC","STKaiti","YuKyokasho","Noto Serif SC",cursive;font-size:17px;font-weight:850;line-height:1.1;white-space:normal;overflow:hidden;overflow-wrap:anywhere;word-break:break-word;-webkit-line-clamp:2;-webkit-box-orient:vertical;transform:rotate(-.7deg);text-shadow:0 1px 0 rgba(255,255,255,.55)}
+.st-person-line.is-name strong .st-profile-info-nickname.is-fit-sm{font-size:15px;line-height:1.08}
+.st-person-line.is-name strong .st-profile-info-nickname.is-fit-xs{font-size:13px;line-height:1.04}
+.st-person-line.is-name strong .st-profile-info-nickname.is-fit-xxs{font-size:11px;line-height:1.02}
 .st-person-line.is-name strong .st-profile-info-nickname.is-private{color:#803727}
 .st-person-line.is-name strong .st-profile-info-nickname.is-recognized{color:#2f6d62}
-.st-person-line.is-name strong .st-profile-name-struck{position:relative;display:inline-block;max-width:100%;overflow:visible;text-overflow:clip;white-space:nowrap;color:rgba(48,38,29,.72)}
+.st-person-line.is-name strong .st-profile-name-struck{position:relative;display:inline-block;max-width:100%;overflow:hidden;text-overflow:clip;white-space:nowrap;color:rgba(48,38,29,.72)}
 .st-person-line.is-name strong .st-profile-name-struck::before,.st-person-line.is-name strong .st-profile-name-struck::after{content:"";position:absolute;left:-3px;right:-3px;height:2px;background:rgba(128,55,43,.72);border-radius:999px;pointer-events:none}
 .st-person-line.is-name strong .st-profile-name-struck::before{top:44%;box-shadow:0 5px 0 rgba(128,55,43,.42);transform:rotate(-2deg)}
 .st-person-line.is-name strong .st-profile-name-struck::after{top:59%;opacity:.58;transform:rotate(2deg)}
@@ -7583,6 +8595,25 @@ button.st-work-notice{cursor:pointer}
 .st-person-body-panel-head strong{color:#33291f;font-size:13px;font-weight:950;letter-spacing:.08em;white-space:nowrap}
 .st-person-body-panel-head span{min-width:0;color:rgba(68,54,42,.54);font-size:10px;font-weight:850;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .st-person-note{margin:0;color:#30261d;font-size:12px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}
+.st-profile-event-grid{display:grid;grid-template-columns:1fr;gap:6px}
+.st-profile-event-card{position:relative;min-width:0;border:1px solid rgba(81,64,49,.2);border-radius:9px;background:rgba(247,241,229,.7);padding:7px 8px;display:grid;grid-template-columns:34px minmax(0,1fr) 58px;align-items:center;gap:8px;justify-items:stretch;box-shadow:inset 0 1px 0 rgba(255,255,255,.46)}
+.st-profile-event-card.is-available{border-color:rgba(47,109,98,.32);background:linear-gradient(180deg,rgba(255,251,241,.82),rgba(226,246,238,.58))}
+.st-profile-event-card.is-pending{border-color:rgba(164,126,68,.32);background:linear-gradient(180deg,rgba(255,251,241,.82),rgba(248,232,190,.5))}
+.st-profile-event-card.is-done{border-color:rgba(128,55,43,.28);background:linear-gradient(180deg,rgba(255,251,241,.8),rgba(244,221,216,.5))}
+.st-profile-event-card.has-memory{border-color:rgba(47,109,98,.3);background:linear-gradient(180deg,rgba(255,251,241,.82),rgba(231,242,236,.58))}
+.st-profile-event-mark{position:relative;display:grid;place-items:center;width:31px;height:31px;border:1px solid rgba(81,64,49,.18);border-radius:999px;background:rgba(255,251,241,.68)}
+.st-profile-event-mark strong{color:#33291f;font-family:"Kaiti SC","STKaiti","HanziPen SC","Noto Serif SC",serif;font-size:15px;font-weight:950;line-height:1}
+.st-profile-event-mark i{position:absolute;right:-4px;top:-8px;color:#7e3026;font-family:"HanziPen SC","Kaiti SC","STKaiti",cursive;font-size:24px;font-style:normal;font-weight:950;line-height:1;transform:rotate(-11deg);text-shadow:0 1px 0 rgba(255,251,241,.7)}
+.st-profile-event-memory{width:100%;min-height:0;margin:0;color:rgba(68,54,42,.7);font-size:10px;font-weight:850;line-height:1.28;text-align:left;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.st-profile-event-memory.is-empty{color:rgba(68,54,42,.38);text-align:left}
+.st-profile-event-actions{width:100%;display:grid;gap:4px}
+.st-profile-event-card button{width:100%;min-width:0;height:27px;border:1px solid rgba(81,64,49,.2);border-radius:999px;background:rgba(255,251,241,.72);color:rgba(68,54,42,.72);font-size:10px;font-weight:950;cursor:pointer;padding:0 4px;white-space:nowrap}
+.st-profile-event-card.is-available button{border-color:rgba(47,109,98,.32);background:rgba(47,109,98,.1);color:#2f6d62}
+.st-profile-event-card button.is-recall{border-color:rgba(47,109,98,.34);background:rgba(47,109,98,.11);color:#2f6d62}
+.st-profile-event-card.is-pending button,.st-profile-event-card.is-done button,.st-profile-event-card.is-locked button:disabled{opacity:.58;cursor:not-allowed}
+.st-profile-event-card.is-done button.is-recall{opacity:1;cursor:pointer}
+.st-profile-event-card button:disabled{opacity:.5!important;cursor:not-allowed!important}
+.st-profile-event-notice{margin:7px 0 0;color:#7d3025;font-size:11px;font-weight:900;line-height:1.45}
 .st-profile-app .st-meter-grid{display:grid;grid-template-columns:1fr;gap:7px;padding:0}
 .st-profile-app .st-meter{min-width:0;border:1px solid rgba(81,64,49,.2);border-radius:8px;background:rgba(247,241,229,.72);padding:7px 8px;box-shadow:inset 0 1px 0 rgba(255,255,255,.45)}
 .st-profile-app .st-meter-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:6px}
@@ -7600,13 +8631,32 @@ button.st-work-notice{cursor:pointer}
 .st-profile-app .st-meter.is-overflow .st-meter-fill{width:100%;background:linear-gradient(90deg,#b94c44,#d28a43,#7d5f9c)}
 .st-profile-app .st-meter.is-overflow .st-meter-track::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(110deg,rgba(255,255,255,.46) 0 5px,transparent 5px 10px);mix-blend-mode:screen;opacity:.5}
 .st-profile-app .st-meter-overflow{display:inline-flex;align-items:center;border:1px solid rgba(137,69,54,.22);border-radius:999px;background:rgba(137,69,54,.1);padding:1px 5px;color:#7d3025;font-size:9px;font-weight:900}
+.st-profile-app .st-state-meter-grid{display:grid;grid-template-columns:1fr;gap:7px}
+.st-profile-app .st-state-meter{min-width:0;border:1px solid rgba(81,64,49,.2);border-radius:8px;background:rgba(247,241,229,.72);padding:7px 8px;box-shadow:inset 0 1px 0 rgba(255,255,255,.45)}
+.st-profile-app .st-state-meter-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:6px}
+.st-profile-app .st-state-meter-label{color:#33291f;font-size:12px;font-weight:950;white-space:nowrap}
+.st-profile-app .st-state-meter-value{display:inline-flex;align-items:center;gap:5px;color:#30261d;font-size:12px;font-weight:950;font-variant-numeric:tabular-nums;white-space:nowrap}
+.st-profile-app .st-state-meter-value small{border:1px solid rgba(81,64,49,.18);border-radius:999px;background:rgba(255,255,255,.38);padding:1px 5px;color:rgba(68,54,42,.58);font-size:9px;font-weight:900;line-height:1.2}
+.st-profile-app .st-state-meter-track{position:relative;height:13px;border:1px solid rgba(81,64,49,.16);border-radius:999px;background:linear-gradient(90deg,rgba(30,31,36,.16),rgba(77,60,45,.08) 48%,rgba(77,60,45,.12) 50%,rgba(77,60,45,.08) 52%,rgba(255,143,196,.18));overflow:hidden}
+.st-profile-app .st-state-meter-track::before{content:"";position:absolute;top:-2px;bottom:-2px;left:50%;width:2px;background:rgba(81,64,49,.32);border-radius:999px;transform:translateX(-50%);z-index:2}
+.st-profile-app .st-state-meter-track::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent 0 24.5%,rgba(81,64,49,.13) 24.5% 25.5%,transparent 25.5% 49.5%,rgba(81,64,49,.2) 49.5% 50.5%,transparent 50.5% 74.5%,rgba(81,64,49,.13) 74.5% 75.5%,transparent 75.5%);pointer-events:none}
+.st-profile-app .st-state-meter-fill{position:absolute;top:0;bottom:0;left:50%;width:var(--bar-width,0%);border-radius:999px;background:linear-gradient(90deg,var(--tone-soft,rgba(255,250,253,.86)),var(--tone,#ff8fc4));box-shadow:0 0 12px var(--tone-glow,rgba(255,143,196,.22));z-index:1;overflow:hidden}
+.st-profile-app .st-state-meter.is-negative .st-state-meter-fill{left:auto;right:50%;background:linear-gradient(90deg,var(--tone,#2d3138),var(--tone-soft,rgba(112,112,120,.48)))}
+.st-profile-app .st-state-meter-heart{position:absolute;top:50%;color:rgba(255,255,255,.92);font-family:Georgia,"Times New Roman","Noto Serif SC",serif;font-weight:900;line-height:1;transform:translate(-50%,-52%);text-shadow:none;pointer-events:none}
+.st-profile-app .st-state-meter-scale{display:none}
+.st-profile-app .st-state-meter-scale span:nth-child(3){text-align:right}
 .st-profile-radar-card{position:relative;margin-bottom:8px;border:1px solid rgba(81,64,49,.18);border-radius:10px;background:radial-gradient(circle at 50% 44%,rgba(250,224,150,.26),rgba(247,241,229,.56) 56%,rgba(230,217,197,.46));box-shadow:inset 0 1px 0 rgba(255,255,255,.48),0 8px 18px rgba(60,45,32,.08);padding:7px 8px 5px;display:grid;place-items:center;overflow:hidden}
+.st-profile-radar-card.is-sensitivity{background:radial-gradient(circle at 50% 50%,rgba(255,244,249,.58),rgba(255,238,246,.34) 46%,rgba(247,241,229,.44));}
 .st-profile-radar-card svg{width:100%;max-width:230px;height:auto;display:block;overflow:visible}
 .st-profile-radar-grid{fill:none;stroke:rgba(81,64,49,.18);stroke-width:1}
 .st-profile-radar-axis{stroke:rgba(81,64,49,.16);stroke-width:1}
 .st-profile-radar-shape{fill:rgba(139,92,48,.22);stroke:#8b5e3c;stroke-width:2;filter:drop-shadow(0 5px 7px rgba(67,45,28,.16))}
+.st-profile-radar-card.is-sensitivity .st-profile-radar-grid{stroke:rgba(255,143,196,.24);stroke-width:.7}
+.st-profile-radar-card.is-sensitivity .st-profile-radar-axis{stroke:rgba(255,143,196,.18);stroke-width:.55}
+.st-profile-radar-shape.is-sensitivity{fill:url(#st-profile-sensitivity-gradient);stroke:rgba(255,116,178,.66);stroke-width:1.15;filter:drop-shadow(0 5px 7px rgba(255,143,196,.13))}
 .st-profile-radar-dot{stroke:rgba(247,241,229,.62);stroke-width:.35}
-.st-profile-radar-dot.is-low{fill:#8fa09a}.st-profile-radar-dot.is-mid{fill:#6b8f71}.st-profile-radar-dot.is-high{fill:#c4914d}.st-profile-radar-dot.is-peak{fill:#c25d55}.st-profile-radar-dot.is-overflow{fill:#7d5f9c}.st-profile-radar-dot.is-negative{fill:#6f6258}
+.st-profile-radar-dot.is-low{fill:#8fa09a}.st-profile-radar-dot.is-mid{fill:#6b8f71}.st-profile-radar-dot.is-high{fill:#c4914d}.st-profile-radar-dot.is-peak{fill:#c25d55}.st-profile-radar-dot.is-overflow{fill:#7d5f9c}.st-profile-radar-dot.is-negative{fill:#6f6258}.st-profile-radar-dot.is-base{fill:#c4914d}.st-profile-radar-dot.is-bad{fill:#b94c44}
+.st-profile-sensitivity-heart{font:900 6.2px/1 Georgia,"Times New Roman","Noto Serif SC",serif;fill:rgba(255,58,153,.72)}
 .st-profile-radar-label{font:900 9px -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC",sans-serif;fill:rgba(51,41,31,.76);paint-order:stroke;stroke:rgba(247,241,229,.82);stroke-width:3px;stroke-linejoin:round}
 .st-profile-radar-value{font:900 8px ui-monospace,SFMono-Regular,Menlo,monospace;fill:rgba(68,54,42,.56);paint-order:stroke;stroke:rgba(247,241,229,.82);stroke-width:2px}
 .st-profile-radar-note{position:absolute;right:8px;bottom:6px;color:rgba(68,54,42,.46);font-size:8px;font-weight:900}
@@ -7614,7 +8664,14 @@ button.st-work-notice{cursor:pointer}
 .st-profile-app .st-count-chip{min-width:0;border:1px solid rgba(81,64,49,.18);border-radius:8px;background:rgba(247,241,229,.72);padding:7px 3px;text-align:center;box-shadow:inset 0 1px 0 rgba(255,255,255,.42)}
 .st-profile-app .st-count-chip strong{display:block;color:#30261d;font-size:14px;font-weight:950;line-height:1;font-variant-numeric:tabular-nums}
 .st-profile-app .st-count-chip span{display:block;margin-top:5px;color:rgba(68,54,42,.62);font-size:9px;font-weight:850;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.st-person-effects{display:grid;gap:9px}
+.st-person-effects{display:grid;gap:8px;min-width:0}
+.st-effect-segments{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.st-effect-segments button{min-width:0;height:30px;border:1px solid rgba(81,64,49,.2);border-radius:999px;background:rgba(247,241,229,.66);color:rgba(68,54,42,.68);display:flex;align-items:center;justify-content:center;gap:5px;padding:0 8px;font-size:11px;font-weight:950;cursor:pointer;box-shadow:inset 0 1px 0 rgba(255,255,255,.42)}
+.st-effect-segments button.active{border-color:rgba(81,64,49,.42);background:rgba(81,64,49,.9);color:#fff8ed}
+.st-effect-segments button span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.st-effect-segments button em{font-style:normal;border:1px solid currentColor;border-radius:999px;min-width:18px;height:18px;display:inline-grid;place-items:center;padding:0 4px;font-size:9px;line-height:1;opacity:.78}
+.st-effect-page-card{border:1px solid rgba(81,64,49,.22);border-radius:8px;background:rgba(247,241,229,.72);overflow:hidden;box-shadow:inset 0 1px 0 rgba(255,255,255,.42);min-width:0}
+.st-effect-page-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 9px;background:rgba(81,64,49,.08);border-bottom:1px dashed rgba(81,64,49,.2)}
 .st-profile-app .st-effect-card{border:1px solid rgba(81,64,49,.22);border-radius:8px;background:rgba(247,241,229,.72);overflow:hidden;box-shadow:inset 0 1px 0 rgba(255,255,255,.42)}
 .st-profile-app .st-effect-card summary{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 9px;background:rgba(81,64,49,.08);cursor:pointer;list-style:none;user-select:none}
 .st-profile-app .st-effect-card[open] summary{border-bottom:1px dashed rgba(81,64,49,.2)}
@@ -7623,11 +8680,12 @@ button.st-work-notice{cursor:pointer}
 .st-profile-app .st-effect-card[open] summary::after{transform:rotate(225deg);margin-top:4px}
 .st-profile-app .st-effect-title{display:flex;align-items:center;gap:7px;min-width:0}
 .st-profile-app .st-effect-dot{width:6px;height:6px;border-radius:999px;background:#6b8f71;box-shadow:0 0 10px rgba(107,143,113,.36)}
-.st-profile-app .st-effect-card.is-permanent .st-effect-dot{background:#8d6e9f;box-shadow:0 0 10px rgba(141,110,159,.34)}
+.st-profile-app .st-effect-card.is-permanent .st-effect-dot,.st-profile-app .st-effect-page-card.is-permanent .st-effect-dot{background:#8d6e9f;box-shadow:0 0 10px rgba(141,110,159,.34)}
 .st-profile-app .st-effect-title strong{min-width:0;color:#33291f;font-size:12px;font-weight:950;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .st-profile-app .st-effect-count{color:rgba(68,54,42,.58);font-size:10px;font-weight:850;white-space:nowrap}
 .st-profile-app .st-effect-empty{padding:11px 10px;color:rgba(68,54,42,.58);font-size:12px;line-height:1.45}
-.st-profile-app .st-effect-list{display:grid;gap:7px;padding:8px}
+.st-profile-app .st-effect-list{display:grid;gap:7px;padding:8px;max-height:236px;overflow:auto;scrollbar-width:none}
+.st-profile-app .st-effect-list::-webkit-scrollbar{display:none}
 .st-profile-app .st-effect-item{border:1px solid rgba(81,64,49,.16);border-radius:8px;background:rgba(255,251,241,.58);padding:8px}
 .st-profile-app .st-effect-item-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .st-profile-app .st-effect-item strong{display:block;min-width:0;color:#30261d;font-size:12px;line-height:1.35;overflow:hidden;text-overflow:ellipsis}
@@ -7636,6 +8694,9 @@ button.st-work-notice{cursor:pointer}
 .st-profile-app .st-effect-item p{margin:5px 0 0;color:rgba(48,38,29,.82);font-size:11px;line-height:1.48;white-space:pre-wrap;overflow-wrap:anywhere}
 .st-profile-app .st-effect-meta{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
 .st-profile-app .st-effect-meta span{border:1px solid rgba(81,64,49,.16);border-radius:999px;background:rgba(81,64,49,.06);color:rgba(68,54,42,.66);padding:3px 7px;font-size:10px;line-height:1.2}
+.st-effect-pager{display:flex;align-items:center;justify-content:center;gap:7px;padding:0 8px 8px}
+.st-effect-pager button{width:24px;height:24px;border:1px solid rgba(81,64,49,.2);border-radius:999px;background:rgba(255,251,241,.62);color:rgba(68,54,42,.72);font-size:18px;font-weight:950;line-height:1;cursor:pointer;box-shadow:inset 0 1px 0 rgba(255,255,255,.42)}
+.st-effect-pager span{min-width:46px;border:1px solid rgba(81,64,49,.16);border-radius:999px;background:rgba(81,64,49,.06);color:rgba(68,54,42,.58);padding:4px 8px;text-align:center;font:900 10px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 .st-person-page-count{position:relative;z-index:1;margin-top:12px;text-align:center;color:rgba(68,54,42,.48);font-size:11px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-weight:800}
 .st-person-delete-role{position:absolute;z-index:3;right:5px;bottom:5px;width:28px;height:22px;border:0;background:rgba(247,241,229,.72);border-radius:999px;color:rgba(151,40,31,.58);display:grid;place-items:center;cursor:pointer;opacity:.78;box-shadow:0 2px 8px rgba(55,28,18,.12)}
 .st-person-delete-role::before{content:"";position:absolute;left:9px;right:9px;bottom:5px;height:12px;border:2px solid currentColor;border-top:0;border-radius:0 0 4px 4px}
@@ -7674,7 +8735,7 @@ button.st-work-notice{cursor:pointer}
   }
 
   function clearPhoneInternalOverlays(root) {
-    root?.querySelectorAll?.(".st-mchan-internal-app,.st-calendar-lite-app,.st-timetable-app,.st-clock-app,.st-profile-app,.st-map-app,.st-school-app,.st-special-location-app,.st-monitor-app,.st-work-app,.st-encounter-app,.st-inventory-app,.st-reward-app,.st-hypnosis-lite-app,.st-help-app,.st-placeholder-app,.st-hypnosis-trance-overlay").forEach((element) => element.remove());
+    root?.querySelectorAll?.(".st-mchan-internal-app,.st-calendar-lite-app,.st-timetable-app,.st-clock-app,.st-profile-app,.st-map-app,.st-city-map-app,.st-school-app,.st-special-location-app,.st-monitor-app,.st-work-app,.st-encounter-app,.st-inventory-app,.st-reward-app,.st-hypnosis-lite-app,.st-help-app,.st-placeholder-app,.st-hypnosis-trance-overlay").forEach((element) => element.remove());
   }
 
   function ensureActiveThread(state) {
@@ -7791,8 +8852,17 @@ button.st-work-notice{cursor:pointer}
   const SCAN_ROLE_COST_STARLIGHT = ${SCAN_ROLE_COST_STARLIGHT};
   const ENCOUNTER_SHOP_MONEY_PER_STARLIGHT = ${ENCOUNTER_SHOP_MONEY_PER_STARLIGHT};
   const ENCOUNTER_SHOP_RULE_COUPON_PRICE = ${ENCOUNTER_SHOP_RULE_COUPON_PRICE};
+  const TIMETABLE_MOD_COUPON_PRICE = ${TIMETABLE_MOD_COUPON_PRICE};
   const ENCOUNTER_SHOP_STARLIGHT_VOUCHER = ${JSON.stringify(ENCOUNTER_SHOP_STARLIGHT_VOUCHER)};
   const SCHOOL_RULE_COUPON_ITEM = ${JSON.stringify(SCHOOL_RULE_COUPON_ITEM)};
+  const TIMETABLE_MOD_COUPON_ITEM = ${JSON.stringify(TIMETABLE_MOD_COUPON_ITEM)};
+  const SPECIAL_LOCATION_PASS_PRICE = ${SPECIAL_LOCATION_PASS_PRICE};
+  const SPECIAL_LOCATION_PASS_ITEM_NAMES = ${JSON.stringify(SPECIAL_LOCATION_PASS_ITEM_NAMES, null, 2)};
+
+  function specialLocationPassItemName(locationOrId) {
+    const id = typeof locationOrId === "object" && locationOrId ? String(locationOrId.id || "") : String(locationOrId || "");
+    return SPECIAL_LOCATION_PASS_ITEM_NAMES[id] || "";
+  }
 
   function detectPhoneApp(root) {
     if (!root) return "";
@@ -7803,6 +8873,7 @@ button.st-work-notice{cursor:pointer}
     if (root.querySelector(".st-clock-app")) return "clock";
     if (root.querySelector(".st-profile-app")) return "profile";
     if (root.querySelector(".st-map-app")) return "map";
+    if (root.querySelector(".st-city-map-app")) return "city-map";
     if (root.querySelector(".st-school-app")) return "school";
     if (root.querySelector(".st-special-location-app")) return "special-location";
     if (root.querySelector(".st-monitor-app")) return "monitor";
@@ -7920,6 +8991,113 @@ button.st-work-notice{cursor:pointer}
     return { selected, pageIndex, pageCount };
   }
 
+  function inventoryDialogItem(host, items) {
+    const name = String(host?.dataset?.inventoryDialogItem || "").trim();
+    return items.find((item) => item.name === name) || null;
+  }
+
+  function inventoryUseDialogHtml(host, items) {
+    if (host?.dataset?.inventoryDialog !== "use") return "";
+    const item = inventoryDialogItem(host, items);
+    if (!item) return "";
+    return '<div class="st-profile-nickname-dialog st-inventory-use-layer" data-inventory-dialog-layer role="presentation">' +
+      '<form class="st-profile-nickname-card st-inventory-use-card" data-inventory-use-form role="dialog" aria-modal="true" aria-label="使用库存物品">' +
+        '<h3>使用物品</h3>' +
+        '<p>给「' + escapeHtml(item.name) + '」写一句使用备注。发送后由AI按当前剧情、物品描述与在场情况判定怎么用、能不能成功。</p>' +
+        '<label><span>备注</span><textarea maxlength="140" data-inventory-use-note placeholder="例：找机会拿出来试穿；或按当前场景合理使用"></textarea></label>' +
+        '<div class="st-profile-nickname-actions">' +
+          '<button type="button" data-inventory-dialog-close>取消</button>' +
+          '<button type="submit" class="primary">暂存使用</button>' +
+        '</div>' +
+      '</form>' +
+    '</div>';
+  }
+
+  async function requestInventoryUseItem(host, item, noteText) {
+    const note = String(noteText || "").replace(/[\\r\\n]+/g, " ").replace(/\\s+/g, " ").trim().slice(0, 140);
+    if (!item) return { ok: false, message: "未选中物品。" };
+    const added = await appendAppOperation({
+      来源: "库存",
+      操作: "使用物品",
+      暂存摘要: "使用 " + item.name,
+      物品名: item.name,
+      当前数量: item.count,
+      物品描述: item.description || "未记录",
+      使用备注: note || "无",
+      备注: note || "无",
+      目标变量路径: "/系统/持有物品/" + item.name,
+      AI执行规范: "这是用户请求在当前剧情中使用库存物品；备注只记录用户意图，不指定强制对象。AI应根据备注、物品描述、当前位置、在场人物、目标意愿/状态和世界观判定实际使用对象、方式与成败。成功时从/系统/持有物品扣除1个该物品，并按合理剧情更新变量；失败时不要扣除物品。物品不能产生描述外的精神控制、强迫他人、直接金钱收益、战斗力增强或其他扩大剧情影响的能力。"
+    });
+    return { ok: Boolean(added), message: added ? "使用请求已暂存。" : "使用请求已在暂存区。" };
+  }
+
+  async function requestInventoryDeleteItem(host, item) {
+    if (!item) return { ok: false, message: "未选中物品。" };
+    const added = await appendAppOperation({
+      来源: "库存",
+      操作: "删除物品",
+      暂存摘要: "删除 " + item.name,
+      物品名: item.name,
+      当前数量: item.count,
+      物品描述: item.description || "未记录",
+      目标变量路径: "/系统/持有物品/" + item.name,
+      AI执行规范: "这是用户请求从库存中删除/丢弃1个该物品；若物品存在，成功时只扣除1个该物品，数量归零时删除该项。不要产生额外剧情收益、退款或副作用；若物品不存在则说明失败。"
+    });
+    return { ok: Boolean(added), message: added ? "删除请求已暂存。" : "删除请求已在暂存区。" };
+  }
+
+  function inventoryNoticeHtml(host) {
+    const text = String(host?.dataset?.inventoryNotice || "").trim();
+    return text ? '<div class="st-inventory-status">' + escapeHtml(text) + '</div>' : "";
+  }
+
+  function bindInventoryActionControls(container, host, items, rerender) {
+    container.querySelectorAll("[data-inventory-use-item]").forEach((button) => {
+      button.addEventListener("click", () => {
+        host.dataset.inventoryDialog = "use";
+        host.dataset.inventoryDialogItem = button.getAttribute("data-inventory-use-item") || "";
+        delete host.dataset.inventoryNotice;
+        rerender();
+      });
+    });
+    container.querySelectorAll("[data-inventory-delete-item]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const name = button.getAttribute("data-inventory-delete-item") || "";
+        const item = items.find((entry) => entry.name === name) || null;
+        Promise.resolve(requestInventoryDeleteItem(host, item)).then((result) => {
+          delete host.dataset.inventoryDialog;
+          delete host.dataset.inventoryDialogItem;
+          host.dataset.inventoryNotice = result?.message || "删除请求已处理。";
+          rerender();
+        });
+      });
+    });
+    container.querySelectorAll("[data-inventory-dialog-close]").forEach((button) => {
+      button.addEventListener("click", () => {
+        delete host.dataset.inventoryDialog;
+        delete host.dataset.inventoryDialogItem;
+        rerender();
+      });
+    });
+    container.querySelector("[data-inventory-dialog-layer]")?.addEventListener("click", (event) => {
+      if (event.target?.closest?.(".st-profile-nickname-card")) return;
+      delete host.dataset.inventoryDialog;
+      delete host.dataset.inventoryDialogItem;
+      rerender();
+    });
+    container.querySelector("[data-inventory-use-form]")?.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const item = inventoryDialogItem(host, items);
+      const note = container.querySelector("[data-inventory-use-note]")?.value || "";
+      Promise.resolve(requestInventoryUseItem(host, item, note)).then((result) => {
+        delete host.dataset.inventoryDialog;
+        delete host.dataset.inventoryDialogItem;
+        host.dataset.inventoryNotice = result?.message || "使用请求已处理。";
+        rerender();
+      });
+    });
+  }
+
   function inventoryLockerHtml(items, selected, pageIndex, pageCount, itemAttr, pageAttr) {
     const lockerImage = stAssetUrl("inventory/locker-inventory.png");
     const start = pageIndex * INVENTORY_LOCKER_PAGE_SIZE;
@@ -7939,6 +9117,7 @@ button.st-work-notice{cursor:pointer}
       '<section class="st-inventory-note">' +
         '<strong>' + escapeHtml(selected ? selected.name + " x" + selected.count : "暂无持有物品") + '</strong>' +
         '<p>' + escapeHtml(selected?.description || (selected ? "暂无描述。" : "获得道具后会挂在左侧袋子上。")) + '</p>' +
+        (selected ? '<div class="st-inventory-note-actions"><button type="button" data-inventory-use-item="' + escapeAttr(selected.name) + '">使用</button><button type="button" class="danger" data-inventory-delete-item="' + escapeAttr(selected.name) + '">删除</button></div>' : "") +
       '</section>' +
       '<section class="st-inventory-bags">' + bags + '</section>' +
       pager +
@@ -7966,7 +9145,9 @@ button.st-work-notice{cursor:pointer}
       layer.className = "st-inventory-backpack";
       root.appendChild(layer);
     }
-    layer.innerHTML = inventoryLockerHtml(items, selected, pageIndex, pageCount, "data-inventory-item", "data-inventory-page");
+    layer.innerHTML = inventoryLockerHtml(items, selected, pageIndex, pageCount, "data-inventory-item", "data-inventory-page") +
+      inventoryNoticeHtml(root) +
+      inventoryUseDialogHtml(root, items);
     layer.querySelectorAll("[data-inventory-item]").forEach((button) => {
       button.addEventListener("click", () => {
         root.dataset.stInventorySelected = button.getAttribute("data-inventory-item") || "";
@@ -7979,6 +9160,7 @@ button.st-work-notice{cursor:pointer}
         renderInventoryBackpack(root);
       });
     });
+    bindInventoryActionControls(layer, root, items, () => renderInventoryBackpack(root));
   }
 
   function removeInventoryBackpack(root) {
@@ -8005,7 +9187,7 @@ button.st-work-notice{cursor:pointer}
     }
     if (app === "inventory") return { title: "库存", html: recordingIslandHtml() };
     if (app === "calendar") {
-      const parsed = parseStoryDate(system["当前日期"] || "4月9日 星期三");
+      const parsed = parseStoryDate(system["当前日期"] || "4月9日");
       return { title: "日历", html: '<strong>' + escapeHtml(String(parsed?.month || 4) + "月") + '</strong>' };
     }
     return null;
@@ -8038,14 +9220,15 @@ button.st-work-notice{cursor:pointer}
     ["vip3_temp_false_memory","VIP3","临时虚假记忆","给目标临时植入一段记忆。","ONE_TIME",250,"输入要植入的记忆..."],
     ["vip3_pseudo_time_stop","VIP3","伪时停","让目标状态与意识暂停，快感累计到结束时释放。","PER_MINUTE",30,""],
     ["vip4_advanced","VIP4","高级一般催眠","被催眠者无意识遵循任何行为指令。","PER_MINUTE",40,""],
-    ["vip4_closed_space_common_sense","VIP4","封闭空间常识修改","修改封闭空间内的规则或常识。","PER_MINUTE",2,"空间与规则"],
-    ["vip4_excretion_control","VIP4","排泄控制","必须在指定条件下才能排泄。","ONE_TIME",300,"条件"],
+    ["vip4_closed_space_common_sense","VIP4","封闭空间常识修改","修改单一封闭空间内类似校规的规矩或场内规定，不受人数限制。","PER_MINUTE",40,"封闭空间与规矩"],
     ["vip4_control_body_keep_conscious","VIP4","保留意识控制身体行动","保留目标意识，强行控制身体。","PER_MINUTE",50,""],
     ["vip4_control_body_no_conscious","VIP4","不保留意识控制身体行动","在目标无意识状态下强行控制身体。","PER_MINUTE",50,""],
-    ["vip4_cognitive_block","VIP4","认知妨碍","心理学隐身，不会被他人意识到存在。","PER_MINUTE",60,""],
+    ["vip4_cognitive_block","VIP4","认知妨碍","仅让催眠对象意识不到使用者存在；不影响未被催眠者。","PER_MINUTE",60,""],
+    ["vip4_closed_space_cognitive_block","VIP4","封闭空间认知障碍","让单一封闭空间内被命令覆盖的人意识不到使用者存在，不受人数限制。","PER_MINUTE",240,"封闭空间"],
     ["vip4_temp_personality","VIP4","临时人格植入","临时将一个人格植入目标。","PER_MINUTE",50,"人格内容"],
-    ["vip4_lactation","VIP4","泌乳诱导","修改内分泌系统，让非哺乳期女性分泌乳汁。","ONE_TIME",500,""],
     ["vip5_permanent","VIP5","永久常识修改","永久修改目标的一项常识。","ONE_TIME",2000,"常识内容"],
+    ["vip5_excretion_control","VIP5","排泄控制","必须在指定条件下才能排泄。","ONE_TIME",900,"条件"],
+    ["vip5_lactation","VIP5","泌乳诱导","修改内分泌系统，让非哺乳期女性分泌乳汁。","ONE_TIME",1500,""],
     ["vip5_fetish_implant","VIP5","性癖植入","永久给目标植入一个性癖倾向。","ONE_TIME",2000,"性癖内容"],
     ["vip5_permanent_false_memory","VIP5","永久虚假记忆","给目标永久植入一段记忆。","ONE_TIME",1500,"记忆内容"],
     ["vip5_permanent_personality","VIP5","永久人格植入","永久将一个人格植入目标。","ONE_TIME",3000,"人格内容"],
@@ -8074,14 +9257,15 @@ button.st-work-notice{cursor:pointer}
     vip3_temp_false_memory: "临时植入一段虚假记忆；到期可恢复或产生违和。",
     vip3_pseudo_time_stop: "暂停目标状态/意识；结束时释放累计快感。",
     vip4_advanced: "目标无意识遵循行为指令；仍按风险和目标状态判定。",
-    vip4_closed_space_common_sense: "只修改封闭空间内规则/常识；按范围和时限生效。",
-    vip4_excretion_control: "按指定条件控制排泄；写入对应效果。",
+    vip4_closed_space_common_sense: "封闭空间校规类规矩修改；不改大道法则或物理定律，不乘人数，范围限单一封闭空间。",
     vip4_control_body_keep_conscious: "保留意识但控制身体；心理可清醒抵抗。",
     vip4_control_body_no_conscious: "在无意识状态下控制身体行动。",
-    vip4_cognitive_block: "心理学隐身；他人不会意识到存在，不等于物理消失。",
+    vip4_cognitive_block: "只对催眠对象形成心理隐身；未被催眠者仍可看见，不等于物理消失。",
+    vip4_closed_space_cognitive_block: "封闭空间范围内的心理隐身；只影响该封闭空间内被命令覆盖的人，不等于物理消失。",
     vip4_temp_personality: "临时植入人格；到期还原或失效。",
-    vip4_lactation: "诱导泌乳；按生理变化写入效果。",
     vip5_permanent: "永久修改目标一项常识。",
+    vip5_excretion_control: "按指定条件控制排泄；写入对应效果。",
+    vip5_lactation: "诱导泌乳；按生理变化写入效果。",
     vip5_fetish_implant: "植入性癖倾向；不瞬间失控或人格崩坏，通常需诱发条件。",
     vip5_permanent_false_memory: "永久植入一段虚假记忆。",
     vip5_permanent_personality: "永久植入人格；按人格内容长期生效。",
@@ -8101,6 +9285,10 @@ button.st-work-notice{cursor:pointer}
     { id: "prostate", label: "前列腺", stat: "前列腺敏感度" },
     { id: "nipple", label: "乳头", stat: "乳头敏感度" }
   ];
+  const HYP_CUSTOM_ITEM_COST_STARLIGHT = 5;
+  const HYP_CUSTOM_ITEM_MIN_VIP_RANK = 2;
+  const HYP_CUSTOM_ITEM_RULE_TEXT = "只能生成衣物或性道具；没有精神方面的影响操作，只能迎合用户性趣味；可以违背一定程度的物理法则，但不能带来直接金钱收益、增强战斗力、强迫他人、远程监控、读心、催眠、洗脑、强制命令或其他明显影响剧情发展的能力。";
+  const HYP_SUPPLY_QTY_MAX = Number.MAX_SAFE_INTEGER;
 
   function reactVipRank(tier) {
     const match = String(tier || "").toUpperCase().match(/VIP\\s*([1-6])/);
@@ -8114,12 +9302,32 @@ button.st-work-notice{cursor:pointer}
   }
 
   function hypnosisDrawerQty(root) {
-    const value = Number(root?.dataset?.stHypnosisDrawerQty || 1);
-    return Math.max(1, Math.min(999, Math.floor(Number.isFinite(value) ? value : 1)));
+    const raw = root?.dataset?.stHypnosisDrawerQty;
+    const text = raw === undefined || raw === null || String(raw).trim() === "" ? "1" : String(raw);
+    const value = Number(text.replace(/,/g, ""));
+    return Math.max(1, Math.min(HYP_SUPPLY_QTY_MAX, Math.floor(Number.isFinite(value) ? value : 1)));
+  }
+
+  function hypnosisDrawerQtyInput(root) {
+    const raw = root?.dataset?.stHypnosisDrawerQty;
+    return raw === undefined || raw === null ? "1" : String(raw);
+  }
+
+  function updateHypnosisSupplyButtonPrices(root) {
+    const qty = hypnosisDrawerQty(root);
+    const update = (selector, price) => {
+      const small = root?.querySelector?.(selector + " small");
+      if (small) small.textContent = "¥" + price.toLocaleString();
+    };
+    update('[data-hypnosis-supply-action="energy"]', qty * 10);
+    update('[data-hypnosis-drawer-action="energy"]', qty * 10);
+    update('[data-hypnosis-supply-action="max-energy"]', qty * 100);
+    update('[data-hypnosis-drawer-action="max-energy"]', qty * 100);
   }
 
   function hypnosisDrawerHtml(root, system) {
     const qty = hypnosisDrawerQty(root);
+    const qtyInput = hypnosisDrawerQtyInput(root);
     const money = Math.max(0, Math.floor(Number(system?.["持有零花钱"] ?? 0) || 0));
     const starlight = Math.max(0, Math.floor(Number(system?.["星光点"] ?? 0) || 0));
     const currentTier = reactCurrentVipTier(system);
@@ -8127,6 +9335,10 @@ button.st-work-notice{cursor:pointer}
     const pendingEnergy = hasPendingHypnosisSupplyOperation(/补充MC能量/);
     const pendingMaxEnergy = hasPendingHypnosisSupplyOperation(/提升MC能量上限/);
     const pendingVip = hasPendingHypnosisVipOperation();
+    const canBuyCustomItem = currentRank >= HYP_CUSTOM_ITEM_MIN_VIP_RANK && starlight >= HYP_CUSTOM_ITEM_COST_STARLIGHT;
+    const customItemLabel = currentRank < HYP_CUSTOM_ITEM_MIN_VIP_RANK ? "需VIP2" : starlight < HYP_CUSTOM_ITEM_COST_STARLIGHT ? "星光点不足" : "定制";
+    const energyPrice = qty * 10;
+    const maxEnergyPrice = qty * 100;
     const vipButtons = HYP_REACT_VIP_TIERS.map((tier) => {
       const rank = reactVipRank(tier);
       const price = HYP_REACT_VIP_PRICE[tier] || 0;
@@ -8145,9 +9357,10 @@ button.st-work-notice{cursor:pointer}
     return '<section class="st-hypnosis-redrawer" aria-label="催眠APP抽屉">' +
       '<div class="st-hypnosis-redrawer-head"><strong>补给 / VIP</strong><span>当前 ' + escapeHtml(currentTier || "未买断") + '</span></div>' +
       '<div class="st-hypnosis-redrawer-grid">' +
-        '<input type="number" min="1" max="999" step="1" value="' + qty + '" data-hypnosis-drawer-qty aria-label="数量">' +
-        '<button type="button" class="primary" data-hypnosis-drawer-action="energy">' + (pendingEnergy ? "继续补充" : "补充能量") + '</button>' +
-        '<button type="button" class="primary" data-hypnosis-drawer-action="max-energy">' + (pendingMaxEnergy ? "继续提升" : "提升上限") + '</button>' +
+        '<input type="number" min="1" step="1" value="' + escapeAttr(qtyInput) + '" data-hypnosis-drawer-qty aria-label="数量">' +
+        '<button type="button" class="primary' + (pendingEnergy ? " is-pending" : "") + '" data-hypnosis-drawer-action="energy">补充能量 <small>¥' + energyPrice.toLocaleString() + '</small></button>' +
+        '<button type="button" class="primary' + (pendingMaxEnergy ? " is-pending" : "") + '" data-hypnosis-drawer-action="max-energy">提升上限 <small>¥' + maxEnergyPrice.toLocaleString() + '</small></button>' +
+        '<button type="button" class="primary st-hypnosis-drawer-wide" data-hypnosis-drawer-action="custom-item"' + (canBuyCustomItem ? "" : " disabled") + '>定制物品 <small>' + customItemLabel + ' · 5星光点</small></button>' +
       '</div>' +
       '<div class="st-hypnosis-vips">' + vipButtons + '</div>' +
       '<p class="st-hypnosis-redrawer-note">补给/VIP会由前端直接写入变量，并在当前楼层锁定暂存；多次补给会自动合并。</p>' +
@@ -8179,8 +9392,45 @@ button.st-work-notice{cursor:pointer}
     return result;
   }
 
-  function hypnosisFrontendSettledPrompt(paths) {
-    return "本操作已由前端直接扣费并写入变量；这条锁定暂存只用于告知AI本轮已经发生的购买事实。AI不得再次扣除持有零花钱、星光点，不得再次增加MC能量、MC能量上限或再次改VIP等级；除非本轮还有启动/追加催眠等其他操作，否则不要继续改动" + paths.join("、") + "。";
+  function hypnosisFrontendSettledPrompt() {
+    return "本操作已由前端直接扣费并写入变量；这条锁定暂存只用于告知AI本轮已经发生的购买事实。AI不得再次扣除持有零花钱、星光点，不得再次增加MC能量、MC能量上限或再次改VIP等级；除非本轮还有启动/追加催眠等其他操作，否则不要继续改动本操作已写入的变量。";
+  }
+
+  function hypnosisCustomItemSafeLabel(requirement) {
+    const text = String(requirement || "").replace(/[\\r\\n]+/g, " ").replace(/[\\/\\\\[\\]{}<>|=]/g, " ").replace(/\\s+/g, " ").trim();
+    return text.slice(0, 10) || "趣味";
+  }
+
+  async function appendHypnosisCustomItemOperation(root, requirement) {
+    const requestText = String(requirement || "").replace(/[\\r\\n]+/g, " ").replace(/\\s+/g, " ").trim().slice(0, 160);
+    if (!requestText) return { ok: false, message: "请先写下想要的衣物或性道具需求。" };
+    const system = getSystemState();
+    const currentTier = reactCurrentVipTier(system);
+    const rank = reactVipRank(currentTier);
+    if (rank < HYP_CUSTOM_ITEM_MIN_VIP_RANK) return { ok: false, message: "定制趣味物品需要VIP2。" };
+    const starlight = hypnosisNumber(system["星光点"], 0);
+    const suggestedName = "定制物品·" + hypnosisCustomItemSafeLabel(requestText);
+    const added = await appendAppOperation({
+      来源: "催眠APP",
+      操作: "资源兑换",
+      项目: "定制趣味物品",
+      暂存摘要: "定制物品｜待AI结算｜星光点 " + HYP_CUSTOM_ITEM_COST_STARLIGHT,
+      购买数量: 1,
+      购买需求: requestText,
+      建议物品名: suggestedName,
+      兑换规则: "成功时按消耗资源与获得资源结算；失败不扣费不生成",
+      所需VIP等级: "VIP2",
+      当前VIP等级: currentTier || "未买断",
+      当前星光点: starlight,
+      消耗星光点: HYP_CUSTOM_ITEM_COST_STARLIGHT,
+      消耗资源: "星光点 " + HYP_CUSTOM_ITEM_COST_STARLIGHT + "（待AI成功时扣除）",
+      获得资源: "库存物品 x1（待AI成功时生成）",
+      物品限制: HYP_CUSTOM_ITEM_RULE_TEXT,
+      前端处理: "仅暂存定制需求；前端未扣除星光点，也未写入/系统/持有物品",
+      变量写入路径: ["/系统/星光点", "/系统/持有物品"],
+      AI执行规范: "本操作只是前端暂存的定制需求，前端没有扣除星光点，也没有写入库存。AI必须检查/系统/催眠APP订阅等级至少VIP2且/系统/星光点不少于5，并按需求、物品限制和当前剧情判断是否可生成。成功时扣除5星光点，并在/系统/持有物品新增1件衣物或性道具，物品可按需求生成或调整为合理近似方案；失败时不要扣星光点、不要新增物品。生成物品不得包含精神控制、强迫他人、直接金钱收益、战斗力增强、远程监控、读心、催眠、洗脑、强制命令或其他明显影响剧情发展的能力。"
+    });
+    return { ok: Boolean(added), message: added ? "定制需求已暂存，发送后由AI判断扣费与生成。" : "定制需求已在暂存区。" };
   }
 
   async function appendHypnosisDrawerOperation(root, action, tier = "") {
@@ -8206,6 +9456,7 @@ button.st-work-notice{cursor:pointer}
             来源: "催眠APP",
             操作: "资源兑换",
             项目: "补充MC能量",
+            暂存摘要: "补充MC能量｜MC能量 +" + formatOperationAmount(actualGain) + "点｜资金 ¥" + requestedCost.toLocaleString(),
             购买数量: qty,
             数量: qty + "点",
             兑换规则: "10円 = 1点MC能量",
@@ -8221,7 +9472,7 @@ button.st-work-notice{cursor:pointer}
             前端写入后MC能量: nextEnergy,
             前端写入后MC能量上限: maxEnergy || system["MC能量上限"] || "未记录",
             变量写入路径: ["/系统/持有零花钱", "/系统/MC能量"],
-            AI执行规范: hypnosisFrontendSettledPrompt(["/系统/持有零花钱", "/系统/MC能量"]),
+            AI执行规范: hypnosisFrontendSettledPrompt(),
             不可删除: true
           }
         };
@@ -8245,6 +9496,7 @@ button.st-work-notice{cursor:pointer}
             来源: "催眠APP",
             操作: "资源兑换",
             项目: "提升MC能量上限",
+            暂存摘要: "提升MC能量上限｜MC能量上限 +" + qty + "点｜资金 ¥" + cost.toLocaleString(),
             购买数量: qty,
             数量: qty + "点",
             兑换规则: "100円 = 1点MC能量上限",
@@ -8256,7 +9508,7 @@ button.st-work-notice{cursor:pointer}
             前端写入后持有零花钱: nextMoney,
             前端写入后MC能量上限: nextMax,
             变量写入路径: ["/系统/持有零花钱", "/系统/MC能量上限"],
-            AI执行规范: hypnosisFrontendSettledPrompt(["/系统/持有零花钱", "/系统/MC能量上限"]),
+            AI执行规范: hypnosisFrontendSettledPrompt(),
             不可删除: true
           }
         };
@@ -8302,7 +9554,8 @@ button.st-work-notice{cursor:pointer}
             前端写入后星光点: nextStarlight,
             前端写入后催眠APP订阅等级: cleanTier,
             变量写入路径: ["/系统/持有零花钱", "/系统/星光点", "/系统/催眠APP订阅等级"],
-            AI执行规范: hypnosisFrontendSettledPrompt(["/系统/持有零花钱", "/系统/星光点", "/系统/催眠APP订阅等级"]) + "VIP仍然不支持一次购买多级；本轮如有第二个VIP购买请求应视为无效。",
+            AI执行规范: hypnosisFrontendSettledPrompt(),
+            VIP购买限制: "VIP仍然不支持一次购买多级；本轮如有第二个VIP购买请求应视为无效。",
             不可删除: true
           }
         };
@@ -8598,6 +9851,161 @@ button.st-work-notice{cursor:pointer}
       : "";
   }
 
+  function rewardNumber(value, fallback = 0) {
+    const number = Number(String(value ?? "").replace(/,/g, ""));
+    return Number.isFinite(number) ? number : fallback;
+  }
+
+  function rewardFormatAmount(value) {
+    const number = Number(value) || 0;
+    return Number.isInteger(number) ? String(number) : String(Math.round(number * 100) / 100);
+  }
+
+  function rewardInventoryObject(stat) {
+    stat["系统"] = stat["系统"] && typeof stat["系统"] === "object" && !Array.isArray(stat["系统"]) ? stat["系统"] : {};
+    if (!stat["系统"]["持有物品"] || typeof stat["系统"]["持有物品"] !== "object") stat["系统"]["持有物品"] = {};
+    return stat["系统"]["持有物品"];
+  }
+
+  function rewardInventoryItemName(item) {
+    return String(item?.name || item?.["名称"] || item?.title || item?.id || "").trim();
+  }
+
+  function rewardAddInventoryItem(inventory, item) {
+    const name = rewardInventoryItemName(item);
+    if (!name) return "";
+    const qty = Math.max(1, Math.trunc(Number(item?.quantity ?? item?.["数量"] ?? 1) || 1));
+    const description = String(item?.description || item?.["描述"] || "").trim();
+    if (Array.isArray(inventory)) {
+      const existing = inventory.find((entry) => rewardInventoryItemName(entry) === name);
+      if (existing && typeof existing === "object") {
+        existing["数量"] = Math.max(0, Math.trunc(Number(existing["数量"] ?? existing.quantity ?? 1) || 1)) + qty;
+      } else {
+        inventory.push({ 名称: name, 数量: qty, 描述: description || "成就和任务奖励物品" });
+      }
+      return name;
+    }
+    const existing = inventory[name];
+    if (existing && typeof existing === "object" && !Array.isArray(existing)) {
+      existing["数量"] = Math.max(0, Math.trunc(Number(existing["数量"] ?? existing.quantity ?? 1) || 1)) + qty;
+      if (description && !existing["描述"]) existing["描述"] = description;
+    } else if (typeof existing === "number") {
+      inventory[name] = existing + qty;
+    } else {
+      inventory[name] = { 名称: name, 数量: qty, 描述: description || "成就和任务奖励物品" };
+    }
+    return name;
+  }
+
+  function rewardClaimItem(kind, row) {
+    const source = row && typeof row === "object" && !Array.isArray(row) ? row : {};
+    const title = firstNonEmptyText(source.title, source.name, source["任务"], source["成就"], source.id, "未命名奖励");
+    const id = firstNonEmptyText(source.id, source["任务ID"], source["成就ID"], title);
+    return {
+      id,
+      title,
+      description: firstNonEmptyText(source.description, source.condition, source["完成条件"], source["条件"]),
+      rewardStarlight: Math.max(0, Math.trunc(rewardNumber(source.rewardStarlight ?? source.rewardMoney ?? source["奖励星光点"], ${DEFAULT_FRONTEND_REWARD_STARLIGHT}))),
+      rewardItems: normalizeRewardItems(source.rewardItems ?? source["奖励物品"]),
+      dailyQuestDate: firstNonEmptyText(source.dailyQuestDate, source["每日任务日期"], source["变量日期"]),
+      dailyQuestTarget: firstNonEmptyText(source.dailyQuestTarget, source["任务目标"]),
+      dailyQuestChatName: firstNonEmptyText(source.dailyQuestChatName, source["每日任务聊天"], source["聊天名"]),
+      kind
+    };
+  }
+
+  function rewardFindTaskKey(stat, item) {
+    const tasks = stat["任务"];
+    if (!tasks || typeof tasks !== "object" || Array.isArray(tasks)) return "";
+    const targets = new Set([item.id, item.title].map((value) => String(value || "").trim()).filter(Boolean));
+    for (const [key, raw] of Object.entries(tasks)) {
+      const task = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+      const values = [
+        key,
+        task["任务ID"],
+        task.id,
+        task.ID,
+        task["任务"],
+        task["名称"],
+        task.title,
+        task.name
+      ].map((value) => String(value || "").trim()).filter(Boolean);
+      if (values.some((value) => targets.has(value))) return key;
+    }
+    return "";
+  }
+
+  async function rewardApplySystemMutation(mutator) {
+    const data = typeof encounterCurrentMvuData === "function" ? encounterCurrentMvuData() : null;
+    if (!data) return { ok: false, message: "MVU变量接口未就绪，无法直接领取奖励。" };
+    data.stat["系统"] = data.stat["系统"] && typeof data.stat["系统"] === "object" && !Array.isArray(data.stat["系统"]) ? data.stat["系统"] : {};
+    const result = mutator(data.stat["系统"], data.stat);
+    if (!result?.ok) return result || { ok: false, message: "奖励领取失败。" };
+    if (typeof encounterReplaceMvuData === "function") await encounterReplaceMvuData(data);
+    else if (data?.replace) await data.replace(data.mvu, data.option);
+    return result;
+  }
+
+  function rewardClaimAiSpec(kind) {
+    return "本奖励已由前端直接发放并写入变量；若是任务奖励，对应任务变量也已由前端删除。这条锁定暂存只用于告知AI本轮已经发生的领取事实。AI不得再次增加星光点或物品，不得写入/成就变量，不得恢复已领取任务，也不得补记历史奖励。";
+  }
+
+  async function rewardClaimDirect(kind, row) {
+    const item = rewardClaimItem(kind, row);
+    const pendingOperation = kind === "achievement" ? /领取成就/ : /领取任务奖励/;
+    if (pendingOperationHas("成就和任务", pendingOperation, item.id, item.title)) {
+      return { ok: false, message: "该奖励已在本轮操作暂存区。" };
+    }
+    const result = await rewardApplySystemMutation((system, stat) => {
+      const currentStarlight = rewardNumber(system["星光点"], 0);
+      const nextStarlight = typeof hypnosisSetSystemNumber === "function"
+        ? hypnosisSetSystemNumber(system, "星光点", currentStarlight + item.rewardStarlight)
+        : (system["星光点"] = Math.max(0, currentStarlight + item.rewardStarlight));
+      const inventory = item.rewardItems.length ? rewardInventoryObject(stat) : null;
+      const addedItems = [];
+      for (const rewardItem of item.rewardItems) {
+        const added = inventory ? rewardAddInventoryItem(inventory, rewardItem) : "";
+        if (added) addedItems.push(added);
+      }
+      const rewardSummary = ["星光点 +" + item.rewardStarlight, addedItems.length ? "物品 " + addedItems.join("、") : ""].filter(Boolean).join("；");
+      let deletedTaskKey = "";
+      if (kind === "quest") {
+        deletedTaskKey = rewardFindTaskKey(stat, item);
+        if (deletedTaskKey && stat["任务"] && typeof stat["任务"] === "object") delete stat["任务"][deletedTaskKey];
+      }
+      const variablePaths = ["/系统/星光点"];
+      if (item.rewardItems.length) variablePaths.push("/系统/持有物品");
+      if (kind === "quest" && deletedTaskKey) variablePaths.push("/任务/" + deletedTaskKey);
+      return {
+        ok: true,
+        message: kind === "achievement" ? "成就奖励已领取并锁定暂存。" : "任务奖励已领取，任务已从变量删除并锁定暂存。",
+        payload: {
+          来源: "成就和任务",
+          操作: kind === "achievement" ? "领取成就" : "领取任务奖励",
+          ...(kind === "achievement" ? { 成就ID: item.id, 成就: item.title } : { 任务ID: item.id, 任务: item.title }),
+          暂存摘要: item.title,
+          条件: item.description,
+          奖励: rewardSummary,
+          ...(item.rewardItems.length ? { 奖励物品: item.rewardItems } : {}),
+          前端处理: kind === "achievement" ? "已由前端直接发放奖励并记录该成就已领取" : "已由前端直接发放奖励并删除对应任务变量",
+          前端写入后星光点: nextStarlight,
+          ...(kind === "quest" ? { 删除任务变量: deletedTaskKey || "未找到同名任务变量，仅记录领取状态" } : {}),
+          变量写入路径: variablePaths,
+          AI执行规范: rewardClaimAiSpec(kind),
+          不可删除: true
+        },
+        item
+      };
+    });
+    if (!result.ok) return result;
+    const added = await appendAppOperation(result.payload);
+    if (kind === "achievement") globalThis.__HYPNOOS_MARK_FRONTEND_ACHIEVEMENT_HANDLED__?.(item);
+    else globalThis.__HYPNOOS_MARK_FRONTEND_QUEST_HANDLED__?.(item);
+    return { ok: Boolean(added), message: result.message };
+  }
+
+  globalThis.__HYPNOOS_CLAIM_REWARD_DIRECT__ = rewardClaimDirect;
+
   function rewardVariablesTasks() {
     const variables = getLatestStatDataSync() || {};
     const tasks = variables["任务"];
@@ -8660,7 +10068,7 @@ button.st-work-notice{cursor:pointer}
   }
 
   function rewardCurrentDateKey(system = getSystemState()) {
-    return firstNonEmptyText(system["当前日期"], system["日期"], system["今日日期"], system["当前日程"], "未记录日期");
+    return firstNonEmptyText(system["当前日期"], system["日期"], system["今日日期"], "未记录日期");
   }
 
   function rewardCurrentChatName() {
@@ -8811,10 +10219,6 @@ button.st-work-notice{cursor:pointer}
     const clean = String(dateKey || "").trim();
     const chat = String(chatName || "").trim();
     if (!clean) return false;
-    const state = readFrontendRewardState();
-    const stateKey = rewardDailyQuestStateKey(clean, chat);
-    if (chat && state?.dailyQuestKeys?.[stateKey]) return true;
-    if (state?.dailyQuestDates?.[clean]) return true;
     return rewardVariablesTasks().some((item) => {
       if (String(item.dailyQuestDate || "").trim() !== clean) return false;
       const itemChat = String(item.dailyQuestChatName || "").trim();
@@ -8894,7 +10298,8 @@ button.st-work-notice{cursor:pointer}
         status: existing?.status || "AVAILABLE",
         source: existing ? "variable" : "configured",
         pendingAccept: pendingOperationHas("成就和任务", /接取任务/, quest.id, quest.name),
-        pendingCancel: pendingOperationHas("成就和任务", /取消任务/, quest.id, quest.name)
+        pendingCancel: pendingOperationHas("成就和任务", /取消任务/, quest.id, quest.name),
+        pendingClaim: pendingOperationHas("成就和任务", /领取任务奖励/, quest.id, quest.name)
       });
       if (existing) taskByTitle.delete(quest.name);
     }
@@ -8903,7 +10308,8 @@ button.st-work-notice{cursor:pointer}
       rows.push({
         ...item,
         pendingAccept: false,
-        pendingCancel: pendingOperationHas("成就和任务", /取消任务/, item.id, item.title)
+        pendingCancel: pendingOperationHas("成就和任务", /取消任务/, item.id, item.title),
+        pendingClaim: pendingOperationHas("成就和任务", /领取任务奖励/, item.id, item.title)
       });
     }
     const order = { COMPLETED: 0, ACTIVE: 1, AVAILABLE: 2 };
@@ -8923,13 +10329,16 @@ button.st-work-notice{cursor:pointer}
     const statusText = row.status === "COMPLETED" ? "可领取" : row.status === "ACTIVE" ? "进行中" : "可接取";
     const canAccept = row.status === "AVAILABLE" && !row.pendingAccept && occupiedTaskCount < 3;
     const canCancel = row.status === "ACTIVE" && !row.pendingCancel;
-    const canClaim = row.status === "COMPLETED";
+    const canClaim = row.status === "COMPLETED" && !row.pendingClaim;
+    const primaryAction = row.status === "COMPLETED" ? "claim-quest" : "accept-quest";
+    const primaryDisabled = row.status === "COMPLETED" ? (!canClaim) : (!canAccept);
+    const primaryText = row.pendingClaim ? "已暂存" : row.status === "COMPLETED" ? "领取奖励" : row.pendingAccept ? "已暂存" : row.status === "AVAILABLE" && occupiedTaskCount >= 3 ? "任务已满" : row.status === "AVAILABLE" ? "接取任务" : statusText;
     return '<article class="st-reward-item">' +
       '<div class="st-reward-item-head"><strong>' + escapeHtml(row.title) + '</strong><span class="st-reward-badge">' + escapeHtml(statusText + " · " + reward) + '</span></div>' +
       '<p>' + escapeHtml(row.description || "") + '</p>' +
       '<div class="st-reward-actions">' +
-        '<button class="st-reward-button" type="button" data-reward-accept-quest="' + escapeAttr(row.id) + '"' + (canAccept ? "" : " disabled") + '>' + (row.pendingAccept ? "已暂存" : row.status === "AVAILABLE" && occupiedTaskCount >= 3 ? "任务已满" : row.status === "AVAILABLE" ? "接取任务" : statusText) + '</button>' +
-        '<button class="st-reward-button secondary" type="button" data-reward-cancel-quest="' + escapeAttr(row.id) + '"' + (canCancel ? "" : " disabled") + '>' + (row.pendingCancel ? "已暂存" : canClaim ? "等待变量扫描" : "取消任务") + '</button>' +
+        '<button class="st-reward-button" type="button" data-reward-' + primaryAction + '="' + escapeAttr(row.id) + '"' + (primaryDisabled ? " disabled" : "") + '>' + primaryText + '</button>' +
+        '<button class="st-reward-button secondary" type="button" data-reward-cancel-quest="' + escapeAttr(row.id) + '"' + (canCancel ? "" : " disabled") + '>' + (row.pendingCancel ? "已暂存" : row.status === "COMPLETED" ? "已完成" : "取消任务") + '</button>' +
       '</div>' +
     '</article>';
   }
@@ -8955,9 +10364,12 @@ button.st-work-notice{cursor:pointer}
         ? '<section class="st-reward-list">' + (quests.map((item) => renderRewardItem(item, "quest", occupiedTaskCount)).join("") || '<p class="st-reward-notice">暂无可显示任务。</p>') + '</section>'
         : '<section class="st-lite-card st-graph-paper st-reward-new">' +
             '<div class="st-graph-head"><strong>新增任务</strong><span>最多同时 3 个进行中任务</span></div>' +
-            '<p class="st-reward-notice">前端按变量日期和聊天名固定抽取一个角色。任务名和内容由 AI 根据剧情、角色变量和已有任务生成。</p>' +
+            '<p class="st-reward-notice">普通任务：奖励5星光点。<br>星光点兑换券任务（高危）：奖励1张星光点兑换券，任务难度更高，极有可能增长user可疑度和他人警戒度。</p>' +
             '<div class="st-reward-daily-target"><span>今天任务目标</span><strong>' + escapeHtml(dailyTarget?.name || "暂无") + '</strong><small>日期：' + escapeHtml(dailyTarget?.dateKey || rewardCurrentDateKey(system)) + ' / 聊天：' + escapeHtml(dailyTarget?.chatName || rewardCurrentChatName()) + '</small></div>' +
-            '<button class="st-reward-button" type="button" data-reward-new-submit' + (dailyTargetDisabled ? " disabled" : "") + '>' + escapeHtml(dailyTargetButtonText) + '</button>' +
+            '<div class="st-reward-choice-grid">' +
+              '<button class="st-reward-button" type="button" data-reward-new-submit="starlight"' + (dailyTargetDisabled ? " disabled" : "") + '>' + escapeHtml(dailyTargetDisabled ? dailyTargetButtonText : "接取 · 5星光点") + '</button>' +
+              '<button class="st-reward-button secondary" type="button" data-reward-new-submit="voucher"' + (dailyTargetDisabled ? " disabled" : "") + '>' + escapeHtml(dailyTargetDisabled ? dailyTargetButtonText : "接取 · 兑换券x1") + '</button>' +
+            '</div>' +
           '</section>';
     page.innerHTML =
       renderLiteHeader(page, { title: "成就和任务", html: '<span class="st-starlight-island"><i aria-hidden="true">☆</i><strong>' + starlight.toLocaleString() + ' 星光点</strong></span>' }) +
@@ -8981,17 +10393,19 @@ button.st-work-notice{cursor:pointer}
       const id = button.getAttribute("data-reward-claim-achievement") || "";
       const item = internalAchievementRows().find((row) => row.id === id);
       if (!item || !item.unlocked) return;
-      appendAppOperation({
-        来源: "成就和任务",
-        操作: "领取成就",
-        成就ID: item.id,
-        成就: item.title,
-        条件: item.description,
-        奖励星光点: item.rewardStarlight,
-        奖励物品: item.rewardItems || []
+      rewardClaimDirect("achievement", item).then((result) => {
+        page.dataset.rewardNotice = result?.message || "成就奖励已领取。";
+        renderRewardPage(page);
       });
-      page.dataset.rewardNotice = "成就领取已暂存。";
-      renderRewardPage(page);
+    }));
+    page.querySelectorAll("[data-reward-claim-quest]").forEach((button) => button.addEventListener("click", () => {
+      const id = button.getAttribute("data-reward-claim-quest") || "";
+      const item = internalQuestRows().find((row) => row.id === id);
+      if (!item || item.status !== "COMPLETED") return;
+      rewardClaimDirect("quest", item).then((result) => {
+        page.dataset.rewardNotice = result?.message || "任务奖励已领取。";
+        renderRewardPage(page);
+      });
     }));
     page.querySelectorAll("[data-reward-accept-quest]").forEach((button) => button.addEventListener("click", () => {
       const id = button.getAttribute("data-reward-accept-quest") || "";
@@ -9028,7 +10442,7 @@ button.st-work-notice{cursor:pointer}
       page.dataset.rewardNotice = "任务取消已暂存。";
       renderRewardPage(page);
     }));
-    page.querySelector("[data-reward-new-submit]")?.addEventListener("click", () => {
+    page.querySelectorAll("[data-reward-new-submit]").forEach((button) => button.addEventListener("click", () => {
       if (rewardOccupiedTaskCount() >= 3) {
         page.dataset.rewardNotice = "变量和暂存区合计已有 3 个任务，不能再新增。";
         renderRewardPage(page);
@@ -9050,10 +10464,16 @@ button.st-work-notice{cursor:pointer}
         renderRewardPage(page);
         return;
       }
+      const rewardMode = button.getAttribute("data-reward-new-submit") === "voucher" ? "voucher" : "starlight";
+      const rewardItems = rewardMode === "voucher"
+        ? [{ name: "星光点兑换券", description: "APP任务奖励道具。VIP5及以上用户可在邂逅商店消耗本券，并以10000零花钱兑换1星光点。", quantity: 1 }]
+        : [];
+      const rewardStarlight = rewardMode === "voucher" ? 0 : ${DEFAULT_FRONTEND_REWARD_STARLIGHT};
+      const rewardLabel = rewardMode === "voucher" ? "星光点兑换券x1" : "${DEFAULT_FRONTEND_REWARD_STARLIGHT}星光点";
       appendAppOperation({
         来源: "成就和任务",
         操作: "新增任务",
-        任务ID: target.id,
+        任务ID: target.id + "_" + rewardMode,
         任务: "待AI命名",
         每日任务日期: target.dateKey,
         每日任务聊天: target.chatName,
@@ -9063,18 +10483,23 @@ button.st-work-notice{cursor:pointer}
         当前已接任务数: rewardActiveTaskCount(),
         暂存区新增任务数: rewardPendingTaskAddCount(),
         当前任务占用数: rewardOccupiedTaskCount(),
-        奖励星光点: ${DEFAULT_FRONTEND_REWARD_STARLIGHT},
+        奖励档位: rewardMode === "voucher" ? "星光点兑换券任务（高危）" : "普通星光点任务",
+        奖励星光点: rewardStarlight,
+        奖励物品: rewardItems,
+        奖励说明: rewardLabel,
         任务目标变量摘要: target.summary,
         当前已有任务摘要: rewardCurrentTaskSummaries(),
-        任务来源: "前端按变量日期和聊天名每日固定roll一个角色，用户只接受当天抽取到的目标角色，不提前知道具体任务内容。",
+        任务来源: "前端按变量日期和聊天名每日固定roll一个角色，用户在5星光点任务和1张星光点兑换券任务中二选一，不提前知道具体任务内容。",
         初始状态: "直接写入任务变量，作为已接/进行中的任务",
         任务命名规则: "AI必须生成一个黑色色情幽默感的短任务名，不能使用“今日任务目标”“每日任务目标”，也不能只用角色名。任务名应结合目标角色人设、当前状态、心理或剧情进展。",
         避免重复规则: "参考当前已有任务摘要，尽量不要复用已有任务名、完成条件和黑色幽默角度；若目标关系或状态已有进展，应把任务安排到更高难度或不同弱点上。",
-        生成规则: "前端不生成任务内容；AI根据当前剧情、任务目标角色变量和已有任务，生成1个高难度、不容易轻易完成、带黑色色情幽默感且黑色幽默对象指向任务目标的任务。写入/任务/AI生成任务名，包含任务ID、每日任务日期、每日任务聊天、任务目标、完成条件、奖励星光点=5、可选奖励物品和已完成=false；不要写入前端静态列表。"
+        生成规则: rewardMode === "voucher"
+          ? "前端不生成任务内容；AI根据当前剧情、任务目标角色变量和已有任务，生成1个更高危、更难完成、带黑色色情幽默感且黑色幽默对象指向任务目标的任务。该任务不只是黑色色情幽默加码，而是极有可能增长{{user}}可疑度和他人警戒度，不能写成轻松、无风险或白给。写入/任务/AI生成任务名，包含任务ID、每日任务日期、每日任务聊天、任务目标、完成条件、奖励星光点=0、奖励物品/星光点兑换券 数量=1、已完成=false；不要写入前端静态列表。"
+          : "前端不生成任务内容；AI根据当前剧情、任务目标角色变量和已有任务，生成1个高难度、不容易轻易完成、带黑色色情幽默感且黑色幽默对象指向任务目标的任务。写入/任务/AI生成任务名，包含任务ID、每日任务日期、每日任务聊天、任务目标、完成条件、奖励星光点=5、已完成=false；不要写入前端静态列表。"
       });
       page.dataset.rewardNotice = "新增任务请求已暂存。";
       renderRewardPage(page);
-    });
+    }));
   }
 
   function openRewardPage(tile) {
@@ -9099,7 +10524,9 @@ button.st-work-notice{cursor:pointer}
       renderLiteHeader(page, { title: "库存", html: recordingIslandHtml() }) +
       '<main class="st-lite-body">' +
         inventoryLockerHtml(items, selected, pageIndex, pageCount, "data-inventory-lite-item", "data-inventory-lite-page") +
-      '</main>';
+        inventoryNoticeHtml(page) +
+      '</main>' +
+      inventoryUseDialogHtml(page, items);
     bindLiteHeader(page, () => renderInventoryPage(page));
     page.querySelector('[data-lite-action="back"]')?.addEventListener("click", () => closeInternalLitePage(page, "inventory"));
     page.querySelectorAll("[data-inventory-lite-item]").forEach((button) => button.addEventListener("click", () => {
@@ -9110,6 +10537,7 @@ button.st-work-notice{cursor:pointer}
       shiftInventoryPage(page, items, "inventorySelected", "inventoryPage", button.getAttribute("data-inventory-lite-page") || "next");
       renderInventoryPage(page);
     }));
+    bindInventoryActionControls(page, page, items, () => renderInventoryPage(page));
   }
 
   function openInventoryPage(tile) {
@@ -9146,7 +10574,8 @@ button.st-work-notice{cursor:pointer}
   }
 
   function hypnosisLiteInt(value, fallback = 1, min = 1, max = 9999) {
-    const parsed = Math.floor(Number(value));
+    const text = String(value ?? "").replace(/,/g, "").trim();
+    const parsed = text ? Math.floor(Number(text)) : NaN;
     const next = Number.isFinite(parsed) ? parsed : fallback;
     return Math.max(min, Math.min(max, next));
   }
@@ -9155,6 +10584,11 @@ button.st-work-notice{cursor:pointer}
     const map = draft?.[key] && typeof draft[key] === "object" && !Array.isArray(draft[key]) ? draft[key] : {};
     const value = map[id];
     return value === undefined || value === null ? fallback : String(value);
+  }
+
+  function hypnosisLiteInputValue(draft, key, id, fallback = "") {
+    const map = draft?.[key] && typeof draft[key] === "object" && !Array.isArray(draft[key]) ? draft[key] : {};
+    return Object.prototype.hasOwnProperty.call(map, id) ? String(map[id] ?? "") : String(fallback ?? "");
   }
 
   function hypnosisDeliveryMode(draft) {
@@ -9257,7 +10691,7 @@ button.st-work-notice{cursor:pointer}
 
   function hypnosisFeatureUsesPersonCount(feature) {
     if (!feature || feature.id === "vip1_stats") return false;
-    if (feature.id === "vip5_open_space_common_sense") return false;
+    if (feature.id === "vip4_closed_space_common_sense" || feature.id === "vip4_closed_space_cognitive_block" || feature.id === "vip5_open_space_common_sense") return false;
     return Number(feature.costValue || 0) > 0;
   }
 
@@ -9278,19 +10712,37 @@ button.st-work-notice{cursor:pointer}
     return hypnosisLiteInt(hypnosisLiteMapValue(draft, "persons", feature.id, "1"), 1, 1, 99);
   }
 
+  function hypnosisFeaturePersonInput(feature, draft) {
+    return hypnosisLiteInputValue(draft, "persons", feature?.id || "", "1");
+  }
+
   function hypnosisFeaturePartCount(feature, draft) {
     if (hypnosisSelectionMode(draft)) return Math.min(5, hypnosisSelectedPartIds(feature, draft).length);
     return hypnosisLiteInt(hypnosisLiteMapValue(draft, "parts", feature.id, "1"), 1, 1, 5);
+  }
+
+  function hypnosisFeaturePartInput(feature, draft) {
+    return hypnosisLiteInputValue(draft, "parts", feature?.id || "", "1");
   }
 
   function hypnosisFeatureDurationMinutes(feature, draft) {
     return hypnosisLiteInt(hypnosisLiteMapValue(draft, "durations", feature.id, "10"), 10, 1, 1440);
   }
 
+  function hypnosisFeatureDurationInput(feature, draft) {
+    return hypnosisLiteInputValue(draft, "durations", feature?.id || "", "10");
+  }
+
   function hypnosisFeatureNumericValue(feature, draft) {
     const config = hypnosisFeatureNumericConfig(feature);
     if (!config) return 1;
     return hypnosisLiteInt(hypnosisLiteMapValue(draft, "numbers", feature.id, config.fallback), Number(config.fallback || 1), config.min, config.max);
+  }
+
+  function hypnosisFeatureNumericInput(feature, draft) {
+    const config = hypnosisFeatureNumericConfig(feature);
+    if (!config) return "";
+    return hypnosisLiteInputValue(draft, "numbers", feature?.id || "", config.fallback);
   }
 
   function hypnosisLiteFeatureCost(feature, draft) {
@@ -9342,19 +10794,19 @@ button.st-work-notice{cursor:pointer}
     if (hypnosisFeatureUsesPersonCount(feature)) {
       items.push(selectionMode
         ? renderHypnosisChoicePicker(feature, draft, page, "role")
-        : '<label class="st-hypnosis-param"><span>人数</span><input type="number" min="1" max="99" step="1" value="' + escapeAttr(String(hypnosisFeaturePersonCount(feature, draft))) + '" data-hypnosis-feature-person="' + escapeAttr(feature.id) + '"></label>');
+        : '<label class="st-hypnosis-param"><span>人数</span><input type="number" min="1" max="99" step="1" value="' + escapeAttr(hypnosisFeaturePersonInput(feature, draft)) + '" data-hypnosis-feature-person="' + escapeAttr(feature.id) + '"></label>');
     }
     if (hypnosisFeatureUsesDuration(feature)) {
-      items.push('<label class="st-hypnosis-param"><span>时间(分钟)</span><input type="number" min="1" max="1440" step="1" value="' + escapeAttr(String(hypnosisFeatureDurationMinutes(feature, draft))) + '" data-hypnosis-feature-duration="' + escapeAttr(feature.id) + '"></label>');
+      items.push('<label class="st-hypnosis-param"><span>时间(分钟)</span><input type="number" min="1" max="1440" step="1" value="' + escapeAttr(hypnosisFeatureDurationInput(feature, draft)) + '" data-hypnosis-feature-duration="' + escapeAttr(feature.id) + '"></label>');
     }
     if (hypnosisFeatureUsesPartCount(feature)) {
       items.push(selectionMode
         ? renderHypnosisChoicePicker(feature, draft, page, "part")
-        : '<label class="st-hypnosis-param"><span>部位数(1-5)</span><input type="number" min="1" max="5" step="1" value="' + escapeAttr(String(hypnosisFeaturePartCount(feature, draft))) + '" data-hypnosis-feature-part="' + escapeAttr(feature.id) + '"></label>');
+        : '<label class="st-hypnosis-param"><span>部位数(1-5)</span><input type="number" min="1" max="5" step="1" value="' + escapeAttr(hypnosisFeaturePartInput(feature, draft)) + '" data-hypnosis-feature-part="' + escapeAttr(feature.id) + '"></label>');
     }
     const numericConfig = hypnosisFeatureNumericConfig(feature);
     if (numericConfig) {
-      items.push('<label class="st-hypnosis-param"><span>' + escapeHtml(numericConfig.label + (numericConfig.unit ? "(" + numericConfig.unit + ")" : "")) + '</span><input type="number" min="' + numericConfig.min + '" max="' + numericConfig.max + '" step="1" value="' + escapeAttr(String(hypnosisFeatureNumericValue(feature, draft))) + '" data-hypnosis-feature-number="' + escapeAttr(feature.id) + '"></label>');
+      items.push('<label class="st-hypnosis-param"><span>' + escapeHtml(numericConfig.label + (numericConfig.unit ? "(" + numericConfig.unit + ")" : "")) + '</span><input type="number" min="' + numericConfig.min + '" max="' + numericConfig.max + '" step="1" value="' + escapeAttr(hypnosisFeatureNumericInput(feature, draft)) + '" data-hypnosis-feature-number="' + escapeAttr(feature.id) + '"></label>');
     }
     return items.length ? '<div class="st-hypnosis-param-grid">' + items.join("") + '</div>' : "";
   }
@@ -9420,24 +10872,50 @@ button.st-work-notice{cursor:pointer}
 
   function renderHypnosisSupply(page, system) {
     const qty = hypnosisDrawerQty(page);
+    const qtyInput = hypnosisDrawerQtyInput(page);
     const money = Math.max(0, Math.floor(Number(system["持有零花钱"] || 0) || 0));
+    const starlight = Math.max(0, Math.floor(Number(system["星光点"] || 0) || 0));
     const suspicion = Math.max(0, Number(system["主角可疑度"] || 0) || 0);
     const pendingEnergy = hasPendingHypnosisSupplyOperation(/补充MC能量/);
     const pendingMaxEnergy = hasPendingHypnosisSupplyOperation(/提升MC能量上限/);
+    const currentRank = reactVipRank(reactCurrentVipTier(system));
+    const customItemBlocked = currentRank < HYP_CUSTOM_ITEM_MIN_VIP_RANK;
+    const customItemText = currentRank < HYP_CUSTOM_ITEM_MIN_VIP_RANK ? "需要VIP2" : "定制";
+    const energyPrice = qty * 10;
+    const maxEnergyPrice = qty * 100;
     return '<section class="st-lite-card st-graph-paper st-hypnosis-form">' +
-      '<div class="st-graph-head"><strong>快速补给</strong><span>资金 ' + escapeHtml("¥" + money.toLocaleString()) + '</span></div>' +
+      '<div class="st-graph-head"><strong>快速补给</strong><span>资金 ' + escapeHtml("¥" + money.toLocaleString()) + ' / 星光点 ' + starlight.toLocaleString() + '</span></div>' +
       '<section class="st-hypnosis-summary">' +
         '<span><strong>' + escapeHtml(String(system["MC能量"] ?? 0)) + '</strong>MC能量</span>' +
         '<span><strong>' + escapeHtml(String(system["MC能量上限"] ?? 0)) + '</strong>上限</span>' +
         '<span><strong>' + escapeHtml(String(suspicion) + "%") + '</strong>可疑度</span>' +
       '</section>' +
       '<div class="st-hypnosis-form-grid">' +
-        '<input type="number" min="1" max="999" step="1" value="' + qty + '" data-hypnosis-drawer-qty aria-label="数量">' +
-        '<button class="st-hypnosis-button' + (pendingEnergy ? " is-pending" : "") + '" type="button" data-hypnosis-supply-action="energy">' + (pendingEnergy ? "并入补给" : "补充能量") + '</button>' +
-        '<button class="st-hypnosis-button' + (pendingMaxEnergy ? " is-pending" : "") + '" type="button" data-hypnosis-supply-action="max-energy">' + (pendingMaxEnergy ? "并入上限" : "提升上限") + '</button>' +
+        '<input type="number" min="1" step="1" value="' + escapeAttr(qtyInput) + '" data-hypnosis-drawer-qty aria-label="数量">' +
+        '<button class="st-hypnosis-button' + (pendingEnergy ? " is-pending" : "") + '" type="button" data-hypnosis-supply-action="energy">补充能量 <small>¥' + energyPrice.toLocaleString() + '</small></button>' +
+        '<button class="st-hypnosis-button' + (pendingMaxEnergy ? " is-pending" : "") + '" type="button" data-hypnosis-supply-action="max-energy">提升上限 <small>¥' + maxEnergyPrice.toLocaleString() + '</small></button>' +
       '</div>' +
-      '<p class="st-hypnosis-notice">补给/VIP由前端直接扣费写变量，并锁定当前楼层暂存。存在“无精打采”时补充能量实际获得减半。</p>' +
+      '<section class="st-hypnosis-custom-item">' +
+        '<div><strong>定制趣味物品</strong><p>VIP2开放，发送后由AI判断并消耗5星光点生成1件库存物品。仅限衣物或性道具。</p></div>' +
+        '<button class="st-hypnosis-button" type="button" data-hypnosis-custom-item-open' + (customItemBlocked ? " disabled" : "") + '>' + customItemText + ' <small>5星光点</small></button>' +
+      '</section>' +
+      '<p class="st-hypnosis-notice">补给/VIP由前端直接扣费写变量；定制物品只暂存需求，发送后由AI判断扣费与生成。存在“无精打采”时补充能量实际获得减半。</p>' +
     '</section>';
+  }
+
+  function renderHypnosisCustomItemDialog(page) {
+    if (page?.dataset?.hypnosisSupplyDialog !== "custom-item") return "";
+    return '<div class="st-hypnosis-dialog-layer" data-hypnosis-dialog-layer role="presentation">' +
+      '<form class="st-hypnosis-dialog-card" data-hypnosis-custom-item-form role="dialog" aria-modal="true" aria-label="定制趣味物品">' +
+        '<h3>定制趣味物品</h3>' +
+        '<p>写下需求后暂存，发送后由AI判断是否消耗5星光点并生成一件库存物品。它只用于迎合性趣味，不会带来精神控制、强迫他人、金钱收益、战斗力或其他强剧情能力。</p>' +
+        '<label><span>需求</span><textarea maxlength="160" data-hypnosis-custom-item-text placeholder="例：适合夏美的大号犬耳外套；不会控制心智，只是穿着羞耻又可爱"></textarea></label>' +
+        '<div class="st-hypnosis-dialog-actions">' +
+          '<button type="button" data-hypnosis-dialog-close>取消</button>' +
+          '<button type="submit" class="primary">暂存需求</button>' +
+        '</div>' +
+      '</form>' +
+    '</div>';
   }
 
   function renderHypnosisVip(page, system) {
@@ -9491,7 +10969,8 @@ button.st-work-notice{cursor:pointer}
         '</section>' +
         (notice ? '<p class="st-hypnosis-notice">' + escapeHtml(notice) + '</p>' : "") +
         body +
-      '</main>';
+      '</main>' +
+      renderHypnosisCustomItemDialog(page);
     const rerenderPreservingScroll = () => rerenderLitePagePreservingBodyScroll(page, () => renderHypnosisLitePage(page));
     bindLiteHeader(page, rerenderPreservingScroll);
     page.querySelector('[data-lite-action="back"]')?.addEventListener("click", () => closeInternalLitePage(page, "hypnosis"));
@@ -9501,7 +10980,8 @@ button.st-work-notice{cursor:pointer}
       rerenderPreservingScroll();
     }));
     page.querySelector("[data-hypnosis-drawer-qty]")?.addEventListener("input", (event) => {
-      page.dataset.stHypnosisDrawerQty = String(event.target.value || "1");
+      page.dataset.stHypnosisDrawerQty = String(event.target?.value ?? "");
+      updateHypnosisSupplyButtonPrices(page);
     });
     page.querySelectorAll("[data-hypnosis-supply-action]").forEach((button) => button.addEventListener("click", () => {
       Promise.resolve(appendHypnosisDrawerOperation(page, button.getAttribute("data-hypnosis-supply-action") || "")).then((result) => {
@@ -9509,6 +10989,29 @@ button.st-work-notice{cursor:pointer}
         rerenderPreservingScroll();
       });
     }));
+    page.querySelector("[data-hypnosis-custom-item-open]")?.addEventListener("click", () => {
+      page.dataset.hypnosisSupplyDialog = "custom-item";
+      delete page.dataset.hypnosisNotice;
+      rerenderPreservingScroll();
+    });
+    page.querySelectorAll("[data-hypnosis-dialog-close]").forEach((button) => button.addEventListener("click", () => {
+      delete page.dataset.hypnosisSupplyDialog;
+      rerenderPreservingScroll();
+    }));
+    page.querySelector("[data-hypnosis-dialog-layer]")?.addEventListener("click", (event) => {
+      if (event.target?.closest?.(".st-hypnosis-dialog-card")) return;
+      delete page.dataset.hypnosisSupplyDialog;
+      rerenderPreservingScroll();
+    });
+    page.querySelector("[data-hypnosis-custom-item-form]")?.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const text = page.querySelector("[data-hypnosis-custom-item-text]")?.value || "";
+      Promise.resolve(appendHypnosisCustomItemOperation(page, text)).then((result) => {
+        delete page.dataset.hypnosisSupplyDialog;
+        page.dataset.hypnosisNotice = result?.message || (result ? "定制物品已暂存。" : "定制物品兑换失败。");
+        rerenderPreservingScroll();
+      });
+    });
     page.querySelectorAll("[data-hypnosis-vip-tier]").forEach((button) => button.addEventListener("click", () => {
       Promise.resolve(appendHypnosisDrawerOperation(page, "vip", button.getAttribute("data-hypnosis-vip-tier") || "")).then((result) => {
         page.dataset.hypnosisNotice = result?.message || (result ? "VIP买断请求已暂存。" : "VIP买断失败。");
@@ -9696,7 +11199,7 @@ button.st-work-notice{cursor:pointer}
         操作: actionText,
         功能列表: commandList,
         MC能量消耗: totalCost + "点",
-        施术模式: soundwaveMode ? "声波单体催眠" : "手机界面单体催眠",
+        施术模式: soundwaveMode ? "声波单体催眠" : selectedNeedsTargetDelivery ? "手机界面单体催眠" : "范围型催眠",
         结算提示: settlementHint
       };
       if (soundwaveMode) operationPayload["声波额外消耗"] = "100点";
@@ -10085,6 +11588,49 @@ button.st-work-notice{cursor:pointer}
     return roles && typeof roles === "object" && !Array.isArray(roles) ? roles : {};
   }
 
+  function setCurrentLayerSystemField(key, value) {
+    const field = String(key || "").trim();
+    if (!field) return false;
+    const option = getCurrentVariableOption();
+    if (!option) return false;
+    const mutateRoot = (root) => {
+      if (!root || typeof root !== "object" || Array.isArray(root)) return false;
+      const system = root["系统"] && typeof root["系统"] === "object" && !Array.isArray(root["系统"]) ? root["系统"] : {};
+      if (String(system[field] ?? "") === String(value ?? "")) return false;
+      system[field] = value;
+      root["系统"] = system;
+      return true;
+    };
+    try {
+      if (typeof updateVariablesWith === "function") {
+        let changed = false;
+        updateVariablesWith((vars) => {
+          const root = vars?.stat_data && typeof vars.stat_data === "object" && !Array.isArray(vars.stat_data) ? vars.stat_data : vars;
+          changed = mutateRoot(root);
+          if (vars?.stat_data && typeof vars.stat_data === "object" && !Array.isArray(vars.stat_data)) vars.stat_data = root;
+          return vars;
+        }, option);
+        return changed;
+      }
+    } catch (error) {
+      console.warn("[HypnoOS] 写入当前层系统变量失败", error);
+    }
+    try {
+      const mvu = window.Mvu?.getMvuData?.(option);
+      if (!mvu || typeof mvu.then === "function") return false;
+      const root = mvu?.stat_data && typeof mvu.stat_data === "object" && !Array.isArray(mvu.stat_data) ? mvu.stat_data : mvu;
+      const changed = mutateRoot(root);
+      if (!changed) return false;
+      if (mvu?.stat_data && typeof mvu.stat_data === "object" && !Array.isArray(mvu.stat_data)) mvu.stat_data = root;
+      const result = window.Mvu?.replaceMvuData?.(mvu, option);
+      if (result && typeof result.catch === "function") result.catch((error) => console.warn("[HypnoOS] 写入当前层系统变量失败", error));
+      return true;
+    } catch (error) {
+      console.warn("[HypnoOS] 写入当前层系统变量失败", error);
+      return false;
+    }
+  }
+
   const ST_ROLE_FAVORITES_STORAGE_PREFIX = "hypnoos:favorite-roles:v1";
 
   function roleFavoriteStorageScope() {
@@ -10222,6 +11768,7 @@ button.st-work-notice{cursor:pointer}
   }
 
   const ST_CORE_STATS = ["好感度", "警戒度", "服从度", "性欲", "快感值"];
+  const ST_STATE_BAR_STATS = ["好感度", "服从度", "警戒度", "性欲", "快感值"];
   const ST_SENSITIVITY_STATS = ["阴蒂敏感度", "小穴敏感度", "菊穴敏感度", "尿道敏感度", "乳头敏感度"];
   const ST_MALE_SENSITIVITY_STATS = ["阴茎敏感度", "龟头敏感度", "睾丸敏感度", "前列腺敏感度", "乳头敏感度"];
   const ST_COUNT_STATS = ["阴蒂高潮次数", "小穴高潮次数", "菊穴高潮次数", "尿道高潮次数", "乳头高潮次数"];
@@ -10273,6 +11820,25 @@ button.st-work-notice{cursor:pointer}
     return Number.isFinite(parsed) ? parsed : fallback;
   }
 
+  function statVisualMax(label) {
+    return isSensitivityStat(label) ? 1000 : 100;
+  }
+
+  function statUpperLimit(label) {
+    return isSensitivityStat(label) ? 2000 : 200;
+  }
+
+  function statLowerLimit(label) {
+    return isSensitivityStat(label) ? 0 : -200;
+  }
+
+  function cappedStatNumber(label, value, fallback = 0) {
+    const number = statNumber(value, fallback);
+    const cap = statUpperLimit(label);
+    const floor = statLowerLimit(label);
+    return Math.max(floor, Math.min(number, cap));
+  }
+
   function formatStatNumber(value) {
     const number = statNumber(value);
     if (!Number.isFinite(number)) return "0";
@@ -10280,8 +11846,8 @@ button.st-work-notice{cursor:pointer}
   }
 
   function renderMeterStat(label, value) {
-    const number = statNumber(value, statFallback(label));
-    const maxValue = isSensitivityStat(label) ? 1000 : 100;
+    const number = cappedStatNumber(label, value, statFallback(label));
+    const maxValue = statVisualMax(label);
     const rawPercent = maxValue > 0 ? (number / maxValue) * 100 : 0;
     const percent = Math.max(0, Math.min(100, rawPercent));
     const roundedPercent = Math.max(0, Math.round(rawPercent));
@@ -10295,7 +11861,7 @@ button.st-work-notice{cursor:pointer}
           : percent >= 25
             ? "is-mid"
             : "is-low";
-    const display = effectScalar(value) || String(statFallback(label));
+    const display = formatStatNumber(number);
     const overflowBadge = overflow
       ? '<span class="st-meter-overflow">+' + escapeHtml(formatStatNumber(number - maxValue)) + '</span>'
       : "";
@@ -10304,6 +11870,65 @@ button.st-work-notice{cursor:pointer}
       '<span class="st-meter-value">' + escapeHtml(display) + '<span class="st-meter-percent">' + roundedPercent + '%</span>' + overflowBadge + '</span></div>' +
       '<div class="st-meter-track"><span class="st-meter-fill"></span></div>' +
       '</article>';
+  }
+
+  function stateMeterTone(label, number) {
+    const isAlert = label === "警戒度";
+    const magnitude = Math.min(100, Math.abs(number));
+    const strength = Math.max(0.32, magnitude / 100);
+    if (number === 0) {
+      return {
+        tone: "rgba(144,136,128,.58)",
+        soft: "rgba(255,255,255,.56)",
+        glow: "rgba(144,136,128,.12)"
+      };
+    }
+    if (isAlert ? number > 0 : number < 0) {
+      return {
+        tone: magnitude >= 85 ? "#20232a" : magnitude >= 45 ? "#3b3f48" : "#6f7078",
+        soft: "rgba(238,238,242," + (0.3 + strength * 0.24).toFixed(2) + ")",
+        glow: "rgba(32,35,42," + (0.1 + strength * 0.18).toFixed(2) + ")"
+      };
+    }
+    return {
+      tone: magnitude >= 85 ? "#ff4fa3" : magnitude >= 45 ? "#ff8fc4" : "#ffc7df",
+      soft: "rgba(255,255,255," + (0.52 + strength * 0.28).toFixed(2) + ")",
+      glow: "rgba(255,79,163," + (0.12 + strength * 0.18).toFixed(2) + ")"
+    };
+  }
+
+  function renderStateMeterStat(label, value) {
+    const number = cappedStatNumber(label, value, 0);
+    const directionNumber = label === "警戒度" ? -number : number;
+    const visual = Math.max(-100, Math.min(100, directionNumber));
+    const width = Math.abs(visual) / 2;
+    const tone = stateMeterTone(label, number);
+    const directionClass = directionNumber < 0 ? "is-negative" : directionNumber > 0 ? "is-positive" : "is-zero";
+    const density = Math.abs(visual) >= 82 ? "is-high-density" : Math.abs(visual) >= 45 ? "is-mid-density" : "is-low-density";
+    const style = "--bar-width:" + width.toFixed(1) + "%;--tone:" + tone.tone + ";--tone-soft:" + tone.soft + ";--tone-glow:" + tone.glow;
+    const guide = "恶 ← 0 → 善";
+    const hearts = renderStateMeterHearts(visual);
+    return '<article class="st-state-meter ' + directionClass + ' ' + density + '" style="' + style + '">' +
+      '<div class="st-state-meter-top"><span class="st-state-meter-label">' + escapeHtml(label) + '</span>' +
+      '<span class="st-state-meter-value">' + escapeHtml(formatStatNumber(number)) + '<small>' + escapeHtml(guide) + '</small></span></div>' +
+      '<div class="st-state-meter-track"><span class="st-state-meter-fill">' + hearts + '</span></div>' +
+      '<div class="st-state-meter-scale"><span>-100</span><span>0</span><span>+100</span></div>' +
+      '</article>';
+  }
+
+  function renderStateMeterHearts(visual) {
+    if (visual <= 8) return "";
+    const amount = visual >= 90 ? 6 : visual >= 70 ? 5 : visual >= 45 ? 4 : visual >= 20 ? 3 : 2;
+    const minSize = amount <= 2 ? 7.4 : 6.4;
+    const maxSize = 11.4;
+    const pieces = [];
+    for (let index = 0; index < amount; index += 1) {
+      const t = amount <= 1 ? 1 : index / (amount - 1);
+      const size = minSize + (maxSize - minSize) * t;
+      const left = amount <= 1 ? 50 : 14 + t * 74;
+      pieces.push('<span class="st-state-meter-heart" style="left:' + left.toFixed(1) + '%;font-size:' + size.toFixed(1) + 'px">♥</span>');
+    }
+    return pieces.join("");
   }
 
   function shortCountLabel(label) {
@@ -10315,17 +11940,19 @@ button.st-work-notice{cursor:pointer}
     return '<article class="st-count-chip"><strong>' + escapeHtml(display) + '</strong><span>' + escapeHtml(shortCountLabel(label)) + '</span></article>';
   }
 
-  function radarToneClass(number) {
-    if (number < 0) return "is-negative";
-    if (number > 100) return "is-overflow";
-    if (number >= 85) return "is-peak";
-    if (number >= 60) return "is-high";
-    if (number >= 25) return "is-mid";
+  function sensitivityRadarToneClass(number) {
+    if (number < 100) return number <= 25 ? "is-bad" : "is-negative";
+    if (number === 100) return "is-base";
+    if (number > 1000) return "is-overflow";
+    if (number >= 800) return "is-peak";
+    if (number >= 500) return "is-high";
+    if (number >= 200) return "is-mid";
     return "is-low";
   }
 
-  function radarPoint(cx, cy, radius, index, ratio) {
-    const angle = (-90 + index * 72) * Math.PI / 180;
+  function radarPoint(cx, cy, radius, index, count, ratio) {
+    const step = count > 0 ? 360 / count : 72;
+    const angle = (-90 + index * step) * Math.PI / 180;
     const distance = radius * Math.max(0, Math.min(1, ratio));
     return {
       x: cx + Math.cos(angle) * distance,
@@ -10333,45 +11960,72 @@ button.st-work-notice{cursor:pointer}
     };
   }
 
-  function renderPersonRadar(roleData) {
+  function shortSensitivityLabel(label) {
+    return bodyStatDisplayLabel(label).replace("敏感度", "");
+  }
+
+  function renderPersonSensitivityRadar(roleData, roleName) {
+    const stats = roleSensitivityStats(roleData, roleName);
     const cx = 100;
     const cy = 100;
     const radius = 56;
     const labelRadius = 77;
-    const ring = (ratio) => ST_CORE_STATS.map((_, index) => {
-      const point = radarPoint(cx, cy, radius, index, ratio);
+    const count = stats.length || 5;
+    const ring = (ratio) => stats.map((_, index) => {
+      const point = radarPoint(cx, cy, radius, index, count, ratio);
       return point.x.toFixed(1) + "," + point.y.toFixed(1);
     }).join(" ");
-    const values = ST_CORE_STATS.map((label, index) => {
-      const number = statNumber(statValue(roleData, label), 0);
-      const ratio = Math.max(0, Math.min(100, number)) / 100;
-      const point = radarPoint(cx, cy, radius, index, ratio);
-      const labelPoint = radarPoint(cx, cy, labelRadius, index, 1);
+    const values = stats.map((label, index) => {
+      const number = cappedStatNumber(label, statValue(roleData, label), statFallback(label));
+      const ratio = Math.max(0, Math.min(1000, number)) / 1000;
+      const point = radarPoint(cx, cy, radius, index, count, ratio);
+      const labelPoint = radarPoint(cx, cy, labelRadius, index, count, 1);
       const anchor = Math.abs(labelPoint.x - cx) < 4 ? "middle" : (labelPoint.x < cx ? "end" : "start");
       const valueY = labelPoint.y + (labelPoint.y < cy - 18 ? -11 : 13);
-      return { label, number, point, labelPoint, valueY, anchor, tone: radarToneClass(number) };
+      return { label: shortSensitivityLabel(label), number, point, labelPoint, valueY, anchor, tone: sensitivityRadarToneClass(number) };
     });
     const shape = values.map((item) => item.point.x.toFixed(1) + "," + item.point.y.toFixed(1)).join(" ");
-    const axes = ST_CORE_STATS.map((_, index) => {
-      const edge = radarPoint(cx, cy, radius, index, 1);
+    const axes = stats.map((_, index) => {
+      const edge = radarPoint(cx, cy, radius, index, count, 1);
       return '<line class="st-profile-radar-axis" x1="' + cx + '" y1="' + cy + '" x2="' + edge.x.toFixed(1) + '" y2="' + edge.y.toFixed(1) + '"></line>';
     }).join("");
     const dots = values.map((item) => (
       '<circle class="st-profile-radar-dot ' + item.tone + '" cx="' + item.point.x.toFixed(1) + '" cy="' + item.point.y.toFixed(1) + '" r="0.9"></circle>'
     )).join("");
+    const hearts = values.flatMap((item, index) => {
+      if (item.number < 400) return [];
+      const amount = item.number >= 900 ? 7 : item.number >= 700 ? 5 : 3;
+      const pieces = [];
+      for (let step = 0; step < amount; step += 1) {
+        const ratio = Math.min(1, (0.36 + step * 0.09 + ((index + step) % 2) * 0.035) * Math.min(1, item.number / 1000));
+        const base = radarPoint(cx, cy, radius, index, count, ratio);
+        const jitterX = (((index * 17 + step * 11) % 9) - 4) * 0.95;
+        const jitterY = (((index * 13 + step * 7) % 7) - 3) * 0.9;
+        pieces.push('<text class="st-profile-sensitivity-heart" x="' + (base.x + jitterX).toFixed(1) + '" y="' + (base.y + jitterY).toFixed(1) + '" text-anchor="middle">♥</text>');
+      }
+      return pieces;
+    }).join("");
     const labels = values.map((item) => (
       '<text class="st-profile-radar-label" x="' + item.labelPoint.x.toFixed(1) + '" y="' + item.labelPoint.y.toFixed(1) + '" text-anchor="' + item.anchor + '">' + escapeHtml(item.label) + '</text>' +
       '<text class="st-profile-radar-value" x="' + item.labelPoint.x.toFixed(1) + '" y="' + item.valueY.toFixed(1) + '" text-anchor="' + item.anchor + '">' + escapeHtml(formatStatNumber(item.number)) + '</text>'
     )).join("");
-    return '<div class="st-profile-radar-card">' +
-      '<svg viewBox="0 0 200 200" role="img" aria-label="五维状态雷达图">' +
+    return '<div class="st-profile-radar-card is-sensitivity">' +
+      '<svg viewBox="0 0 200 200" role="img" aria-label="五项敏感度雷达图">' +
+        '<defs><radialGradient id="st-profile-sensitivity-gradient" gradientUnits="userSpaceOnUse" cx="100" cy="100" r="56">' +
+          '<stop offset="0%" stop-color="#fff8fc" stop-opacity=".24"></stop>' +
+          '<stop offset="18%" stop-color="#fff0f7" stop-opacity=".32"></stop>' +
+          '<stop offset="44%" stop-color="#ffd8ea" stop-opacity=".48"></stop>' +
+          '<stop offset="74%" stop-color="#ffacd3" stop-opacity=".62"></stop>' +
+          '<stop offset="100%" stop-color="#ff79b9" stop-opacity=".72"></stop>' +
+        '</radialGradient></defs>' +
         [0.25, 0.5, 0.75, 1].map((ratio) => '<polygon class="st-profile-radar-grid" points="' + ring(ratio) + '"></polygon>').join("") +
         axes +
-        '<polygon class="st-profile-radar-shape" points="' + shape + '"></polygon>' +
+        '<polygon class="st-profile-radar-shape is-sensitivity" style="fill:url(#st-profile-sensitivity-gradient);fill-opacity:.92" points="' + shape + '"></polygon>' +
+        hearts +
         dots +
         labels +
       '</svg>' +
-      '<span class="st-profile-radar-note">0-100</span>' +
+      '<span class="st-profile-radar-note">100基准 / 1000满</span>' +
     '</div>';
   }
 
@@ -10417,6 +12071,14 @@ button.st-work-notice{cursor:pointer}
     return roleNicknameRecognized(roleData) ? "is-recognized" : "is-private";
   }
 
+  function roleNicknameFitClass(nickname) {
+    const length = Array.from(String(nickname || "").trim()).length;
+    if (length >= 14) return "is-fit-xxs";
+    if (length >= 10) return "is-fit-xs";
+    if (length >= 7) return "is-fit-sm";
+    return "";
+  }
+
   function profileDisplayNameHtml(roleName, roleData, extraClass = "") {
     const baseName = String(roleName || "").trim() || "未记录";
     const nickname = roleNickname(baseName, roleData);
@@ -10453,6 +12115,223 @@ button.st-work-notice{cursor:pointer}
       目标变量路径: "/角色/" + roleName + "/" + effectType + "/" + effectKey,
       AI执行规范: "只在剧情与变量允许时删除这个角色指定类型下的单个效果；成功用remove删除目标路径。不要顺手改其他效果、敏感度、次数、校规或资源；失败时在正文说明原因。"
     });
+  }
+
+	  function roleEventThresholds(roleName) {
+	    const specific = ROLE_EVENT_HINT_CONFIG.find((config) => String(config.role || "") === String(roleName || ""));
+	    if (specific?.thresholds?.length) {
+	      return specific.thresholds.slice(0, 5).map((item, index) => ({
+	        value: Number(item.value || ENCOUNTER_AFFECTION_CHAIN_THRESHOLDS[index] || 0),
+	        bit: Math.max(0, Math.min(4, Number(item.bit ?? index) || 0)),
+	        label: String(item.label || item.title || ""),
+	        title: String(item.title || item.label || ""),
+	        summary: String(item.summary || item.description || item.text || "")
+	      }));
+	    }
+	    return ENCOUNTER_AFFECTION_CHAIN_THRESHOLDS.map((value, index) => {
+	      const generic = ENCOUNTER_GENERIC_AFFECTION_CHAIN[index] || {};
+	      return {
+	        value,
+	        bit: index,
+	        label: String(generic.title || ""),
+	        title: String(generic.title || ""),
+	        summary: String(generic.summary || ""),
+	        generic: true
+	      };
+	    });
+	  }
+
+  function roleEventRecordWithBit(record, bit) {
+    const chars = normalizedRoleEventRecord(record).split("");
+    const safeBit = Math.max(0, Math.min(4, Number(bit) || 0));
+    chars[safeBit] = "1";
+    return chars.join("");
+  }
+
+  function pendingRoleEventTrigger(roleName, bit) {
+    try {
+      const pending = window.__ST_GET_PENDING_OPERATION_INPUT_LOG__?.() || [];
+      return pending.some((entry) => {
+        const payload = entry?.payload || entry;
+        if (!payload || typeof payload !== "object") return false;
+        return String(payload["来源"] || "") === "人物档案"
+          && String(payload["操作"] || "") === "触发角色事件"
+          && String(payload["角色名"] || "") === String(roleName || "")
+          && Number(payload["事件位"]) === Number(bit);
+      });
+    } catch {
+      return false;
+    }
+  }
+
+  function pendingRoleEventRecall(roleName, bit) {
+    try {
+      const pending = window.__ST_GET_PENDING_OPERATION_INPUT_LOG__?.() || [];
+      return pending.some((entry) => {
+        const payload = entry?.payload || entry;
+        if (!payload || typeof payload !== "object") return false;
+        return String(payload["来源"] || "") === "人物档案"
+          && String(payload["操作"] || "") === "回忆角色事件"
+          && String(payload["角色名"] || "") === String(roleName || "")
+          && Number(payload["事件位"]) === Number(bit);
+      });
+    } catch {
+      return false;
+    }
+  }
+
+  function pendingAnyRoleEventTrigger() {
+    try {
+      const pending = window.__ST_GET_PENDING_OPERATION_INPUT_LOG__?.() || [];
+      return pending.some((entry) => {
+        const payload = entry?.payload || entry;
+        if (!payload || typeof payload !== "object") return false;
+        return String(payload["来源"] || "") === "人物档案"
+          && String(payload["操作"] || "") === "触发角色事件";
+      });
+    } catch {
+      return false;
+    }
+  }
+
+  async function requestTriggerProfileEvent(page, roleName, roleData, eventItem) {
+    const bit = Math.max(0, Math.min(4, Number(eventItem?.bit) || 0));
+    const eventIndex = bit + 1;
+    const numeral = ENCOUNTER_EVENT_NUMERALS[bit] || String(eventIndex);
+    const record = normalizedRoleEventRecord(roleData?.["事件记录"]);
+    if (pendingAnyRoleEventTrigger()) {
+      page.dataset.profileEventNotice = "本轮已有角色事件暂存，发送或取消后才能触发下一个。";
+      renderPersonProfilePage(page);
+      return;
+    }
+    if (record[bit] === "1" || pendingRoleEventTrigger(roleName, bit)) return;
+    const nextRecord = roleEventRecordWithBit(record, bit);
+    const result = await rewardApplySystemMutation((system, stat) => {
+      const roles = stat["角色"] && typeof stat["角色"] === "object" && !Array.isArray(stat["角色"]) ? stat["角色"] : {};
+      const target = roles[roleName] && typeof roles[roleName] === "object" && !Array.isArray(roles[roleName]) ? roles[roleName] : null;
+      if (!target) return { ok: false, message: "没有找到角色变量。" };
+      const currentRecord = normalizedRoleEventRecord(target["事件记录"]);
+      if (currentRecord[bit] === "1") return { ok: false, message: "事件" + numeral + "已经触发过。" };
+      const writtenRecord = roleEventRecordWithBit(currentRecord, bit);
+      target["事件记录"] = writtenRecord;
+      return {
+        ok: true,
+        message: "事件" + numeral + "已写入事件记录。",
+        payload: {
+          来源: "人物档案",
+          操作: "触发角色事件",
+          暂存摘要: roleName + "｜事件" + numeral,
+          角色名: roleName,
+          事件序号: eventIndex,
+	          事件位: bit,
+	          事件标记: numeral,
+	          事件名: String(eventItem?.title || eventItem?.label || "通用事件" + numeral),
+	          事件描述: String(eventItem?.summary || "由AI按当前角色状态生成。"),
+	          好感链来源: eventItem?.generic ? "通用好感链（未生成专属世界书条目）" : "角色专属好感链或事件配置",
+	          当前好感度: statValue(target, "好感度"),
+	          建议好感条件: "好感度≥" + Number(eventItem?.value || 0),
+	          前端处理: "已由前端直接写入角色事件记录",
+	          前端写入前事件记录: currentRecord,
+	          前端写入后事件记录: writtenRecord,
+	          变量写入路径: ["/角色/" + roleName + "/事件记录"],
+	          AI执行规范: "这是用户在人物档案主动选择触发角色事件；事件记录位图已由前端直接写入并锁定暂存。优先使用本操作里的事件名/事件描述生成该阶段事件剧情；若角色专属好感链/事件世界书存在，可结合对应序号条目。若没有专属世界书，则使用通用好感链并根据当前角色人设、好感/服从/警戒/性欲/快感值、心理、地点、关系进展和近期剧情自然生成。AI不得再次replace /角色/" + roleName + "/事件记录，不得重复触发已完成事件，也不要自动发奖。",
+	          不可删除: true
+	        }
+	      };
+    });
+    if (!result?.ok) {
+      page.dataset.profileEventNotice = result?.message || "事件记录写入失败。";
+      renderPersonProfilePage(page);
+      return;
+    }
+    const added = await appendAppOperation(result.payload);
+    page.dataset.profileEventNotice = added ? "事件" + numeral + "已写入并锁定暂存。" : "事件" + numeral + "已写入变量。";
+    renderPersonProfilePage(page);
+  }
+
+  async function requestRecallProfileEvent(page, roleName, roleData, eventItem) {
+    const bit = Math.max(0, Math.min(4, Number(eventItem?.bit) || 0));
+    const eventIndex = bit + 1;
+    const numeral = ENCOUNTER_EVENT_NUMERALS[bit] || String(eventIndex);
+    const memory = getProfileEventMemory(roleName, bit);
+    if (!memory) {
+      page.dataset.profileEventNotice = "事件" + numeral + "还没有前端回忆摘要。触发新事件并让AI输出事件记录后才可回忆。";
+      renderPersonProfilePage(page);
+      return;
+    }
+    const memoryText = profileEventMemoryText(memory);
+    const result = await rewardApplySystemMutation((system, stat) => {
+      const roles = stat["角色"] && typeof stat["角色"] === "object" && !Array.isArray(stat["角色"]) ? stat["角色"] : {};
+      const target = roles[roleName] && typeof roles[roleName] === "object" && !Array.isArray(roles[roleName]) ? roles[roleName] : null;
+      if (!target) return { ok: false, message: "没有找到角色变量。" };
+      target["至关重要记忆"] = memoryText;
+      return {
+        ok: true,
+        message: "事件" + numeral + "已写入至关重要记忆。",
+        payload: {
+          来源: "人物档案",
+          操作: "回忆角色事件",
+          暂存摘要: roleName + "｜回忆事件" + numeral,
+          角色名: roleName,
+          事件序号: eventIndex,
+          事件位: bit,
+          事件标记: numeral,
+          事件标题: memory.title || "事件" + numeral,
+          事件回忆内容: memoryText,
+          当前好感度: statValue(target, "好感度"),
+          当前服从度: statValue(target, "服从度"),
+          当前警戒度: statValue(target, "警戒度"),
+          当前性欲: statValue(target, "性欲"),
+          当前快感值: statValue(target, "快感值"),
+          前端处理: "已由前端直接写入角色至关重要记忆",
+          变量写入路径: ["/角色/" + roleName + "/至关重要记忆"],
+          AI执行规范: "这是用户在人物档案中点击回忆已完成角色事件；前端已把本地保存的事件摘要写入/角色/" + roleName + "/至关重要记忆。AI应读取该字段，让" + roleName + "围绕这段共同经历自然聊天、回想或回应{{user}}，可结合当前角色变量和关系状态调整语气；不要把它当作新事件触发，不要修改/角色/" + roleName + "/事件记录，也不要自动发奖。"
+        }
+      };
+    });
+    if (!result?.ok) {
+      page.dataset.profileEventNotice = result?.message || "至关重要记忆写入失败。";
+      renderPersonProfilePage(page);
+      return;
+    }
+    const added = await appendAppOperation(result.payload);
+    page.dataset.profileEventNotice = added ? "事件" + numeral + "回忆已暂存。" : "事件" + numeral + "回忆已在暂存区。";
+    renderPersonProfilePage(page);
+  }
+
+  function renderPersonEventsPanel(page, roleName, roleData) {
+    const record = normalizedRoleEventRecord(roleData?.["事件记录"]);
+    const favor = Number(statValue(roleData, "好感度"));
+    const thresholds = roleEventThresholds(roleName);
+    const notice = page?.dataset?.profileEventNotice || "";
+    const anyPending = pendingAnyRoleEventTrigger();
+    const cards = thresholds.map((item, index) => {
+      const bit = Math.max(0, Math.min(4, Number(item.bit ?? index) || 0));
+      const numeral = ENCOUNTER_EVENT_NUMERALS[bit] || String(bit + 1);
+      const done = record[bit] === "1";
+      const pending = pendingRoleEventTrigger(roleName, bit);
+      const memory = getProfileEventMemory(roleName, bit);
+      const recallPending = pendingRoleEventRecall(roleName, bit);
+      const blockedByOtherEvent = anyPending && !pending;
+      const available = !done && !pending && !blockedByOtherEvent && Number.isFinite(favor) && favor >= Number(item.value || 0);
+      const state = (done && memory ? "is-done has-memory" : done ? "is-done" : pending ? "is-pending" : available ? "is-available" : "is-locked");
+      const status = done ? "已完成" : pending ? "已暂存" : blockedByOtherEvent ? "本轮已锁" : available ? "可触发" : "未满足";
+      return '<article class="st-profile-event-card ' + state + '" title="好感条件：' + escapeAttr(String(item.value || 0)) + '">' +
+        '<div class="st-profile-event-mark">' +
+          '<strong>' + escapeHtml(numeral) + '</strong>' +
+          (done ? '<i aria-hidden="true">✓</i>' : '') +
+        '</div>' +
+        (memory ? '<p class="st-profile-event-memory">' + escapeHtml(profileEventMemorySnippet(memory)) + '</p>' : '<p class="st-profile-event-memory is-empty">' + escapeHtml(done ? "未收录" : " ") + '</p>') +
+        '<div class="st-profile-event-actions">' +
+          (done
+            ? '<button type="button" class="is-recall" data-profile-recall-event="' + bit + '"' + (memory && !recallPending ? "" : " disabled") + '>' + escapeHtml(recallPending ? "已暂存" : "回忆") + '</button>'
+            : '<button type="button" data-profile-trigger-event="' + bit + '"' + (available ? "" : " disabled") + '>' + escapeHtml(status) + '</button>') +
+        '</div>' +
+      '</article>';
+    }).join("");
+    return '<section class="st-person-lines is-body">' +
+      renderPersonPanel("事件", '<div class="st-profile-event-grid">' + cards + '</div>' + (notice ? '<p class="st-profile-event-notice">' + escapeHtml(notice) + '</p>' : ''), "壹到伍") +
+      '</section>';
   }
 
   function requestDeleteProfileRole(roleName) {
@@ -10515,6 +12394,104 @@ button.st-work-notice{cursor:pointer}
     '</div>';
   }
 
+  function currentEditableProfileContext(page) {
+    if (isIsaacProfilePage(page)) return null;
+    const roles = getStatsRoles();
+    const roleNames = orderedProfileRoleNames(roles);
+    const roleName = roleNames[normalizeProfileIndex(page, roleNames.length)] || "";
+    if (!roleName) return null;
+    const roleData = isPlainObject(roles[roleName]) ? roles[roleName] : {};
+    return { roles, roleNames, roleName, roleData };
+  }
+
+  function openProfilePhotoDialog(page) {
+    if (isIsaacProfilePage(page)) return;
+    page.dataset.profilePhotoDialog = "true";
+    delete page.dataset.profilePhotoResetWarning;
+    delete page.dataset.profilePickerOpen;
+    renderPersonProfilePage(page);
+  }
+
+  function closeProfilePhotoDialog(page) {
+    delete page.dataset.profilePhotoDialog;
+    delete page.dataset.profilePhotoResetWarning;
+    renderPersonProfilePage(page);
+  }
+
+  function profileSetPhotoSlot(page, slotIndex, image) {
+    const context = currentEditableProfileContext(page);
+    if (!context) return;
+    delete page.dataset.profilePhotoResetWarning;
+    const index = Math.max(0, Math.min(3, Math.trunc(Number(slotIndex) || 0)));
+    const state = profilePhotoSlotsState(context.roleName, context.roleData);
+    const slots = normalizeProfilePhotoSlots(state.slots);
+    slots[index] = String(image || "").trim();
+    profileSaveLocalPhotoSlots(context.roleName, slots, slots[index] ? index : state.selected);
+    renderPersonProfilePage(page);
+  }
+
+  function profileDeletePhotoSlot(page, slotIndex) {
+    const context = currentEditableProfileContext(page);
+    if (!context) return;
+    delete page.dataset.profilePhotoResetWarning;
+    const index = Math.max(0, Math.min(3, Math.trunc(Number(slotIndex) || 0)));
+    const state = profilePhotoSlotsState(context.roleName, context.roleData);
+    const slots = normalizeProfilePhotoSlots(state.slots);
+    slots[index] = "";
+    const nextSelected = slots[state.selected] ? state.selected : Math.max(0, slots.findIndex(Boolean));
+    profileSaveLocalPhotoSlots(context.roleName, slots, nextSelected);
+    renderPersonProfilePage(page);
+  }
+
+  function profileResetPhotoSlots(page) {
+    const context = currentEditableProfileContext(page);
+    if (!context) return;
+    delete page.dataset.profilePhotoResetWarning;
+    profileClearLocalPhotoSlots(context.roleName);
+    renderPersonProfilePage(page);
+  }
+
+  function profileSelectPhotoSlot(page, slotIndex) {
+    const context = currentEditableProfileContext(page);
+    if (!context) return;
+    delete page.dataset.profilePhotoResetWarning;
+    const index = Math.max(0, Math.min(3, Math.trunc(Number(slotIndex) || 0)));
+    const state = profilePhotoSlotsState(context.roleName, context.roleData);
+    const slots = normalizeProfilePhotoSlots(state.slots);
+    if (!slots[index]) return;
+    profileSaveLocalPhotoSlots(context.roleName, slots, index);
+    renderPersonProfilePage(page);
+  }
+
+  function renderProfilePhotoDialog(roleName, roleData, resetWarning = false) {
+    const state = profilePhotoSlotsState(roleName, roleData);
+    const slots = normalizeProfilePhotoSlots(state.slots);
+    const selected = Math.max(0, Math.min(3, Math.trunc(Number(state.selected) || 0)));
+    const cells = slots.map((source, index) => {
+      const filled = Boolean(source);
+      const active = filled && index === selected;
+      return '<article class="st-profile-photo-slot ' + (active ? "is-selected" : "") + '">' +
+        '<div class="st-profile-photo-preview">' + (filled ? '<img alt="' + escapeAttr(roleName + " 照片" + (index + 1)) + '" src="' + escapeAttr(source) + '">' : '<span>照片位 ' + (index + 1) + '</span>') + '</div>' +
+        '<div class="st-profile-photo-actions">' +
+          '<button type="button" data-profile-photo-action="change" data-profile-photo-slot="' + index + '">更换</button>' +
+          '<button type="button" class="danger" data-profile-photo-action="delete" data-profile-photo-slot="' + index + '"' + (!filled ? " disabled" : "") + '>删除</button>' +
+          '<button type="button" class="primary" data-profile-photo-action="select" data-profile-photo-slot="' + index + '"' + (!filled || active ? " disabled" : "") + '>' + (active ? "已选" : "选中") + '</button>' +
+        '</div>' +
+        '<input type="file" accept="image/*" data-profile-photo-file-slot="' + index + '" hidden>' +
+      '</article>';
+    }).join("");
+    const footerHtml = resetWarning
+      ? '<div class="st-profile-photo-warning"><p>恢复默认会清除这个角色当前聊天里的本地上传、替换、删除和选中状态，照片夹会回到内置默认配置。</p><div class="st-profile-photo-footer"><button type="button" data-profile-photo-action="reset-default-cancel">取消</button><button type="button" class="danger" data-profile-photo-action="reset-default-confirm">确认恢复</button></div></div>'
+      : '<div class="st-profile-photo-footer"><button type="button" class="danger" data-profile-photo-action="reset-default">恢复默认</button><button type="button" data-profile-photo-action="close">完成</button></div>';
+    return '<div class="st-profile-photo-dialog" data-profile-photo-dialog role="dialog" aria-modal="true" aria-label="管理照片">' +
+      '<section class="st-profile-photo-card">' +
+        '<h3>照片夹</h3>' +
+        '<div class="st-profile-photo-grid">' + cells + '</div>' +
+        footerHtml +
+      '</section>' +
+    '</div>';
+  }
+
   function requestSetProfileNickname(page, input, speakToTarget = false) {
     if (isIsaacProfilePage(page)) return;
     const roles = getStatsRoles();
@@ -10531,12 +12508,11 @@ button.st-work-notice{cursor:pointer}
       return;
     }
     const requestMode = speakToTarget ? "直接和目标说" : "{{user}}自己心里想";
-    const nicknameTargetText = nickname ? "「" + nickname + "」" : "空字符串";
     const recognitionRule = nickname
       ? (speakToTarget
-        ? "剧情中应写出{{user}}确实把这个称呼当面对目标说出；只有目标接受、默许或之后稳定回应这个称呼时，才replace /角色/" + roleName + "/绰号已认可 为 true，否则replace为 false或保持原值。"
-        : "这是{{user}}自己心里/档案里的称呼，不代表目标知道；成功时replace /角色/" + roleName + "/绰号已认可 为 false。")
-      : "清除绰号时同时replace /角色/" + roleName + "/绰号已认可 为 false。";
+        ? "剧情中应写出{{user}}确实把这个称呼当面对目标说出；只有目标接受、默许或之后稳定回应这个称呼时，才将本条绰号认可状态写为true，否则写为false或保持原值。"
+        : "这是{{user}}自己心里/档案里的称呼，不代表目标知道；成功时将本条绰号认可状态写为false。")
+      : "清除绰号时同时将本条绰号认可状态写为false。";
     const currentStatus = current ? (currentRecognized ? "目标已认可" : "仅{{user}}自用") : "无";
     const nicknameSummary = nickname ? ((speakToTarget ? "当面说：" : "自己心里：") + nickname) : "清除绰号";
     Promise.resolve(appendAppOperation({
@@ -10549,7 +12525,7 @@ button.st-work-notice{cursor:pointer}
       新绰号: nickname || "清除",
       设置方式: requestMode,
       目标变量路径: ["/角色/" + roleName + "/绰号", "/角色/" + roleName + "/绰号已认可"],
-      AI执行规范: "这是{{user}}在自己搜集整理的纸质人物档案姓名旁用铅笔记录/修改绰号，不是催眠APP操作，也不是任何APP效果。同一角色本轮只处理最后一次设置。若剧情条件允许，replace /角色/" + roleName + "/绰号 为 " + nicknameTargetText + "；不要写入/角色/" + roleName + "/档案/姓名，也不要改真实姓名。" + recognitionRule
+      AI执行规范: "这是{{user}}在自己搜集整理的纸质人物档案姓名旁用铅笔记录/修改绰号，不是催眠APP操作，也不是任何APP效果。同一角色本轮只处理最后一次设置。若剧情条件允许，按本条目标变量路径更新绰号和绰号认可状态；不要写入角色档案里的姓名，也不要改真实姓名。" + recognitionRule
     })).then((added) => {
       delete page.dataset.profileNicknameDialog;
       page.dataset.profileTransformNotice = added ? "绰号请求已暂存，确认发送后由AI更新。" : "绰号请求已在暂存区。";
@@ -10608,25 +12584,68 @@ button.st-work-notice{cursor:pointer}
     return text ? [{ key: "效果", title: "效果", description: text, meta: [] }] : [];
   }
 
-  function renderEffectCard(roleName, label, value, variant) {
+  function profileEffectDatasetKey(effectType) {
+    return String(effectType || "").includes("永久") ? "profilePermanentEffectPage" : "profileTemporaryEffectPage";
+  }
+
+  function activeProfileEffectType(page) {
+    const value = String(page?.dataset?.profileEffectType || "");
+    return value === "永久催眠效果" ? "永久催眠效果" : "临时催眠效果";
+  }
+
+  function normalizeProfileEffectPage(page, effectType, count) {
+    const pageCount = Math.max(1, Math.ceil(Math.max(0, count) / PERSON_PROFILE_EFFECT_PAGE_SIZE));
+    const key = profileEffectDatasetKey(effectType);
+    const raw = Number(page?.dataset?.[key] || 0);
+    const index = Number.isFinite(raw) ? Math.trunc(raw) : 0;
+    return Math.max(0, Math.min(pageCount - 1, index));
+  }
+
+  function turnProfileEffectPage(page, effectType, direction) {
+    const context = currentEditableProfileContext(page);
+    if (!context) return;
+    const type = effectType === "永久催眠效果" ? "永久催眠效果" : "临时催眠效果";
+    const entries = normalizeEffectEntries(context.roleData[type]);
+    const pageCount = Math.max(1, Math.ceil(entries.length / PERSON_PROFILE_EFFECT_PAGE_SIZE));
+    const current = normalizeProfileEffectPage(page, type, entries.length);
+    const delta = direction === "prev" || Number(direction) < 0 ? -1 : 1;
+    page.dataset[profileEffectDatasetKey(type)] = String(((current + delta) % pageCount + pageCount) % pageCount);
+    page.dataset.profileEffectType = type;
+    renderPersonProfilePage(page);
+  }
+
+  function renderEffectItem(roleName, effectType, entry) {
+    const meta = entry.meta.length
+      ? '<div class="st-effect-meta">' + entry.meta.map(([key, text]) => '<span>' + escapeHtml(key) + '：' + escapeHtml(text) + '</span>').join("") + '</div>'
+      : "";
+    return '<article class="st-effect-item"><div class="st-effect-item-head"><strong>' + escapeHtml(entry.title) + '</strong>' +
+      '<button type="button" class="st-effect-delete" data-effect-delete="true" data-effect-role="' + escapeAttr(roleName) + '" data-effect-type="' + escapeAttr(effectType) + '" data-effect-key="' + escapeAttr(entry.key || entry.title) + '" data-effect-title="' + escapeAttr(entry.title) + '">删除</button></div>' +
+      (entry.description ? '<p>' + escapeHtml(entry.description) + '</p>' : '') +
+      meta + '</article>';
+  }
+
+  function renderEffectPageCard(page, roleName, label, value, variant) {
     const entries = normalizeEffectEntries(value);
     const emptyText = label.includes("临时") ? "暂无临时效果" : "暂无永久效果";
+    const pageCount = Math.max(1, Math.ceil(entries.length / PERSON_PROFILE_EFFECT_PAGE_SIZE));
+    const pageIndex = normalizeProfileEffectPage(page, label, entries.length);
+    const visible = entries.slice(pageIndex * PERSON_PROFILE_EFFECT_PAGE_SIZE, pageIndex * PERSON_PROFILE_EFFECT_PAGE_SIZE + PERSON_PROFILE_EFFECT_PAGE_SIZE);
     const body = entries.length
-      ? '<div class="st-effect-list">' + entries.map((entry) => {
-          const meta = entry.meta.length
-            ? '<div class="st-effect-meta">' + entry.meta.map(([key, text]) => '<span>' + escapeHtml(key) + '：' + escapeHtml(text) + '</span>').join("") + '</div>'
-            : "";
-          return '<article class="st-effect-item"><div class="st-effect-item-head"><strong>' + escapeHtml(entry.title) + '</strong>' +
-            '<button type="button" class="st-effect-delete" data-effect-delete="true" data-effect-role="' + escapeAttr(roleName) + '" data-effect-type="' + escapeAttr(label) + '" data-effect-key="' + escapeAttr(entry.key || entry.title) + '" data-effect-title="' + escapeAttr(entry.title) + '">删除</button></div>' +
-            (entry.description ? '<p>' + escapeHtml(entry.description) + '</p>' : '') +
-            meta + '</article>';
-        }).join("") + '</div>'
+      ? '<div class="st-effect-list">' + visible.map((entry) => renderEffectItem(roleName, label, entry)).join("") + '</div>'
       : '<div class="st-effect-empty">' + emptyText + '</div>';
-    return '<details class="st-effect-card ' + variant + '">' +
-      '<summary><div class="st-effect-title"><span class="st-effect-dot"></span><strong>' + escapeHtml(label) + '</strong></div>' +
-      '<div class="st-effect-count">' + entries.length + ' 项</div></summary>' +
+    const pager = pageCount > 1
+      ? '<nav class="st-effect-pager" aria-label="' + escapeAttr(label) + '分页">' +
+          '<button type="button" data-effect-page="prev" data-effect-type="' + escapeAttr(label) + '" aria-label="上一页">‹</button>' +
+          '<span>' + (pageIndex + 1) + ' / ' + pageCount + '</span>' +
+          '<button type="button" data-effect-page="next" data-effect-type="' + escapeAttr(label) + '" aria-label="下一页">›</button>' +
+        '</nav>'
+      : "";
+    return '<section class="st-effect-page-card ' + variant + '">' +
+      '<header class="st-effect-page-head"><div class="st-effect-title"><span class="st-effect-dot"></span><strong>' + escapeHtml(label) + '</strong></div>' +
+      '<div class="st-effect-count">' + entries.length + ' 项</div></header>' +
       body +
-      '</details>';
+      pager +
+      '</section>';
   }
 
   function safeSignature(value) {
@@ -10673,7 +12692,7 @@ button.st-work-notice{cursor:pointer}
 
   function homeTilesByText(text) {
     const labels = Array.from(document.querySelectorAll("span,button,div"))
-      .filter((element) => !element.closest(".st-mchan-internal-app,.st-calendar-lite-app,.st-timetable-app,.st-clock-app,.st-profile-app,.st-map-app,.st-school-app,.st-special-location-app,.st-monitor-app,.st-work-app,.st-encounter-app,.st-inventory-app,.st-reward-app,.st-hypnosis-lite-app,.st-help-app,.st-placeholder-app") && element.textContent?.trim() === text);
+      .filter((element) => !element.closest(".st-mchan-internal-app,.st-calendar-lite-app,.st-timetable-app,.st-clock-app,.st-profile-app,.st-map-app,.st-city-map-app,.st-school-app,.st-special-location-app,.st-monitor-app,.st-work-app,.st-encounter-app,.st-inventory-app,.st-reward-app,.st-hypnosis-lite-app,.st-help-app,.st-placeholder-app") && element.textContent?.trim() === text);
     const tiles = [];
     const seen = new Set();
     for (const label of labels) {
@@ -10749,6 +12768,7 @@ button.st-work-notice{cursor:pointer}
     4: ["数学", "古典", "英语", "化学", "音乐", "保健"],
     5: ["现代文", "日本史", "生物", "英语", "体育（球技）", "综合探究"]
   };
+  const ST_TIMETABLE_STORAGE_PREFIX = "hypnoos.timetable.overrides.v1";
   const ST_CLASS_PERIODS = [
     { index: 1, start: 520, end: 570, label: "1限" },
     { index: 2, start: 580, end: 630, label: "2限" },
@@ -10816,6 +12836,153 @@ button.st-work-notice{cursor:pointer}
     { m: 3, d: 24, title: "修业式", detail: "年度结束/特别日程" },
     { m: 3, from: 25, to: 31, title: "春假", detail: "自由行动", holiday: true }
   ];
+
+  function timetableStorageKey() {
+    try {
+      return ST_TIMETABLE_STORAGE_PREFIX + ":" + graphCommonScopeKey();
+    } catch {
+      return ST_TIMETABLE_STORAGE_PREFIX + ":global";
+    }
+  }
+
+  function normalizeWeeklyTimetable(source = ST_WEEKLY_TIMETABLE) {
+    const table = {};
+    for (let day = 1; day <= 5; day += 1) {
+      const sourceRow = Array.isArray(source?.[day]) ? source[day] : Array.isArray(source?.[String(day)]) ? source[String(day)] : [];
+      const defaultRow = ST_WEEKLY_TIMETABLE[day] || [];
+      table[day] = ST_CLASS_PERIODS.map((period, index) => {
+        const value = String(sourceRow[index] ?? defaultRow[index] ?? "自习").trim();
+        return value || "自习";
+      });
+    }
+    return table;
+  }
+
+  function readWeeklyTimetable() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(timetableStorageKey()) || "null");
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return normalizeWeeklyTimetable(parsed);
+    } catch {}
+    return normalizeWeeklyTimetable(ST_WEEKLY_TIMETABLE);
+  }
+
+	  function writeWeeklyTimetable(table) {
+	    try {
+	      localStorage.setItem(timetableStorageKey(), JSON.stringify(normalizeWeeklyTimetable(table)));
+	      globalThis.__ST_HYPNOOS_DAILY_SCHEDULE_SYNC_SIGNATURE__ = "";
+	      scheduleReadonlyScheduleSyncForCurrentClock();
+	    } catch {}
+	  }
+
+	  function resetWeeklyTimetable() {
+	    try {
+	      localStorage.removeItem(timetableStorageKey());
+	      globalThis.__ST_HYPNOOS_DAILY_SCHEDULE_SYNC_SIGNATURE__ = "";
+	      scheduleReadonlyScheduleSyncForCurrentClock();
+	    } catch {}
+	  }
+
+	  let readonlyScheduleSyncTimer = 0;
+	  function scheduleReadonlyScheduleSyncForCurrentClock(delay = 220) {
+	    try {
+	      if (readonlyScheduleSyncTimer) window.clearTimeout(readonlyScheduleSyncTimer);
+	      readonlyScheduleSyncTimer = window.setTimeout(() => {
+	        readonlyScheduleSyncTimer = 0;
+	        syncReadonlyScheduleVariablesForCurrentClock().catch((err) => {
+	          console.warn("[HypnoOS] 同步只读课程表变量失败", err);
+	        });
+	      }, Math.max(0, Number(delay) || 0));
+	    } catch {}
+	  }
+
+	  async function syncReadonlyScheduleVariablesForCurrentClock() {
+	    if (typeof rewardApplySystemMutation !== "function") return false;
+	    const result = await rewardApplySystemMutation((system) => {
+	      const dateText = String(system["当前日期"] || "").trim() || "4月9日";
+	      const timeText = storyTimeOnly(system["当前时间"], "12:00");
+	      const before = JSON.stringify([
+	        system["_当前周几"],
+	        system["_当前日程"],
+	        system["_当前特殊日期"],
+	        system["当天课程表"],
+	        system["当天原课程表"],
+	        system["当天魔改课程表"]
+	      ]);
+	      workApplyReadonlySchedule(system, dateText, timeText);
+	      const after = JSON.stringify([
+	        system["_当前周几"],
+	        system["_当前日程"],
+	        system["_当前特殊日期"],
+	        system["当天课程表"],
+	        system["当天原课程表"],
+	        system["当天魔改课程表"]
+	      ]);
+	      return before === after
+	        ? { ok: false, message: "只读课程表变量无需同步。" }
+	        : { ok: true, message: "已同步只读课程表变量。" };
+	    });
+	    return Boolean(result?.ok);
+	  }
+
+  function weeklyTimetableSubject(weekdayIndex, periodIndex, table = readWeeklyTimetable()) {
+    const day = Number(weekdayIndex);
+    const period = Math.max(1, Math.floor(Number(periodIndex) || 1));
+    return String(table?.[day]?.[period - 1] || ST_WEEKLY_TIMETABLE[day]?.[period - 1] || "自习").trim() || "自习";
+  }
+
+  function weeklyTimetableOriginalSubject(weekdayIndex, periodIndex) {
+    const day = Number(weekdayIndex);
+    const period = Math.max(1, Math.floor(Number(periodIndex) || 1));
+    return String(ST_WEEKLY_TIMETABLE[day]?.[period - 1] || "自习").trim() || "自习";
+  }
+
+  function weeklyTimetableIsModified(weekdayIndex, periodIndex, table = readWeeklyTimetable()) {
+    return weeklyTimetableSubject(weekdayIndex, periodIndex, table) !== weeklyTimetableOriginalSubject(weekdayIndex, periodIndex);
+  }
+
+  function weeklyTimetableChangeCount(table = readWeeklyTimetable()) {
+    let count = 0;
+    for (let day = 1; day <= 5; day += 1) {
+      for (const period of ST_CLASS_PERIODS) {
+        if (weeklyTimetableIsModified(day, period.index, table)) count += 1;
+      }
+    }
+    return count;
+  }
+
+  function timetableModificationCouponCount(stat = getLatestStatDataSync()) {
+    try {
+      return encounterInventoryItemCount(TIMETABLE_MOD_COUPON_ITEM, stat);
+    } catch {
+      return 0;
+    }
+  }
+
+  async function consumeTimetableModificationCoupon() {
+    const data = encounterCurrentMvuData();
+    if (!data) return { ok: false, reason: "MVU变量接口未就绪，无法使用课程表魔改券。" };
+    data.stat["系统"] = data.stat["系统"] && typeof data.stat["系统"] === "object" && !Array.isArray(data.stat["系统"]) ? data.stat["系统"] : {};
+    const beforeCount = timetableModificationCouponCount(data.stat);
+    if (beforeCount < 1) return { ok: false, reason: "需要课程表魔改券，VIP6可在邂逅商店用100星光点购买。" };
+    if (!encounterConsumeInventoryItem(data.stat, TIMETABLE_MOD_COUPON_ITEM, 1)) return { ok: false, reason: "课程表魔改券扣除失败。" };
+    await encounterReplaceMvuData(data);
+    await appendAppOperation({
+      来源: "课程表",
+      操作: "使用课程表魔改券",
+      不可删除: true,
+      消耗物品: TIMETABLE_MOD_COUPON_ITEM + " x1",
+      前端写入后剩余魔改券: Math.max(0, beforeCount - 1),
+      前端处理: "已由前端扣除课程表魔改券，并允许本次编辑魔改课程表。",
+	      AI执行规范: "课程表魔改券已由前端扣除；AI不得再次扣券或扣星光点。课程表内容由前端本地保存，并同步当天课程表、当天原课程表和当天魔改课程表等只读日程字段。"
+    });
+    return { ok: true, remaining: Math.max(0, beforeCount - 1) };
+  }
+
+  try {
+    globalThis.__ST_HYPNOOS_GET_TIMETABLE__ = () => readWeeklyTimetable();
+    globalThis.__ST_HYPNOOS_RESET_TIMETABLE__ = () => resetWeeklyTimetable();
+  } catch {}
+  const ST_STORY_CALENDAR = buildStoryCalendar();
 
   function getSystemState() {
     const variables = getLatestStatDataSync();
@@ -11031,14 +13198,59 @@ button.st-work-notice{cursor:pointer}
     return day;
   }
 
+  function storyCalendarKey(month, day) {
+    return String(Number(month) || 0) + "-" + String(Number(day) || 0);
+  }
+
+  function storyCalendarSpecialLabel(item) {
+    const from = item.from ?? item.d;
+    const to = item.to ?? from;
+    return from === to ? item.m + "月" + from + "日" : item.m + "月" + from + "-" + to + "日";
+  }
+
+  function buildStoryCalendar() {
+    const calendar = Object.create(null);
+    for (const month of ST_SCHOOL_MONTH_ORDER) {
+      const daysInMonth = ST_MONTH_DAYS[month] || 30;
+      for (let day = 1; day <= daysInMonth; day += 1) {
+        const diff = schoolYearDay(month, day) - schoolYearDay(4, 9);
+        const weekdayIndex = ((3 + diff) % 7 + 7) % 7;
+        calendar[storyCalendarKey(month, day)] = {
+          month,
+          day,
+          dateText: month + "月" + day + "日",
+          weekday: ST_WEEKDAY_NAMES[weekdayIndex],
+          specialDay: null,
+          specialText: ""
+        };
+      }
+    }
+    const specialRanges = ST_SPECIAL_DAYS
+      .map((item) => {
+        const from = item.from ?? item.d;
+        const to = item.to ?? from;
+        return { item, from, to, span: to - from, start: schoolYearDay(item.m, from) };
+      })
+      .sort((a, b) => a.span - b.span || a.start - b.start);
+    for (const range of specialRanges) {
+      for (let day = range.from; day <= range.to; day += 1) {
+        const entry = calendar[storyCalendarKey(range.item.m, day)];
+        if (!entry || entry.specialDay) continue;
+        entry.specialDay = { ...range.item };
+        entry.specialText = storyCalendarSpecialLabel(range.item) + " " + range.item.title + "：" + (range.item.detail || "特别日程");
+      }
+    }
+    return calendar;
+  }
+
+  function storyCalendarDay(month, day) {
+    return ST_STORY_CALENDAR[storyCalendarKey(month, day)] || null;
+  }
+
   function weekdayForStoryDate(dateText) {
     const parsed = parseStoryDate(dateText);
     if (!parsed) return "";
-    if (parsed.explicitWeekday) return parsed.explicitWeekday;
-    const anchor = { month: 4, day: 9, weekday: 3 };
-    const diff = schoolYearDay(parsed.month, parsed.day) - schoolYearDay(anchor.month, anchor.day);
-    const index = ((anchor.weekday + diff) % 7 + 7) % 7;
-    return ST_WEEKDAY_NAMES[index];
+    return storyCalendarDay(parsed.month, parsed.day)?.weekday || "";
   }
 
   function minutesFromTimeText(text) {
@@ -11047,21 +13259,19 @@ button.st-work-notice{cursor:pointer}
     return Number(match[1]) * 60 + Number(match[2]);
   }
 
+  function nextStoryDateLabel(dateText) {
+    const parsed = parseStoryDate(dateText);
+    if (!parsed) return "明天";
+    const maxDay = ST_MONTH_DAYS[parsed.month] || 30;
+    if (parsed.day < maxDay) return parsed.month + "月" + (parsed.day + 1) + "日";
+    const index = ST_SCHOOL_MONTH_ORDER.indexOf(parsed.month);
+    const nextMonth = ST_SCHOOL_MONTH_ORDER[(index + 1) % ST_SCHOOL_MONTH_ORDER.length] || ((parsed.month % 12) + 1);
+    return nextMonth + "月1日";
+  }
+
   function specialDayForDate(parsedDate) {
     if (!parsedDate) return null;
-    const matches = ST_SPECIAL_DAYS.filter((item) => {
-      if (item.m !== parsedDate.month) return false;
-      const from = item.from ?? item.d;
-      const to = item.to ?? item.d;
-      return parsedDate.day >= from && parsedDate.day <= to;
-    });
-    if (!matches.length) return null;
-    matches.sort((a, b) => {
-      const spanA = (a.to ?? a.d) - (a.from ?? a.d);
-      const spanB = (b.to ?? b.d) - (b.from ?? b.d);
-      return spanA - spanB;
-    });
-    return matches[0];
+    return storyCalendarDay(parsedDate.month, parsedDate.day)?.specialDay || null;
   }
 
   function normalSchoolSlot(minutes, weekdayText) {
@@ -11074,7 +13284,7 @@ button.st-work-notice{cursor:pointer}
     if (minutes >= 510 && minutes < 520) return { title: "朝礼", detail: "08:30-08:40" };
     for (const period of ST_CLASS_PERIODS) {
       if (minutes >= period.start && minutes < period.end) {
-        const subject = ST_WEEKLY_TIMETABLE[weekdayIndex]?.[period.index - 1] || "自习";
+        const subject = weeklyTimetableSubject(weekdayIndex, period.index);
         return {
           title: period.label + " · " + subject,
           detail: formatPeriodTime(period.start) + "-" + formatPeriodTime(period.end),
@@ -11170,7 +13380,7 @@ button.st-work-notice{cursor:pointer}
     const slot = routineSlot(minutesFromTimeText(referenceTime), weekday, selectedDate);
     const courses = weekdayIndex >= 1 && weekdayIndex <= 5 && !special?.holiday
       ? ST_CLASS_PERIODS.map((period) => {
-          const subject = ST_WEEKLY_TIMETABLE[weekdayIndex]?.[period.index - 1] || "自习";
+          const subject = weeklyTimetableSubject(weekdayIndex, period.index);
           return '<span title="' + escapeAttr(period.label + " " + subject) + '">' + escapeHtml(period.label + " " + subject) + '</span>';
         }).join("")
       : "";
@@ -11225,12 +13435,12 @@ button.st-work-notice{cursor:pointer}
 
   function renderLiteCalendarPage(page) {
     const system = getSystemState();
-    const dateText = system["当前日期"] || "4月9日 星期三";
+    const dateText = system["当前日期"] || "4月9日";
     const timeText = storyTimeOnly(system["当前时间"], "12:00");
     const parsedDate = parseStoryDate(dateText);
     const displayDate = calendarDisplayDate(page, parsedDate);
     const selectedDate = calendarSelectedDate(page, displayDate, parsedDate);
-    const weekday = weekdayForStoryDate(dateText) || "星期三";
+    const weekday = weekdayForStoryDate(dateText) || String(system["_当前周几"] || system["当前周几"] || "").trim() || "星期三";
     const slot = routineSlot(minutesFromTimeText(timeText), weekday, parsedDate);
     const special = specialDayForDate(parsedDate);
     const events = upcomingSpecialDays(parsedDate);
@@ -11286,26 +13496,43 @@ button.st-work-notice{cursor:pointer}
       { index: 5, short: "周五", full: "星期五" }
     ];
     const system = getSystemState();
-    const dateText = system["当前日期"] || "4月9日 星期三";
+    const dateText = system["当前日期"] || "4月9日";
     const timeText = storyTimeOnly(system["当前时间"], "12:00");
     const parsedDate = parseStoryDate(dateText);
-    const weekday = weekdayForStoryDate(dateText) || "星期三";
+    const weekday = weekdayForStoryDate(dateText) || String(system["_当前周几"] || system["当前周几"] || "").trim() || "星期三";
     const activeDay = ST_WEEKDAY_INDEX[weekday];
     const minutes = minutesFromTimeText(timeText);
     const activePeriod = ST_CLASS_PERIODS.find((period) => minutes >= period.start && minutes < period.end)?.index || 0;
     const special = specialDayForDate(parsedDate);
     const blocksClass = special && (special.holiday || special.exam || !/普通授课/.test(special.detail || ""));
     const slot = routineSlot(minutes, weekday, parsedDate);
+    const mode = page.dataset.timetableMode === "original" ? "original" : "modified";
+    if (mode !== "modified") page.dataset.timetableEdit = "";
+    const editing = mode === "modified" && page.dataset.timetableEdit === "true";
+    const timetable = readWeeklyTimetable();
+    const displayTable = mode === "original" ? normalizeWeeklyTimetable(ST_WEEKLY_TIMETABLE) : timetable;
+    const changeCount = weeklyTimetableChangeCount(timetable);
+    const couponCount = timetableModificationCouponCount();
+    const notice = String(page.dataset.timetableNotice || "").trim();
     const weekHtml = days.map((day) => {
       const periods = ST_CLASS_PERIODS.map((period) => {
-        const subject = ST_WEEKLY_TIMETABLE[day.index]?.[period.index - 1] || "自习";
-        const parts = splitSubject(subject);
-        const current = !blocksClass && day.index === activeDay && period.index === activePeriod;
-        return '<div class="st-tt-period ' + (current ? "is-current" : "") + '">' +
-          '<small>' + escapeHtml(period.label) + '</small>' +
-          '<strong>' + escapeHtml(parts.main) + '</strong>' +
-          (parts.sub ? '<em>' + escapeHtml(parts.sub) + '</em>' : '') +
-        '</div>';
+        const subject = weeklyTimetableSubject(day.index, period.index, displayTable);
+        const originalSubject = weeklyTimetableOriginalSubject(day.index, period.index);
+        const modifiedSubject = weeklyTimetableSubject(day.index, period.index, timetable);
+	        const modified = originalSubject !== modifiedSubject;
+	        const parts = splitSubject(subject);
+	        const current = !blocksClass && day.index === activeDay && period.index === activePeriod;
+	        const canRenameCell = mode === "modified" && modified;
+	        const cellEditable = editing || canRenameCell;
+	        const compareText = modified
+	          ? (mode === "original" ? ("魔改：" + modifiedSubject) : ("原：" + originalSubject))
+	          : "";
+	        return '<div class="st-tt-period ' + (current ? "is-current " : "") + (modified ? "is-modified" : "") + '">' +
+	          '<small>' + escapeHtml(period.label) + '</small>' +
+	          (cellEditable
+	            ? '<input class="st-tt-subject-input" data-timetable-subject data-timetable-day="' + day.index + '" data-timetable-period="' + period.index + '" value="' + escapeAttr(subject) + '" aria-label="' + escapeAttr(day.short + " " + period.label) + '">'
+	            : '<strong>' + escapeHtml(parts.main) + '</strong>' + (parts.sub ? '<em>' + escapeHtml(parts.sub) + '</em>' : '') + (compareText ? '<em class="st-tt-original">' + escapeHtml(compareText) + '</em>' : '')) +
+	        '</div>';
       }).join("");
       return '<section class="st-tt-day ' + (day.index === activeDay ? "is-active" : "") + '">' +
         '<h3>' + escapeHtml(day.short) + '<small>' + escapeHtml(day.full) + '</small></h3>' +
@@ -11319,6 +13546,16 @@ button.st-work-notice{cursor:pointer}
           '<div><span>' + escapeHtml(dateText + " · " + timeText) + '</span><strong>' + escapeHtml(slot.title) + '</strong></div>' +
           '<div class="st-tt-badge">' + escapeHtml(slot.detail || (special?.detail || "普通授课")) + '</div>' +
         '</section>' +
+        '<section class="st-tt-segments">' +
+          '<button type="button" class="' + (mode === "original" ? "active" : "") + '" data-timetable-mode="original">原课程表</button>' +
+          '<button type="button" class="' + (mode === "modified" ? "active" : "") + '" data-timetable-mode="modified">魔改课程表</button>' +
+        '</section>' +
+        '<section class="st-tt-actions">' +
+          (mode === "modified" ? '<button type="button" class="primary" data-timetable-edit-toggle>' + (editing ? "完成" : "修改课程表") + '</button>' : '') +
+          (editing ? '<button type="button" data-timetable-reset>恢复默认</button>' : '') +
+          '<span>' + escapeHtml((editing ? "编辑中 / " : "") + "已改 " + changeCount + " 格 / " + TIMETABLE_MOD_COUPON_ITEM + " " + couponCount + " 张") + '</span>' +
+        '</section>' +
+        (notice ? '<p class="st-tt-status">' + escapeHtml(notice) + '</p>' : '') +
         '<section class="st-tt-week">' + weekHtml + '</section>' +
         '<section class="st-tt-rhythm">' +
           '<div class="st-tt-rhythm-item"><b>08:30</b><span>朝礼</span><i>08:40</i></div>' +
@@ -11333,6 +13570,62 @@ button.st-work-notice{cursor:pointer}
       setPhoneActiveApp(page.parentElement, "");
       page.remove();
     });
+    page.querySelectorAll("[data-timetable-mode]").forEach((button) => {
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        page.dataset.timetableMode = button.getAttribute("data-timetable-mode") || "modified";
+        page.dataset.timetableEdit = "";
+        renderTimetablePage(page);
+      });
+    });
+    page.querySelector("[data-timetable-edit-toggle]")?.addEventListener("click", async (event) => {
+      event.preventDefault();
+      if (page.dataset.timetableEdit === "true") {
+        page.dataset.timetableEdit = "";
+        page.dataset.timetableNotice = "魔改课程表已保存到本聊天本地课表。";
+        renderTimetablePage(page);
+        return;
+      }
+      const requirement = timetableModificationCouponCount();
+      if (requirement < 1) {
+        page.dataset.timetableNotice = "需要" + TIMETABLE_MOD_COUPON_ITEM + "（VIP6 / " + TIMETABLE_MOD_COUPON_PRICE + "星光点购买）。";
+        renderTimetablePage(page);
+        return;
+      }
+      const ok = window.confirm("修改魔改课程表会消耗1张「" + TIMETABLE_MOD_COUPON_ITEM + "」。\\n\\n确认进入编辑？");
+      if (!ok) return;
+      page.dataset.timetableNotice = "正在使用" + TIMETABLE_MOD_COUPON_ITEM + "...";
+      renderTimetablePage(page);
+      const result = await consumeTimetableModificationCoupon();
+      if (!result.ok) {
+        page.dataset.timetableNotice = result.reason || "课程表魔改券使用失败。";
+        renderTimetablePage(page);
+        return;
+      }
+      page.dataset.timetableMode = "modified";
+      page.dataset.timetableEdit = "true";
+      page.dataset.timetableNotice = "已消耗1张" + TIMETABLE_MOD_COUPON_ITEM + "，本次可编辑魔改课程表。";
+      renderTimetablePage(page);
+    });
+    page.querySelector("[data-timetable-reset]")?.addEventListener("click", (event) => {
+      event.preventDefault();
+      resetWeeklyTimetable();
+      page.dataset.timetableNotice = "魔改课程表已恢复为原课程表。";
+      renderTimetablePage(page);
+    });
+	    page.querySelectorAll("[data-timetable-subject]").forEach((input) => {
+	      input.addEventListener("input", () => {
+	        const day = Math.max(1, Math.min(5, Number(input.getAttribute("data-timetable-day")) || 1));
+	        const period = Math.max(1, Math.min(6, Number(input.getAttribute("data-timetable-period")) || 1));
+	        const table = readWeeklyTimetable();
+	        table[day] = Array.isArray(table[day]) ? table[day].slice() : normalizeWeeklyTimetable()[day].slice();
+	        table[day][period - 1] = String(input.value || "").trim() || "自习";
+	        writeWeeklyTimetable(table);
+	      });
+	      input.addEventListener("change", () => {
+	        rerenderLitePagePreservingBodyScroll(page, () => renderTimetablePage(page));
+	      });
+	    });
   }
 
   const PERSON_PROFILE_INFO_FIELDS = [
@@ -11355,8 +13648,11 @@ button.st-work-notice{cursor:pointer}
     { id: "info", label: "信息" },
     { id: "state", label: "状态" },
     { id: "sensitivity", label: "敏感" },
+    { id: "events", label: "事件" },
     { id: "effects", label: "效果" }
   ];
+  const PERSON_PROFILE_DESK_PAGE_SIZE = 6;
+  const PERSON_PROFILE_EFFECT_PAGE_SIZE = 3;
   const PERSON_PROFILE_EASTER_KEY = "__isaac_binding_easter__";
   const PERSON_PROFILE_EASTER = {
     name: "以撒",
@@ -11375,6 +13671,154 @@ button.st-work-notice{cursor:pointer}
     }
   };
   const PROFILE_PHOTO_STORAGE_PREFIX = "hypnoos:profile-photo:v1";
+  const PROFILE_PHOTO_IDB_NAME = "hypnoos-profile-photo-storage-v1";
+  const PROFILE_PHOTO_IDB_STORE = "photos";
+  const profilePhotoMemoryStorage = new Map();
+  const profilePhotoDeletedStorageKeys = new Set();
+  let profilePhotoIdbPromise = null;
+
+  function profileRememberPhotoStorage(key, value) {
+    if (!key) return;
+    const storageKey = String(key);
+    profilePhotoDeletedStorageKeys.delete(storageKey);
+    profilePhotoMemoryStorage.set(storageKey, String(value || ""));
+  }
+
+  function profileOpenPhotoIdb() {
+    if (typeof indexedDB === "undefined") return Promise.resolve(null);
+    if (profilePhotoIdbPromise) return profilePhotoIdbPromise;
+    profilePhotoIdbPromise = new Promise((resolve) => {
+      const request = indexedDB.open(PROFILE_PHOTO_IDB_NAME, 1);
+      request.onupgradeneeded = () => {
+        try {
+          const db = request.result;
+          if (!db.objectStoreNames.contains(PROFILE_PHOTO_IDB_STORE)) db.createObjectStore(PROFILE_PHOTO_IDB_STORE);
+        } catch {}
+      };
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => {
+        console.warn("[人物档案] 照片 IndexedDB 打开失败", request.error);
+        resolve(null);
+      };
+      request.onblocked = () => resolve(null);
+    });
+    return profilePhotoIdbPromise;
+  }
+
+  async function profileSetPhotoStorageIdb(key, value) {
+    const db = await profileOpenPhotoIdb();
+    if (!db) return false;
+    return new Promise((resolve) => {
+      try {
+        const tx = db.transaction(PROFILE_PHOTO_IDB_STORE, "readwrite");
+        tx.objectStore(PROFILE_PHOTO_IDB_STORE).put(String(value || ""), String(key || ""));
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => {
+          console.warn("[人物档案] 照片 IndexedDB 写入失败", key, tx.error);
+          resolve(false);
+        };
+      } catch (error) {
+        console.warn("[人物档案] 照片 IndexedDB 写入失败", key, error);
+        resolve(false);
+      }
+    });
+  }
+
+  async function profileGetPhotoStorageIdb(key) {
+    const db = await profileOpenPhotoIdb();
+    if (!db) return null;
+    return new Promise((resolve) => {
+      try {
+        const tx = db.transaction(PROFILE_PHOTO_IDB_STORE, "readonly");
+        const request = tx.objectStore(PROFILE_PHOTO_IDB_STORE).get(String(key || ""));
+        request.onsuccess = () => resolve(request.result === undefined ? null : String(request.result || ""));
+        request.onerror = () => resolve(null);
+      } catch {
+        resolve(null);
+      }
+    });
+  }
+
+  async function profileRemovePhotoStorageIdb(key) {
+    const db = await profileOpenPhotoIdb();
+    if (!db) return false;
+    return new Promise((resolve) => {
+      try {
+        const tx = db.transaction(PROFILE_PHOTO_IDB_STORE, "readwrite");
+        tx.objectStore(PROFILE_PHOTO_IDB_STORE).delete(String(key || ""));
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => resolve(false);
+      } catch {
+        resolve(false);
+      }
+    });
+  }
+
+  function profileReadPhotoStorageString(key) {
+    const storageKey = String(key || "");
+    if (!storageKey) return "";
+    if (profilePhotoMemoryStorage.has(storageKey)) return String(profilePhotoMemoryStorage.get(storageKey) || "");
+    try {
+      const legacy = localStorage.getItem(storageKey);
+      if (legacy) {
+        profileRememberPhotoStorage(storageKey, legacy);
+        profileSetPhotoStorageIdb(storageKey, legacy).then((ok) => {
+          if (ok) {
+            try { localStorage.removeItem(storageKey); } catch {}
+          }
+        });
+        return legacy;
+      }
+    } catch {}
+    return "";
+  }
+
+  function profileSetPhotoStorage(key, value) {
+    const storageKey = String(key || "");
+    if (!storageKey) return false;
+    profilePhotoDeletedStorageKeys.delete(storageKey);
+    profileRememberPhotoStorage(storageKey, value);
+    try { localStorage.removeItem(storageKey); } catch {}
+    profileSetPhotoStorageIdb(storageKey, String(value || ""));
+    return true;
+  }
+
+  function profileRemovePhotoStorage(key) {
+    const storageKey = String(key || "");
+    if (!storageKey) return false;
+    profilePhotoDeletedStorageKeys.add(storageKey);
+    profilePhotoMemoryStorage.delete(storageKey);
+    try { localStorage.removeItem(storageKey); } catch {}
+    profileRemovePhotoStorageIdb(storageKey).then(() => {
+      profilePhotoDeletedStorageKeys.delete(storageKey);
+    });
+    return true;
+  }
+
+  async function profileHydratePhotoStorageKey(key) {
+    const storageKey = String(key || "");
+    if (!storageKey || profilePhotoMemoryStorage.has(storageKey)) return false;
+    if (profilePhotoDeletedStorageKeys.has(storageKey)) return false;
+    const stored = await profileGetPhotoStorageIdb(storageKey);
+    if (profilePhotoDeletedStorageKeys.has(storageKey)) return false;
+    if (stored !== null) {
+      profileRememberPhotoStorage(storageKey, stored);
+      try { localStorage.removeItem(storageKey); } catch {}
+      return true;
+    }
+    try {
+      const legacy = localStorage.getItem(storageKey);
+      if (!legacy) return false;
+      profileRememberPhotoStorage(storageKey, legacy);
+      profileSetPhotoStorageIdb(storageKey, legacy).then((ok) => {
+        if (ok) {
+          try { localStorage.removeItem(storageKey); } catch {}
+        }
+      });
+      return true;
+    } catch {}
+    return false;
+  }
 
   function orderedProfileRoleNames(roles) {
     const defaults = DEFAULT_ROLE_NAMES.filter((name) => Object.prototype.hasOwnProperty.call(roles, name));
@@ -11418,7 +13862,7 @@ button.st-work-notice{cursor:pointer}
 	      '<div class="st-person-picker ' + (pickerOpen && !staticView ? "is-open" : "") + '">' +
 	        '<button type="button" class="st-person-select" data-profile-picker-toggle aria-label="选择角色档案" aria-expanded="' + (pickerOpen && !staticView ? "true" : "false") + '"' + (staticView ? " disabled" : "") + '><span>' + selectedLabelHtml + '</span></button>' +
 	        '<button type="button" class="st-person-favorite ' + (favorite ? "active" : "") + '" data-profile-favorite aria-label="' + (favorite ? "取消收藏" : "收藏角色") + '" aria-pressed="' + (favorite ? "true" : "false") + '"' + (!selectedValue || staticView ? " disabled" : "") + '>' + (favorite ? "★" : "☆") + '</button>' +
-	        '<input class="st-person-search" type="search" data-profile-search value="' + escapeAttr(searchValue || "") + '" placeholder="搜索" autocomplete="off" aria-label="搜索角色档案">' +
+	        '<input class="st-person-search" type="text" data-profile-search value="' + escapeAttr(searchValue || "") + '" placeholder="搜索" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="搜索角色档案">' +
 	        '<div class="st-person-menu" role="listbox">' + menuHtml + '</div>' +
 	      '</div>' +
 	    '</div>';
@@ -11467,6 +13911,18 @@ button.st-work-notice{cursor:pointer}
     return PROFILE_PHOTO_STORAGE_PREFIX + ":stable:" + profileStableStorageScope() + ":" + roleName;
   }
 
+  function profilePhotoSlotsStorageKey(roleName) {
+    return PROFILE_PHOTO_STORAGE_PREFIX + ":slots:" + profileStorageScope() + ":" + roleName;
+  }
+
+  function profilePhotoSlotsStorageKeyForScope(scope, roleName) {
+    return PROFILE_PHOTO_STORAGE_PREFIX + ":slots:" + String(scope || profileStorageScope()) + ":" + roleName;
+  }
+
+  function profileStablePhotoSlotsStorageKey(roleName) {
+    return PROFILE_PHOTO_STORAGE_PREFIX + ":slots:stable:" + profileStableStorageScope() + ":" + roleName;
+  }
+
   function profilePhotoReadKeys(roleName) {
     const keys = [];
     const addKey = (key) => {
@@ -11482,27 +13938,170 @@ button.st-work-notice{cursor:pointer}
     return keys;
   }
 
+  function profilePhotoSlotsReadKeys(roleName) {
+    const keys = [];
+    const addKey = (key) => {
+      const text = String(key || "").trim();
+      if (text && !keys.includes(text)) keys.push(text);
+    };
+    addKey(profilePhotoSlotsStorageKey(roleName));
+    try {
+      const previous = window.__ST_HYPNOOS_PREVIOUS_FRONTEND_MESSAGE_SCOPE__?.();
+      if (previous) addKey(profilePhotoSlotsStorageKeyForScope(previous, roleName));
+    } catch {}
+    addKey(profileStablePhotoSlotsStorageKey(roleName));
+    return keys;
+  }
+
+  function profilePhotoAllReadKeys(roleName) {
+    const keys = [];
+    const addKey = (key) => {
+      const text = String(key || "").trim();
+      if (text && !keys.includes(text)) keys.push(text);
+    };
+    profilePhotoSlotsReadKeys(roleName).forEach(addKey);
+    profilePhotoReadKeys(roleName).forEach(addKey);
+    return keys;
+  }
+
+  function profileHydratePhotoStorageForRoles(page, roleNames) {
+    const names = (Array.isArray(roleNames) ? roleNames : []).map((name) => String(name || "").trim()).filter(Boolean);
+    if (!page || !names.length) return;
+    const keys = [];
+    names.forEach((name) => profilePhotoAllReadKeys(name).forEach((key) => {
+      if (key && !keys.includes(key)) keys.push(key);
+    }));
+    const pending = keys.filter((key) => !profilePhotoMemoryStorage.has(String(key || "")));
+    if (!pending.length) return;
+    const signature = pending.join("\\n");
+    if (page.__stProfilePhotoHydratingSignature === signature) return;
+    page.__stProfilePhotoHydratingSignature = signature;
+    Promise.all(pending.map(profileHydratePhotoStorageKey)).then((results) => {
+      if (!page.isConnected) return;
+      page.__stProfilePhotoHydratingSignature = "";
+      if (results.some(Boolean)) renderPersonProfilePage(page);
+    }).catch(() => {
+      if (page) page.__stProfilePhotoHydratingSignature = "";
+    });
+  }
+
+  function normalizeProfilePhotoSlots(value) {
+    const slots = Array.isArray(value) ? value : [];
+    return Array.from({ length: 4 }, (_, index) => {
+      const text = String(slots[index] || "").trim();
+      return text && !["无", "空", "未记录"].includes(text) ? text : "";
+    });
+  }
+
+  function profileSaveLocalPhotoSlots(roleName, slots, selectedIndex = 0) {
+    if (!roleName) return false;
+    const normalizedSlots = normalizeProfilePhotoSlots(slots);
+    const availableIndex = normalizedSlots.findIndex(Boolean);
+    const normalizedSelected = normalizedSlots[selectedIndex] ? Math.max(0, Math.min(3, Math.trunc(Number(selectedIndex) || 0))) : Math.max(0, availableIndex);
+    const state = {
+      version: 2,
+      selected: normalizedSelected >= 0 ? normalizedSelected : 0,
+      slots: normalizedSlots
+    };
+    let saved = false;
+    for (const key of [profilePhotoSlotsStorageKey(roleName), profileStablePhotoSlotsStorageKey(roleName)]) {
+      if (profileSetPhotoStorage(key, JSON.stringify(state))) saved = true;
+    }
+    return saved;
+  }
+
+  function profileReadLocalPhotoSlotsState(roleName) {
+    for (const key of profilePhotoSlotsReadKeys(roleName)) {
+      try {
+        const raw = profileReadPhotoStorageString(key);
+        if (!raw) continue;
+        const parsed = JSON.parse(raw);
+        if (!parsed || !Array.isArray(parsed.slots)) continue;
+        const slots = normalizeProfilePhotoSlots(parsed.slots);
+        const selected = Math.max(0, Math.min(3, Math.trunc(Number(parsed?.selected) || 0)));
+        const firstFilled = slots.findIndex(Boolean);
+        return { slots, selected: slots[selected] ? selected : firstFilled >= 0 ? firstFilled : 0 };
+      } catch {}
+    }
+    const configured = ST_DEFAULT_PROFILE_PHOTO_SLOTS[roleName];
+    if (Array.isArray(configured) && configured.length) return null;
+    const legacy = localProfilePhoto(roleName);
+    if (legacy) return { slots: normalizeProfilePhotoSlots([legacy]), selected: 0 };
+    return null;
+  }
+
   function profileSaveLocalPhoto(roleName, value) {
     const image = String(value || "");
     if (!roleName || !image) return false;
     let saved = false;
     for (const key of [profilePhotoStorageKey(roleName), profileStablePhotoStorageKey(roleName)]) {
-      try {
-        localStorage.setItem(key, image);
-        saved = true;
-      } catch {}
+      if (profileSetPhotoStorage(key, image)) saved = true;
+    }
+    const configured = ST_DEFAULT_PROFILE_PHOTO_SLOTS[roleName];
+    if (Array.isArray(configured) && configured.length) {
+      const slots = normalizeProfilePhotoSlots(configured);
+      const matched = slots.findIndex((source) => source === image);
+      if (matched >= 0) {
+        profileSaveLocalPhotoSlots(roleName, slots, matched);
+      } else {
+        slots[0] = image;
+        profileSaveLocalPhotoSlots(roleName, slots, 0);
+      }
+    } else {
+      profileSaveLocalPhotoSlots(roleName, [image], 0);
     }
     return saved;
+  }
+
+  function profileClearLocalPhotoSlots(roleName) {
+    if (!roleName) return false;
+    const keys = [];
+    const addKey = (key) => {
+      const text = String(key || "").trim();
+      if (text && !keys.includes(text)) keys.push(text);
+    };
+    profilePhotoSlotsReadKeys(roleName).forEach(addKey);
+    profilePhotoReadKeys(roleName).forEach(addKey);
+    addKey(profilePhotoSlotsStorageKey(roleName));
+    addKey(profileStablePhotoSlotsStorageKey(roleName));
+    addKey(profilePhotoStorageKey(roleName));
+    addKey(profileStablePhotoStorageKey(roleName));
+    let changed = false;
+    keys.forEach((key) => {
+      try {
+        if (profilePhotoMemoryStorage.has(String(key || "")) || localStorage.getItem(key) !== null) changed = true;
+      } catch {}
+      profileRemovePhotoStorage(key);
+    });
+    return changed || keys.length > 0;
   }
 
   function localProfilePhoto(roleName) {
     for (const key of profilePhotoReadKeys(roleName)) {
       try {
-        const value = localStorage.getItem(key);
+        const value = profileReadPhotoStorageString(key);
         if (value) return value;
       } catch {}
     }
     return "";
+  }
+
+  function defaultProfilePhotoSlots(roleName, roleData) {
+    if (isOtakuFemaleForm(roleName, roleData)) return normalizeProfilePhotoSlots([ST_OTAKU_FEMALE_PROFILE_PHOTO]);
+    const configured = ST_DEFAULT_PROFILE_PHOTO_SLOTS[roleName];
+    if (Array.isArray(configured) && configured.length) return normalizeProfilePhotoSlots(configured);
+    const single = ST_DEFAULT_PROFILE_PHOTOS[roleName] || "";
+    return normalizeProfilePhotoSlots(single ? [single] : []);
+  }
+
+  function profilePhotoSlotsState(roleName, roleData) {
+    const local = profileReadLocalPhotoSlotsState(roleName);
+    if (local) return local;
+    const profile = roleProfileData(roleName, roleData);
+    const source = effectScalar(profile["照片"]).trim();
+    if (source && !["无", "空", "未记录"].includes(source)) return { slots: normalizeProfilePhotoSlots([source]), selected: 0 };
+    const slots = defaultProfilePhotoSlots(roleName, roleData);
+    return { slots, selected: slots.findIndex(Boolean) >= 0 ? Math.max(0, slots.findIndex(Boolean)) : 0 };
   }
 
   function isOtakuRoleName(roleName) {
@@ -11537,10 +14136,8 @@ button.st-work-notice{cursor:pointer}
   }
 
   function profilePhotoSource(roleName, roleData) {
-    const profile = roleProfileData(roleName, roleData);
-    const source = effectScalar(profile["照片"]).trim();
-    if (source && !["无", "空", "未记录"].includes(source)) return source;
-    return localProfilePhoto(roleName) || (isOtakuFemaleForm(roleName, roleData) ? ST_OTAKU_FEMALE_PROFILE_PHOTO : ST_DEFAULT_PROFILE_PHOTOS[roleName]) || "";
+    const state = profilePhotoSlotsState(roleName, roleData);
+    return state.slots[state.selected] || state.slots.find(Boolean) || "";
   }
 
   function profileFieldText(profile, roleName, field) {
@@ -11585,6 +14182,8 @@ button.st-work-notice{cursor:pointer}
       "工作价值": 2,
       "绰号": effectScalar(roleData?.["绰号"] ?? "").trim(),
       "绰号已认可": roleNicknameRecognized(roleData),
+      "事件记录": normalizedRoleEventRecord(roleData?.["事件记录"]),
+      "至关重要记忆": effectScalar(roleData?.["至关重要记忆"] ?? "").trim(),
       "档案": {
         "照片": "",
         "姓名": roleName || "阿宅",
@@ -11648,27 +14247,37 @@ button.st-work-notice{cursor:pointer}
   }
 
   function renderPersonStatePanel(roleName, roleData) {
-    const counts = roleCountStats(roleData, roleName).map((label) => renderCountStat(label, statValue(roleData, label))).join("");
+    const stateBars = ST_STATE_BAR_STATS.map((label) => renderStateMeterStat(label, statValue(roleData, label))).join("");
     return '<section class="st-person-lines is-body">' +
-      renderPersonPanel("状态", renderPersonRadar(roleData), "超出100贴边，低于0归心") +
-      renderPersonPanel("次数", '<div class="st-count-grid">' + counts + '</div>') +
+      renderPersonPanel("状态", '<div class="st-state-meter-grid">' + stateBars + '</div>', "-100 到 +100 为视觉两端") +
       '</section>';
   }
 
   function renderPersonSensitivityPanel(roleName, roleData) {
-    const sensitivity = roleSensitivityStats(roleData, roleName).map((label) => renderMeterStat(label, statValue(roleData, label))).join("");
+    const counts = roleCountStats(roleData, roleName).map((label) => renderCountStat(label, statValue(roleData, label))).join("");
     return '<section class="st-person-lines is-body">' +
-      renderPersonPanel("敏感度", '<div class="st-meter-grid">' + sensitivity + '</div>', "1000 为满刻度") +
+      renderPersonPanel("敏感度", renderPersonSensitivityRadar(roleData, roleName), "100 以下偏迟钝") +
+      renderPersonPanel("次数", '<div class="st-count-grid">' + counts + '</div>') +
       '</section>';
   }
 
-  function renderPersonEffectsPanel(roleName, roleData) {
+  function renderPersonEffectsPanel(page, roleName, roleData) {
     const mind = pickFirstText(roleData, ST_MIND_FIELDS[0].keys) || "未记录";
+    const activeType = activeProfileEffectType(page);
+    const tempEntries = normalizeEffectEntries(roleData["临时催眠效果"]);
+    const permanentEntries = normalizeEffectEntries(roleData["永久催眠效果"]);
+    const segmentHtml = '<div class="st-effect-segments" role="tablist" aria-label="催眠效果分段">' +
+      '<button type="button" data-effect-tab="临时催眠效果" class="' + (activeType === "临时催眠效果" ? "active" : "") + '"><span>临时催眠效果</span><em>' + tempEntries.length + '</em></button>' +
+      '<button type="button" data-effect-tab="永久催眠效果" class="' + (activeType === "永久催眠效果" ? "active" : "") + '"><span>永久催眠效果</span><em>' + permanentEntries.length + '</em></button>' +
+      '</div>';
+    const activeCard = activeType === "永久催眠效果"
+      ? renderEffectPageCard(page, roleName, "永久催眠效果", roleData["永久催眠效果"], "is-permanent")
+      : renderEffectPageCard(page, roleName, "临时催眠效果", roleData["临时催眠效果"], "is-temporary");
     return '<section class="st-person-lines is-body">' +
       renderPersonPanel("心理", '<p class="st-person-note">' + escapeHtml(mind) + '</p>') +
       '<div class="st-person-effects">' +
-        renderEffectCard(roleName, "临时催眠效果", roleData["临时催眠效果"], "is-temporary") +
-        renderEffectCard(roleName, "永久催眠效果", roleData["永久催眠效果"], "is-permanent") +
+        segmentHtml +
+        activeCard +
       '</div>' +
       '</section>';
   }
@@ -11678,6 +14287,28 @@ button.st-work-notice{cursor:pointer}
     const raw = Number(page.dataset.profileIndex || 0);
     const index = Number.isFinite(raw) ? raw : 0;
     return ((Math.trunc(index) % count) + count) % count;
+  }
+
+  function profileDeskPageCount(count) {
+    return Math.max(1, Math.ceil(Math.max(0, count) / PERSON_PROFILE_DESK_PAGE_SIZE));
+  }
+
+  function normalizeProfileDeskPage(page, count) {
+    const pageCount = profileDeskPageCount(count);
+    const raw = Number(page.dataset.profileDeskPage || 0);
+    const index = Number.isFinite(raw) ? Math.trunc(raw) : 0;
+    return Math.max(0, Math.min(pageCount - 1, index));
+  }
+
+  function turnPersonProfileDeskPage(page, direction) {
+    const roleNames = orderedProfileRoleNames(getStatsRoles());
+    const pageCount = profileDeskPageCount(roleNames.length);
+    if (pageCount <= 1) return;
+    const current = normalizeProfileDeskPage(page, roleNames.length);
+    const delta = direction === "prev" || Number(direction) < 0 ? -1 : 1;
+    page.dataset.profileDeskPage = String(((current + delta) % pageCount + pageCount) % pageCount);
+    delete page.dataset.profilePickerOpen;
+    renderPersonProfilePage(page);
   }
 
   function closePersonProfilePage(page) {
@@ -11718,6 +14349,9 @@ button.st-work-notice{cursor:pointer}
     if (action === "desk") {
       delete page.dataset.profileStatic;
       delete page.dataset.profilePickerOpen;
+      const roleNames = orderedProfileRoleNames(getStatsRoles());
+      const index = normalizeProfileIndex(page, roleNames.length);
+      page.dataset.profileDeskPage = String(Math.floor(index / PERSON_PROFILE_DESK_PAGE_SIZE));
       page.dataset.profileDeskMode = "desk";
       renderPersonProfilePage(page);
       return;
@@ -11745,7 +14379,7 @@ button.st-work-notice{cursor:pointer}
       page.dataset.profileTab = action;
       renderPersonProfilePage(page);
     }
-    if (action === "upload-photo") page.querySelector("[data-profile-file]")?.click();
+    if (action === "upload-photo") openProfilePhotoDialog(page);
   }
 
   function selectPersonProfile(page, value) {
@@ -11773,6 +14407,14 @@ button.st-work-notice{cursor:pointer}
     renderPersonProfilePage(page);
   }
 
+  function focusProfileSearchInput(page, query = "") {
+    const input = page.querySelector("[data-profile-search]");
+    if (!input) return;
+    try { input.focus({ preventScroll: true }); } catch { input.focus(); }
+    const caret = String(query || input.value || "").length;
+    try { input.setSelectionRange(caret, caret); } catch {}
+  }
+
   function searchPersonProfile(page, value) {
     const query = String(value || "");
     page.dataset.profileSearch = query;
@@ -11781,41 +14423,33 @@ button.st-work-notice{cursor:pointer}
     const roleNames = orderedProfileRoleNames(getStatsRoles());
     if (!normalized) {
       renderPersonProfilePage(page);
-      window.setTimeout(() => {
-        const input = page.querySelector("[data-profile-search]");
-        input?.focus?.();
-      }, 0);
+      focusProfileSearchInput(page, query);
       return;
     }
     const match = roleNames.find((name) => name.toLocaleLowerCase("zh-CN") === normalized)
       || roleNames.find((name) => name.toLocaleLowerCase("zh-CN").includes(normalized));
     if (!match) {
       renderPersonProfilePage(page);
-      window.setTimeout(() => {
-        const input = page.querySelector("[data-profile-search]");
-        input?.focus?.();
-        try {
-          input?.setSelectionRange?.(query.length, query.length);
-        } catch {}
-      }, 0);
+      focusProfileSearchInput(page, query);
       return;
     }
     delete page.dataset.profileStatic;
     page.dataset.profileIndex = String(roleNames.indexOf(match));
     renderPersonProfilePage(page);
-    window.setTimeout(() => {
-      const input = page.querySelector("[data-profile-search]");
-      input?.focus?.();
-      try {
-        input?.setSelectionRange?.(query.length, query.length);
-      } catch {}
-    }, 0);
+    focusProfileSearchInput(page, query);
   }
 
   function bindPersonProfileEvents(page) {
     if (page.dataset.profileBound === "true") return;
     page.dataset.profileBound = "true";
     page.addEventListener("click", (event) => {
+      const deskPageButton = event.target?.closest?.(".st-profile-desk-pager button[data-profile-desk-page]");
+      if (deskPageButton && page.contains(deskPageButton)) {
+        event.preventDefault();
+        event.stopPropagation();
+        turnPersonProfileDeskPage(page, deskPageButton.getAttribute("data-profile-desk-page") || "next");
+        return;
+      }
       const deskDelete = event.target?.closest?.("[data-profile-desk-delete-role]");
       if (deskDelete && page.contains(deskDelete)) {
         event.preventDefault();
@@ -11859,6 +14493,80 @@ button.st-work-notice{cursor:pointer}
         togglePersonProfileFavorite(page);
         return;
       }
+      const effectTab = event.target?.closest?.("[data-effect-tab]");
+      if (effectTab && page.contains(effectTab)) {
+        event.preventDefault();
+        event.stopPropagation();
+        page.dataset.profileEffectType = effectTab.getAttribute("data-effect-tab") || "临时催眠效果";
+        renderPersonProfilePage(page);
+        return;
+      }
+      const effectPageButton = event.target?.closest?.("[data-effect-page]");
+      if (effectPageButton && page.contains(effectPageButton)) {
+        event.preventDefault();
+        event.stopPropagation();
+        turnProfileEffectPage(
+          page,
+          effectPageButton.getAttribute("data-effect-type") || activeProfileEffectType(page),
+          effectPageButton.getAttribute("data-effect-page") || "next"
+        );
+        return;
+      }
+      const eventTrigger = event.target?.closest?.("[data-profile-trigger-event]");
+      if (eventTrigger && page.contains(eventTrigger)) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (eventTrigger.disabled) return;
+        const roles = getStatsRoles();
+        const roleNames = orderedProfileRoleNames(roles);
+        const roleName = roleNames[normalizeProfileIndex(page, roleNames.length)] || "";
+        const roleData = isPlainObject(roles[roleName]) ? roles[roleName] : {};
+        const bit = Math.max(0, Math.min(4, Number(eventTrigger.getAttribute("data-profile-trigger-event") || 0) || 0));
+        const item = roleEventThresholds(roleName).find((threshold) => Number(threshold.bit) === bit) || { bit, value: ENCOUNTER_AFFECTION_CHAIN_THRESHOLDS[bit] || 0 };
+        requestTriggerProfileEvent(page, roleName, roleData, item);
+        return;
+      }
+      const eventRecall = event.target?.closest?.("[data-profile-recall-event]");
+      if (eventRecall && page.contains(eventRecall)) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (eventRecall.disabled) return;
+        const roles = getStatsRoles();
+        const roleNames = orderedProfileRoleNames(roles);
+        const roleName = roleNames[normalizeProfileIndex(page, roleNames.length)] || "";
+        const roleData = isPlainObject(roles[roleName]) ? roles[roleName] : {};
+        const bit = Math.max(0, Math.min(4, Number(eventRecall.getAttribute("data-profile-recall-event") || 0) || 0));
+        const item = roleEventThresholds(roleName).find((threshold) => Number(threshold.bit) === bit) || { bit, value: ENCOUNTER_AFFECTION_CHAIN_THRESHOLDS[bit] || 0 };
+        requestRecallProfileEvent(page, roleName, roleData, item);
+        return;
+      }
+      const photoAction = event.target?.closest?.("[data-profile-photo-action]");
+      if (photoAction && page.contains(photoAction)) {
+        event.preventDefault();
+        event.stopPropagation();
+        const action = photoAction.getAttribute("data-profile-photo-action") || "";
+        const slot = Number(photoAction.getAttribute("data-profile-photo-slot") || 0) || 0;
+        if (action === "close") closeProfilePhotoDialog(page);
+        if (action === "change") page.querySelector('[data-profile-photo-file-slot="' + slot + '"]')?.click();
+        if (action === "delete") profileDeletePhotoSlot(page, slot);
+        if (action === "select") profileSelectPhotoSlot(page, slot);
+        if (action === "reset-default") {
+          page.dataset.profilePhotoResetWarning = "true";
+          renderPersonProfilePage(page);
+        }
+        if (action === "reset-default-cancel") {
+          delete page.dataset.profilePhotoResetWarning;
+          renderPersonProfilePage(page);
+        }
+        if (action === "reset-default-confirm") profileResetPhotoSlots(page);
+        return;
+      }
+      if (event.target?.closest?.("[data-profile-photo-dialog]") && !event.target?.closest?.(".st-profile-photo-card")) {
+        event.preventDefault();
+        event.stopPropagation();
+        closeProfilePhotoDialog(page);
+        return;
+      }
       const nicknameAction = event.target?.closest?.("[data-profile-nickname-action]");
       if (nicknameAction && page.contains(nicknameAction)) {
         event.preventDefault();
@@ -11879,15 +14587,43 @@ button.st-work-notice{cursor:pointer}
       }
     });
     page.addEventListener("change", (event) => {
+      const photoFile = event.target?.closest?.("[data-profile-photo-file-slot]");
+      if (photoFile && page.contains(photoFile)) {
+        event.preventDefault();
+        event.stopPropagation();
+        const file = photoFile.files?.[0];
+        const slot = Number(photoFile.getAttribute("data-profile-photo-file-slot") || 0) || 0;
+        if (!file || !/^image\\//i.test(file.type || "")) return;
+        const reader = new FileReader();
+        reader.onload = () => profileSetPhotoSlot(page, slot, String(reader.result || ""));
+        reader.readAsDataURL(file);
+        return;
+      }
       const target = event.target?.closest?.("[data-profile-select]");
       if (!target || !page.contains(target)) return;
       event.preventDefault();
       event.stopPropagation();
       selectPersonProfile(page, target.value);
     });
+    page.addEventListener("compositionstart", (event) => {
+      const target = event.target?.closest?.("[data-profile-search]");
+      if (!target || !page.contains(target)) return;
+      page.dataset.profileSearchComposing = "true";
+    });
+    page.addEventListener("compositionend", (event) => {
+      const target = event.target?.closest?.("[data-profile-search]");
+      if (!target || !page.contains(target)) return;
+      delete page.dataset.profileSearchComposing;
+      window.setTimeout(() => searchPersonProfile(page, target.value), 0);
+    });
     page.addEventListener("input", (event) => {
       const target = event.target?.closest?.("[data-profile-search]");
       if (!target || !page.contains(target)) return;
+      if (event.isComposing || page.dataset.profileSearchComposing === "true") {
+        page.dataset.profileSearch = String(target.value || "");
+        page.dataset.profilePickerOpen = "true";
+        return;
+      }
       searchPersonProfile(page, target.value);
     });
     page.addEventListener("submit", (event) => {
@@ -11898,10 +14634,11 @@ button.st-work-notice{cursor:pointer}
       submitProfileNicknameDialog(page);
     });
     page.addEventListener("keydown", (event) => {
-      if (event.target?.closest?.(".st-profile-nickname-dialog")) {
+      if (event.target?.closest?.(".st-profile-nickname-dialog,.st-profile-photo-dialog")) {
         if (event.key === "Escape") {
           event.preventDefault();
-          closeProfileNicknameDialog(page);
+          if (event.target?.closest?.(".st-profile-photo-dialog")) closeProfilePhotoDialog(page);
+          else closeProfileNicknameDialog(page);
         }
         return;
       }
@@ -11909,16 +14646,28 @@ button.st-work-notice{cursor:pointer}
         return;
       }
       if (event.key === "ArrowLeft") {
+        if (!isIsaacProfilePage(page) && page.dataset.profileDeskMode !== "detail") {
+          return;
+        }
         event.preventDefault();
         turnPersonProfilePage(page, -1);
       }
       if (event.key === "ArrowRight") {
+        if (!isIsaacProfilePage(page) && page.dataset.profileDeskMode !== "detail") {
+          return;
+        }
         event.preventDefault();
         turnPersonProfilePage(page, 1);
       }
+      const deskCard = event.target?.closest?.("[data-profile-desk-role]");
+      if ((event.key === "Enter" || event.key === " ") && deskCard && page.contains(deskCard)) {
+        event.preventDefault();
+        deskCard.click();
+        return;
+      }
       if ((event.key === "Enter" || event.key === " ") && event.target?.closest?.('[data-profile-action="upload-photo"]')) {
         event.preventDefault();
-        page.querySelector("[data-profile-file]")?.click();
+        openProfilePhotoDialog(page);
       }
       if (event.key === "Escape" && page.dataset.profilePickerOpen === "true") {
         event.preventDefault();
@@ -11942,7 +14691,10 @@ button.st-work-notice{cursor:pointer}
         favorites: readFavoriteRoleNames(),
         profile: PERSON_PROFILE_EASTER.profile,
         photo: PERSON_PROFILE_EASTER.photo,
-        tab: activePersonProfileTab(page)
+        tab: activePersonProfileTab(page),
+        effectType: activeProfileEffectType(page),
+        tempEffectPage: Number(page?.dataset?.profileTemporaryEffectPage || 0) || 0,
+        permanentEffectPage: Number(page?.dataset?.profilePermanentEffectPage || 0) || 0
       });
     }
     const index = normalizeProfileIndex(page, roleNames.length);
@@ -11952,10 +14704,15 @@ button.st-work-notice{cursor:pointer}
       index,
       names: roleNames,
       favorites: readFavoriteRoleNames(),
+      deskPage: normalizeProfileDeskPage(page, roleNames.length),
       tab: activePersonProfileTab(page),
       profile: roleProfileData(roleName, roleData),
       roleData,
-      photo: profilePhotoSource(roleName, roleData)
+      photo: profilePhotoSource(roleName, roleData),
+      photoSlots: profilePhotoSlotsState(roleName, roleData),
+      effectType: activeProfileEffectType(page),
+      tempEffectPage: Number(page?.dataset?.profileTemporaryEffectPage || 0) || 0,
+      permanentEffectPage: Number(page?.dataset?.profilePermanentEffectPage || 0) || 0
     });
   }
 
@@ -11969,19 +14726,34 @@ button.st-work-notice{cursor:pointer}
       '</div>'
     )).join("");
     return '<article class="st-profile-desk-wrap">' +
-      '<button class="st-profile-desk-card" type="button" data-profile-desk-role="' + escapeAttr(roleName) + '">' +
+      '<div class="st-profile-desk-card" role="button" tabindex="0" data-profile-desk-role="' + escapeAttr(roleName) + '">' +
         '<div class="st-profile-mini-head">人物档案</div>' +
         '<div class="st-profile-mini-picker"><strong>' + profileDisplayNameHtml(roleName, roleData, "st-profile-mini-name") + '</strong><i>☆</i></div>' +
-        '<div class="st-profile-mini-photo">' + (photo ? '<img alt="' + escapeAttr(profileDisplayNameText(roleName, roleData)) + '" src="' + escapeAttr(photo) + '">' : '<span>照片</span>') + '</div>' +
-        '<nav class="st-profile-mini-tabs" aria-hidden="true"><span>衣着</span><span>信息</span><span>状态</span><span>敏感</span><span>效果</span></nav>' +
+        '<div class="st-profile-mini-photo-tabs">' +
+          '<nav class="st-profile-mini-tabs st-profile-mini-tabs-left" aria-hidden="true"><span>衣着</span><span>信息</span><span>状态</span></nav>' +
+          '<div class="st-profile-mini-photo">' + (photo ? '<img alt="' + escapeAttr(profileDisplayNameText(roleName, roleData)) + '" src="' + escapeAttr(photo) + '">' : '<span>照片</span>') + '</div>' +
+          '<nav class="st-profile-mini-tabs st-profile-mini-tabs-right" aria-hidden="true"><span>敏感</span><span>事件</span><span>效果</span></nav>' +
+        '</div>' +
         '<section class="st-profile-mini-lines">' + lines + '</section>' +
-      '</button>' +
+      '</div>' +
     '</article>';
   }
 
   function renderPersonProfileDeskPage(page, roleNames, roles) {
-    const visible = roleNames.slice(0, 6);
+    const pageCount = profileDeskPageCount(roleNames.length);
+    const pageIndex = normalizeProfileDeskPage(page, roleNames.length);
+    page.dataset.profileDeskPage = String(pageIndex);
+    const start = pageIndex * PERSON_PROFILE_DESK_PAGE_SIZE;
+    const visible = roleNames.slice(start, start + PERSON_PROFILE_DESK_PAGE_SIZE);
+    profileHydratePhotoStorageForRoles(page, visible);
     const cards = visible.map((roleName) => profileDeskCardHtml(roleName, isPlainObject(roles[roleName]) ? roles[roleName] : {})).join("");
+    const pager = pageCount > 1
+      ? '<nav class="st-profile-desk-pager" aria-label="人物档案桌面分页">' +
+          '<button type="button" data-profile-desk-page="prev" aria-label="上一页">‹</button>' +
+          '<span>' + (pageIndex + 1) + ' / ' + pageCount + '</span>' +
+          '<button type="button" data-profile-desk-page="next" aria-label="下一页">›</button>' +
+        '</nav>'
+      : "";
     page.dataset.profileSignature = personProfileSignature(page);
     page.innerHTML =
       renderLiteHeader(page, { title: "人物档案", html: recordingIslandHtml() }) +
@@ -11989,6 +14761,7 @@ button.st-work-notice{cursor:pointer}
         (cards
           ? '<section class="st-profile-desk" aria-label="桌面人物档案">' + cards + '</section>'
           : '<section class="st-profile-desk-empty">没有可显示的角色档案。</section>') +
+        pager +
       '</main>';
     bindLiteHeader(page, () => renderPersonProfilePage(page));
     page.querySelector('[data-lite-action="back"]')?.addEventListener("click", () => closePersonProfilePage(page));
@@ -12020,6 +14793,7 @@ button.st-work-notice{cursor:pointer}
     }
     const roleName = staticIsaac ? PERSON_PROFILE_EASTER.name : roleNames[index];
     const roleData = !staticIsaac && isPlainObject(roles[roleName]) ? roles[roleName] : {};
+    if (!staticIsaac) profileHydratePhotoStorageForRoles(page, [roleName]);
     const profile = staticIsaac ? PERSON_PROFILE_EASTER.profile : roleProfileData(roleName, roleData);
     const photo = staticIsaac ? PERSON_PROFILE_EASTER.photo : profilePhotoSource(roleName, roleData);
     const activeTab = activePersonProfileTab(page);
@@ -12031,28 +14805,32 @@ button.st-work-notice{cursor:pointer}
     const fieldsHtml = fields.map((field) => {
       const text = profileFieldText(profile, roleName, field);
       const nickname = field.key === "姓名" && !staticIsaac ? roleNickname(roleName, roleData) : "";
-      const nicknameClass = nickname ? roleNicknameClass(roleData) : "";
+      const nicknameClass = nickname ? [roleNicknameClass(roleData), roleNicknameFitClass(nickname)].filter(Boolean).join(" ") : "";
       const editButton = field.key === "姓名" && !staticIsaac
         ? '<button class="st-profile-nickname-edit" type="button" data-profile-action="set-nickname" aria-label="设置绰号" title="设置绰号"></button>'
         : "";
       const valueHtml = nickname
         ? '<span class="st-profile-info-name"><span class="st-profile-name-struck">' + escapeHtml(text) + '</span><span class="st-profile-info-nickname ' + escapeAttr(nicknameClass) + '">' + escapeHtml(nickname) + '</span></span>'
         : escapeHtml(text);
-      return '<div class="st-person-line ' + (field.long ? "is-long" : "") + (field.key === "姓名" ? " is-name" : "") + '">' +
+      return '<div class="st-person-line ' + (field.long ? "is-long" : "") + (field.key === "姓名" ? " is-name" : "") + (nickname ? " has-nickname" : "") + '">' +
         editButton +
         '<span>' + escapeHtml(field.label) + '</span>' +
         '<strong>' + valueHtml + '</strong>' +
       '</div>';
     }).join("");
-    const tabsHtml = PERSON_PROFILE_TABS.map((tab) => (
+    const profileTabButtonHtml = (tab) => (
       '<button class="st-person-tab ' + (activeTab === tab.id ? "active" : "") + '" type="button" data-profile-action="' + escapeAttr(tab.id) + '">' + escapeHtml(tab.label) + '</button>'
-    )).join("");
+    );
+    const leftTabsHtml = PERSON_PROFILE_TABS.slice(0, 3).map(profileTabButtonHtml).join("");
+    const rightTabsHtml = PERSON_PROFILE_TABS.slice(3).map(profileTabButtonHtml).join("");
     const contentHtml = activeTab === "state"
       ? renderPersonStatePanel(roleName, roleData)
       : activeTab === "sensitivity"
         ? renderPersonSensitivityPanel(roleName, roleData)
+        : activeTab === "events"
+          ? renderPersonEventsPanel(page, roleName, roleData)
         : activeTab === "effects"
-          ? renderPersonEffectsPanel(roleName, roleData)
+          ? renderPersonEffectsPanel(page, roleName, roleData)
           : '<section class="st-person-lines">' + fieldsHtml + '</section>';
     const activeTabLabel = PERSON_PROFILE_TABS.find((tab) => tab.id === activeTab)?.label || "档案";
     const canDeleteRole = !staticIsaac && roleName && !ST_LOCKED_PROFILE_ROLES.has(roleName);
@@ -12074,6 +14852,9 @@ button.st-work-notice{cursor:pointer}
     const nicknameDialogHtml = !staticIsaac && page.dataset.profileNicknameDialog === "true"
       ? renderProfileNicknameDialog(roleName, roleData)
       : "";
+    const photoDialogHtml = !staticIsaac && page.dataset.profilePhotoDialog === "true"
+      ? renderProfilePhotoDialog(roleName, roleData, page.dataset.profilePhotoResetWarning === "true")
+      : "";
     page.innerHTML =
       renderLiteHeader(page, { title: "人物档案", html: recordingIslandHtml() }) +
       '<main class="st-lite-body st-profile-body is-detail">' +
@@ -12085,20 +14866,22 @@ button.st-work-notice{cursor:pointer}
           '<section class="st-person-paper' + animationClass + '" aria-label="人物档案纸">' +
             '<div class="st-person-paper-head"><small aria-hidden="true">✦───✦</small><h2>人物档案</h2></div>' +
             profilePickerHtml(roleNames, selectedValue, profileSearchValue, staticIsaac, pickerOpen, roles) +
-            '<div class="st-person-photo-wrap">' +
-              (staticIsaac ? '<div class="st-person-photo is-static">' : '<button class="st-person-photo" type="button" data-profile-action="upload-photo" title="点击更换照片">') +
-                (photo ? '<img alt="' + escapeAttr(profileDisplayNameText(roleName, roleData)) + '" src="' + escapeAttr(photo) + '">' : '<div class="st-person-photo-empty">点击照片区域<br>更换图片</div>') +
-              (staticIsaac ? '</div>' : '</button>') +
+            '<div class="st-person-photo-tabs-wrap">' +
+              '<nav class="st-person-tabs st-person-tabs-left" aria-label="档案分页左侧">' + leftTabsHtml + '</nav>' +
+              '<div class="st-person-photo-wrap">' +
+                (staticIsaac ? '<div class="st-person-photo is-static">' : '<button class="st-person-photo" type="button" data-profile-action="upload-photo" title="管理照片">') +
+                  (photo ? '<img alt="' + escapeAttr(profileDisplayNameText(roleName, roleData)) + '" src="' + escapeAttr(photo) + '">' : '<div class="st-person-photo-empty">点击照片区域<br>管理图片</div>') +
+                (staticIsaac ? '</div>' : '</button>') +
+              '</div>' +
+              '<nav class="st-person-tabs st-person-tabs-right" aria-label="档案分页右侧">' + rightTabsHtml + '</nav>' +
             '</div>' +
-            '<nav class="st-person-tabs" aria-label="档案分页">' +
-              tabsHtml +
-            '</nav>' +
             '<input type="file" accept="image/*" data-profile-file hidden>' +
             contentHtml +
             '<div class="st-person-page-count">' + escapeHtml((staticIsaac ? "彩蛋档案" : String(index + 1) + " / " + roleNames.length) + " · " + activeTabLabel) + '</div>' +
           '</section>' +
           detailActionsHtml +
           nicknameDialogHtml +
+          photoDialogHtml +
         '</section>' +
       '</main>';
     page.dataset.profileSignature = personProfileSignature(page);
@@ -12195,6 +14978,73 @@ button.st-work-notice{cursor:pointer}
     return pad ? safe.padStart(2, "0") : safe;
   }
 
+  function normalizeClockDateOffset(value) {
+    const parsed = Math.trunc(Number(value) || 0);
+    return Math.max(0, Math.min(2, parsed));
+  }
+
+  function clockCurrentDateText() {
+    return String(getSystemState()["当前日期"] || getSystemState()["日期"] || getSystemState()["今日日期"] || "").trim() || "4月9日";
+  }
+
+  function storyDateLabelAfter(dateText, offset = 0) {
+    let label = String(dateText || "").trim() || "4月9日";
+    const count = normalizeClockDateOffset(offset);
+    for (let index = 0; index < count; index += 1) label = nextStoryDateLabel(label);
+    return label;
+  }
+
+  function clockDateOptions(currentDateText = clockCurrentDateText()) {
+    const labels = ["今天", "明天", "后天"];
+    return labels.map((label, offset) => {
+      const dateText = storyDateLabelAfter(currentDateText, offset);
+      const weekday = weekdayForStoryDate(dateText);
+      return { offset, label, dateText, weekday };
+    });
+  }
+
+  function clockCurrentStamp() {
+    const dateText = clockCurrentDateText();
+    const parsed = parseStoryDate(dateText) || parseStoryDate("4月9日");
+    const minutes = minutesFromTimeText(storyTimeOnly(getSystemState()["当前时间"], "00:00"));
+    return schoolYearDay(parsed.month, parsed.day) * 1440 + minutes;
+  }
+
+  function clockTargetStamp(dateText, timeText) {
+    const parsed = parseStoryDate(dateText);
+    if (!parsed) return NaN;
+    const minutes = minutesFromTimeText(timeText);
+    return schoolYearDay(parsed.month, parsed.day) * 1440 + minutes;
+  }
+
+  function clockTargetInfo(hour, minute, offset) {
+    const currentDateText = clockCurrentDateText();
+    const currentTimeText = storyTimeOnly(getSystemState()["当前时间"], "未知");
+    const safeOffset = normalizeClockDateOffset(offset);
+    const targetDateText = storyDateLabelAfter(currentDateText, safeOffset);
+    const targetTimeText = formatClockInput(hour, minute);
+    const currentParsed = parseStoryDate(currentDateText) || parseStoryDate("4月9日");
+    const currentMinutes = minutesFromTimeText(storyTimeOnly(getSystemState()["当前时间"], "00:00"));
+    const targetMinutes = minutesFromTimeText(targetTimeText);
+    const currentStamp = schoolYearDay(currentParsed.month, currentParsed.day) * 1440 + currentMinutes;
+    const targetStamp = schoolYearDay(currentParsed.month, currentParsed.day) * 1440 + safeOffset * 1440 + targetMinutes;
+    const maxStamp = currentStamp + 2 * 1440;
+    const tooEarly = Number.isFinite(targetStamp) && targetStamp < currentStamp;
+    const tooLate = Number.isFinite(targetStamp) && targetStamp > maxStamp;
+    return {
+      currentDateText,
+      currentTimeText,
+      targetDateText,
+      targetTimeText,
+      currentStamp,
+      targetStamp,
+      maxStamp,
+      tooEarly,
+      tooLate,
+      valid: Number.isFinite(targetStamp) && !tooEarly && !tooLate
+    };
+  }
+
   function getClockSeed() {
     const text = storyTimeOnly(getSystemState()["当前时间"], "12:00");
     const minutes = minutesFromTimeText(text);
@@ -12219,6 +15069,31 @@ button.st-work-notice{cursor:pointer}
     if (label) label.textContent = formatClockInput(hour, minute);
   }
 
+	  function updateClockActionState(page) {
+	    const pendingClock = hasPendingClockSuggestionOperation();
+	    const hour = normalizeClockPart(page.querySelector("[data-clock-hour]")?.value, 23);
+    const minute = normalizeClockPart(page.querySelector("[data-clock-minute]")?.value, 59);
+    const offset = normalizeClockDateOffset(page.querySelector("[data-clock-date-offset]:checked")?.value ?? page.dataset.clockDateOffset);
+    page.dataset.clockDateOffset = String(offset);
+    const info = clockTargetInfo(hour, minute, offset);
+	    const button = page.querySelector('[data-clock-action="suggest"]');
+	    if (button) {
+	      button.disabled = Boolean(pendingClock || !info.valid);
+	      button.textContent = pendingClock ? "已暂存" : info.tooEarly ? "时间已过" : info.tooLate ? "超过2天" : "锚定此时间";
+    }
+    const validation = page.querySelector("[data-clock-validation]");
+    if (validation) {
+      validation.textContent = info.tooEarly
+        ? "目标不能早于当前变量时间（" + info.currentDateText + " " + info.currentTimeText + "）。"
+        : info.tooLate
+          ? "目标不能超过当前变量时间后2天。"
+          : "目标：" + info.targetDateText + " " + info.targetTimeText;
+    }
+    const header = page.querySelector("[data-clock-header-target]");
+    if (header) header.textContent = info.targetDateText + " " + info.targetTimeText;
+    return info;
+  }
+
   function setClockValue(page, hour, minute) {
     const hourInput = page.querySelector("[data-clock-hour]");
     const minuteInput = page.querySelector("[data-clock-minute]");
@@ -12227,9 +15102,20 @@ button.st-work-notice{cursor:pointer}
     updateClockFace(page);
   }
 
-	  function renderClockPage(page) {
-	    const seed = getClockSeed();
-	    const pendingClock = hasPendingClockSuggestionOperation();
+		  function renderClockPage(page) {
+		    const seed = getClockSeed();
+		    const pendingClock = hasPendingClockSuggestionOperation();
+		    const selectedOffset = normalizeClockDateOffset(page.dataset.clockDateOffset);
+		    page.dataset.clockDateOffset = String(selectedOffset);
+		    const targetInfo = clockTargetInfo(seed.hour, seed.minute, selectedOffset);
+		    const clockActionLocked = pendingClock || !targetInfo.valid;
+	    if (!page.dataset.clockDateGroupName) page.dataset.clockDateGroupName = "st-clock-date-" + Math.random().toString(36).slice(2, 9);
+	    const dateGroupName = page.dataset.clockDateGroupName;
+	    const dateOptions = clockDateOptions(targetInfo.currentDateText).map((option) => (
+	      '<label><input type="radio" name="' + escapeAttr(dateGroupName) + '" data-clock-date-offset value="' + option.offset + '"' + (option.offset === selectedOffset ? " checked" : "") + '><span>' +
+	        escapeHtml(option.label) + '<small>' + escapeHtml(option.dateText + (option.weekday ? " · " + option.weekday.replace(/^星期/, "周") : "")) + '</small>' +
+	      '</span></label>'
+	    )).join("");
     const marks = Array.from({ length: 12 }, (_, index) => {
       const angle = index * 30;
       const radians = angle * Math.PI / 180;
@@ -12238,20 +15124,22 @@ button.st-work-notice{cursor:pointer}
       return '<i class="st-clock-mark" style="left:' + x.toFixed(2) + '%;top:' + y.toFixed(2) + '%;transform:translate(-50%,-50%) rotate(' + angle + 'deg)"></i>';
     }).join("");
     page.innerHTML =
-      renderLiteHeader(page, { title: "时钟", html: '<strong>' + escapeHtml(formatClockInput(seed.hour, seed.minute)) + '</strong>' }) +
+      renderLiteHeader(page, { title: "时钟", html: '<strong data-clock-header-target>' + escapeHtml(targetInfo.targetDateText + " " + formatClockInput(seed.hour, seed.minute)) + '</strong>' }) +
       '<main class="st-lite-body">' +
         '<section class="st-lite-card st-clock-card">' +
           '<div class="st-clock-face" aria-hidden="true">' + marks +
             '<i class="st-clock-hand hour"></i><i class="st-clock-hand minute"></i><i class="st-clock-center"></i>' +
           '</div>' +
           '<div class="st-clock-time">' + escapeHtml(formatClockInput(seed.hour, seed.minute)) + '</div>' +
+          '<div class="st-clock-date-options">' + dateOptions + '</div>' +
           '<div class="st-clock-inputs">' +
 	            '<label><span>时</span><input data-clock-hour inputmode="numeric" autocomplete="off" maxlength="2" min="0" max="23" value="' + escapeAttr(String(seed.hour).padStart(2, "0")) + '"></label>' +
 	            '<b class="st-clock-colon">:</b>' +
 	            '<label><span>分</span><input data-clock-minute inputmode="numeric" autocomplete="off" maxlength="2" min="0" max="59" value="' + escapeAttr(String(seed.minute).padStart(2, "0")) + '"></label>' +
           '</div>' +
-	          '<button type="button" class="st-clock-action" data-clock-action="suggest"' + (pendingClock ? " disabled" : "") + '>' + (pendingClock ? "已暂存" : "建议此时间") + '</button>' +
-          '<p class="st-clock-note">这只会写入本轮操作，请 AI 按剧情连续性判断是否推进时间；前端不会直接改当前时间变量。</p>' +
+	          '<button type="button" class="st-clock-action" data-clock-action="suggest"' + (clockActionLocked ? " disabled" : "") + '>' + (pendingClock ? "已暂存" : (targetInfo.tooEarly ? "时间已过" : targetInfo.tooLate ? "超过2天" : "锚定此时间")) + '</button>' +
+          '<p class="st-clock-note" data-clock-validation>' + escapeHtml(targetInfo.tooEarly ? "目标不能早于当前变量时间（" + targetInfo.currentDateText + " " + targetInfo.currentTimeText + "）。" : targetInfo.tooLate ? "目标不能超过当前变量时间后2天。" : "目标：" + targetInfo.targetDateText + " " + targetInfo.targetTimeText) + '</p>' +
+          '<p class="st-clock-note">这会写入本轮强制日期时间锚点；目标范围为当前变量时间到2天后。</p>' +
         '</section>' +
       '</main>';
     bindLiteHeader(page, () => renderClockPage(page));
@@ -12266,30 +15154,51 @@ button.st-work-notice{cursor:pointer}
         const max = input.hasAttribute("data-clock-hour") ? 23 : 59;
         input.value = sanitizeClockInputValue(input.value, max, false);
         updateClockFace(page);
+        updateClockActionState(page);
       });
       input.addEventListener("blur", () => {
         const max = input.hasAttribute("data-clock-hour") ? 23 : 59;
         input.value = sanitizeClockInputValue(input.value, max, true) || "00";
         updateClockFace(page);
+        updateClockActionState(page);
       });
     });
-	    page.querySelector('[data-clock-action="suggest"]')?.addEventListener("click", () => {
-	      if (hasPendingClockSuggestionOperation()) {
-	        renderClockPage(page);
-	        return;
-	      }
+    page.querySelectorAll("[data-clock-date-offset]").forEach((input) => {
+      input.addEventListener("change", () => {
+        page.dataset.clockDateOffset = String(normalizeClockDateOffset(input.value));
+        updateClockActionState(page);
+      });
+    });
+		    page.querySelector('[data-clock-action="suggest"]')?.addEventListener("click", () => {
+		      if (hasPendingClockSuggestionOperation()) {
+		        renderClockPage(page);
+		        return;
+		      }
 	      const hour = normalizeClockPart(page.querySelector("[data-clock-hour]")?.value, 23);
 	      const minute = normalizeClockPart(page.querySelector("[data-clock-minute]")?.value, 59);
 	      const suggested = formatClockInput(hour, minute);
+	      const offset = normalizeClockDateOffset(page.querySelector("[data-clock-date-offset]:checked")?.value ?? page.dataset.clockDateOffset);
+	      const info = clockTargetInfo(hour, minute, offset);
+	      if (!info.valid) {
+	        updateClockActionState(page);
+	        return;
+	      }
 	      Promise.resolve(appendAppOperation({
 	        来源: "时钟",
-	        操作: "建议剧情开始时间",
-	        当前时间: storyTimeOnly(getSystemState()["当前时间"], "未知"),
+	        操作: "强制剧情开始时间",
+	        暂存摘要: "强制到 " + info.targetDateText + " " + suggested,
+	        当前日期: info.currentDateText,
+	        当前时间: info.currentTimeText,
+	        日期选择: offset === 0 ? "今天" : offset === 1 ? "明天" : "后天",
 	        建议时间: suggested,
-	        AI执行规范: "这是用户建议剧情从该时间开始或推进到该时间；AI应按剧情连续性判断是否成立，成立时更新系统.当前时间并同步日程、事件、当前/待上课程与课程表相关变量。"
+	        目标日期: info.targetDateText,
+	        目标时间: suggested,
+	        时间解释: "前端已由用户选择目标日期和目标时间，并校验目标不早于当前变量时间、且不超过当前变量时间后2天。",
+	        AI执行规范: "这是用户设置的强制剧情时间锚点，不是可忽略建议。AI必须让本轮剧情从目标日期与目标时间开始或推进到该时间点；除非用户最新正文明确取消或改时间，不得绕开、忽略或另选时间。前端已经判断目标日期：直接按/目标日期和/目标时间执行，不要重新判断是否跨天。只更新/系统/当前时间和必要的/系统/当前事件；目标日期不同于当前日期时同步更新/系统/当前日期。/系统/_当前周几、/系统/_当前日程、/系统/_当前特殊日期、/系统/当天课程表、/系统/当天原课程表和/系统/当天魔改课程表为前端只读同步字段，AI不要手写这些字段。"
 	      })).then(() => renderClockPage(page));
 	    });
     updateClockFace(page);
+    updateClockActionState(page);
   }
 
   function openClockPage(tile) {
@@ -12784,7 +15693,7 @@ button.st-work-notice{cursor:pointer}
           工作价值: monitorRoleValue(role),
           每日星光点: monitorRoleStarlightPerDay(role),
           前置条件: "好感度>=100；服从度>=100；未派遣中；门位为空。",
-          AI执行规范: "由AI按剧情和前置条件判定派遣是否成功；派遣工作以本条派遣工作字段为准，若原始派遣工作为空或明显不可能发生在学校男厕门位，前端已改用默认轻口味的NSFW直播，不要再按原始荒诞内容执行。工作内容可能影响主角可疑度，请按剧情风险决定是否更新。成功时写入系统.派遣岗位." + (index + 1) + "号门的角色名、派遣工作、派遣开始时间、派遣结束时间、工作价值，并将该角色的是否派遣中设为true；派遣期间不立刻发星光点。失败则不要改变量。"
+          AI执行规范: "由AI按剧情和前置条件判定派遣是否成功；派遣工作以本条派遣工作字段为准，若原始派遣工作为空或明显不可能发生在学校男厕门位，前端已改用默认轻口味的NSFW直播，不要再按原始荒诞内容执行。工作内容可能影响主角可疑度，请按剧情风险决定是否更新。成功时写入本条门位对应的系统.派遣岗位，记录角色名、派遣工作、派遣开始时间、派遣结束时间、工作价值，并将该角色的是否派遣中设为true；派遣期间不立刻发星光点。失败则不要改变量。"
         };
         const pendingEntry = getPendingMonitorGateDispatchEntry(index);
         const pendingChanged = pendingEntry && monitorDispatchPayloadSignature(pendingEntry.payload) !== monitorDispatchPayloadSignature(payload);
@@ -12864,12 +15773,12 @@ button.st-work-notice{cursor:pointer}
   }
 
   const ST_WORK_JOBS = [
-    { id: "construction", threshold: 0, title: "搬砖", place: "工地杂工", wage: 10000, shachiku: 10, chance: 0.08, detail: "XX工地急缺临时力工，负责把砖块、水泥袋和脚手架零件搬到指定位置。无需经验，听从工头安排，手脚麻利优先；灰尘大、出汗多，工资当日结清。" },
-    { id: "convenience", threshold: 40, title: "便利店夜班", place: "便利店临时工", wage: 19000, shachiku: 8, chance: 0.11, detail: "街角便利店招夜班替班，负责收银、补货、热柜整理、清扫门口与仓库。要求能熬夜、会简单对客，不迟到不擅离岗位；下班后结算。" },
-    { id: "warehouse", threshold: 80, title: "仓储分拣", place: "物流仓库", wage: 32000, shachiku: 6, chance: 0.15, detail: "城郊仓库临时招分拣员，按单拣货、贴标、装箱、搬运小件包裹。工作节奏快，需要核对编号，弄错会被扣时薪；适合有体力也能细心的人。" },
-    { id: "event-staff", threshold: 120, title: "会场杂务", place: "活动会场后台", wage: 52000, shachiku: 4, chance: 0.19, detail: "某活动会场招短期支援，协助布置桌椅、搬运展架、引导来宾、结束后撤场。需要穿着整洁、反应快、能听懂现场指挥，可能接触各类来宾。" },
-    { id: "office-temp", threshold: 160, title: "事务所临时文员", place: "事务所外包", wage: 80000, shachiku: 3, chance: 0.23, detail: "某事务所需要临时文员，整理纸质档案、录入资料、跑腿送件、复印装订。表面轻松但要求保密、少说话、字迹清楚，做完六小时统一结算。" },
-    { id: "private-errand", threshold: 200, title: "高端代办", place: "会员制委托", wage: 125000, shachiku: 0, chance: 0.28, detail: "私人委托招可靠代办，内容包括预约排队、取送物品、陪同处理琐事和临时协调。报酬高但要求守口如瓶、会看气氛、不要追问委托人的隐私。" }
+    { id: "construction", threshold: 0, title: "搬砖", place: "工地杂工", wage: 20000, shachiku: 10, chance: 0.16, detail: "XX工地急缺临时力工，负责把砖块、水泥袋和脚手架零件搬到指定位置。无需经验，听从工头安排，手脚麻利优先；灰尘大、出汗多，工资当日结清。" },
+    { id: "convenience", threshold: 40, title: "便利店夜班", place: "便利店临时工", wage: 38000, shachiku: 8, chance: 0.22, detail: "街角便利店招夜班替班，负责收银、补货、热柜整理、清扫门口与仓库。要求能熬夜、会简单对客，不迟到不擅离岗位；下班后结算。" },
+    { id: "warehouse", threshold: 80, title: "仓储分拣", place: "物流仓库", wage: 64000, shachiku: 6, chance: 0.3, detail: "城郊仓库临时招分拣员，按单拣货、贴标、装箱、搬运小件包裹。工作节奏快，需要核对编号，弄错会被扣时薪；适合有体力也能细心的人。" },
+    { id: "event-staff", threshold: 120, title: "会场杂务", place: "活动会场后台", wage: 104000, shachiku: 4, chance: 0.38, detail: "某活动会场招短期支援，协助布置桌椅、搬运展架、引导来宾、结束后撤场。需要穿着整洁、反应快、能听懂现场指挥，可能接触各类来宾。" },
+    { id: "office-temp", threshold: 160, title: "事务所临时文员", place: "事务所外包", wage: 160000, shachiku: 3, chance: 0.46, detail: "某事务所需要临时文员，整理纸质档案、录入资料、跑腿送件、复印装订。表面轻松但要求保密、少说话、字迹清楚，做完六小时统一结算。" },
+    { id: "private-errand", threshold: 200, title: "高端代办", place: "会员制委托", wage: 250000, shachiku: 0, chance: 0.56, detail: "私人委托招可靠代办，内容包括预约排队、取送物品、陪同处理琐事和临时协调。报酬高但要求守口如瓶、会看气氛、不要追问委托人的隐私。" }
   ];
 
   function workNumber(value, fallback = 0) {
@@ -12972,24 +15881,27 @@ button.st-work-notice{cursor:pointer}
     return next;
   }
 
-  function workCurrentTimeInfo(hours = 6) {
-    const clock = workEffectiveClockInfo();
-    const dateText = clock.dateText;
-    const timeText = storyTimeOnly(clock.timeText, "00:00");
-    const startText = [dateText, timeText].filter(Boolean).join(" ") || "未知";
+	  function workClockStampFromInfo(clock) {
+	    const parsed = parseStoryDate(clock?.dateText || "");
+	    const minutes = minutesFromTimeText(storyTimeOnly(clock?.timeText, "00:00"));
+	    if (!parsed || !Number.isFinite(minutes)) return 0;
+	    return schoolYearDay(parsed.month, parsed.day) * 1440 + minutes;
+	  }
+
+	  function workCurrentTimeInfo(hours = 6, clock = workEffectiveClockInfo()) {
+	    const dateText = clock.dateText;
+	    const timeText = storyTimeOnly(clock.timeText, "00:00");
+	    const startText = [dateText, timeText].filter(Boolean).join(" ") || "未知";
     const parsed = parseStoryDate(dateText);
     const minutes = minutesFromTimeText(timeText || "00:00");
     if (!parsed || !Number.isFinite(minutes)) {
       return {
         startText,
-        endText: "当前时间 + " + hours + "小时",
-        minutes: hours * 60,
-        timeSource: clock.source,
-        pendingTime: clock.pendingTime,
-        pendingTargetText: clock.pendingTargetText,
-        postWorkTargetText: clock.postWorkTargetText,
-        selectionRule: clock.selectionRule
-      };
+	        endText: "当前时间 + " + hours + "小时",
+	        minutes: hours * 60,
+	        timeSource: clock.source,
+	        selectionRule: clock.selectionRule
+	      };
     }
     const totalMinutes = minutes + hours * 60;
     const dayOffset = Math.floor(totalMinutes / 1440);
@@ -12998,26 +15910,23 @@ button.st-work-notice{cursor:pointer}
     date.setDate(date.getDate() + dayOffset);
     return {
       startText,
-      endText: (date.getMonth() + 1) + "月" + date.getDate() + "日 " + formatPeriodTime(endMinutes),
-      minutes: hours * 60,
-      timeSource: clock.source,
-      pendingTime: clock.pendingTime,
-      pendingTargetText: clock.pendingTargetText,
-      postWorkTargetText: clock.postWorkTargetText,
-      selectionRule: clock.selectionRule
-    };
-  }
+	      endText: (date.getMonth() + 1) + "月" + date.getDate() + "日 " + formatPeriodTime(endMinutes),
+	      minutes: hours * 60,
+	      timeSource: clock.source,
+	      selectionRule: clock.selectionRule
+	    };
+	  }
 
   function workOffsetDateTimeText(startText, hours = 0) {
     const text = String(startText || "").trim();
     const dateMatch = text.match(/(\d{1,2})月(\d{1,2})日/);
     const timeMatch = text.match(/(\d{1,2}):(\d{2})/);
-    if (!dateMatch || !timeMatch) return hours ? "开始后" + hours + "小时" : text || "未知";
+    if (!dateMatch || !timeMatch) return hours ? "" : text || "未知";
     const month = Number(dateMatch[1]);
     const day = Number(dateMatch[2]);
     const hour = Number(timeMatch[1]);
     const minute = Number(timeMatch[2]);
-    if (![month, day, hour, minute].every(Number.isFinite)) return hours ? "开始后" + hours + "小时" : text || "未知";
+    if (![month, day, hour, minute].every(Number.isFinite)) return hours ? "" : text || "未知";
     const totalMinutes = hour * 60 + minute + hours * 60;
     const dayOffset = Math.floor(totalMinutes / 1440);
     const endMinutes = ((totalMinutes % 1440) + 1440) % 1440;
@@ -13048,6 +15957,56 @@ button.st-work-notice{cursor:pointer}
     return schoolYearDay(parsed.month, parsed.day) * 1440 + minutes;
   }
 
+  const WORK_LOCK_RELEASE_AFTER_START_MINUTES = 6 * 60;
+  const WORK_LOCK_RELEASE_BEFORE_BUFF_END_MINUTES = 18 * 60;
+
+	  function workLockReleaseThresholds(payload) {
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) return [];
+    const thresholds = [];
+    const startStamp = monitorStampFromText(payload["开始时间"] || payload["打工开始时间"] || "");
+    if (startStamp) thresholds.push(startStamp + WORK_LOCK_RELEASE_AFTER_START_MINUTES);
+    const buffEndStamp = monitorStampFromText(payload["buff结束时间"] || "");
+    if (buffEndStamp) thresholds.push(buffEndStamp - WORK_LOCK_RELEASE_BEFORE_BUFF_END_MINUTES);
+    if (!thresholds.length) {
+      const endStamp = monitorStampFromText(payload["预计结束时间"] || payload["打工结束时间"] || "");
+      if (endStamp) thresholds.push(endStamp);
+    }
+    return thresholds.filter((value) => Number.isFinite(value) && value > 0);
+  }
+
+  function workOperationLockExpired(payload, currentStamp = workCurrentStamp()) {
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) return false;
+    if (String(payload["来源"] || "").trim() !== "打工") return false;
+    if (!/^(开始打工|有偶遇|打工中提醒|打工buff提醒)$/.test(String(payload["操作"] || "").trim())) return false;
+    if (!currentStamp) return false;
+    const thresholds = workLockReleaseThresholds(payload);
+    return thresholds.some((threshold) => currentStamp > threshold);
+  }
+
+  function pruneExpiredWorkOperationLocks() {
+    try {
+      if (!Array.isArray(window.__ST_OPERATION_INPUT_LOG__) || !window.__ST_OPERATION_INPUT_LOG__.length) return false;
+      const currentStamp = workCurrentStamp();
+      if (!currentStamp) return false;
+      const before = window.__ST_OPERATION_INPUT_LOG__.length;
+      window.__ST_OPERATION_INPUT_LOG__ = window.__ST_OPERATION_INPUT_LOG__.filter((entry) => {
+        const payload = operationEntryPayload(entry);
+        return !workOperationLockExpired(payload, currentStamp);
+      });
+	      const changed = before !== window.__ST_OPERATION_INPUT_LOG__.length;
+	      if (changed) {
+	        try { emitOperationQueueChanged(); } catch {}
+	        scheduleReadonlyScheduleSyncForCurrentClock(0);
+	      }
+	      return changed;
+    } catch (err) {
+      console.warn("[HypnoOS] 打工暂存锁自动清理失败", err);
+      return false;
+    }
+  }
+  window.__ST_PRUNE_EXPIRED_WORK_OPERATIONS__ = pruneExpiredWorkOperationLocks;
+  window.setTimeout(() => pruneExpiredWorkOperationLocks(), 0);
+
   function workMessageBody(message) {
     if (typeof message === "string") return message;
     if (!message || typeof message !== "object") return "";
@@ -13072,12 +16031,12 @@ button.st-work-notice{cursor:pointer}
     return sources.sort((a, b) => b.length - a.length).find((items) => Array.isArray(items) && items.length) || [];
   }
 
-  function workParseOperationLine(line) {
+  function workParsePipePayloadLine(line, actionPattern = null) {
     const text = String(line || "").trim();
     if (!text.startsWith("-")) return null;
     const parts = text.replace(/^-\s*/, "").split("｜").map((item) => item.trim()).filter(Boolean);
     const action = parts.shift() || "";
-    if (!/开始打工/.test(action)) return null;
+    if (actionPattern && !actionPattern.test(action)) return null;
     const payload = { 来源: "打工", 操作: action };
     for (const part of parts) {
       const index = part.indexOf("=");
@@ -13087,6 +16046,10 @@ button.st-work-notice{cursor:pointer}
       if (key) payload[key] = value;
     }
     return payload;
+  }
+
+  function workParseOperationLine(line) {
+    return workParsePipePayloadLine(line, /开始打工/);
   }
 
   function workStartPayloadsFromText(text) {
@@ -13105,8 +16068,27 @@ button.st-work-notice{cursor:pointer}
     return result;
   }
 
+  function workBuffTimeParts(text) {
+    const raw = String(text || "").trim();
+    const dateMatch = raw.match(/(\d{1,2}月\d{1,2}日)/);
+    const timeMatch = raw.match(/(\d{1,2}:\d{2})/);
+    return {
+      dateText: dateMatch ? dateMatch[1] : "",
+      timeText: timeMatch ? timeMatch[1] : ""
+    };
+  }
+
+  function workSystemBuffEndText(system = getSystemState()) {
+    return String(system["buff结束时间"] || "").trim();
+  }
+
+	  function pendingRawOperationPayloads() {
+	    const entries = Array.isArray(window.__ST_OPERATION_INPUT_LOG__) ? window.__ST_OPERATION_INPUT_LOG__ : [];
+	    return entries.map((entry) => rawOperationEntryPayload(entry));
+	  }
+
 	  function pendingOperationPayloads() {
-	    return (window.__ST_GET_PENDING_OPERATION_INPUT_LOG__?.() || []).map((entry) => entry?.payload || entry);
+	    return (window.__ST_GET_PENDING_OPERATION_INPUT_LOG__?.() || []).map((entry) => operationEntryPayload(entry));
 	  }
 
 	  function pendingPayloadMatches(payload, sourcePattern, operationPattern) {
@@ -13119,7 +16101,7 @@ button.st-work-notice{cursor:pointer}
 	  }
 
 	  function hasPendingClockSuggestionOperation() {
-	    return pendingOperationPayloads().some((payload) => pendingPayloadMatches(payload, "时钟", /建议剧情开始时间|建议时间|当前时间|推进到该时间/));
+	    return pendingRawOperationPayloads().some((payload) => pendingPayloadMatches(payload, "时钟", /强制剧情开始时间|强制时间|目标时间|建议剧情开始时间|建议时间|当前时间|推进到该时间/));
 	  }
 
 	  function graphOperationSource(scope) {
@@ -13133,18 +16115,6 @@ button.st-work-notice{cursor:pointer}
 	  function hasPendingGraphAddLocationOperation(scope) {
 	    return pendingOperationPayloads().some((payload) => pendingPayloadMatches(payload, graphOperationSource(scope), "请求新增地点"));
 	  }
-
-  function latestPendingClockTimeText() {
-    const payloads = pendingOperationPayloads();
-    for (let index = payloads.length - 1; index >= 0; index -= 1) {
-      const payload = payloads[index];
-      if (payload?.["来源"] !== "时钟") continue;
-      if (!/建议剧情开始时间|建议时间|当前时间|推进到该时间/.test(String(payload?.["操作"] || ""))) continue;
-      const timeText = storyTimeOnly(payload["建议时间"] || payload["目标时间"] || payload["当前时间变量"] || "", "");
-      if (/^\d{1,2}:\d{2}$/.test(timeText)) return timeText;
-    }
-    return "";
-  }
 
   function workDateTextWithOffset(dateText, dayOffset = 0) {
     const parsed = parseStoryDate(dateText);
@@ -13177,46 +16147,16 @@ button.st-work-notice{cursor:pointer}
   function workEffectiveClockInfo() {
     const system = getSystemState();
     const dateText = String(system["当前日期"] || "").trim();
-    const pendingTime = latestPendingClockTimeText();
     const currentTimeText = storyTimeOnly(system["当前时间"], "00:00");
-    if (!pendingTime) {
-      return {
-        dateText,
-        timeText: currentTimeText,
-        pendingTime,
-        pendingTargetText: "",
-        postWorkTargetText: "",
-        pendingDistanceMinutes: NaN,
-        selectionRule: "没有暂存区时钟建议，按当前变量时间开始打工。",
-        source: "当前变量时间"
-      };
-    }
-    const currentMinutes = minutesFromTimeText(currentTimeText || "00:00");
-    const pendingMinutes = minutesFromTimeText(pendingTime || "00:00");
-    const distance = workMinutesUntilNext(currentMinutes, pendingMinutes);
-    const pendingDayOffset = Number.isFinite(distance) && distance > 0 && pendingMinutes <= currentMinutes ? 1 : 0;
-    const pendingDateText = workDateTextWithOffset(dateText, pendingDayOffset);
-    const currentScore = workTimingBenefitScore(dateText, currentMinutes);
-    const pendingScore = workTimingBenefitScore(pendingDateText, pendingMinutes);
-    const pendingTargetText = [pendingDateText, pendingTime].filter(Boolean).join(" ");
-    const choosePending = Number.isFinite(distance) && (distance < 360 || pendingScore > currentScore);
-    const timeText = choosePending ? pendingTime : currentTimeText;
-    const chosenDateText = choosePending ? pendingDateText : dateText;
-    const postWorkTargetText = !choosePending && Number.isFinite(distance) && distance >= 360 ? pendingTargetText : "";
-    const selectionRule = choosePending
-      ? (distance < 360
-        ? "暂存区建议时间距离当前时间小于6小时，无论是否偶遇，都从暂存区建议时间开始打工。"
-        : "暂存区建议时间比当前时间的打工buff结果更有利，因此从暂存区建议时间开始打工。")
-      : "当前变量时间比暂存区建议时间的打工buff结果更有利，因此立刻开始打工；若暂存目标晚于6小时结算点，结算后再推进到暂存目标时间。";
     return {
-      dateText: chosenDateText,
-      timeText,
-      pendingTime,
-      pendingTargetText,
-      postWorkTargetText,
-      pendingDistanceMinutes: distance,
-      selectionRule,
-      source: choosePending ? "暂存区时钟建议时间（有利选择）" : "当前变量时间（有利选择）"
+      dateText,
+      timeText: currentTimeText,
+      pendingTime: "",
+      pendingTargetText: "",
+      postWorkTargetText: "",
+      pendingDistanceMinutes: NaN,
+      selectionRule: "打工不与同轮时钟锚点连锁；按当前变量时间开始。",
+      source: "当前变量时间"
     };
   }
 
@@ -13236,11 +16176,10 @@ button.st-work-notice{cursor:pointer}
     return latest;
   }
 
-  function workStartTimingInfo() {
-    const system = getSystemState();
-    const clock = workEffectiveClockInfo();
-    const dateText = clock.dateText;
-    const timeText = storyTimeOnly(clock.timeText, "00:00");
+	  function workStartTimingInfo(clock = workEffectiveClockInfo()) {
+	    const system = getSystemState();
+	    const dateText = clock.dateText;
+	    const timeText = storyTimeOnly(clock.timeText, "00:00");
     const parsed = parseStoryDate(dateText);
     const minutes = minutesFromTimeText(timeText || "00:00");
     const weekdayText = weekdayForStoryDate(dateText);
@@ -13248,71 +16187,81 @@ button.st-work-notice{cursor:pointer}
     const special = specialDayForDate(parsed);
     const isSchoolDay = weekdayIndex >= 1 && weekdayIndex <= 5 && !special?.holiday;
     const isSchoolTime = Boolean(isSchoolDay && minutes >= 510 && minutes < 970);
-    const isNormalWorkStart = minutes >= 970 && minutes <= 1080;
-    const isNightWork = minutes > 1080 || minutes < 360;
-    const currentBuff = String(system["buff"] || "").trim();
-    const hasCurrentBuff = Boolean(currentBuff && currentBuff !== "无");
-    const buffLockRule = hasCurrentBuff
-      ? "当前仍处于“" + currentBuff + "”状态，精力不足，任意buff持续期间不能开始新的打工。"
+    const isFreeDay = !isSchoolDay;
+    const isNormalWorkStart = (isSchoolDay && minutes >= 970 && minutes <= 1080) || (isFreeDay && minutes >= 360 && minutes <= 1080);
+	    const isNightWork = minutes > 1080 || minutes < 360;
+	    const currentBuffRaw = String(system["buff"] || "").trim();
+	    const currentBuffEndText = workSystemBuffEndText(system);
+	    const currentBuffEndStamp = currentBuffEndText ? monitorStampFromText(currentBuffEndText) : 0;
+	    const startStamp = workClockStampFromInfo(clock);
+	    const currentBuffExpired = Boolean(currentBuffRaw && currentBuffRaw !== "无" && currentBuffEndStamp && startStamp && startStamp >= currentBuffEndStamp);
+	    const currentBuff = currentBuffExpired ? "" : currentBuffRaw;
+	    const hasCurrentBuff = Boolean(currentBuff && currentBuff !== "无");
+	    const buffLockRule = hasCurrentBuff
+	      ? "当前仍处于“" + currentBuff + "”状态" + (currentBuffEndText ? "，持续至" + currentBuffEndText : "") + "，精力不足，任意buff持续期间不能开始新的打工。"
       : "";
     const dayRule = isSchoolDay
       ? "当前是上课日，8:30-16:10内开始打工算逃学。"
-      : "当前是周末或假日，不算逃学，不会因白天打工触发“社会的蔑视”；但夜班仍会触发“无精打采”。";
+      : "当前是周末或假日，不算逃学；白天打工按“全盛出击”处理，不触发“社会的蔑视”，但夜班仍会触发“无精打采”。";
     if (isSchoolTime) {
       return {
         kind: "上学时间逃课",
-        buff: "社会的蔑视",
-        currentBuff,
-        buffLocked: hasCurrentBuff,
-        buffLockRule,
-        timeSource: clock.source,
-        pendingTime: clock.pendingTime,
-        dayRule,
-        rule: "上课日8:30-16:10内逃课打工，被其他人发现或议论后遭到蔑视；成功开始/结算本次打工时将/系统/buff写为“社会的蔑视”。该buff本质是“逃学被其他人蔑视”，从预计结束时间起持续1天；存在期间所有角色好感度不能提升，只能不变或按剧情下降，且不能开始新的打工。周末或假日不触发该buff。"
+	        buff: "社会的蔑视",
+	        currentBuff,
+	        buffLocked: hasCurrentBuff,
+	        buffLockRule,
+	        currentBuffExpiredAtStart: currentBuffExpired,
+	        timeSource: clock.source,
+	        dayRule,
+        rule: "上课日8:30-16:10内逃课打工，被其他人发现或议论后遭到蔑视；成功开始/结算本次打工时将/系统/buff写为“社会的蔑视”。该buff本质是“逃学被其他人蔑视”，从打工开始时间起持续1天；存在期间所有角色好感度不能提升，只能不变或按剧情下降，且不能开始新的打工。周末或假日不触发该buff。"
       };
     }
     if (isNormalWorkStart) {
       return {
         kind: "正常时间",
-        buff: "全盛出击",
-        currentBuff,
-        buffLocked: hasCurrentBuff,
-        buffLockRule,
-        timeSource: clock.source,
-        pendingTime: clock.pendingTime,
-        dayRule,
-        rule: "16:10-18:00期间开始打工，视为正常时间；成功开始/结算本次打工时将/系统/buff写为“全盛出击”，并把/系统/MC能量一次性恢复到/系统/MC能量上限。该buff效果只触发一次但显示从预计结束时间起持续1天；持续期间不能开始新的打工。"
+	        buff: "全盛出击",
+	        currentBuff,
+	        buffLocked: hasCurrentBuff,
+	        buffLockRule,
+	        currentBuffExpiredAtStart: currentBuffExpired,
+	        timeSource: clock.source,
+	        dayRule,
+        rule: "上课日16:10-18:00期间，或周末/假日6:00-18:00期间开始打工，视为正常时间；成功开始/结算本次打工时将/系统/buff写为“全盛出击”，并把/系统/MC能量一次性恢复到/系统/MC能量上限。该buff效果只触发一次但显示从打工开始时间起持续1天；持续期间不能开始新的打工。"
       };
     }
     if (isNightWork) {
       return {
         kind: "夜班",
-        buff: "无精打采",
-        currentBuff,
-        buffLocked: hasCurrentBuff,
-        buffLockRule,
-        timeSource: clock.source,
-        pendingTime: clock.pendingTime,
-        dayRule,
-        rule: "夜班打工；成功开始/结算本次打工时将/系统/buff写为“无精打采”。该buff从预计结束时间起持续1天；存在期间补充MC能量时获得量减半，且不能开始新的打工。"
+	        buff: "无精打采",
+	        currentBuff,
+	        buffLocked: hasCurrentBuff,
+	        buffLockRule,
+	        currentBuffExpiredAtStart: currentBuffExpired,
+	        timeSource: clock.source,
+	        dayRule,
+        rule: "夜班打工；成功开始/结算本次打工时将/系统/buff写为“无精打采”。该buff从打工开始时间起持续1天；存在期间补充MC能量时获得量减半，且不能开始新的打工。"
       };
     }
     return {
       kind: "非标准空档",
       buff: "",
-      currentBuff,
-      buffLocked: hasCurrentBuff,
-      buffLockRule,
-      timeSource: clock.source,
-      pendingTime: clock.pendingTime,
-      dayRule,
-      rule: "当前不是上学时间逃课，也不是夜班；但只有16:10-18:00期间开始才算完全正常。本次打工不新增buff；若已有buff则因精力不足不能开始新的打工。"
+	      currentBuff,
+	      buffLocked: hasCurrentBuff,
+	      buffLockRule,
+	      currentBuffExpiredAtStart: currentBuffExpired,
+	      timeSource: clock.source,
+	      dayRule,
+      rule: "当前不是上学时间逃课，也不是夜班；但只有上课日16:10-18:00期间，或周末/假日6:00-18:00期间开始才算完全正常。本次打工不新增buff；若已有buff则因精力不足不能开始新的打工。"
     };
   }
 
-  function pendingWorkPayloads() {
-    return pendingOperationPayloads()
-      .filter((payload) => payload?.["来源"] === "打工" && /^(开始打工|打工中提醒)$/.test(String(payload?.["操作"] || "")));
+	  function derivePendingWorkPayloadForClock(payload) {
+	    return payload;
+	  }
+
+	  function pendingWorkPayloads() {
+	    return pendingOperationPayloads()
+	      .filter((payload) => payload?.["来源"] === "打工" && /^(开始打工|有偶遇|打工中提醒)$/.test(String(payload?.["操作"] || "")));
   }
 
   function pendingWorkStartPayloads() {
@@ -13323,73 +16272,433 @@ button.st-work-notice{cursor:pointer}
     return pendingWorkPayloads().length > 0;
   }
 
-  function syncWorkStatusReminder() {
-    if (pendingWorkStartPayloads().length) {
-      window.__ST_SET_WORK_STATUS_REMINDER__?.(null);
-      return;
-    }
+  function hasActiveWorkBuffAtCurrentTime(system = getSystemState()) {
+    const buff = String(system["buff"] || "").trim();
+    if (!buff || buff === "无") return false;
+    const endText = workSystemBuffEndText(system);
+    const endStamp = endText ? monitorStampFromText(endText) : 0;
+    if (!endStamp) return true;
+    const currentStamp = monitorCurrentStamp();
+    return !currentStamp || currentStamp < endStamp;
+  }
+
+	  function shouldLockClockForPendingWorkBuff() {
+	    return false;
+	  }
+
+	  function isClockSuggestionLockedByPendingWorkBuff(entry) {
+	    return false;
+	  }
+	  window.__ST_IS_CLOCK_SUGGESTION_LOCKED_BY_PENDING_WORK_BUFF__ = isClockSuggestionLockedByPendingWorkBuff;
+
+	  function workDefaultTimeSeed() {
+	    const minutes = minutesFromTimeText(storyTimeOnly(getSystemState()["当前时间"], "12:00"));
+	    const safeMinutes = Number.isFinite(minutes) ? minutes : 12 * 60;
+	    return { hour: Math.floor(safeMinutes / 60) % 24, minute: safeMinutes % 60 };
+	  }
+
+	  function workSelectedClockInfo(page) {
+	    const hour = normalizeClockPart(page?.querySelector?.("[data-work-time-hour]")?.value ?? page?.dataset?.workTimeHour, 23);
+	    const minute = normalizeClockPart(page?.querySelector?.("[data-work-time-minute]")?.value ?? page?.dataset?.workTimeMinute, 59);
+	    const offset = normalizeClockDateOffset(page?.querySelector?.("[data-work-time-date-offset]:checked")?.value ?? page?.dataset?.workTimeDateOffset);
+	    const info = clockTargetInfo(hour, minute, offset);
+	    return {
+	      ...info,
+	      dateText: info.targetDateText,
+	      timeText: info.targetTimeText,
+	      targetText: info.targetDateText + " " + info.targetTimeText,
+	      source: "打工时间弹窗",
+	      selectionRule: "由打工弹窗选择开始时间；本轮时钟暂存是另一件事，不会改写本次打工。"
+	    };
+	  }
+
+	  function workNextDateFromParsed(parsed) {
+	    const nextText = nextStoryDateLabel(parsed ? parsed.month + "月" + parsed.day + "日" : "4月9日");
+	    return parseStoryDate(nextText) || parsed || { month: 4, day: 10 };
+	  }
+
+		  function workCourseRowsForDate(parsedDate, weekdayText, table = readWeeklyTimetable()) {
+		    const weekdayIndex = ST_WEEKDAY_INDEX[weekdayText];
+		    const special = parsedDate ? storyCalendarDay(parsedDate.month, parsedDate.day)?.specialDay : null;
+		    if (!parsedDate || weekdayIndex === 0 || weekdayIndex === 6 || special?.holiday || special?.exam || (special && !/普通授课/.test(special.detail || ""))) return [];
+		    return ST_CLASS_PERIODS.map((period) => ({
+		      课节: period.label,
+		      科目: weeklyTimetableSubject(weekdayIndex, period.index, table)
+		    }));
+		  }
+
+	  function workFirstClassForDate(parsedDate) {
+	    const dateText = parsedDate ? parsedDate.month + "月" + parsedDate.day + "日" : "4月10日";
+	    const weekdayText = weekdayForStoryDate(dateText);
+	    const weekdayIndex = ST_WEEKDAY_INDEX[weekdayText];
+	    const special = parsedDate ? storyCalendarDay(parsedDate.month, parsedDate.day)?.specialDay : null;
+	    if (weekdayIndex === 0 || weekdayIndex === 6 || special?.holiday || special?.exam || (special && !/普通授课/.test(special.detail || ""))) {
+	      return { 日期: dateText, 星期: weekdayText || "", 课节: "无", 时间: "", 科目: "无固定课程" };
+	    }
+	    const first = ST_CLASS_PERIODS[0];
+	    return {
+	      日期: dateText,
+	      星期: weekdayText || "",
+	      课节: first.label,
+	      时间: formatPeriodTime(first.start) + "-" + formatPeriodTime(first.end),
+	      科目: weeklyTimetableSubject(weekdayIndex, first.index)
+	    };
+	  }
+
+	  function workDailyScheduleForDateTime(dateText, timeText) {
+	    const parsed = parseStoryDate(dateText) || parseStoryDate("4月9日");
+	    const safeDateText = parsed.month + "月" + parsed.day + "日";
+	    const weekdayText = weekdayForStoryDate(safeDateText) || "";
+	    const minutes = minutesFromTimeText(storyTimeOnly(timeText, "00:00"));
+		    const slot = routineSlot(minutes, weekdayText, parsed);
+		    const calendar = storyCalendarDay(parsed.month, parsed.day);
+		    const tomorrow = workNextDateFromParsed(parsed);
+		    const originalTable = normalizeWeeklyTimetable(ST_WEEKLY_TIMETABLE);
+		    const modifiedTable = readWeeklyTimetable();
+		    return {
+		      日期: safeDateText,
+		      星期: weekdayText,
+		      当前课段: { 名称: slot.title || "无", 时间: slot.detail || "" },
+		      当前日程: slot.title || "无",
+		      当前特殊日期: calendar?.specialText || "",
+		      课表: workCourseRowsForDate(parsed, weekdayText, modifiedTable),
+		      原课程表: workCourseRowsForDate(parsed, weekdayText, originalTable),
+		      魔改课程表: workCourseRowsForDate(parsed, weekdayText, modifiedTable),
+		      次日第一节: workFirstClassForDate(tomorrow)
+		    };
+		  }
+
+	  function workApplyReadonlySchedule(system, dateText, timeText) {
+	    const dailySchedule = workDailyScheduleForDateTime(dateText, timeText);
+		    system["_当前周几"] = String(dailySchedule.星期 || "");
+		    system["_当前日程"] = String(dailySchedule.当前课段?.名称 || dailySchedule.当前日程 || "无");
+		    system["_当前特殊日期"] = String(dailySchedule.当前特殊日期 || "");
+		    system["当天课程表"] = Array.isArray(dailySchedule.课表) ? dailySchedule.课表 : [];
+		    system["当天原课程表"] = Array.isArray(dailySchedule.原课程表) ? dailySchedule.原课程表 : [];
+		    system["当天魔改课程表"] = Array.isArray(dailySchedule.魔改课程表) ? dailySchedule.魔改课程表 : [];
+		    return dailySchedule;
+		  }
+
+	  function workDateTimePartsFromText(text) {
+	    const parts = workBuffTimeParts(text);
+	    return {
+	      dateText: parts.dateText,
+	      timeText: parts.timeText
+	    };
+	  }
+
+	  function workFrontendSettledPrompt(hasEncounter) {
+	    return hasEncounter
+	      ? "本条锁定暂存只告知AI发生了打工途中偶遇；变量结算以<相关变量>中的前端处理后数值为准。AI只描写偶遇互动并在互动后收束到预计结束时间。"
+	      : "本条锁定暂存只告知AI本轮发生了打工事实；变量结算以<相关变量>中的前端处理后数值为准。AI只承认该事实，不重复安排第二次打工。";
+	  }
+
+	  async function startWorkDirect(page, job, clockInfo) {
+	    if (!job) return { ok: false, message: "未找到这份打工。" };
+	    if (hasPendingWorkOperation()) return { ok: false, message: "本轮已经有打工或偶遇锁。" };
+	    const currentValue = currentShachikuValue();
+	    if (currentValue < job.threshold) return { ok: false, message: "社畜值不足，暂时接不了。" };
+	    if (!clockInfo?.valid) return { ok: false, message: clockInfo?.tooLate ? "开始时间不能超过2天后。" : "开始时间不能早于当前变量时间。" };
+	    const timingInfo = workStartTimingInfo(clockInfo);
+	    if (timingInfo.buffLocked) return { ok: false, message: timingInfo.buffLockRule || "当前buff未结束，精力不足。" };
+	    const timeInfo = workCurrentTimeInfo(6, clockInfo);
+	    const latestRoll = readWorkLayerRoll();
+	    const encounterRole = latestRoll.roleName && latestRoll.rolls?.[job.id] ? latestRoll.roleName : "";
+	    const encounterDelayHours = encounterRole ? workEncounterDelayHours(job, latestRoll) : 0;
+	    const encounterTime = encounterRole ? workOffsetDateTimeText(timeInfo.startText, encounterDelayHours) : "";
+	    const writeDateTimeText = encounterRole ? encounterTime : timeInfo.endText;
+	    const writeParts = workDateTimePartsFromText(writeDateTimeText);
+	    const buffEndText = timingInfo.buff ? workOffsetDateTimeText(timeInfo.startText, 24) : "";
+	    const shachikuGain = workShachikuGain(job, currentValue);
+	    const result = await rewardApplySystemMutation((system, stat) => {
+	      const beforeMoney = workNumber(system["持有零花钱"], 0);
+	      const nextMoney = hypnosisSetSystemNumber(system, "持有零花钱", beforeMoney + job.wage, ["零花钱"]);
+	      const beforeShachiku = workNumber(system["社畜值"] ?? system["打工值"] ?? system["社畜经验"], 0);
+	      const nextShachiku = Math.min(200, beforeShachiku + shachikuGain);
+	      hypnosisSetSystemNumber(system, "社畜值", nextShachiku, ["打工值", "社畜经验"]);
+	      if (timingInfo.currentBuffExpiredAtStart) {
+	        system["buff"] = "";
+	        system["buff结束时间"] = "";
+	      }
+	      if (timingInfo.buff) {
+	        system["buff"] = timingInfo.buff;
+	        system["buff结束时间"] = buffEndText;
+	        if (timingInfo.buff === "全盛出击") {
+	          const maxEnergy = hypnosisNumber(system["MC能量上限"] ?? system["_MC能量上限"], 0);
+	          if (maxEnergy > 0) hypnosisSetSystemNumber(system, "MC能量", maxEnergy, ["_MC能量", "当前MC能量"]);
+	        }
+	      }
+	      if (writeParts.dateText) system["当前日期"] = writeParts.dateText;
+	      if (writeParts.timeText) system["当前时间"] = writeParts.timeText;
+	      system["当前事件"] = encounterRole ? ("打工中偶遇：" + encounterRole) : ("打工结束：" + job.title);
+	      const dailySchedule = writeParts.dateText && writeParts.timeText ? workApplyReadonlySchedule(system, writeParts.dateText, writeParts.timeText) : null;
+		      const variablePaths = ["/系统/持有零花钱", "/系统/社畜值", "/系统/当前日期", "/系统/当前时间", "/系统/当前事件", "/系统/_当前周几", "/系统/_当前日程", "/系统/_当前特殊日期", "/系统/当天课程表", "/系统/当天原课程表", "/系统/当天魔改课程表"];
+	      if (timingInfo.buff || timingInfo.currentBuffExpiredAtStart) variablePaths.push("/系统/buff", "/系统/buff结束时间");
+	      if (timingInfo.buff === "全盛出击") variablePaths.push("/系统/MC能量");
+	      return {
+	        ok: true,
+	        message: encounterRole ? "已结算到偶遇节点。" : "已完成打工结算。",
+	        payload: {
+	          来源: "打工",
+	          操作: "开始打工",
+	          工作ID: job.id,
+	          工作: job.title,
+	          工作地点: job.place,
+	          暂存摘要: job.title + "｜" + timeInfo.startText + "-" + timeInfo.endText + (encounterRole ? "｜有偶遇" : ""),
+	          开始时间: timeInfo.startText,
+	          预计结束时间: timeInfo.endText,
+	          前端写入当前时间: writeDateTimeText,
+	          前端处理: "已由前端直接结算工资、社畜值、buff、buff结束时间和当前时间",
+	          获得零花钱: job.wage,
+	          前端写入后持有零花钱: nextMoney,
+	          获得社畜值: shachikuGain,
+	          前端写入后社畜值: nextShachiku,
+	          打工获得buff: timingInfo.buff || "无",
+	          buff结束时间: buffEndText || "无",
+	          偶遇: encounterRole ? "有" : "无",
+	          偶遇女角色: encounterRole || "无",
+	          偶遇发生时间: encounterTime || "无",
+	          变量写入路径: variablePaths,
+	          AI执行规范: workFrontendSettledPrompt(Boolean(encounterRole)),
+	          不可删除: true
+	        },
+	        dailySchedule
+	      };
+	    });
+	    if (!result?.ok) return result || { ok: false, message: "打工结算失败。" };
+	    const added = await appendAppOperation(result.payload);
+	    return { ok: Boolean(added), message: added ? result.message : "已在暂存区。" };
+	  }
+
+	  function openWorkTimeDialog(page, jobId) {
+	    const seed = workDefaultTimeSeed();
+	    page.dataset.workTimeJob = String(jobId || "");
+	    page.dataset.workTimeDateOffset = page.dataset.workTimeDateOffset || "0";
+	    page.dataset.workTimeHour = String(seed.hour).padStart(2, "0");
+	    page.dataset.workTimeMinute = String(seed.minute).padStart(2, "0");
+	    page.dataset.workTimeStatus = "";
+	    renderWorkPage(page);
+	  }
+
+	  function closeWorkTimeDialog(page) {
+	    delete page.dataset.workTimeJob;
+	    delete page.dataset.workTimeStatus;
+	    renderWorkPage(page);
+	  }
+
+	  function renderWorkTimeDialog(page) {
+	    const jobId = String(page?.dataset?.workTimeJob || "");
+	    if (!jobId) return "";
+	    const job = ST_WORK_JOBS.find((item) => item.id === jobId);
+	    if (!job) return "";
+	    const group = page.dataset.workTimeDateGroupName || ("st-work-time-date-" + Math.random().toString(36).slice(2, 9));
+	    page.dataset.workTimeDateGroupName = group;
+	    const offset = normalizeClockDateOffset(page.dataset.workTimeDateOffset);
+	    const seedHour = normalizeClockPart(page.dataset.workTimeHour || workDefaultTimeSeed().hour, 23);
+	    const seedMinute = normalizeClockPart(page.dataset.workTimeMinute || workDefaultTimeSeed().minute, 59);
+	    const clockInfo = clockTargetInfo(seedHour, seedMinute, offset);
+	    const timingInfo = workStartTimingInfo({
+	      dateText: clockInfo.targetDateText,
+	      timeText: clockInfo.targetTimeText,
+	      source: "打工时间弹窗",
+	      selectionRule: "由打工弹窗选择开始时间；本轮时钟暂存是另一件事，不会改写本次打工。"
+	    });
+	    const timeInfo = workCurrentTimeInfo(6, {
+	      dateText: clockInfo.targetDateText,
+	      timeText: clockInfo.targetTimeText,
+	      source: "打工时间弹窗",
+	      selectionRule: "由打工弹窗选择开始时间；本轮时钟暂存是另一件事，不会改写本次打工。"
+	    });
+	    const disabled = Boolean(hasPendingWorkOperation() || currentShachikuValue() < job.threshold || !clockInfo.valid || timingInfo.buffLocked);
+	    const dateOptions = clockDateOptions(clockInfo.currentDateText).map((option) => (
+	      '<label><input type="radio" name="' + escapeAttr(group) + '" data-work-time-date-offset value="' + option.offset + '"' + (option.offset === offset ? " checked" : "") + '><span>' +
+	        escapeHtml(option.label) + '<small>' + escapeHtml(option.dateText + (option.weekday ? " · " + option.weekday.replace(/^星期/, "周") : "")) + '</small>' +
+	      '</span></label>'
+	    )).join("");
+	    const status = page.dataset.workTimeStatus || (clockInfo.tooEarly
+	      ? "开始时间不能早于当前变量时间。"
+	      : clockInfo.tooLate
+	        ? "开始时间不能超过当前变量时间后2天。"
+	        : timingInfo.buffLocked
+	          ? timingInfo.buffLockRule
+	          : "开始：" + timeInfo.startText + "\\n结束：" + timeInfo.endText + "\\nbuff：" + (timingInfo.buff || "无"));
+	    return '<div class="st-work-time-backdrop" data-work-time-backdrop>' +
+	      '<section class="st-work-time-dialog" role="dialog" aria-modal="true" aria-label="选择打工时间">' +
+	        '<div class="st-work-time-head"><div><strong>' + escapeHtml(job.title) + '</strong><span>' + escapeHtml(workNoticePlace(job) + " · 6小时") + '</span></div><button type="button" class="st-work-time-close" data-work-time-close>×</button></div>' +
+	        '<div class="st-work-time-options">' + dateOptions + '</div>' +
+	        '<div class="st-work-time-inputs">' +
+	          '<label><span>时</span><input data-work-time-hour inputmode="numeric" autocomplete="off" maxlength="2" value="' + escapeAttr(String(seedHour).padStart(2, "0")) + '"></label>' +
+	          '<b>:</b>' +
+	          '<label><span>分</span><input data-work-time-minute inputmode="numeric" autocomplete="off" maxlength="2" value="' + escapeAttr(String(seedMinute).padStart(2, "0")) + '"></label>' +
+	        '</div>' +
+	        '<p class="st-work-time-status" data-work-time-status>' + escapeHtml(status) + '</p>' +
+	        '<div class="st-work-time-actions"><button type="button" data-work-time-cancel>取消</button><button type="button" class="primary" data-work-time-confirm' + (disabled ? " disabled" : "") + '>确认打工</button></div>' +
+	      '</section>' +
+	    '</div>';
+	  }
+
+	  function updateWorkTimeDialogState(page) {
+	    const info = workSelectedClockInfo(page);
+	    const job = ST_WORK_JOBS.find((item) => item.id === String(page?.dataset?.workTimeJob || ""));
+	    const clock = { dateText: info.dateText, timeText: info.timeText, source: info.source, selectionRule: info.selectionRule };
+	    const timingInfo = workStartTimingInfo(clock);
+	    const timeInfo = workCurrentTimeInfo(6, clock);
+	    const status = page.querySelector("[data-work-time-status]");
+	    const confirm = page.querySelector("[data-work-time-confirm]");
+	    const disabled = Boolean(!job || hasPendingWorkOperation() || currentShachikuValue() < (job?.threshold || 0) || !info.valid || timingInfo.buffLocked);
+	    if (status) {
+	      status.textContent = info.tooEarly
+	        ? "开始时间不能早于当前变量时间。"
+	        : info.tooLate
+	          ? "开始时间不能超过当前变量时间后2天。"
+	          : timingInfo.buffLocked
+	            ? timingInfo.buffLockRule
+	            : "开始：" + timeInfo.startText + "\\n结束：" + timeInfo.endText + "\\nbuff：" + (timingInfo.buff || "无");
+	    }
+	    if (confirm) confirm.disabled = disabled;
+	    return { info, timingInfo, timeInfo, disabled };
+	  }
+
+	  function bindWorkTimeDialog(page) {
+	    if (!page?.dataset?.workTimeJob) return;
+	    page.querySelector("[data-work-time-close]")?.addEventListener("click", () => closeWorkTimeDialog(page));
+	    page.querySelector("[data-work-time-cancel]")?.addEventListener("click", () => closeWorkTimeDialog(page));
+	    page.querySelector("[data-work-time-backdrop]")?.addEventListener("click", (event) => {
+	      if (event.target === event.currentTarget) closeWorkTimeDialog(page);
+	    });
+	    page.querySelectorAll("[data-work-time-date-offset]").forEach((input) => {
+	      input.addEventListener("change", () => {
+	        page.dataset.workTimeDateOffset = String(normalizeClockDateOffset(input.value));
+	        page.dataset.workTimeStatus = "";
+	        updateWorkTimeDialogState(page);
+	      });
+	    });
+	    page.querySelectorAll("[data-work-time-hour],[data-work-time-minute]").forEach((input) => {
+	      input.addEventListener("input", () => {
+	        const max = input.hasAttribute("data-work-time-hour") ? 23 : 59;
+	        input.value = sanitizeClockInputValue(input.value, max, false);
+	        if (input.hasAttribute("data-work-time-hour")) page.dataset.workTimeHour = input.value || "0";
+	        else page.dataset.workTimeMinute = input.value || "0";
+	        page.dataset.workTimeStatus = "";
+	        updateWorkTimeDialogState(page);
+	      });
+	      input.addEventListener("blur", () => {
+	        const max = input.hasAttribute("data-work-time-hour") ? 23 : 59;
+	        input.value = sanitizeClockInputValue(input.value, max, true) || "00";
+	        if (input.hasAttribute("data-work-time-hour")) page.dataset.workTimeHour = input.value;
+	        else page.dataset.workTimeMinute = input.value;
+	        updateWorkTimeDialogState(page);
+	      });
+	    });
+	    page.querySelector("[data-work-time-confirm]")?.addEventListener("click", async () => {
+	      const job = ST_WORK_JOBS.find((item) => item.id === String(page.dataset.workTimeJob || ""));
+	      const state = updateWorkTimeDialogState(page);
+	      if (state.disabled) return;
+	      const button = page.querySelector("[data-work-time-confirm]");
+	      if (button) {
+	        button.disabled = true;
+	        button.textContent = "处理中";
+	      }
+	      const result = await startWorkDirect(page, job, {
+	        dateText: state.info.dateText,
+	        timeText: state.info.timeText,
+	        valid: state.info.valid,
+	        tooEarly: state.info.tooEarly,
+	        tooLate: state.info.tooLate,
+	        source: state.info.source,
+	        selectionRule: state.info.selectionRule
+	      });
+	      if (result?.ok) {
+	        delete page.dataset.workTimeJob;
+	        delete page.dataset.workTimeStatus;
+	        renderWorkPage(page);
+	        return;
+	      }
+	      page.dataset.workTimeStatus = result?.message || "打工失败。";
+	      renderWorkPage(page);
+	    });
+	  }
+
+	  function syncWorkStatusReminder() {
+	    if (pendingWorkStartPayloads().length) {
+	      window.__ST_SET_WORK_STATUS_REMINDER__?.(null);
+	      return;
+	    }
     const latest = latestWorkStartPayloadFromChat();
     if (!latest) {
       window.__ST_SET_WORK_STATUS_REMINDER__?.(null);
       return;
     }
-    const endText = String(latest["预计结束时间"] || "").trim();
-    const endStamp = monitorStampFromText(endText);
-    const currentStamp = workCurrentStamp();
-    if (!endStamp || !currentStamp || currentStamp >= endStamp) {
-      window.__ST_SET_WORK_STATUS_REMINDER__?.(null);
-      return;
-    }
-    const encounterRole = String(latest["偶遇女角色"] || "无").trim() || "无";
-    const hasEncounter = encounterRole && encounterRole !== "无";
-    const postWorkTargetText = String(latest["结算后建议时间"] || "").trim();
-    window.__ST_SET_WORK_STATUS_REMINDER__?.({
-      来源: "打工",
-      操作: "打工中提醒",
-      阶段: hasEncounter ? "偶遇互动后结算" : "补完结算",
-      工作: latest["工作"] || "未记录",
-      工作地点: latest["工作地点"] || "未记录",
-      开始时间: latest["开始时间"] || "未记录",
-      预计结束时间: endText,
-      结算后建议时间: postWorkTargetText || "无",
-      结算后时间处理: postWorkTargetText && postWorkTargetText !== "无" ? "先按预计结束时间完成6小时打工并结算；随后把剧情时间推进到结算后建议时间。这段等待/过渡不是额外打工，不增加额外工资或社畜值。" : "无",
-      当前时间: workEffectiveCurrentTimeText(),
-      偶遇女角色: encounterRole,
-      时间范围说明: "开始打工的6小时总时段已经包含赶路去工作场所、到场交接、实际劳动、收工和必要返回时间；本提醒补完到预计结束时间即可，不要额外追加路程时间。",
-      提醒: hasEncounter
-        ? "上一轮打工已到偶遇节点；本轮处理用户与偶遇角色的互动后，直接推进到预计结束时间结算。"
-        : "上一轮普通打工尚未写到结束；本轮直接推进到预计结束时间结算。"
-    });
-  }
+	    const endText = String(latest["预计结束时间"] || "").trim();
+	    const endStamp = monitorStampFromText(endText);
+	    const currentStamp = workCurrentStamp();
+	    if (!endStamp || !currentStamp || currentStamp >= endStamp) {
+	      window.__ST_SET_WORK_STATUS_REMINDER__?.(null);
+	      return;
+	    }
+	    const encounterRole = String(latest["偶遇女角色"] || "无").trim() || "无";
+	    const hasEncounter = encounterRole && encounterRole !== "无";
+	    if (!hasEncounter) {
+	      window.__ST_SET_WORK_STATUS_REMINDER__?.(null);
+	      return;
+	    }
+	    window.__ST_SET_WORK_STATUS_REMINDER__?.({
+	      来源: "打工",
+	      操作: "有偶遇",
+	      工作: latest["工作"] || "未记录",
+	      工作地点: latest["工作地点"] || "未记录",
+	      开始时间: latest["开始时间"] || "未记录",
+	      预计结束时间: endText,
+	      暂存摘要: "有偶遇｜" + encounterRole + "｜收束至 " + endText,
+	      偶遇女角色: encounterRole,
+	      偶遇发生时间: latest["偶遇发生时间"] || workEffectiveCurrentTimeText(),
+	      前端处理: "打工工资、社畜值、buff、buff结束时间和当前时间已由前端处理；本条只提醒AI处理偶遇后收束。",
+	      AI执行规范: "本轮只处理打工途中偶遇互动，并在互动后把剧情收束到预计结束时间；不得再次发工资、增加社畜值、改buff或重复结算打工。"
+	    });
+	  }
 
   function syncWorkBuffStatusReminder() {
     const system = getSystemState();
     const buff = String(system["buff"] || "").trim();
+    const endText = workSystemBuffEndText(system);
     if (!buff || buff === "无") {
+      if (endText) setCurrentLayerSystemField("buff结束时间", "");
       window.__ST_SET_WORK_BUFF_STATUS_REMINDER__?.(null);
       return;
     }
-    const latest = latestWorkStartPayloadFromChat();
-    const latestBuff = String(latest?.["打工获得buff"] || "").trim();
-    const startText = latest && (latestBuff === buff || !latestBuff || latestBuff === "按世界书判定")
-      ? String(latest?.["开始时间"] || "").trim()
-      : "";
-    const workEndText = latest && startText ? String(latest?.["预计结束时间"] || "").trim() : "";
-    const endText = startText
-      ? String(latest?.["打工buff预计结束时间"] || workOffsetDateTimeText(workEndText || startText, 24)).trim()
-      : "";
-    const endStamp = endText ? monitorStampFromText(endText) : 0;
+    if (!endText || !monitorStampFromText(endText)) {
+      window.__ST_SET_WORK_BUFF_STATUS_REMINDER__?.(null);
+      return;
+    }
+    const endStamp = monitorStampFromText(endText);
     const currentStamp = workCurrentStamp();
     const expired = Boolean(endStamp && currentStamp && currentStamp >= endStamp);
-    window.__ST_SET_WORK_BUFF_STATUS_REMINDER__?.({
-      来源: "打工",
-      操作: "打工buff提醒",
-      当前buff: buff,
-      buff开始时间: startText || "未记录",
-      buff预计结束时间: endText || "按写入后1天由AI判断",
-      当前时间: workEffectiveCurrentTimeText(),
-      提醒: expired ? "buff已到预计结束时间；若没有新buff，请清空/系统/buff。" : "当前buff仍在持续，按世界书规则影响相关操作。"
-    });
+    if (expired) {
+      setCurrentLayerSystemField("buff", "");
+      setCurrentLayerSystemField("buff结束时间", "");
+      window.__ST_SET_WORK_BUFF_STATUS_REMINDER__?.(null);
+      return;
+    }
+	    const releaseStamp = endStamp - WORK_LOCK_RELEASE_BEFORE_BUFF_END_MINUTES;
+	    if (releaseStamp > 0 && currentStamp && currentStamp > releaseStamp) {
+	      scheduleReadonlyScheduleSyncForCurrentClock(0);
+	      window.__ST_SET_WORK_BUFF_STATUS_REMINDER__?.(null);
+	      return;
+	    }
+	    const reminderPayload = {
+	      来源: "打工",
+	      操作: "打工buff提醒",
+	      暂存摘要: buff + "｜持续至 " + endText,
+	      当前buff: buff,
+	      buff结束时间: endText,
+	      前端处理: "当前buff和buff结束时间由前端只读维护；本条锁定暂存只提醒AI承认buff仍在持续。",
+	      AI执行规范: "本条只提醒打工buff持续到结束时间，不是新的打工或结算。AI不得重复结算打工，不得改写buff结束时间；到达buff结束时间后由前端清空/系统/buff和/系统/buff结束时间。",
+	      提醒: "当前buff持续至" + endText + "，按世界书规则影响相关操作；到达buff结束时间后由前端清空。",
+	      不可删除: true,
+	      locked: true,
+	      forceLocked: true
+	    };
+    window.__ST_SET_WORK_BUFF_STATUS_REMINDER__?.(reminderPayload);
   }
 
   function flashWorkButton(button, text) {
@@ -13409,15 +16718,14 @@ button.st-work-notice{cursor:pointer}
 
   function renderWorkNotice(job, index, options) {
     const shachiku = options?.shachiku || 0;
-    const pendingWork = Boolean(options?.pendingWork);
-    const timingInfo = options?.timingInfo || {};
-    const focused = Boolean(options?.focused);
-    const unlocked = shachiku >= job.threshold;
-    const shachikuGain = workShachikuGain(job, shachiku);
-    const buffLocked = Boolean(timingInfo.buffLocked);
-    const disabled = !unlocked || pendingWork || buffLocked;
-    const buttonText = pendingWork ? "已有打工" : buffLocked ? "精力不足" : (unlocked ? "开始打工" : "未解锁");
-    const className = "st-work-notice" + (focused ? " st-work-focus-poster" : "") + (unlocked ? "" : " is-locked") + (pendingWork ? " is-pending" : "") + (buffLocked ? " is-pending" : "");
+	    const pendingWork = Boolean(options?.pendingWork);
+	    const timingInfo = options?.timingInfo || {};
+	    const focused = Boolean(options?.focused);
+	    const unlocked = shachiku >= job.threshold;
+	    const shachikuGain = workShachikuGain(job, shachiku);
+	    const disabled = !unlocked || pendingWork;
+	    const buttonText = pendingWork ? "已有打工" : (unlocked ? "选择时间" : "未解锁");
+	    const className = "st-work-notice" + (focused ? " st-work-focus-poster" : "") + (unlocked ? "" : " is-locked") + (pendingWork ? " is-pending" : "");
     const open = focused ? '<div class="st-work-focus-top"><span class="st-work-notice-kicker">寻工启事</span><button type="button" class="st-work-wall-button" data-work-wall>返回墙面</button></div>' : '<span class="st-work-notice-kicker">寻工启事</span>';
     const body =
       open +
@@ -13431,7 +16739,7 @@ button.st-work-notice{cursor:pointer}
       '</div>' +
       (focused
         ? '<div class="st-work-pay"><strong>' + escapeHtml(workMoneyText(job.wage)) + '</strong><small>社畜值 +' + shachikuGain + '</small></div>' +
-          '<button type="button" class="st-work-button" data-work-job="' + escapeAttr(job.id) + '"' + (disabled ? " disabled" : "") + '>' + escapeHtml(buttonText) + '</button>'
+	          '<button type="button" class="st-work-button" data-work-job="' + escapeAttr(job.id) + '"' + (disabled ? " disabled" : "") + '>' + escapeHtml(buttonText) + '</button>'
         : "");
     return focused
       ? '<article class="' + className + '">' + body + '</article>'
@@ -13466,11 +16774,12 @@ button.st-work-notice{cursor:pointer}
             '<span>' + escapeHtml(timingInfo.dayRule || "") + '</span>' +
             (timingInfo.buffLockRule ? '<span>' + escapeHtml(timingInfo.buffLockRule) + '</span>' : '') +
             '<span>打工可能会偶遇女角色，越高级的工作偶遇概率越高；具体是否偶遇不会在界面暴露。</span>' +
-            '<span>社会的蔑视：逃学被其他人蔑视，结束后1天内好感不提升。无精打采：夜班结束后1天内补充MC能量减半。全盛出击：正常时间开始时一次性恢复全部MC能量，并显示到结束后1天。任意buff持续期间不能再次打工。</span>' +
+            '<span>社会的蔑视：上课日逃学打工才会触发，打工开始后1天内好感不提升；周末/假日白天改为全盛出击。无精打采：夜班开始后1天内补充MC能量减半。全盛出击：正常时间开始时一次性恢复全部MC能量，并显示到开始后1天。任意buff持续期间不能再次打工。</span>' +
           '</section>' +
-          '<p class="st-work-note">墙上共有 ' + ST_WORK_JOBS.length + ' 张寻工启事，已解锁 ' + unlockedCount + ' 张。每次打工按6小时结算，赶路去工作场所、到场交接、收工和必要返回时间都包含在这6小时内。</p>' +
-        '</section>' +
-      '</main>';
+	          '<p class="st-work-note">墙上共有 ' + ST_WORK_JOBS.length + ' 张寻工启事，已解锁 ' + unlockedCount + ' 张。每次打工按6小时结算，赶路去工作场所、到场交接、收工和必要返回时间都包含在这6小时内。</p>' +
+	          renderWorkTimeDialog(page) +
+	        '</section>' +
+	      '</main>';
     bindLiteHeader(page, () => renderWorkPage(page));
     page.querySelector('[data-lite-action="back"]')?.addEventListener("click", () => {
       const root = page.parentElement;
@@ -13486,63 +16795,19 @@ button.st-work-notice{cursor:pointer}
         const job = ST_WORK_JOBS.find((item) => item.id === jobId);
         if (!job) return;
         const currentValue = currentShachikuValue();
-        if (hasPendingWorkOperation()) {
-          flashWorkButton(button, "已有打工");
-          renderWorkPage(page);
-          return;
-        }
-        const timingInfo = workStartTimingInfo();
-        if (timingInfo.buffLocked) {
-          flashWorkButton(button, "精力不足");
-          renderWorkPage(page);
-          return;
-        }
-        if (currentValue < job.threshold) {
-          flashWorkButton(button, "未解锁");
-          return;
-        }
-        const timeInfo = workCurrentTimeInfo(6);
-        const latestRoll = readWorkLayerRoll();
-        const encounterRole = latestRoll.roleName && latestRoll.rolls?.[job.id] ? latestRoll.roleName : "";
-        const encounterDelayHours = encounterRole ? workEncounterDelayHours(job, latestRoll) : 0;
-        const postWorkTargetText = String(timeInfo.postWorkTargetText || "").trim();
-        const shachikuGain = workShachikuGain(job, currentValue);
-        const nextValue = Math.min(200, currentValue + shachikuGain);
-        const payload = {
-          来源: "打工",
-          操作: "开始打工",
-          工作ID: job.id,
-          工作: job.title,
-          工作地点: job.place,
-          当前社畜值: currentValue,
-          需要社畜值: job.threshold,
-          跳过时间: "6小时",
-          时间范围说明: "6小时总时段已经包含准备、赶路去工作场所、到场交接、实际劳动、收工和必要返回时间；不要在预计结束时间之外额外追加路程时间。",
-          开始时间: timeInfo.startText,
-          开始时间来源: timeInfo.timeSource || "当前变量时间",
-          暂存区建议时间: timeInfo.pendingTime || "无",
-          暂存区目标时间: timeInfo.pendingTargetText || "无",
-          暂存区时间选择规则: timeInfo.selectionRule || "无",
-          预计结束时间: timeInfo.endText,
-          结算后建议时间: postWorkTargetText || "无",
-          结算后时间处理: postWorkTargetText ? "先按预计结束时间完成6小时打工并结算；随后把剧情时间推进到结算后建议时间。这段等待/过渡不是额外打工，不增加额外工资或社畜值。" : "无",
-          buff判定规则: "若开始时间为上课日8:30-16:10，获得“社会的蔑视”，所有角色好感不能提升；若开始时间为16:10-18:00，获得“全盛出击”，并一次性恢复MC能量到上限；若开始时间为夜班（18:00后或6:00前），获得“无精打采”，补充MC能量获得量减半；其他时间无新增buff。若产生buff，则从预计结束时间起持续1天；任意当前buff持续期间不能开始打工。",
-          buff持续时间: "若本次按规则产生buff，从预计结束时间起持续1天；到期前不能再次打工。",
-          获得零花钱: job.wage,
-          社畜值基础增量: job.shachiku,
-          获得社畜值: shachikuGain,
-          结算后社畜值上限预览: nextValue,
-          社畜值上限: 200,
-          偶遇女角色: encounterRole || "无",
-          偶遇发生时间: encounterRole ? workOffsetDateTimeText(timeInfo.startText, encounterDelayHours) : "无",
-          处理方式: (encounterRole ? "先写到工作途中偶遇节点；下一轮锁定提醒处理互动后结算。" : "直接写到预计结束时间并结算。") + (postWorkTargetText ? " 结算后再推进到结算后建议时间。" : "")
-        };
-        Promise.resolve(appendAppOperation(payload)).then((added) => {
-          flashWorkButton(button, added ? "已暂存" : "已在暂存区");
-          renderWorkPage(page);
-        });
-      });
-    });
+	        if (hasPendingWorkOperation()) {
+	          flashWorkButton(button, "已有打工");
+	          renderWorkPage(page);
+	          return;
+	        }
+	        if (currentValue < job.threshold) {
+	          flashWorkButton(button, "未解锁");
+	          return;
+	        }
+	        openWorkTimeDialog(page, job.id);
+	      });
+	    });
+	    bindWorkTimeDialog(page);
     page.querySelectorAll("[data-work-focus]").forEach((button) => {
       button.addEventListener("click", () => {
         page.dataset.workFocusIndex = String(button.getAttribute("data-work-focus") || "0");
@@ -13598,10 +16863,80 @@ button.st-work-notice{cursor:pointer}
 	  const ENCOUNTER_PACKAGE_FORMAT = "hypnoos-role-package";
 	  const ENCOUNTER_DUPLICATE_PACKAGE_GROUPS = [];
 	  const ENCOUNTER_ROLE_PAGE_SIZE = 4;
+	  const ENCOUNTER_ROLE_IMAGE_SLOT_COUNT = 4;
+  const ENCOUNTER_AFFECTION_CHAIN_THRESHOLDS = [40, 70, 100, 140, 200];
+  const ENCOUNTER_GENERIC_AFFECTION_CHAIN = [
+    { title: "注意到异常", summary: "角色第一次明确注意到{{user}}、催眠APP或当前关系里的异常，并因此对{{user}}产生额外关注。" },
+    { title: "主动靠近", summary: "角色找理由和{{user}}单独接触，试探对方意图，也暴露一点自己的兴趣、弱点或欲望。" },
+    { title: "关系越界", summary: "角色在信任、好奇、依赖或被影响的状态下跨过原本的社交距离，做出比平时更亲近的选择。" },
+    { title: "秘密共享", summary: "角色把一个秘密、请求或重要情绪交给{{user}}，两人的关系因此变得难以回到普通距离。" },
+    { title: "关键选择", summary: "角色在重要场景中主动选择站到{{user}}这边，承认关系已经改变，并留下后续更深事件的钩子。" }
+  ];
+  const ENCOUNTER_EVENT_NUMERALS = ["壹", "貳", "參", "肆", "伍"];
+  const ENCOUNTER_WORLDBOOK_VARIABLE_START_COMMENT = "[mvu_update]⬇️⬇️⬇️ 变量列表从此开始 ⬇️⬇️⬇️";
+  const ENCOUNTER_WORLDBOOK_VARIABLE_END_COMMENT = "[mvu_update]⬆️⬆️⬆️ 变量列表到此结束 ⬆️⬆️⬆️";
+  const ENCOUNTER_WORLDBOOK_PERSONA_START_COMMENT = "[mvu_plot]⬇️⬇️⬇️ 人设从此开始 ⬇️⬇️⬇️";
+  const ENCOUNTER_WORLDBOOK_PERSONA_END_COMMENT = "[mvu_plot]⬆️⬆️⬆️ 人设到此结束 ⬆️⬆️⬆️";
+  const ENCOUNTER_WORLDBOOK_FAVOR_START_COMMENT = "[mvu_plot]⬇️⬇️⬇️ 好感链从此开始 ⬇️⬇️⬇️";
+  const ENCOUNTER_WORLDBOOK_FAVOR_END_COMMENT = "[mvu_plot]⬆️⬆️⬆️ 好感链到此结束 ⬆️⬆️⬆️";
+  const ENCOUNTER_WORLDBOOK_BOUNDARY_COMMENTS = new Set([
+    ENCOUNTER_WORLDBOOK_VARIABLE_START_COMMENT,
+    ENCOUNTER_WORLDBOOK_VARIABLE_END_COMMENT,
+    ENCOUNTER_WORLDBOOK_PERSONA_START_COMMENT,
+    ENCOUNTER_WORLDBOOK_PERSONA_END_COMMENT,
+    ENCOUNTER_WORLDBOOK_FAVOR_START_COMMENT,
+    ENCOUNTER_WORLDBOOK_FAVOR_END_COMMENT
+  ]);
+  const ENCOUNTER_IMAGE_DATA_URL_SOFT_LIMIT = 420000;
+  const ENCOUNTER_IMAGE_RESIZE_STEPS = [720, 540];
+		  const ENCOUNTER_FEATURED_ROLE_ORDER = [
+		    { name: "月咏皋月", packageId: "orjenrn-role-pack" },
+		    { name: "西园寺美织", packageId: "baikai-role-pack" }
+		  ];
 
-  function encounterId(prefix) {
-    return String(prefix || "encounter") + "-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
+  function encounterLibraryScopeText(value) {
+    const text = String(value === null || value === undefined ? "" : value).trim();
+    if (!text) return "";
+    try {
+      return encodeURIComponent(text).slice(0, 180);
+    } catch {
+      return text.slice(0, 180);
+    }
   }
+
+  function encounterLibraryStorageScope() {
+    try {
+      const chatId = window.SillyTavern?.getCurrentChatId?.();
+      const text = encounterLibraryScopeText(chatId);
+      if (text) return "chat:" + text;
+    } catch {}
+    try {
+      const context = window.SillyTavern?.getContext?.() || (typeof getContext === "function" ? getContext() : null);
+      const candidates = [
+        context?.chatId,
+        context?.chat_id,
+        context?.chatFile,
+        context?.chat_file,
+        context?.chat?.id,
+        context?.chat?.chatId,
+        context?.chat?.file_name,
+        context?.chat?.filename,
+        context?.chatMetadata?.chat_id,
+        context?.chatMetadata?.file_name,
+        context?.chatMetadata?.filename
+      ].map(encounterLibraryScopeText).filter(Boolean);
+      if (candidates.length) return "ctx:" + candidates.join(":");
+    } catch {}
+    return "global";
+  }
+
+  function encounterLibraryStorageKey(baseKey) {
+    return String(baseKey || "hypnoos.encounter") + ":" + encounterLibraryStorageScope();
+  }
+
+	  function encounterId(prefix) {
+	    return String(prefix || "encounter") + "-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
+	  }
 
   function encounterBlankRole() {
     return {
@@ -13627,7 +16962,15 @@ button.st-work-notice{cursor:pointer}
 	      personaFields: [],
 	      variableEntry: null,
 	      personaEntry: null,
-	      imageDataUrl: ""
+	      imageDataUrl: "",
+	      images: Array.from({ length: ENCOUNTER_ROLE_IMAGE_SLOT_COUNT }, () => ""),
+      affectionChain: ENCOUNTER_AFFECTION_CHAIN_THRESHOLDS.map((threshold, index) => ({
+        index: index + 1,
+        numeral: ENCOUNTER_EVENT_NUMERALS[index] || String(index + 1),
+        threshold,
+        title: "",
+        summary: ""
+      }))
     };
   }
 
@@ -13694,6 +17037,65 @@ button.st-work-notice{cursor:pointer}
 	    }
 	    return "";
 	  }
+
+  function encounterRoleImageText(value) {
+    const text = String(value ?? "").trim();
+    return text && !["无", "空", "未记录"].includes(text) ? text : "";
+  }
+
+  function encounterImageAssetUrl(value) {
+    const text = encounterRoleImageText(value);
+    if (!text || /^(?:data:|https?:|blob:)/i.test(text)) return text;
+    return stAssetUrl(text);
+  }
+
+  function encounterNormalizeRoleImageSlots(value) {
+    const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+    const slots = Array.from({ length: ENCOUNTER_ROLE_IMAGE_SLOT_COUNT }, () => "");
+    const arrays = [
+      source.images,
+      source.imageDataUrls,
+      source.imageUrls,
+      source.photos,
+      source.photoSlots,
+      source["图片列表"],
+      source["照片列表"]
+    ];
+    for (const items of arrays) {
+      if (!Array.isArray(items)) continue;
+      items.slice(0, ENCOUNTER_ROLE_IMAGE_SLOT_COUNT).forEach((item, index) => {
+        const text = encounterRoleImageText(item);
+        if (text) slots[index] = text;
+      });
+      if (slots.some(Boolean)) break;
+    }
+    if (!slots.some(Boolean)) {
+      const legacy = encounterRoleImageText(source.imageDataUrl || source.image || source.cover || source["图片"] || source["照片"]);
+      if (legacy) slots[0] = legacy;
+    } else if (!slots[0]) {
+      const legacy = encounterRoleImageText(source.imageDataUrl || source.image || source["图片"] || source["照片"]);
+      if (legacy) slots[0] = legacy;
+    }
+    return slots;
+  }
+
+  function encounterRoleImageSlots(role) {
+    return encounterNormalizeRoleImageSlots(role);
+  }
+
+  function encounterRolePrimaryImage(role) {
+    return encounterRoleImageSlots(role).find(Boolean) || "";
+  }
+
+  function encounterSetRoleImageSlot(role, slot, image) {
+    const normalized = encounterNormalizeRole(role || {});
+    const slots = encounterRoleImageSlots(normalized);
+    const safeSlot = Math.max(0, Math.min(ENCOUNTER_ROLE_IMAGE_SLOT_COUNT - 1, Math.trunc(Number(slot) || 0)));
+    slots[safeSlot] = encounterRoleImageText(image);
+    normalized.images = slots;
+    normalized.imageDataUrl = slots.find(Boolean) || "";
+    return encounterNormalizeRole(normalized);
+  }
 
 	  function encounterLeadingSpaces(line) {
 	    let count = 0;
@@ -13871,6 +17273,67 @@ button.st-work-notice{cursor:pointer}
 	    return encounterRolePersonaFields(role).some((field) => String(field.key || field.content || "").trim());
 	  }
 
+  function encounterNormalizeAffectionChain(chain) {
+    let source = [];
+    if (Array.isArray(chain)) {
+      source = chain;
+    } else if (chain && typeof chain === "object") {
+      source = ENCOUNTER_AFFECTION_CHAIN_THRESHOLDS.map((threshold, index) => (
+        chain[index] ?? chain[index + 1] ?? chain[String(index + 1)] ?? chain[threshold] ?? chain[String(threshold)] ?? null
+      ));
+    }
+    return ENCOUNTER_AFFECTION_CHAIN_THRESHOLDS.map((threshold, index) => {
+      const raw = source[index];
+      const item = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : { summary: raw };
+      return {
+        index: index + 1,
+        numeral: ENCOUNTER_EVENT_NUMERALS[index] || String(index + 1),
+        threshold,
+        title: String(item.title ?? item.name ?? item["标题"] ?? item["事件名"] ?? "").trim(),
+        summary: String(item.summary ?? item.content ?? item.description ?? item.text ?? item.body ?? item["内容"] ?? item["事件"] ?? "").trim()
+      };
+    });
+  }
+
+  function encounterRoleAffectionChain(role) {
+    const source = role && typeof role === "object" && !Array.isArray(role) ? role : {};
+    return encounterNormalizeAffectionChain(
+      source.affectionChain ??
+      source.loveChain ??
+      source.favorChain ??
+      source.favorEvents ??
+      source["好感链"] ??
+      source["好感事件链"] ??
+      source["事件链"]
+    );
+  }
+
+  function encounterRoleHasAffectionChain(role) {
+    return encounterRoleAffectionChain(role).some((item) => String(item.title || item.summary || "").trim());
+  }
+
+  function encounterAffectionChainWorldbookText(role) {
+    const normalized = role && typeof role === "object" && !Array.isArray(role) ? role : {};
+    const name = String(normalized.name || "角色").trim() || "角色";
+    const chain = encounterRoleAffectionChain(normalized).filter((item) => String(item.title || item.summary || "").trim());
+    if (!chain.length) return "";
+    const lines = [
+      "<" + name + "好感链>",
+      "- 本条是该角色的五段好感事件提案。只有本轮人物档案的触发角色事件操作指定该角色和对应事件时，才写成正式事件；其他时候只可自然铺垫。",
+      "- /角色/" + name + "/事件记录是前端只读维护的五位字符串，从左到右对应事件壹到伍；前端已写入对应位后，AI只写事件剧情，不得再replace、补写、回退或清空事件记录。",
+      "- 前端可按事件序号读取对应的事件名和事件描述拼入本轮提示词；AI生成剧情时优先使用被触发事件块，不要改写其他事件块。",
+      "- 事件正式触发后，回复末尾输出<人物档案事件记录>块，字段包含角色名、事件序号、标题、概要、关键场面、关系变化和后续钩子；该块只供前端本地保存回忆摘要，不写入MVU变量。"
+    ];
+    for (const item of chain) {
+      lines.push("- 事件" + item.numeral + ":");
+      lines.push("  好感阈值: " + item.threshold);
+      lines.push("  事件名: " + (item.title || "事件" + item.numeral));
+      lines.push("  事件描述: " + (item.summary || "由AI按当前角色状态生成。"));
+    }
+    lines.push("</" + name + "好感链>");
+    return lines.join("\\n");
+  }
+
 	  function encounterParsePersonaFixedContent(content, roleName) {
 	    const raw = encounterNormalizeNewlines(content);
 	    const mainBlock = encounterExtractTaggedBlock(raw, "人设") || raw;
@@ -13951,6 +17414,8 @@ button.st-work-notice{cursor:pointer}
 	      lines.push(encounterNormalizeNewlines(normalized.behaviorGuidance).trim());
 	      lines.push("</" + name + "行为指导>");
 	    }
+    const affectionChainText = encounterAffectionChainWorldbookText(normalized);
+    if (affectionChainText) lines.push("", affectionChainText);
 	    return lines.join("\\n");
 	  }
 
@@ -13989,6 +17454,8 @@ button.st-work-notice{cursor:pointer}
 	      "工作价值": workValue,
 	      "绰号": "",
 	      "绰号已认可": false,
+      "事件记录": "00000",
+	      "至关重要记忆": "",
 	      "档案": {
 	        "照片": "",
 	        "姓名": name,
@@ -14058,7 +17525,9 @@ button.st-work-notice{cursor:pointer}
 	    } else {
 	      output["绰号已认可"] = output["绰号已认可"] === true || /^true$/i.test(String(output["绰号已认可"] ?? output["绰号已認可"] ?? "").trim());
 	    }
-	    if (encounterLooksLikeWorldbookChunk(output["心理"])) output["心理"] = "未记录";
+    if (encounterLooksLikeWorldbookChunk(output["心理"])) output["心理"] = "未记录";
+    output["事件记录"] = normalizedRoleEventRecord(output["事件记录"]);
+	    output["至关重要记忆"] = encounterPlainLine(output["至关重要记忆"] || "");
 	    return output;
 	  }
 
@@ -14304,7 +17773,7 @@ button.st-work-notice{cursor:pointer}
 	    return encounterSanitizeInitialRoleVariableObject(merged, normalized);
 	  }
 
-	  const ENCOUNTER_INITIAL_VARIABLE_SKIP_FILL_PATHS = new Set(["档案.照片", "临时催眠效果", "永久催眠效果"]);
+	  const ENCOUNTER_INITIAL_VARIABLE_SKIP_FILL_PATHS = new Set(["档案.照片", "至关重要记忆", "临时催眠效果", "永久催眠效果"]);
 
 	  function encounterIsUnfilledInitialVariableValue(value) {
 	    if (value === undefined || value === null) return true;
@@ -14407,6 +17876,7 @@ button.st-work-notice{cursor:pointer}
 	        content: String(personaExtra || "")
 	      });
 	    }
+	    const imageSlots = encounterNormalizeRoleImageSlots(source);
 	    return {
 	      id: String(source.id || source.roleId || encounterId("role-" + index)),
 	      name,
@@ -14430,7 +17900,9 @@ button.st-work-notice{cursor:pointer}
 	      personaFields,
 	      variableEntry: encounterNormalizeRoleWorldbookEntry(source.variableEntry || source["人物变量世界书条目"] || source["人物变量条目"]),
 	      personaEntry: encounterNormalizeRoleWorldbookEntry(source.personaEntry || source["人设世界书条目"] || source["人设条目"]),
-	      imageDataUrl: String(source.imageDataUrl || source.image || source["图片"] || "")
+	      imageDataUrl: imageSlots.find(Boolean) || "",
+	      images: imageSlots,
+      affectionChain: encounterRoleAffectionChain(source)
 	    };
 	  }
 
@@ -14456,12 +17928,58 @@ button.st-work-notice{cursor:pointer}
     };
   }
 
+  function encounterRoleForStorage(role, index = 0) {
+    const normalized = encounterNormalizeRole(role || {}, index);
+    const output = {
+      id: normalized.id,
+      name: normalized.name,
+      aliases: normalized.aliases,
+      intro: normalized.intro,
+      encounterPrompt: normalized.encounterPrompt,
+      variables: normalized.variables,
+      initialVariables: normalized.initialVariables,
+      personaTitle: normalized.personaTitle,
+      gender: normalized.gender,
+      age: normalized.age,
+      identity: normalized.identity,
+      firstEncounter: normalized.firstEncounter,
+      socialConnection: normalized.socialConnection,
+      personality: normalized.personality,
+      habit: normalized.habit,
+      appearance: normalized.appearance,
+      profileDefault: normalized.profileDefault,
+      behaviorGuidance: normalized.behaviorGuidance,
+      personaFields: encounterRolePersonaFields(normalized),
+      affectionChain: encounterRoleAffectionChain(normalized),
+      images: encounterRoleImageSlots(normalized)
+    };
+    if (!output.images.some(Boolean)) delete output.images;
+    return output;
+  }
+
+  function encounterPackageForStorage(pkg) {
+    const normalized = encounterNormalizePackage(pkg || {});
+    return {
+      id: normalized.id,
+      format: ENCOUNTER_PACKAGE_FORMAT,
+      version: 1,
+      name: normalized.name,
+      intro: normalized.intro,
+      encounterPrompt: normalized.encounterPrompt,
+      price: normalized.price,
+      variableWorldbook: normalized.variableWorldbook,
+      personaWorldbook: normalized.personaWorldbook,
+      coverDataUrl: normalized.coverDataUrl,
+      roles: (normalized.roles || []).map((role, index) => encounterRoleForStorage(role, index))
+    };
+  }
+
   function encounterRoleEncounterPrompt(role) {
     const normalized = encounterNormalizeRole(role || {});
     const name = String(normalized.name || "").trim();
     const text = String(normalized.encounterPrompt || "").trim()
       || String(normalized.firstEncounter || "").trim()
-      || (name ? "请让" + name + "在当前剧情中自然登场，并由AI判断是否与已有角色重复；若重复则不新增。" : "");
+      || (name ? "围绕" + name + "安排一次自然邂逅，并按当前对话世界书与角色变量描写。" : "");
     return text;
   }
 
@@ -14470,15 +17988,9 @@ button.st-work-notice{cursor:pointer}
     const roles = (Array.isArray(pkg?.roles) ? pkg.roles : [])
       .map((role, index) => encounterNormalizeRole(role, index))
       .filter((role) => String(role.name || role.intro || role.encounterPrompt || role.firstEncounter || "").trim());
-    const lines = [];
-    roles.forEach((role, index) => {
-      const prompt = encounterRoleEncounterPrompt(role, pkg);
-      if (!prompt) return;
-      const name = String(role.name || ("角色" + (index + 1))).trim();
-      lines.push(String(index + 1) + ". " + name + "：" + prompt);
-    });
-    if (packagePrompt) lines.push("整体串联：" + packagePrompt);
-    return lines.join("\\n").trim();
+    if (packagePrompt) return packagePrompt;
+    if (roles.length === 1) return encounterRoleEncounterPrompt(roles[0], pkg);
+    return "";
   }
 
   function encounterPackagePrice(pkg) {
@@ -14694,6 +18206,7 @@ button.st-work-notice{cursor:pointer}
       "工作价值": 9,
       "绰号": "",
       "绰号已认可": false,
+      "事件记录": "00000",
       "档案": {
         "照片": "",
         "姓名": "白枢暗子",
@@ -14731,6 +18244,7 @@ button.st-work-notice{cursor:pointer}
       "工作价值": 9,
       "绰号": "",
       "绰号已认可": false,
+      "事件记录": "00000",
       "档案": {
         "照片": "",
         "姓名": "千杀百花",
@@ -14768,6 +18282,7 @@ button.st-work-notice{cursor:pointer}
       "工作价值": 20,
       "绰号": "",
       "绰号已认可": false,
+      "事件记录": "00000",
       "档案": {
         "照片": "",
         "姓名": "中村樱",
@@ -14799,7 +18314,7 @@ button.st-work-notice{cursor:pointer}
       id: "basic-example-role-pack",
       name: "基础邂逅示例包",
       intro: "三个可直接导入的示例角色：阴郁同学、异世界杀手、成熟总裁。适合测试角色包导入、人物档案图片和世界书写入流程。",
-      encounterPrompt: "三位角色可以按当前剧情连续登场，也可以分散到同一天不同场景；保留各自出场提示词里的核心邂逅节点即可。",
+      encounterPrompt: "邂逅开场：放学后的斋明学园，{{user}}被催眠APP弹出的异常桃花运路线引到旧教学楼附近；先在楼梯或走廊转角与白枢暗子迎面撞上，看似瘦弱阴郁的她反而把{{user}}撞飞，短暂停顿后沉默离开；{{user}}追出校门附近时又被千杀百花误认为可疑人物，娇小杀手迅速把他按倒盘问，确认他很弱后冷淡嘲讽并准备离开；混乱刚要结束，中村樱安排的车或临时会客室切入现场，把{{user}}带到短暂独处的空间，优雅而急切地写下《人权自愿放弃协议》，自己先签名再递给{{user}}。AI需要把三段写成同一天连续发生的角色包初遇，让三人的反差都被{{user}}记住；若当前剧情已有同名或高度重复角色，沿用已有角色状态自然在场或被点名；不要替AI结算变量、好感、服从、警戒或长期关系变化，只留下异常桃花运路线、三名角色连续介入和后续纠缠的剧情钩子。",
       price: 12,
       variableWorldbook: "人物变量世界书",
       personaWorldbook: "人设世界书",
@@ -14815,7 +18330,11 @@ button.st-work-notice{cursor:pointer}
           initialVariables: ankoInitialVariables,
           persona: ankoPersona,
           personaEntry: encounterBuiltinWorldbookEntry("[mvu_plot]白枢暗子人设", ["白枢暗子", "暗子", "白枢同学", "灵异学", "鬼怪"], ankoPersona),
-          imageDataUrl: stAssetUrl("encounter/shirakusu-anko.png")
+          imageDataUrl: stAssetUrl("encounter/shirakusu-anko.png"),
+          images: [
+            stAssetUrl("encounter/shirakusu-anko.png"),
+            stAssetUrl("encounter/shirakusu-anko-old.png")
+          ]
         },
         {
           id: "role-senkoro-momoka",
@@ -14827,7 +18346,11 @@ button.st-work-notice{cursor:pointer}
           initialVariables: momokaInitialVariables,
           persona: momokaPersona,
           personaEntry: encounterBuiltinWorldbookEntry("[mvu_plot]千杀百花人设", ["千杀百花", "百花", "千杀", "异世界杀手", "勇者"], momokaPersona),
-          imageDataUrl: stAssetUrl("encounter/senkoro-momoka.png")
+          imageDataUrl: stAssetUrl("encounter/senkoro-momoka.png"),
+          images: [
+            stAssetUrl("encounter/senkoro-momoka.png"),
+            stAssetUrl("encounter/senkoro-momoka-old.png")
+          ]
         },
         {
           id: "role-nakamura-sakura",
@@ -14839,7 +18362,11 @@ button.st-work-notice{cursor:pointer}
           initialVariables: sakuraInitialVariables,
           persona: sakuraPersona,
           personaEntry: encounterBuiltinWorldbookEntry("[mvu_plot]中村樱人设", ["中村樱", "樱酱", "中村总裁", "神宫寺莲", "作弊模式"], sakuraPersona),
-          imageDataUrl: stAssetUrl("encounter/nakamura-sakura.png")
+          imageDataUrl: stAssetUrl("encounter/nakamura-sakura.png"),
+          images: [
+            stAssetUrl("encounter/nakamura-sakura.png"),
+            stAssetUrl("encounter/nakamura-sakura-old.png")
+          ]
         }
       ]
     })];
@@ -14848,15 +18375,17 @@ button.st-work-notice{cursor:pointer}
         const source = pkg && typeof pkg === "object" && !Array.isArray(pkg) ? pkg : {};
         const roles = (Array.isArray(source.roles) ? source.roles : []).map((role) => {
           const roleSource = role && typeof role === "object" && !Array.isArray(role) ? role : {};
+          const imageSlots = encounterNormalizeRoleImageSlots(roleSource).map((image) => image ? encounterImageAssetUrl(image) : "");
           return {
             ...roleSource,
-            imageDataUrl: roleSource.imageDataUrl || roleSource.image ? stAssetUrl(roleSource.imageDataUrl || roleSource.image) : ""
+            images: imageSlots,
+            imageDataUrl: imageSlots.find(Boolean) || ""
           };
         });
-        const fallbackCover = roles.find((role) => String(role.imageDataUrl || "").trim())?.imageDataUrl || "";
+        const fallbackCover = roles.find((role) => String(encounterRolePrimaryImage(role) || "").trim())?.imageDataUrl || "";
         return encounterNormalizePackage({
           ...source,
-          coverDataUrl: source.coverDataUrl || source.cover ? stAssetUrl(source.coverDataUrl || source.cover) : fallbackCover,
+          coverDataUrl: source.coverDataUrl || source.cover ? encounterImageAssetUrl(source.coverDataUrl || source.cover) : fallbackCover,
           roles
         });
       });
@@ -14867,99 +18396,314 @@ button.st-work-notice{cursor:pointer}
     return new Set(encounterBuiltInPackages().map((pkg) => pkg.id));
   }
 
-  function encounterReadStoredPackages() {
+	  function encounterReadStoredPackages() {
+	    try {
+	      const parsed = encounterGetJsonStorage(encounterLibraryStorageKey(ENCOUNTER_PACKAGE_STORAGE_KEY)) || [];
+	      if (Array.isArray(parsed)) return parsed.map(encounterNormalizePackage);
+	    } catch {}
+	    return [];
+	  }
+
+	  function encounterReadPackages() {
+	    const builtIns = encounterBuiltInPackages();
+	    const builtInIds = new Set(builtIns.map((pkg) => pkg.id));
+	    const stored = encounterReadStoredPackages().filter((pkg) => !builtInIds.has(pkg.id));
+	    return builtIns.concat(stored);
+	  }
+
+  let encounterLastStorageError = "";
+  const ENCOUNTER_IDB_NAME = "hypnoos-encounter-storage-v1";
+  const ENCOUNTER_IDB_STORE = "json";
+  const encounterMemoryStorage = new Map();
+  let encounterIdbPromise = null;
+
+  function encounterCloneStorageValue(value) {
+    const cloned = encounterClone(value);
+    return cloned === null ? value : cloned;
+  }
+
+  function encounterRememberJsonStorage(key, value) {
+    if (!key) return;
+    encounterMemoryStorage.set(String(key), encounterCloneStorageValue(value));
+  }
+
+  function encounterReadRememberedJsonStorage(key) {
+    if (!encounterMemoryStorage.has(String(key))) return null;
+    return encounterCloneStorageValue(encounterMemoryStorage.get(String(key)));
+  }
+
+  function encounterOpenIdb() {
+    if (typeof indexedDB === "undefined") return Promise.resolve(null);
+    if (encounterIdbPromise) return encounterIdbPromise;
+    encounterIdbPromise = new Promise((resolve) => {
+      const request = indexedDB.open(ENCOUNTER_IDB_NAME, 1);
+      request.onupgradeneeded = () => {
+        try {
+          const db = request.result;
+          if (!db.objectStoreNames.contains(ENCOUNTER_IDB_STORE)) db.createObjectStore(ENCOUNTER_IDB_STORE);
+        } catch {}
+      };
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => {
+        console.warn("[邂逅] IndexedDB 打开失败", request.error);
+        resolve(null);
+      };
+      request.onblocked = () => resolve(null);
+    });
+    return encounterIdbPromise;
+  }
+
+  async function encounterSetJsonStorageIdb(key, text) {
+    const db = await encounterOpenIdb();
+    if (!db) return false;
+    return new Promise((resolve) => {
+      try {
+        const tx = db.transaction(ENCOUNTER_IDB_STORE, "readwrite");
+        tx.objectStore(ENCOUNTER_IDB_STORE).put(String(text || ""), String(key || ""));
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => {
+          console.warn("[邂逅] IndexedDB 写入失败", key, tx.error);
+          resolve(false);
+        };
+      } catch (error) {
+        console.warn("[邂逅] IndexedDB 写入失败", key, error);
+        resolve(false);
+      }
+    });
+  }
+
+  async function encounterGetJsonStorageIdb(key) {
+    const db = await encounterOpenIdb();
+    if (!db) return "";
+    return new Promise((resolve) => {
+      try {
+        const tx = db.transaction(ENCOUNTER_IDB_STORE, "readonly");
+        const request = tx.objectStore(ENCOUNTER_IDB_STORE).get(String(key || ""));
+        request.onsuccess = () => resolve(String(request.result || ""));
+        request.onerror = () => resolve("");
+      } catch {
+        resolve("");
+      }
+    });
+  }
+
+  function encounterGetJsonStorage(key) {
+    const remembered = encounterReadRememberedJsonStorage(key);
+    if (remembered !== null) return remembered;
+    // Legacy read only: older builds stored encounter data in localStorage.
+    // New writes go to IndexedDB to avoid quota failures with large role packs.
     try {
-      const parsed = JSON.parse(localStorage.getItem(ENCOUNTER_PACKAGE_STORAGE_KEY) || "[]");
-      if (Array.isArray(parsed)) return parsed.map(encounterNormalizePackage);
+      const text = localStorage.getItem(key) || "";
+      if (!text) return null;
+      const parsed = JSON.parse(text);
+      encounterRememberJsonStorage(key, parsed);
+      return encounterCloneStorageValue(parsed);
     } catch {}
-    return [];
+    return null;
   }
 
-  function encounterReadPackages() {
-    const builtIns = encounterBuiltInPackages();
-    const builtInIds = new Set(builtIns.map((pkg) => pkg.id));
-    const stored = encounterReadStoredPackages().filter((pkg) => !builtInIds.has(pkg.id));
-    return builtIns.concat(stored);
-  }
-
-  function encounterSavePackages(packages) {
+  async function encounterHydrateJsonStorage(key) {
+    if (!key) return false;
+    const storageKey = String(key);
+    const hadMemory = encounterMemoryStorage.has(storageKey);
+    const text = await encounterGetJsonStorageIdb(key);
+    if (text) {
+      try {
+        const parsed = JSON.parse(text);
+        encounterRememberJsonStorage(key, parsed);
+        try { localStorage.removeItem(key); } catch {}
+        return true;
+      } catch {
+        return false;
+      }
+    }
+    if (hadMemory) return false;
     try {
-      const builtInIds = encounterBuiltInPackageIds();
-      const stored = (Array.isArray(packages) ? packages : [])
-        .map(encounterNormalizePackage)
-        .filter((pkg) => !builtInIds.has(pkg.id));
-      localStorage.setItem(ENCOUNTER_PACKAGE_STORAGE_KEY, JSON.stringify(stored));
-    } catch {}
+      const legacyText = localStorage.getItem(key) || "";
+      if (!legacyText) return false;
+      const parsed = JSON.parse(legacyText);
+      encounterRememberJsonStorage(key, parsed);
+      encounterSetJsonStorageIdb(key, legacyText).then((ok) => {
+        if (ok) {
+          try { localStorage.removeItem(key); } catch {}
+        }
+      });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
-  function encounterUpsertPackage(pkg) {
+  function encounterStorageKeysForCurrentScope() {
+    return [
+      encounterLibraryStorageKey(ENCOUNTER_PACKAGE_STORAGE_KEY),
+      encounterLibraryStorageKey(ENCOUNTER_DRAFT_STORAGE_KEY),
+      encounterLibraryStorageKey(ENCOUNTER_ROLE_STORAGE_KEY),
+      encounterLibraryStorageKey(ENCOUNTER_ROLE_DRAFT_STORAGE_KEY),
+      encounterLibraryStorageKey(ENCOUNTER_MANAGEMENT_STORAGE_KEY),
+      encounterPurchaseStorageKey(),
+      ENCOUNTER_CHAT_WORLD_INFO_CACHE_KEY
+    ];
+  }
+
+  function encounterHydrateCurrentScopeStorage(page) {
+    if (!page || page.__stEncounterHydratingStorage || page.__stEncounterStorageHydrated) return;
+    page.__stEncounterHydratingStorage = true;
+    Promise.all(encounterStorageKeysForCurrentScope().map(encounterHydrateJsonStorage)).then((results) => {
+      if (!page.isConnected) return;
+      page.__stEncounterHydratingStorage = false;
+      page.__stEncounterStorageHydrated = true;
+      if (results.some(Boolean)) renderEncounterPage(page, { preserveScroll: true });
+    }).catch(() => {
+      if (page) page.__stEncounterHydratingStorage = false;
+    });
+  }
+
+  function encounterStorageErrorMessage(error) {
+    const message = String(error?.message || error || "");
+    if (/quota|exceed|storage/i.test(message)) return "本地存储空间不足，通常是角色图片太大或已保存内容太多。";
+    return message ? "本地存储写入失败：" + message : "本地存储写入失败。";
+  }
+
+  function encounterSetJsonStorage(key, value) {
+    encounterLastStorageError = "";
+    let text = "";
+    try {
+      text = JSON.stringify(value);
+      encounterRememberJsonStorage(key, value);
+      try { localStorage.removeItem(key); } catch {}
+      encounterSetJsonStorageIdb(key, text);
+      return true;
+    } catch (error) {
+      console.warn("[邂逅] 保存扩展数据失败", key, error);
+      if (!text) {
+        encounterLastStorageError = encounterStorageErrorMessage(error);
+        return false;
+      }
+      encounterSetJsonStorageIdb(key, text).then((ok) => {
+        if (!ok) console.warn("[邂逅] 扩展存储也保存失败", key);
+      });
+      return true;
+    }
+  }
+
+	  function encounterSavePackages(packages) {
+	    try {
+	      const builtInIds = encounterBuiltInPackageIds();
+	      const stored = (Array.isArray(packages) ? packages : [])
+	        .map(encounterPackageForStorage)
+	        .filter((pkg) => !builtInIds.has(pkg.id));
+	      return encounterSetJsonStorage(encounterLibraryStorageKey(ENCOUNTER_PACKAGE_STORAGE_KEY), stored);
+	    } catch (error) {
+      encounterLastStorageError = encounterStorageErrorMessage(error);
+      console.warn("[邂逅] 保存角色包失败", error);
+      return false;
+    }
+	  }
+
+  function encounterPackageForLibrary(pkg) {
     const normalized = encounterNormalizePackage(pkg);
-    const packages = encounterReadStoredPackages();
-    const index = packages.findIndex((item) => item.id === normalized.id || (item.name && item.name === normalized.name));
-    if (index >= 0) packages[index] = normalized;
-    else packages.unshift(normalized);
-    encounterSavePackages(packages);
-    return normalized;
+    if (!encounterIsBuiltInPackageId(normalized.id)) return normalized;
+    const customName = String(normalized.name || "").trim();
+    return encounterNormalizePackage({
+      ...normalized,
+      id: encounterId("pkg-custom"),
+      sourcePackageId: normalized.id,
+      sourcePackageName: customName
+    });
   }
 
-  function encounterReadDraft() {
-    try {
-      const parsed = JSON.parse(localStorage.getItem(ENCOUNTER_DRAFT_STORAGE_KEY) || "null");
-      if (parsed && typeof parsed === "object") return encounterNormalizePackage(parsed);
-    } catch {}
-    return encounterBlankDraft();
-  }
+		  function encounterUpsertPackage(pkg) {
+		    const normalized = encounterPackageForLibrary(pkg);
+		    const packages = encounterReadStoredPackages();
+		    const index = packages.findIndex((item) => item.id === normalized.id || (item.name && item.name === normalized.name));
+		    if (index >= 0) packages[index] = normalized;
+		    else packages.unshift(normalized);
+		    if (!encounterSavePackages(packages)) return null;
+		    return normalized;
+		  }
 
-  function encounterSaveDraft(draft) {
-    const normalized = encounterNormalizePackage(draft);
-    try {
-      localStorage.setItem(ENCOUNTER_DRAFT_STORAGE_KEY, JSON.stringify(normalized));
-    } catch {}
-    return normalized;
-  }
+	  function encounterIsBuiltInPackageId(packageId) {
+	    const value = String(packageId || "").trim();
+	    return Boolean(value) && encounterBuiltInPackageIds().has(value);
+	  }
 
-  function encounterReadStandaloneRoles() {
-    try {
-      const parsed = JSON.parse(localStorage.getItem(ENCOUNTER_ROLE_STORAGE_KEY) || "[]");
-      if (Array.isArray(parsed)) return parsed.map((role, index) => encounterNormalizeRole(role, index));
-    } catch {}
-    return [];
-  }
+	  function encounterCanDeletePackage(pkg) {
+	    const id = String(pkg?.id || "").trim();
+	    return Boolean(id) && !encounterIsBuiltInPackageId(id);
+	  }
 
-  function encounterSaveStandaloneRoles(roles) {
-    try {
-      const normalized = (Array.isArray(roles) ? roles : [])
-        .map((role, index) => encounterNormalizeRole(role, index))
-        .filter((role) => String(role.name || role.intro || "").trim() || encounterHasPersonaContent(role));
-      localStorage.setItem(ENCOUNTER_ROLE_STORAGE_KEY, JSON.stringify(normalized));
-    } catch {}
-  }
+	  function encounterDeleteStoredPackage(packageId) {
+	    const id = String(packageId || "").trim();
+	    if (!id || encounterIsBuiltInPackageId(id)) return false;
+	    const packages = encounterReadStoredPackages();
+	    const nextPackages = packages.filter((pkg) => String(pkg.id || "") !== id);
+	    if (nextPackages.length === packages.length) return false;
+	    if (!encounterSavePackages(nextPackages)) return false;
+	    const managementState = encounterReadManagementState();
+	    delete managementState[encounterManagementKey("package", id)];
+	    encounterWriteManagementState(managementState);
+	    return true;
+	  }
+
+		  function encounterReadDraft() {
+	    try {
+	      const parsed = encounterGetJsonStorage(encounterLibraryStorageKey(ENCOUNTER_DRAFT_STORAGE_KEY));
+	      if (parsed && typeof parsed === "object") return encounterNormalizePackage(parsed);
+	    } catch {}
+	    return encounterBlankDraft();
+	  }
+
+		  function encounterSaveDraft(draft) {
+		    const normalized = encounterPackageForStorage(draft);
+		    encounterSetJsonStorage(encounterLibraryStorageKey(ENCOUNTER_DRAFT_STORAGE_KEY), normalized);
+		    return encounterNormalizePackage(normalized);
+		  }
+
+	  function encounterReadStandaloneRoles() {
+	    try {
+	      const parsed = encounterGetJsonStorage(encounterLibraryStorageKey(ENCOUNTER_ROLE_STORAGE_KEY)) || [];
+	      if (Array.isArray(parsed)) return parsed.map((role, index) => encounterNormalizeRole(role, index));
+	    } catch {}
+	    return [];
+	  }
+
+	  function encounterSaveStandaloneRoles(roles) {
+	    try {
+	      const normalized = (Array.isArray(roles) ? roles : [])
+	        .map((role, index) => encounterRoleForStorage(role, index))
+	        .filter((role) => String(role.name || role.intro || "").trim() || encounterHasPersonaContent(role));
+	      return encounterSetJsonStorage(encounterLibraryStorageKey(ENCOUNTER_ROLE_STORAGE_KEY), normalized);
+	    } catch (error) {
+      encounterLastStorageError = encounterStorageErrorMessage(error);
+      console.warn("[邂逅] 保存角色库失败", error);
+      return false;
+    }
+	  }
 
   function encounterUpsertStandaloneRole(role) {
     const normalized = encounterNormalizeRole(role || {});
-    const roles = encounterReadStandaloneRoles();
-    const index = roles.findIndex((item) => item.id === normalized.id || (item.name && item.name === normalized.name));
-    if (index >= 0) roles[index] = normalized;
-    else roles.unshift(normalized);
-    encounterSaveStandaloneRoles(roles);
-    return normalized;
-  }
+	    const roles = encounterReadStandaloneRoles();
+	    const index = roles.findIndex((item) => item.id === normalized.id || (item.name && item.name === normalized.name));
+	    if (index >= 0) roles[index] = normalized;
+	    else roles.unshift(normalized);
+	    if (!encounterSaveStandaloneRoles(roles)) return null;
+	    return normalized;
+	  }
 
-  function encounterReadSingleRoleDraft() {
-    try {
-      const parsed = JSON.parse(localStorage.getItem(ENCOUNTER_ROLE_DRAFT_STORAGE_KEY) || "null");
-      if (parsed && typeof parsed === "object") return encounterNormalizeRole(parsed);
-    } catch {}
-    return encounterBlankRole();
-  }
+	  function encounterReadSingleRoleDraft() {
+	    try {
+	      const parsed = encounterGetJsonStorage(encounterLibraryStorageKey(ENCOUNTER_ROLE_DRAFT_STORAGE_KEY));
+	      if (parsed && typeof parsed === "object") return encounterNormalizeRole(parsed);
+	    } catch {}
+	    return encounterBlankRole();
+	  }
 
-  function encounterSaveSingleRoleDraft(role) {
-    const normalized = encounterNormalizeRole(role || {});
-    try {
-      localStorage.setItem(ENCOUNTER_ROLE_DRAFT_STORAGE_KEY, JSON.stringify(normalized));
-    } catch {}
-    return normalized;
-  }
+		  function encounterSaveSingleRoleDraft(role) {
+		    const stored = encounterRoleForStorage(role || {});
+		    encounterSetJsonStorage(encounterLibraryStorageKey(ENCOUNTER_ROLE_DRAFT_STORAGE_KEY), stored);
+		    return encounterNormalizeRole(stored);
+		  }
 
   function encounterSingleRolePackageId(role, sourcePackage) {
     const normalized = encounterNormalizeRole(role || {});
@@ -14980,7 +18724,7 @@ button.st-work-notice{cursor:pointer}
       price: SCAN_ROLE_COST_STARLIGHT,
       variableWorldbook: sourcePackage?.variableWorldbook || "人物变量世界书",
       personaWorldbook: sourcePackage?.personaWorldbook || "人设世界书",
-      coverDataUrl: normalizedRole.imageDataUrl || sourcePackage?.coverDataUrl || "",
+      coverDataUrl: encounterRolePrimaryImage(normalizedRole) || sourcePackage?.coverDataUrl || "",
       roles: [normalizedRole]
     });
   }
@@ -15029,6 +18773,28 @@ button.st-work-notice{cursor:pointer}
       else unnamed += 1;
     }
     return names.size + unnamed;
+  }
+
+  function encounterFeaturedRoleRank(item) {
+    const role = encounterNormalizeRole(item?.role || {});
+    const name = String(role.name || "").trim();
+    const packageId = String(item?.sourcePackage?.id || item?.package?.id || "").trim();
+    const rank = ENCOUNTER_FEATURED_ROLE_ORDER.findIndex((target) => (
+      target.name === name && (!target.packageId || target.packageId === packageId)
+    ));
+    return rank >= 0 ? rank : ENCOUNTER_FEATURED_ROLE_ORDER.length;
+  }
+
+  function encounterSortRoleItemsForBrowse(items) {
+    return (Array.isArray(items) ? items : [])
+      .map((item, index) => ({ item, index }))
+      .sort((left, right) => {
+        const leftRank = encounterFeaturedRoleRank(left.item);
+        const rightRank = encounterFeaturedRoleRank(right.item);
+        if (leftRank !== rightRank) return leftRank - rightRank;
+        return left.index - right.index;
+      })
+      .map(({ item }) => item);
   }
 
   function encounterRoleItemHasWorldbookContent(item) {
@@ -15175,7 +18941,7 @@ button.st-work-notice{cursor:pointer}
   function encounterReadPurchasedIds() {
     const ids = encounterPurchasedIdsFromChat();
     try {
-      const parsed = JSON.parse(localStorage.getItem(encounterPurchaseStorageKey()) || "[]");
+      const parsed = encounterGetJsonStorage(encounterPurchaseStorageKey()) || [];
       if (Array.isArray(parsed)) {
         for (const item of parsed.map(String).filter(Boolean)) ids.add(item);
       }
@@ -15194,9 +18960,7 @@ button.st-work-notice{cursor:pointer}
     const value = String(packageId || "");
     if (!value) return ids;
     ids.add(value);
-    try {
-      localStorage.setItem(encounterPurchaseStorageKey(), JSON.stringify(Array.from(ids)));
-    } catch {}
+    encounterSetJsonStorage(encounterPurchaseStorageKey(), Array.from(ids));
     return ids;
   }
 
@@ -15233,7 +18997,7 @@ button.st-work-notice{cursor:pointer}
 
   function encounterReadManagementState() {
     try {
-      const parsed = JSON.parse(localStorage.getItem(ENCOUNTER_MANAGEMENT_STORAGE_KEY) || "{}");
+      const parsed = encounterGetJsonStorage(encounterLibraryStorageKey(ENCOUNTER_MANAGEMENT_STORAGE_KEY)) || {};
       return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
     } catch {
       return {};
@@ -15241,9 +19005,7 @@ button.st-work-notice{cursor:pointer}
   }
 
   function encounterWriteManagementState(state) {
-    try {
-      localStorage.setItem(ENCOUNTER_MANAGEMENT_STORAGE_KEY, JSON.stringify(state && typeof state === "object" ? state : {}));
-    } catch {}
+    encounterSetJsonStorage(encounterLibraryStorageKey(ENCOUNTER_MANAGEMENT_STORAGE_KEY), state && typeof state === "object" ? state : {});
   }
 
   function encounterManagementKey(type, id) {
@@ -15437,6 +19199,35 @@ button.st-work-notice{cursor:pointer}
     else inventory[name] = count;
   }
 
+  function encounterAddInventoryItemDetailed(stat, itemName, amount, description = "") {
+    const name = String(itemName || "").trim();
+    const count = Math.max(0, Math.floor(Number(amount) || 0));
+    if (!name || count <= 0) return;
+    const desc = String(description || "").trim();
+    const inventory = encounterEnsureSystemInventory(stat);
+    if (Array.isArray(inventory)) {
+      const found = inventory.find((item) => item && typeof item === "object" && String(item.name || item["名称"] || item.id || "").trim() === name);
+      if (found) {
+        found["数量"] = Math.max(0, encounterItemValueCount(found)) + count;
+        if (desc && !found["描述"] && !found.description) found["描述"] = desc;
+      } else {
+        const item = { "名称": name, "数量": count };
+        if (desc) item["描述"] = desc;
+        inventory.push(item);
+      }
+      return;
+    }
+    if (inventory[name] && typeof inventory[name] === "object") {
+      inventory[name]["数量"] = Math.max(0, encounterItemValueCount(inventory[name])) + count;
+      if (desc && !inventory[name]["描述"] && !inventory[name].description) inventory[name]["描述"] = desc;
+    } else if (typeof inventory[name] === "number") {
+      inventory[name] = { "名称": name, "数量": Math.max(0, Number(inventory[name]) || 0) + count };
+      if (desc) inventory[name]["描述"] = desc;
+    } else {
+      inventory[name] = desc ? { "名称": name, "数量": count, "描述": desc } : count;
+    }
+  }
+
   function encounterAdjustItemObject(value, take) {
     if (typeof value === "number") return { next: Math.max(0, value - take), used: Math.min(Math.max(0, value), take) };
     if (value && typeof value === "object") {
@@ -15502,7 +19293,9 @@ button.st-work-notice{cursor:pointer}
       money: Number.isFinite(money) ? Math.max(0, Math.floor(money)) : 0,
       starlight: Number.isFinite(starlight) ? Math.max(0, Math.floor(starlight)) : 0,
       starlightVoucher: encounterInventoryItemCount(ENCOUNTER_SHOP_STARLIGHT_VOUCHER, stat),
-      ruleCoupon: encounterInventoryItemCount(SCHOOL_RULE_COUPON_ITEM, stat)
+      ruleCoupon: encounterInventoryItemCount(SCHOOL_RULE_COUPON_ITEM, stat),
+      timetableCoupon: encounterInventoryItemCount(TIMETABLE_MOD_COUPON_ITEM, stat),
+      accessPasses: Object.fromEntries(Object.entries(SPECIAL_LOCATION_PASS_ITEM_NAMES).map(([id, itemName]) => [id, encounterInventoryItemCount(itemName, stat)]))
     };
   }
 
@@ -15535,6 +19328,19 @@ button.st-work-notice{cursor:pointer}
     data.stat["系统"]["持有零花钱"] = money - costMoney;
     data.stat["系统"]["星光点"] = Math.max(0, Math.floor(Number(data.stat["系统"]["星光点"] ?? 0) || 0)) + count;
     await globalThis.Mvu.replaceMvuData(data.mvu, data.option);
+    await appendAppOperation({
+      来源: "邂逅",
+      操作: "兑换星光点",
+      不可删除: true,
+      兑换数量: count,
+      消耗物品: ENCOUNTER_SHOP_STARLIGHT_VOUCHER + " x" + count,
+      消耗零花钱: costMoney,
+      获得星光点: count,
+      前端写入后持有零花钱: money - costMoney,
+      前端写入后星光点: data.stat["系统"]["星光点"],
+      前端处理: "已由前端扣除兑换券和零花钱，并增加星光点。",
+      AI执行规范: "邂逅商店兑换已由前端写入变量；AI不得再次扣除兑换券、零花钱或再次增加星光点。"
+    });
     page.dataset.encounterStatus = "已兑换 " + count + " 星光点。";
     renderEncounterPage(page);
   }
@@ -15560,7 +19366,101 @@ button.st-work-notice{cursor:pointer}
     data.stat["系统"]["星光点"] = current - cost;
     encounterAddInventoryItem(data.stat, SCHOOL_RULE_COUPON_ITEM, count);
     await globalThis.Mvu.replaceMvuData(data.mvu, data.option);
+    await appendAppOperation({
+      来源: "邂逅",
+      操作: "购买校规修改券",
+      不可删除: true,
+      购买数量: count,
+      消耗星光点: cost,
+      获得物品: SCHOOL_RULE_COUPON_ITEM + " x" + count,
+      前端写入后星光点: current - cost,
+      前端处理: "已由前端扣除星光点，并写入校规修改券。",
+      AI执行规范: "邂逅商店购买已由前端写入变量；AI不得再次扣星光点或重复发放校规修改券。"
+    });
     page.dataset.encounterStatus = "已购买 " + count + " 张校规修改券。";
+    renderEncounterPage(page);
+  }
+
+  async function encounterShopBuyTimetableCoupon(page, quantity) {
+    const count = Math.max(1, Math.floor(Number(quantity) || 1));
+    const data = encounterCurrentMvuData();
+    if (!data) {
+      encounterSetStatus(page, "MVU变量接口未就绪，无法购买。");
+      return;
+    }
+    data.stat["系统"] = data.stat["系统"] && typeof data.stat["系统"] === "object" && !Array.isArray(data.stat["系统"]) ? data.stat["系统"] : {};
+    if (!encounterVip6FromSystem(data.stat["系统"])) {
+      encounterSetStatus(page, "课程表魔改券只有VIP6用户才能购买。");
+      return;
+    }
+    const cost = count * TIMETABLE_MOD_COUPON_PRICE;
+    const current = Math.max(0, Math.floor(Number(data.stat["系统"]["星光点"] ?? 0) || 0));
+    if (current < cost) {
+      encounterSetStatus(page, "星光点不足，课程表魔改券每张" + TIMETABLE_MOD_COUPON_PRICE + "星光点。");
+      return;
+    }
+    data.stat["系统"]["星光点"] = current - cost;
+    encounterAddInventoryItemDetailed(data.stat, TIMETABLE_MOD_COUPON_ITEM, count, "用于在课程表APP中启用一次魔改课程表编辑。前端扣券后本地保存修改，并同步当天课程表、当天原课程表和当天魔改课程表等只读日程字段。");
+    await globalThis.Mvu.replaceMvuData(data.mvu, data.option);
+    await appendAppOperation({
+      来源: "邂逅",
+      操作: "购买课程表魔改券",
+      不可删除: true,
+      购买数量: count,
+      消耗星光点: cost,
+      获得物品: TIMETABLE_MOD_COUPON_ITEM + " x" + count,
+      前端写入后星光点: current - cost,
+      前端处理: "已由前端扣除星光点，并写入课程表魔改券。",
+      AI执行规范: "邂逅商店购买已由前端写入变量；AI不得再次扣星光点或重复发放课程表魔改券。"
+    });
+    page.dataset.encounterStatus = "已购买 " + count + " 张课程表魔改券。";
+    renderEncounterPage(page);
+  }
+
+  async function encounterShopBuyAccessPass(page, id) {
+    const passId = String(id || "").trim();
+    const itemName = specialLocationPassItemName(passId);
+    const location = SPECIAL_LOCATION_STATIC_ITEMS.find((item) => item.id === passId);
+    if (!itemName) {
+      encounterSetStatus(page, "没有找到对应的准入证。");
+      return;
+    }
+    const data = encounterCurrentMvuData();
+    if (!data) {
+      encounterSetStatus(page, "MVU变量接口未就绪，无法购买。");
+      return;
+    }
+    data.stat["系统"] = data.stat["系统"] && typeof data.stat["系统"] === "object" && !Array.isArray(data.stat["系统"]) ? data.stat["系统"] : {};
+    if (!encounterVip5FromSystem(data.stat["系统"])) {
+      encounterSetStatus(page, "只有VIP5及以上用户有资格购买特殊地点准入证。");
+      return;
+    }
+    if (encounterInventoryItemCount(itemName, data.stat) > 0) {
+      encounterSetStatus(page, "已经持有「" + itemName + "」。");
+      renderEncounterPage(page);
+      return;
+    }
+    const current = Math.max(0, Math.floor(Number(data.stat["系统"]["星光点"] ?? 0) || 0));
+    if (current < SPECIAL_LOCATION_PASS_PRICE) {
+      encounterSetStatus(page, "星光点不足，准入证需要" + SPECIAL_LOCATION_PASS_PRICE + "点。");
+      return;
+    }
+    data.stat["系统"]["星光点"] = current - SPECIAL_LOCATION_PASS_PRICE;
+    encounterAddInventoryItemDetailed(data.stat, itemName, 1, "催眠APP官方援助渠道提供的" + (location?.label || "特殊地点") + "进入资格；不代表瞬移，也不无视门禁时间。");
+    await globalThis.Mvu.replaceMvuData(data.mvu, data.option);
+    await appendAppOperation({
+      来源: "邂逅",
+      操作: "购买特殊地点准入证",
+      不可删除: true,
+      特殊地点ID: passId,
+      特殊地点: location?.label || passId,
+      消耗星光点: SPECIAL_LOCATION_PASS_PRICE,
+      获得物品: itemName + " x1",
+      前端写入后星光点: current - SPECIAL_LOCATION_PASS_PRICE,
+      前端处理: "已由前端扣除星光点，并写入特殊地点准入证。",
+      AI执行规范: "邂逅商店购买已由前端写入变量；AI不得再次扣星光点或重复发放准入证。准入证只是进入资格，不代表瞬移或无视时间和门禁。"
+    });
+    page.dataset.encounterStatus = "已购买「" + itemName + "」。";
     renderEncounterPage(page);
   }
 
@@ -15569,6 +19469,33 @@ button.st-work-notice{cursor:pointer}
     return dataUrl
       ? '<img alt="' + escapeAttr(text) + '" src="' + escapeAttr(dataUrl) + '" loading="lazy" decoding="async">'
       : '<span>' + escapeHtml(text) + '</span>';
+  }
+
+  function encounterRolePreviewImagesHtml(role) {
+    const normalized = encounterNormalizeRole(role || {});
+    const slots = encounterRoleImageSlots(normalized);
+    return '<div class="st-encounter-role-preview-images">' + slots.map((source, index) => (
+      '<div class="st-encounter-role-preview-image">' +
+        (source ? '<img alt="' + escapeAttr((normalized.name || "角色") + " 图片" + (index + 1)) + '" src="' + escapeAttr(source) + '" loading="lazy" decoding="async">' : '<span>图' + (index + 1) + '</span>') +
+      '</div>'
+    )).join("") + '</div>';
+  }
+
+  function encounterRoleImageEditorHtml(role, selectedIndex, single) {
+    const normalized = encounterNormalizeRole(role || {}, selectedIndex);
+    const slots = encounterRoleImageSlots(normalized);
+    const cells = slots.map((source, slot) => (
+      '<article class="st-encounter-role-image-slot">' +
+        '<div class="st-encounter-role-image-slot-preview">' +
+          (source ? '<img alt="' + escapeAttr((normalized.name || "角色") + " 图片" + (slot + 1)) + '" src="' + escapeAttr(source) + '">' : '<span>图片 ' + (slot + 1) + '</span>') +
+        '</div>' +
+        '<div class="st-encounter-role-image-slot-actions">' +
+          '<label><span>' + (source ? "更换" : "选择") + '</span><input type="file" accept="image/*" ' + (single ? "data-encounter-single-role-image" : 'data-encounter-role-image="' + selectedIndex + '"') + ' data-image-slot="' + slot + '" hidden></label>' +
+          '<button type="button" data-encounter-action="clear-role-image" data-image-slot="' + slot + '" data-role-index="' + selectedIndex + '"' + (single ? ' data-single="1"' : "") + (!source ? " disabled" : "") + '>删除</button>' +
+        '</div>' +
+      '</article>'
+    )).join("");
+    return '<div class="st-encounter-role-image-row"><div class="st-encounter-role-image-slots">' + cells + '</div></div>';
   }
 
   function encounterReadRoleFromCard(card, fallbackRole) {
@@ -15604,6 +19531,13 @@ button.st-work-notice{cursor:pointer}
         content: String(content)
       };
     });
+    role.affectionChain = ENCOUNTER_AFFECTION_CHAIN_THRESHOLDS.map((threshold, index) => ({
+      index: index + 1,
+      numeral: ENCOUNTER_EVENT_NUMERALS[index] || String(index + 1),
+      threshold,
+      title: String(card.querySelector("[name='roleAffectionTitle-" + index + "']")?.value || ""),
+      summary: String(card.querySelector("[name='roleAffectionSummary-" + index + "']")?.value || "")
+    }));
     return encounterNormalizeRole(role);
   }
 
@@ -15643,7 +19577,7 @@ button.st-work-notice{cursor:pointer}
     if (!roles.length) return "";
     return '<div class="st-encounter-role-strip">' + roles.map((role) => (
       '<div class="st-encounter-role-chip">' +
-        (role.imageDataUrl ? '<img alt="' + escapeAttr(role.name || "角色") + '" src="' + escapeAttr(role.imageDataUrl) + '" loading="lazy" decoding="async">' : '<span></span>') +
+        (encounterRolePrimaryImage(role) ? '<img alt="' + escapeAttr(role.name || "角色") + '" src="' + escapeAttr(encounterRolePrimaryImage(role)) + '" loading="lazy" decoding="async">' : '<span></span>') +
         '<div><strong>' + escapeHtml(role.name || "未命名") + '</strong><small>' + escapeHtml((role.aliases || role.intro || "角色").split(/[，,、]/)[0]) + '</small></div>' +
       '</div>'
     )).join("") + '</div>';
@@ -15671,9 +19605,12 @@ button.st-work-notice{cursor:pointer}
 	    const roleCount = Array.isArray(pkg.roles) ? pkg.roles.length : 0;
 	    const used = encounterIsPurchased(pkg.id);
 	    const pendingPurchase = encounterHasPendingPurchaseOperation();
-	    const conflict = encounterDuplicatePackageConflict(pkg);
-	    const managed = encounterManagedEnabled("package", pkg.id);
-	    const availability = encounterPackageAvailability(pkg, page);
+		    const conflict = encounterDuplicatePackageConflict(pkg);
+		    const managed = encounterManagedEnabled("package", pkg.id);
+		    const deleteButton = encounterCanDeletePackage(pkg)
+		      ? '<button type="button" class="danger" data-encounter-action="delete-package" data-package-id="' + escapeAttr(pkg.id) + '">删除</button>'
+		      : "";
+		    const availability = encounterPackageAvailability(pkg, page);
 	    const allDuplicated = availability.ready && availability.total > 0 && availability.available <= 0;
 	    const nonRepeatText = availability.ready ? (availability.available + " 非重复") : "检测中";
 	    const status = allDuplicated
@@ -15689,9 +19626,9 @@ button.st-work-notice{cursor:pointer}
 	          '<div class="st-encounter-package-facts"><span>' + roleCount + ' 角色</span><span>' + escapeHtml(nonRepeatText) + '</span><span class="st-encounter-price">' + escapeHtml(status) + '</span></div>' +
 	        '</div>' +
 	      '</button>' +
-	      '<div class="st-encounter-card-manage"><button type="button" data-encounter-action="toggle-worldbook" data-target-type="package" data-target-id="' + escapeAttr(pkg.id) + '">' + (managed ? "管理开" : "管理关") + '</button></div>' +
-	    '</article>';
-	  }
+		      '<div class="st-encounter-card-manage"><button type="button" data-encounter-action="toggle-worldbook" data-target-type="package" data-target-id="' + escapeAttr(pkg.id) + '">' + (managed ? "管理开" : "管理关") + '</button>' + deleteButton + '</div>' +
+		    '</article>';
+		  }
 
 	  function encounterRoleCardHtml(item, page) {
 	    const role = encounterNormalizeRole(item?.role || {});
@@ -15706,7 +19643,7 @@ button.st-work-notice{cursor:pointer}
 	    const priceText = duplicated ? "已存在" : used ? "已使用" : (pendingPurchase ? "本轮已使用" : SCAN_ROLE_COST_STARLIGHT + ' 星光点');
 	    const useButton = '<button type="button" class="primary" data-encounter-action="purchase" data-package-id="' + escapeAttr(pkg.id) + '"' + ((used || pendingPurchase || duplicated) ? " disabled" : "") + '>' + (duplicated ? "已存在" : (pendingPurchase && !used ? "本轮已有" : (packageRole ? "单独使用" : "使用"))) + '</button>';
 	    return '<article class="st-encounter-package st-encounter-role-card-entry' + (used || duplicated ? " is-used" : "") + (duplicated ? " is-conflict" : "") + (pendingPurchase && !used ? " is-pending" : "") + '" data-encounter-role-open-id="' + escapeAttr(item?.id || pkg.id) + '">' +
-	      '<div class="st-encounter-cover">' + encounterCoverHtml(role.imageDataUrl, role.name || "角色") + '</div>' +
+	      '<div class="st-encounter-cover">' + encounterCoverHtml(encounterRolePrimaryImage(role), role.name || "角色") + '</div>' +
 	      '<div class="st-encounter-package-body">' +
 	        '<div class="st-encounter-package-title"><strong>' + escapeHtml(role.name || "未命名角色") + '</strong></div>' +
         '<div class="st-encounter-package-facts"><span>' + escapeHtml(item?.sourceName || "角色") + '</span>' + (firstAlias ? '<span>' + escapeHtml(firstAlias) + '</span>' : '') + '<span class="st-encounter-price">' + priceText + '</span></div>' +
@@ -15742,7 +19679,7 @@ button.st-work-notice{cursor:pointer}
     };
     const packages = encounterReadPackages().filter(packageMatches);
     const allRoleItems = encounterRoleLibraryItems();
-    const roleItems = allRoleItems.filter(roleMatches);
+    const roleItems = encounterSortRoleItemsForBrowse(allRoleItems.filter(roleMatches));
     const rolePageTotal = Math.max(1, Math.ceil(roleItems.length / ENCOUNTER_ROLE_PAGE_SIZE));
     const rolePage = Math.max(1, Math.min(rolePageTotal, Math.floor(Number(page.dataset.encounterRolePage || 1) || 1)));
     page.dataset.encounterRolePage = String(rolePage);
@@ -15783,7 +19720,7 @@ button.st-work-notice{cursor:pointer}
         '<button type="button" class="' + (section === "roles" ? "active" : "") + '" data-encounter-action="browse-section" data-section="roles">角色</button>' +
       '</nav>' +
       '<section class="st-encounter-browse-tools">' +
-        '<input type="search" data-encounter-search value="' + escapeAttr(query) + '" placeholder="搜索角色包 / 角色">' +
+        '<input type="text" data-encounter-search value="' + escapeAttr(query) + '" placeholder="搜索角色包 / 角色" autocomplete="off" autocapitalize="off" spellcheck="false">' +
         (section === "roles" ? '<select data-encounter-package-filter aria-label="筛选角色来源">' + packageOptions + '</select>' : '<span>筛选角色包</span>') +
       '</section>' +
 	      randomHtml +
@@ -15805,9 +19742,12 @@ button.st-work-notice{cursor:pointer}
 	    const price = encounterPackagePrice(pkg);
 	    const used = encounterIsPurchased(pkg.id);
 	    const pendingPurchase = encounterHasPendingPurchaseOperation();
-	    const conflict = encounterDuplicatePackageConflict(pkg);
-	    const managed = encounterManagedEnabled("package", pkg.id);
-		    const availability = encounterPackageAvailability(pkg, page);
+		    const conflict = encounterDuplicatePackageConflict(pkg);
+		    const managed = encounterManagedEnabled("package", pkg.id);
+		    const deleteAction = encounterCanDeletePackage(pkg)
+		      ? '<button type="button" class="st-encounter-button danger" data-encounter-action="delete-package" data-package-id="' + escapeAttr(pkg.id) + '">删除角色包</button>'
+		      : "";
+			    const availability = encounterPackageAvailability(pkg, page);
 	    const allDuplicated = availability.ready && availability.total > 0 && availability.available <= 0;
 	    const purchaseDisabled = used || pendingPurchase || Boolean(conflict) || allDuplicated;
 	    const combinedPrompt = encounterPackageCombinedPrompt(pkg);
@@ -15826,10 +19766,11 @@ button.st-work-notice{cursor:pointer}
 	      (!allDuplicated && availability.duplicateNames.length ? '<div class="st-encounter-used-note">已存在角色会自动跳过：' + escapeHtml(availability.duplicateNames.join("、")) + '</div>' : '') +
 	      (conflict ? '<div class="st-encounter-used-note is-warning">这个角色包与「' + escapeHtml(conflict.name) + '」存在重复角色；对方已' + (conflict.pending ? "在本轮暂存区" : "使用") + '，因此本包禁止购买。</div>' : '') +
       (!used && pendingPurchase ? '<div class="st-encounter-used-note">本轮已经有一个角色或角色包在暂存区。确认写入前不能再购买其他内容。</div>' : '') +
-      '<div class="st-encounter-actions">' +
-        '<button type="button" class="st-encounter-button" data-encounter-action="edit-package" data-package-id="' + escapeAttr(pkg.id) + '">在此包上定制</button>' +
-        '<button type="button" class="st-encounter-button primary" data-encounter-action="purchase" data-package-id="' + escapeAttr(pkg.id) + '"' + (purchaseDisabled ? " disabled" : "") + '>' + (pendingPurchase && !used ? "本轮已有购买" : "购买 / 使用") + '</button>' +
-      '</div>' +
+	      '<div class="st-encounter-actions">' +
+	        '<button type="button" class="st-encounter-button" data-encounter-action="edit-package" data-package-id="' + escapeAttr(pkg.id) + '">在此包上定制</button>' +
+	        '<button type="button" class="st-encounter-button primary" data-encounter-action="purchase" data-package-id="' + escapeAttr(pkg.id) + '"' + (purchaseDisabled ? " disabled" : "") + '>' + (pendingPurchase && !used ? "本轮已有购买" : "购买 / 使用") + '</button>' +
+	        deleteAction +
+	      '</div>' +
       '<div class="st-encounter-actions is-single"><button type="button" class="st-encounter-button" data-encounter-action="toggle-worldbook" data-target-type="package" data-target-id="' + escapeAttr(pkg.id) + '">' + (managed ? "管理：开启世界书条目" : "管理：已禁用世界书条目") + '</button></div>' +
       '<p class="st-encounter-note">购买会先警告确认；确认后前端直接扣星光点、创建初始角色变量、缓存图片，并把条目写入当前对话独有的 Chat Lorebook。</p>' +
     '</section>';
@@ -15872,7 +19813,7 @@ button.st-work-notice{cursor:pointer}
       '<div class="st-encounter-name-list">' + names + '</div>' +
       (hiddenRoleCount ? '<p class="st-encounter-note">另有 ' + hiddenRoleCount + ' 名角色会在购买 / 使用时一并导入。</p>' : '') +
       '<div class="st-encounter-role-preview">' +
-        '<div class="st-encounter-role-preview-image">' + encounterCoverHtml(selected.imageDataUrl, selected.name || "角色图") + '</div>' +
+        encounterRolePreviewImagesHtml(selected) +
         '<div class="st-encounter-role-preview-body">' +
           '<strong>' + escapeHtml(selected.name || ("角色 " + (selectedIndex + 1))) + '</strong>' +
           '<small>' + escapeHtml(selected.aliases || "无别名") + '</small>' +
@@ -15921,7 +19862,8 @@ button.st-work-notice{cursor:pointer}
 
   function encounterRoleContentSection(page) {
     const value = String(page?.dataset?.encounterRoleContentSection || "persona");
-    return value === "initial" ? "initial" : "persona";
+    if (value === "initial" || value === "affection") return value;
+    return "persona";
   }
 
   function encounterRoleSelectHtml(draft, selectedIndex) {
@@ -15941,7 +19883,7 @@ button.st-work-notice{cursor:pointer}
       '</div>' +
       '<label class="st-encounter-field"><span>角色包名字</span><input name="name" value="' + escapeAttr(draft.name) + '" placeholder="例如：斋明学园扩展角色包"></label>' +
       '<label class="st-encounter-field"><span>介绍</span><textarea name="intro" placeholder="用户在偶遇页会看到的角色包简介">' + escapeHtml(draft.intro) + '</textarea></label>' +
-      '<label class="st-encounter-field"><span>包级串联补充</span><textarea name="encounterPrompt" placeholder="可留空；实际提示词会由角色页每个角色的出场提示词组合，包级内容只作为整体顺序或连接补充">' + escapeHtml(draft.encounterPrompt) + '</textarea></label>' +
+      '<label class="st-encounter-field"><span>包级邂逅开场</span><textarea name="encounterPrompt" placeholder="多角色包会只使用这里作为整体串联开场；单独角色才使用角色自己的出场提示词。">' + escapeHtml(draft.encounterPrompt) + '</textarea></label>' +
       '<label class="st-encounter-field"><span>价格（星光点）</span><input name="price" type="number" min="0" step="1" value="' + escapeAttr(draft.price) + '" placeholder="默认人数 × 4"></label>' +
       '<div class="st-encounter-actions">' +
         '<button type="button" class="st-encounter-button" data-encounter-action="save-library">保存到偶遇</button>' +
@@ -15982,6 +19924,14 @@ button.st-work-notice{cursor:pointer}
         value: () => field.content
       });
     });
+    encounterRoleAffectionChain(normalized).forEach((item, index) => {
+      specs.push({
+        name: "roleAffectionSummary-" + index,
+        label: "事件" + item.numeral,
+        required: false,
+        value: () => item.summary || item.title
+      });
+    });
     return specs;
   }
 
@@ -16016,16 +19966,33 @@ button.st-work-notice{cursor:pointer}
     '</section>';
   }
 
+	  function encounterRoleAffectionChainHtml(role) {
+	    const chain = encounterRoleAffectionChain(role);
+	    return '<section class="st-encounter-affection-chain" aria-label="好感链五段">' +
+	      '<div class="st-encounter-affection-head">' +
+	        '<strong>好感链</strong>' +
+	        '<span>留空使用通用链，不新建专属世界书</span>' +
+	      '</div>' +
+	      chain.map((item, index) => (
+	        '<article class="st-encounter-affection-card">' +
+	          '<div class="st-encounter-affection-mark"><b>' + escapeHtml(item.numeral) + '</b><small>好感 ' + item.threshold + '</small></div>' +
+	          '<div class="st-encounter-affection-fields">' +
+	            '<label class="st-encounter-field"><span>短标题</span><input name="roleAffectionTitle-' + index + '" value="' + escapeAttr(item.title) + '" placeholder="' + escapeAttr("通用：" + (ENCOUNTER_GENERIC_AFFECTION_CHAIN[index]?.title || "按当前关系生成")) + '"></label>' +
+	            '<label class="st-encounter-field"><span>事件梗概</span><textarea name="roleAffectionSummary-' + index + '" placeholder="' + escapeAttr("通用：" + (ENCOUNTER_GENERIC_AFFECTION_CHAIN[index]?.summary || "由AI按当前角色状态生成。")) + '">' + escapeHtml(item.summary) + '</textarea></label>' +
+	          '</div>' +
+	        '</article>'
+	      )).join("") +
+	      '<p class="st-encounter-note">全部留空时只使用前端通用好感链，不生成该角色好感链世界书条目；填写任意事件名或梗概时，才写入专属好感链世界书。</p>' +
+	    '</section>';
+	  }
+
   function renderEncounterRoleFormCard(role, selectedIndex, options = {}) {
     const single = Boolean(options.single);
-    const contentSection = options.contentSection === "initial" ? "initial" : "persona";
+    const contentSection = options.contentSection === "initial" || options.contentSection === "affection" ? options.contentSection : "persona";
     const normalized = encounterNormalizeRole(role || {}, selectedIndex);
     return '<article class="st-encounter-role-card" data-encounter-role-card data-role-index="' + selectedIndex + '">' +
       encounterRoleFieldDotsHtml(normalized) +
-      '<div class="st-encounter-role-image-row">' +
-        '<div class="st-encounter-role-image">' + encounterCoverHtml(normalized.imageDataUrl, "角色图") + '</div>' +
-        '<label class="st-encounter-field"><span>角色图片</span><input type="file" accept="image/*" ' + (single ? "data-encounter-single-role-image" : 'data-encounter-role-image="' + selectedIndex + '"') + '></label>' +
-      '</div>' +
+      encounterRoleImageEditorHtml(normalized, selectedIndex, single) +
       '<div class="st-encounter-grid2">' +
         '<label class="st-encounter-field"><span>角色名</span><input name="roleName" value="' + escapeAttr(normalized.name) + '" placeholder="角色名"></label>' +
         '<label class="st-encounter-field"><span>别名 / 关键词</span><input name="roleAliases" value="' + escapeAttr(normalized.aliases) + '" placeholder="逗号分隔"></label>' +
@@ -16034,10 +20001,14 @@ button.st-work-notice{cursor:pointer}
       '<label class="st-encounter-field"><span>角色出场提示词</span><textarea name="roleEncounterPrompt" placeholder="购买/使用后交给AI的这个角色单独登场方式、触发场景或剧情钩子">' + escapeHtml(normalized.encounterPrompt) + '</textarea></label>' +
       '<nav class="st-encounter-role-content-tabs">' +
         '<button type="button" class="' + (contentSection === "persona" ? "active" : "") + '" data-encounter-action="role-content-section" data-section="persona">人设世界书</button>' +
+        '<button type="button" class="' + (contentSection === "affection" ? "active" : "") + '" data-encounter-action="role-content-section" data-section="affection">好感链</button>' +
         '<button type="button" class="' + (contentSection === "initial" ? "active" : "") + '" data-encounter-action="role-content-section" data-section="initial">初始变量</button>' +
       '</nav>' +
       '<section class="st-encounter-role-pane ' + (contentSection === "initial" ? "active" : "") + '" data-role-pane="initial">' +
         '<label class="st-encounter-field"><span>初始变量（JSON）</span><textarea name="roleInitialVariables" placeholder="购买/使用时写入 stat_data.角色.角色名 的初始变量">' + escapeHtml(encounterInitialVariablesText(normalized)) + '</textarea></label>' +
+      '</section>' +
+      '<section class="st-encounter-role-pane ' + (contentSection === "affection" ? "active" : "") + '" data-role-pane="affection">' +
+        encounterRoleAffectionChainHtml(normalized) +
       '</section>' +
       '<section class="st-encounter-role-pane ' + (contentSection === "persona" ? "active" : "") + '" data-role-pane="persona">' +
         '<div class="st-encounter-grid2">' +
@@ -16076,7 +20047,7 @@ button.st-work-notice{cursor:pointer}
       '</div>' +
       '<div class="st-encounter-actions is-single"><button type="button" class="st-encounter-button primary" data-encounter-action="save-library">保存到偶遇</button></div>' +
       '<input type="file" accept=".json,application/json" data-encounter-import-role-json hidden>' +
-      '<p class="st-encounter-note">人物变量 entry 会按角色名自动生成固定格式；初始变量会在购买/使用时写入当前楼层变量；人设 entry 会由 title/gender 等固定字段重新拼成固定格式，并统一写入当前对话 Chat Lorebook。角色JSON导入/导出不覆盖角色图片。</p>' +
+      '<p class="st-encounter-note">人物变量 entry 会按角色名自动生成固定格式；初始变量会在购买/使用时写入当前楼层变量；人设 entry 会由 title/gender 等固定字段重新拼成固定格式，并统一写入当前对话 Chat Lorebook。角色JSON导入/导出不覆盖4张角色图片。</p>' +
     '</section>';
   }
 
@@ -16089,13 +20060,14 @@ button.st-work-notice{cursor:pointer}
     const purchaseDisabled = !hasContent || used || pendingPurchase;
     return '<section class="st-lite-card st-encounter-form" data-encounter-single-role-form>' +
       '<div class="st-encounter-toolbar"><strong>角色定制</strong><span>草稿自动保存</span></div>' +
-      '<p class="st-encounter-note">单独角色会保存到角色库；偶遇页的角色包内角色只由前端临时拆分，不会重复存储。</p>' +
+      '<p class="st-encounter-note">保存到偶遇会生成一个只有此角色的角色包；保存到角色库则只进入角色列表，方便以后复用。</p>' +
       renderEncounterRoleFormCard(role, 0, { single: true, contentSection: encounterRoleContentSection(page) }) +
       '<div class="st-encounter-actions">' +
         '<button type="button" class="st-encounter-button" data-encounter-action="import-role-json">导入角色JSON</button>' +
         '<button type="button" class="st-encounter-button" data-encounter-action="export-role-json">导出角色JSON</button>' +
       '</div>' +
       '<div class="st-encounter-actions">' +
+        '<button type="button" class="st-encounter-button primary" data-encounter-action="save-single-role-package">保存到偶遇</button>' +
         '<button type="button" class="st-encounter-button" data-encounter-action="save-standalone-role">保存到角色库</button>' +
         '<button type="button" class="st-encounter-button" data-encounter-action="clear-single-role">清空草稿</button>' +
       '</div>' +
@@ -16133,15 +20105,28 @@ button.st-work-notice{cursor:pointer}
     const exchangeDisabled = exchangeMax <= 0;
     const ruleCouponMax = Math.max(0, Math.floor(state.starlight / ENCOUNTER_SHOP_RULE_COUPON_PRICE));
     const ruleCouponDisabled = !state.vip6 || ruleCouponMax <= 0;
+    const timetableCouponMax = Math.max(0, Math.floor(state.starlight / TIMETABLE_MOD_COUPON_PRICE));
+    const timetableCouponDisabled = !state.vip6 || timetableCouponMax <= 0;
+    const passRows = Object.entries(SPECIAL_LOCATION_PASS_ITEM_NAMES).map(([id, itemName]) => {
+      const owned = Math.max(0, Math.floor(Number(state.accessPasses?.[id] || 0) || 0));
+      const location = SPECIAL_LOCATION_STATIC_ITEMS.find((item) => item.id === id);
+      const disabled = owned > 0 || state.starlight < SPECIAL_LOCATION_PASS_PRICE;
+      return '<div class="st-encounter-shop-pass">' +
+        '<div><strong>' + escapeHtml(itemName) + '</strong><small>' + escapeHtml(location?.label || "特殊地点") + ' · ' + SPECIAL_LOCATION_PASS_PRICE + '星光点</small></div>' +
+        '<span>' + (owned > 0 ? "持有" + owned : "未持有") + '</span>' +
+        '<button type="button" class="st-encounter-button primary" data-encounter-action="shop-buy-access-pass" data-special-location-pass="' + escapeAttr(id) + '"' + (disabled ? " disabled" : "") + '>' + (owned > 0 ? "已拥有" : (state.starlight < SPECIAL_LOCATION_PASS_PRICE ? "星光点不足" : "购买")) + '</button>' +
+      '</div>';
+    }).join("");
     return '<section class="st-encounter-shop">' +
       '<article class="st-encounter-shop-card">' +
         '<h3>邂逅商店</h3>' +
-        '<p>APP开放的特权商店。VIP5可进入并使用“' + escapeHtml(ENCOUNTER_SHOP_STARLIGHT_VOUCHER) + '”兑换星光点；校规修改券仍仅限VIP6。</p>' +
+        '<p>APP开放的特权商店。VIP5可进入并使用“' + escapeHtml(ENCOUNTER_SHOP_STARLIGHT_VOUCHER) + '”兑换星光点，也可购买特殊地点准入证；校规修改券和课程表魔改券仅限VIP6。</p>' +
         '<div class="st-encounter-shop-meta">' +
           '<span><strong>' + state.money.toLocaleString() + '</strong>零花钱</span>' +
           '<span><strong>' + state.starlight + '</strong>星光点</span>' +
           '<span><strong>' + state.starlightVoucher + '</strong>兑换券</span>' +
           '<span><strong>' + state.ruleCoupon + '</strong>校规券</span>' +
+          '<span><strong>' + state.timetableCoupon + '</strong>课表券</span>' +
         '</div>' +
       '</article>' +
       '<article class="st-encounter-shop-card">' +
@@ -16160,10 +20145,27 @@ button.st-work-notice{cursor:pointer}
           '<button type="button" class="st-encounter-button primary" data-encounter-action="shop-buy-rule-coupon"' + (ruleCouponDisabled ? " disabled" : "") + '>' + (!state.vip6 ? "需要VIP6" : (ruleCouponMax <= 0 ? "星光点不足" : "购买")) + '</button>' +
         '</div>' +
       '</article>' +
+      '<article class="st-encounter-shop-card">' +
+        '<h3>课程表魔改券</h3>' +
+        '<p>VIP6可用100星光点购买1张课程表魔改券；课程表APP进入修改模式会消耗1张，并把本聊天的魔改课程表保存到本地。</p>' +
+        '<div class="st-encounter-shop-row">' +
+          '<input type="number" min="1" step="1" max="' + (state.vip6 ? timetableCouponMax : 0) + '" value="' + (state.vip6 && timetableCouponMax ? 1 : 0) + '" data-encounter-shop-timetable-coupon-qty aria-label="购买课程表魔改券数量"' + (state.vip6 ? "" : " disabled") + '>' +
+          '<button type="button" class="st-encounter-button primary" data-encounter-action="shop-buy-timetable-coupon"' + (timetableCouponDisabled ? " disabled" : "") + '>' + (!state.vip6 ? "需要VIP6" : (timetableCouponMax <= 0 ? "星光点不足" : "购买")) + '</button>' +
+        '</div>' +
+      '</article>' +
+      '<article class="st-encounter-shop-card">' +
+        '<h3>特殊地点准入证</h3>' +
+        '<p>VIP5可用20星光点购买校内特殊地点准入证。准入证只是进入资格，不代表瞬移或无视门禁时间。</p>' +
+        '<div class="st-encounter-shop-pass-list">' + passRows + '</div>' +
+      '</article>' +
     '</section>';
   }
 
-  function renderEncounterPage(page) {
+  function renderEncounterPage(page, options = {}) {
+    encounterHydrateCurrentScopeStorage(page);
+    const preserveScroll = Boolean(options?.preserveScroll);
+    const previousBody = page.querySelector(".st-lite-body");
+    const previousScrollTop = preserveScroll ? Math.max(0, Number(previousBody?.scrollTop || 0) || 0) : 0;
     const tab = page.dataset.encounterTab || "browse";
     const detailOpen = tab === "browse" && page.dataset.encounterView === "detail";
     const content = tab === "shop" ? renderEncounterShop(page) : tab === "edit" ? renderEncounterEdit(page) : tab === "role" ? renderEncounterSingleRoleEdit(page) : (detailOpen ? renderEncounterDetail(page) : renderEncounterBrowse(page));
@@ -16182,15 +20184,73 @@ button.st-work-notice{cursor:pointer}
       '</main>';
     bindLiteHeader(page, () => renderEncounterPage(page));
     bindEncounterPage(page);
+    if (preserveScroll) {
+      const nextBody = page.querySelector(".st-lite-body");
+      if (nextBody) {
+        nextBody.scrollTop = previousScrollTop;
+        requestAnimationFrame(() => { nextBody.scrollTop = previousScrollTop; });
+      }
+    }
   }
 
-  function encounterFileAsDataUrl(file) {
+  function encounterRawFileAsDataUrl(file) {
+	    return new Promise((resolve, reject) => {
+	      const reader = new FileReader();
+	      reader.onload = () => resolve(String(reader.result || ""));
+	      reader.onerror = () => reject(reader.error || new Error("读取文件失败"));
+	      reader.readAsDataURL(file);
+	    });
+	  }
+
+  function encounterLoadImageElement(dataUrl) {
     return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result || ""));
-      reader.onerror = () => reject(reader.error || new Error("读取文件失败"));
-      reader.readAsDataURL(file);
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error("图片解码失败"));
+      image.src = dataUrl;
     });
+  }
+
+  async function encounterResizeImageDataUrl(dataUrl, maxSide = 960) {
+    const image = await encounterLoadImageElement(dataUrl);
+    const width = Number(image.naturalWidth || image.width || 0);
+    const height = Number(image.naturalHeight || image.height || 0);
+    if (!width || !height) return dataUrl;
+    const scale = Math.min(1, maxSide / Math.max(width, height));
+    const nextWidth = Math.max(1, Math.round(width * scale));
+    const nextHeight = Math.max(1, Math.round(height * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = nextWidth;
+    canvas.height = nextHeight;
+    const context = canvas.getContext("2d");
+    if (!context) return dataUrl;
+    context.fillStyle = "#fff";
+    context.fillRect(0, 0, nextWidth, nextHeight);
+    context.drawImage(image, 0, 0, nextWidth, nextHeight);
+    const candidates = [
+      canvas.toDataURL("image/webp", 0.82),
+      canvas.toDataURL("image/jpeg", 0.84)
+    ].filter((item) => new RegExp("^data:image/(?:webp|jpeg);", "i").test(item));
+    candidates.sort((a, b) => a.length - b.length);
+    return candidates[0] && candidates[0].length < dataUrl.length ? candidates[0] : dataUrl;
+  }
+
+  async function encounterFileAsDataUrl(file) {
+    const dataUrl = await encounterRawFileAsDataUrl(file);
+    const mime = String(file && file.type || "");
+    if (!new RegExp("^image/", "i").test(mime) || new RegExp("^image/(?:gif|svg[+]xml)$", "i").test(mime)) return dataUrl;
+    if (dataUrl.length <= ENCOUNTER_IMAGE_DATA_URL_SOFT_LIMIT) return dataUrl;
+    let best = dataUrl;
+    try {
+      for (const maxSide of ENCOUNTER_IMAGE_RESIZE_STEPS) {
+        const resized = await encounterResizeImageDataUrl(best, maxSide);
+        if (resized.length < best.length) best = resized;
+        if (best.length <= ENCOUNTER_IMAGE_DATA_URL_SOFT_LIMIT) break;
+      }
+    } catch (error) {
+      console.warn("[邂逅] 图片压缩失败，使用原图", error);
+    }
+    return best;
   }
 
   let ENCOUNTER_CRC_TABLE = null;
@@ -16311,14 +20371,23 @@ button.st-work-notice{cursor:pointer}
   }
 
   function encounterDataUrlToBytes(dataUrl) {
-    const text = String(dataUrl || "");
-    const comma = text.indexOf(",");
-    if (comma < 0 || !/^data:/i.test(text)) return new Uint8Array();
-    const body = text.slice(comma + 1);
-    const binary = atob(body);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
-    return bytes;
+    const text = String(dataUrl || "").trim();
+    const match = /^data:([^,]*),(.*)$/i.exec(text);
+    if (!match) return new Uint8Array();
+    const meta = match[1] || "";
+    const body = match[2] || "";
+    try {
+      if (/;base64/i.test(meta)) {
+        const binary = atob(body.replace(/\s+/g, ""));
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+        return bytes;
+      }
+      return new TextEncoder().encode(decodeURIComponent(body.split("+").join("%20")));
+    } catch (error) {
+      console.warn("[邂逅] 图片 data URL 解码失败", error);
+      return new Uint8Array();
+    }
   }
 
   function encounterMimeFromDataUrl(dataUrl) {
@@ -16351,40 +20420,94 @@ button.st-work-notice{cursor:pointer}
     return "data:" + (mime || "application/octet-stream") + ";base64," + btoa(binary);
   }
 
+  function encounterExportImageUrl(source) {
+    const text = String(source || "").trim();
+    if (!text || /^data:/i.test(text)) return text;
+    if (/^(?:https?:|blob:)/i.test(text)) return text;
+    if (new RegExp("^/(?:public/frontends/hypnosis-app/assets|dist/催眠APP前端/assets)/").test(text)) return text;
+    const normalized = text
+      .split("\\\\").join("/")
+      .replace(new RegExp("^[.]/"), "")
+      .replace(new RegExp("^/+"), "");
+    if (normalized.startsWith("public/frontends/hypnosis-app/assets/")) return "/" + normalized;
+    if (normalized.startsWith("dist/催眠APP前端/assets/")) return "/" + normalized;
+    if (normalized.startsWith("assets/")) return stAssetUrl(normalized.slice("assets/".length));
+    return stAssetUrl(normalized);
+  }
+
+  async function encounterExportImageFile(source) {
+    const text = String(source || "").trim();
+    if (!text) return null;
+    if (/^data:/i.test(text)) {
+      const bytes = encounterDataUrlToBytes(text);
+      if (!bytes.length) return null;
+      return { bytes, mime: encounterMimeFromDataUrl(text) };
+    }
+    const url = encounterExportImageUrl(text);
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error("HTTP " + response.status);
+      const blob = await response.blob();
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      if (!bytes.length) return null;
+      return { bytes, mime: blob.type || encounterMimeForName(url) };
+    } catch (error) {
+      console.warn("[邂逅] 导出图片资源失败", text, error);
+      return null;
+    }
+  }
+
   function encounterSafeName(name, fallback) {
     const text = String(name || fallback || "item").trim().replace(/[\\/:*?"<>|]+/g, "-").replace(/\\s+/g, "-");
     return text || String(fallback || "item");
   }
 
-	  function encounterPackageToZipBlob(pkg) {
-	    const normalized = encounterNormalizePackage(pkg);
-	    const manifest = encounterClone(normalized) || encounterNormalizePackage(normalized);
-	    const files = [];
+	  async function encounterPackageToZipBlob(pkg) {
+		    const normalized = encounterNormalizePackage(pkg);
+		    const manifest = encounterClone(normalized) || encounterNormalizePackage(normalized);
+		    const files = [];
     if (normalized.coverDataUrl) {
-      const mime = encounterMimeFromDataUrl(normalized.coverDataUrl);
-      const ext = encounterExtForMime(mime);
-      manifest.cover = "cover." + ext;
+      const imageFile = await encounterExportImageFile(normalized.coverDataUrl);
+      if (imageFile) {
+        const ext = encounterExtForMime(imageFile.mime);
+        manifest.cover = "cover." + ext;
+        files.push({ name: manifest.cover, bytes: imageFile.bytes });
+      }
       delete manifest.coverDataUrl;
-      files.push({ name: manifest.cover, bytes: encounterDataUrlToBytes(normalized.coverDataUrl) });
     }
-	    manifest.roles = normalized.roles.map((role, index) => {
-	      const normalizedRole = encounterNormalizeRole(role, index);
-	      const next = { ...normalizedRole };
-	      delete next.variableEntry;
+		    manifest.roles = [];
+    for (let index = 0; index < normalized.roles.length; index += 1) {
+      const role = normalized.roles[index];
+		      const normalizedRole = encounterNormalizeRole(role, index);
+		      const next = { ...normalizedRole };
+		      delete next.variableEntry;
 	      const personaEntry = encounterPersonaWorldbookEntry(normalizedRole, normalized.name || "角色包");
 	      if (personaEntry) {
 	        next.personaEntry = personaEntry;
 	        next.personaContent = personaEntry.content;
 	      }
-	      if (normalizedRole.imageDataUrl) {
-	        const mime = encounterMimeFromDataUrl(normalizedRole.imageDataUrl);
-	        const ext = encounterExtForMime(mime);
-	        next.image = "roles/" + String(index + 1).padStart(2, "0") + "-" + encounterSafeName(normalizedRole.name, "role") + "." + ext;
-	        files.push({ name: next.image, bytes: encounterDataUrlToBytes(normalizedRole.imageDataUrl) });
-	      }
-	      delete next.imageDataUrl;
-	      return next;
-	    });
+		      const imageSlots = encounterRoleImageSlots(normalizedRole);
+		      const exportedSlots = Array.from({ length: ENCOUNTER_ROLE_IMAGE_SLOT_COUNT }, () => "");
+		      for (let slot = 0; slot < imageSlots.length; slot += 1) {
+		        const source = imageSlots[slot];
+		        if (!source) continue;
+		        const imageFile = await encounterExportImageFile(source);
+		        if (imageFile) {
+		          const ext = encounterExtForMime(imageFile.mime);
+		          const imagePath = "roles/" + String(index + 1).padStart(2, "0") + "-" + encounterSafeName(normalizedRole.name, "role") + "-" + String(slot + 1) + "." + ext;
+		          exportedSlots[slot] = imagePath;
+		          files.push({ name: imagePath, bytes: imageFile.bytes });
+		        } else if (!/^data:/i.test(source)) {
+		          exportedSlots[slot] = source;
+		        }
+		      }
+		      if (exportedSlots.some(Boolean)) {
+		        next.images = exportedSlots;
+		        next.image = exportedSlots.find(Boolean) || "";
+		      }
+		      delete next.imageDataUrl;
+		      manifest.roles.push(next);
+    }
     manifest.format = ENCOUNTER_PACKAGE_FORMAT;
     manifest.version = 1;
     const json = JSON.stringify(manifest, null, 2);
@@ -16396,6 +20519,7 @@ button.st-work-notice{cursor:pointer}
 	    const normalized = encounterNormalizeRole(role || {});
 	    const exported = { ...normalized };
 	    delete exported.imageDataUrl;
+	    delete exported.images;
 	    delete exported.variableEntry;
 	    const personaEntry = encounterPersonaWorldbookEntry(normalized, packageName || "角色包");
 	    if (personaEntry) {
@@ -16473,9 +20597,20 @@ button.st-work-notice{cursor:pointer}
     if (coverBytes) normalized.coverDataUrl = encounterBytesToDataUrl(coverBytes, encounterMimeForName(coverName));
     normalized.roles = normalized.roles.map((role, index) => {
       const sourceRole = Array.isArray(manifest.roles) ? manifest.roles[index] : {};
-      const imageName = sourceRole?.image || sourceRole?.imagePath || sourceRole?.["图片文件"];
-      const imageBytes = asset(imageName);
-      if (imageBytes) role.imageDataUrl = encounterBytesToDataUrl(imageBytes, encounterMimeForName(imageName));
+      const sourceSlots = encounterNormalizeRoleImageSlots({
+        images: Array.isArray(sourceRole?.images) ? sourceRole.images : null,
+        imageDataUrls: Array.isArray(sourceRole?.imageDataUrls) ? sourceRole.imageDataUrls : null,
+        imageDataUrl: sourceRole?.imageDataUrl,
+        image: sourceRole?.image || sourceRole?.imagePath || sourceRole?.["图片文件"]
+      });
+      const nextSlots = sourceSlots.map((imageName) => {
+        if (!imageName) return "";
+        const imageBytes = asset(imageName);
+        if (imageBytes) return encounterBytesToDataUrl(imageBytes, encounterMimeForName(imageName));
+        return encounterRoleImageText(imageName);
+      });
+      role.images = encounterNormalizeRoleImageSlots({ images: nextSlots });
+      role.imageDataUrl = role.images.find(Boolean) || "";
       return role;
     });
     return normalized;
@@ -16496,9 +20631,12 @@ button.st-work-notice{cursor:pointer}
     const cached = [];
     for (const role of pkg.roles || []) {
       const name = String(role.name || "").trim();
-      if (!name || !role.imageDataUrl) continue;
+      const slots = encounterRoleImageSlots(role);
+      const firstIndex = slots.findIndex(Boolean);
+      if (!name || firstIndex < 0) continue;
       try {
-        profileSaveLocalPhoto(name, role.imageDataUrl);
+        profileSaveLocalPhoto(name, slots[firstIndex]);
+        profileSaveLocalPhotoSlots(name, slots, firstIndex);
         cached.push(name);
       } catch {}
     }
@@ -16552,16 +20690,19 @@ button.st-work-notice{cursor:pointer}
 
   function encounterRoleFromJson(parsed, currentRole) {
     const current = encounterNormalizeRole(currentRole || {});
+    const currentImageSlots = encounterRoleImageSlots(current);
+    const currentPrimaryImage = currentImageSlots.find(Boolean) || "";
     const picked = encounterPickRoleJsonSource(parsed, current);
     const source = picked.source && typeof picked.source === "object" && !Array.isArray(picked.source) ? picked.source : {};
     const direct = encounterNormalizeRole({
       ...source,
       name: source.name || source["角色名"] || picked.name || current.name,
-	      imageDataUrl: current.imageDataUrl
+	      imageDataUrl: currentPrimaryImage,
+	      images: currentImageSlots
 	    });
 	    const hasDirect = [direct.name, direct.aliases, direct.intro, direct.encounterPrompt, direct.variables, direct.initialVariables].some((value) => String(value || "").trim()) || encounterHasPersonaContent(direct);
 	    if (hasDirect && (direct.variables || direct.initialVariables || direct.intro || direct.encounterPrompt || direct.aliases || encounterHasPersonaContent(direct) || picked.name)) {
-	      return { ...current, ...direct, imageDataUrl: current.imageDataUrl };
+	      return { ...current, ...direct, imageDataUrl: currentPrimaryImage, images: currentImageSlots };
 	    }
     const entries = encounterWorldbookEntriesFromJson(parsed);
     const roleName = String(current.name || picked.name || "").trim();
@@ -16727,6 +20868,343 @@ button.st-work-notice{cursor:pointer}
 	    return true;
 	  }
 
+  const ROLE_EVENT_HINT_CONFIG = [
+    {
+      role: "西园寺爱丽莎",
+      valueKey: "好感度",
+      thresholds: [
+        { value: 40, bit: 0, label: "40 聊动漫" },
+        { value: 70, bit: 1, label: "70 漫展邀请" },
+        { value: 100, bit: 2, label: "100 巧克力/准入证" },
+        { value: 140, bit: 3, label: "140 示爱" },
+        { value: 200, bit: 4, label: "200 公开恋情" }
+      ]
+    }
+  ];
+
+  function normalizedRoleEventRecord(value) {
+    const text = String(value ?? "").trim();
+    return /^[01]{5}$/.test(text) ? text : "00000";
+  }
+
+  const PROFILE_EVENT_MEMORY_STORAGE_PREFIX = "hypnoos.profile.eventMemories.v1:";
+  const PROFILE_EVENT_MEMORY_BLOCK_RE = /<人物档案事件记录>([\\s\\S]*?)<\\/人物档案事件记录>/g;
+
+  function profileEventMemoryScopeText(value) {
+    const text = String(value ?? "").trim();
+    if (!text) return "";
+    try {
+      return encodeURIComponent(text).slice(0, 220);
+    } catch {
+      return text.slice(0, 220);
+    }
+  }
+
+  function profileEventMemoryStorageKey() {
+    try {
+      const scope = profileEventMemoryScopeText(window.__ST_HYPNOOS_CHAT_STORAGE_SCOPE__?.());
+      if (scope) return PROFILE_EVENT_MEMORY_STORAGE_PREFIX + scope;
+    } catch {}
+    try {
+      const chatId = window.SillyTavern?.getCurrentChatId?.();
+      const scope = profileEventMemoryScopeText(chatId);
+      if (scope) return PROFILE_EVENT_MEMORY_STORAGE_PREFIX + "chat:" + scope;
+    } catch {}
+    try {
+      const context = window.SillyTavern?.getContext?.() || (typeof getContext === "function" ? getContext() : null);
+      const values = [context?.chatId, context?.chat_id, context?.chatFile, context?.chat_file, context?.characterId, context?.groupId];
+      const scope = profileEventMemoryScopeText(values.find((item) => String(item ?? "").trim()));
+      if (scope) return PROFILE_EVENT_MEMORY_STORAGE_PREFIX + "ctx:" + scope;
+    } catch {}
+    return PROFILE_EVENT_MEMORY_STORAGE_PREFIX + "global";
+  }
+
+  function readProfileEventMemoryStore() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(profileEventMemoryStorageKey()) || "null");
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        const events = parsed.events && typeof parsed.events === "object" && !Array.isArray(parsed.events) ? parsed.events : {};
+        return { version: 1, updatedAt: Number(parsed.updatedAt || 0) || 0, events };
+      }
+    } catch {}
+    return { version: 1, updatedAt: 0, events: {} };
+  }
+
+  function writeProfileEventMemoryStore(store) {
+    try {
+      localStorage.setItem(profileEventMemoryStorageKey(), JSON.stringify({
+        version: 1,
+        updatedAt: Date.now(),
+        events: store?.events && typeof store.events === "object" ? store.events : {}
+      }));
+      return true;
+    } catch (err) {
+      console.warn("[HypnoOS] 人物档案事件回忆保存失败", err);
+      return false;
+    }
+  }
+
+  function profileEventMemoryHash(value) {
+    const text = String(value ?? "");
+    let hash = 2166136261;
+    for (let index = 0; index < text.length; index += 1) {
+      hash ^= text.charCodeAt(index);
+      hash = Math.imul(hash, 16777619);
+    }
+    return (hash >>> 0).toString(36);
+  }
+
+  const PROFILE_EVENT_CR = String.fromCharCode(13);
+  const PROFILE_EVENT_LF = String.fromCharCode(10);
+  const PROFILE_EVENT_TAB = String.fromCharCode(9);
+  const PROFILE_EVENT_CRLF_RE = new RegExp(PROFILE_EVENT_CR + PROFILE_EVENT_LF + "?", "g");
+  const PROFILE_EVENT_TRAILING_SPACE_RE = new RegExp("[ " + PROFILE_EVENT_TAB + "]+" + PROFILE_EVENT_LF, "g");
+  const PROFILE_EVENT_BLANK_LINES_RE = new RegExp(PROFILE_EVENT_LF + "{3,}", "g");
+  const PROFILE_EVENT_FIELD_RE = new RegExp("^([^:：<>]{1,32})[:：][ " + PROFILE_EVENT_TAB + "]*(.*)$");
+  const PROFILE_EVENT_WHITESPACE_RE = new RegExp("[ " + PROFILE_EVENT_TAB + PROFILE_EVENT_CR + PROFILE_EVENT_LF + "]+", "g");
+
+  function profileEventMemoryCleanText(value, limit = 900) {
+    const text = String(value ?? "")
+      .replace(PROFILE_EVENT_CRLF_RE, PROFILE_EVENT_LF)
+      .replace(PROFILE_EVENT_TRAILING_SPACE_RE, PROFILE_EVENT_LF)
+      .replace(PROFILE_EVENT_BLANK_LINES_RE, PROFILE_EVENT_LF + PROFILE_EVENT_LF)
+      .trim();
+    return text.length > limit ? text.slice(0, limit).trim() : text;
+  }
+
+  function profileEventMemoryFieldValue(fields, keys, limit = 1200) {
+    for (const key of keys) {
+      const value = fields[key];
+      const text = profileEventMemoryCleanText(value, limit);
+      if (text) return text;
+    }
+    return "";
+  }
+
+  function profileEventMemoryParseFields(block) {
+    const fields = {};
+    let currentKey = "";
+    for (const rawLine of String(block || "").replace(PROFILE_EVENT_CRLF_RE, PROFILE_EVENT_LF).split(PROFILE_EVENT_LF)) {
+      const line = rawLine.trim();
+      if (!line) continue;
+      const match = line.match(PROFILE_EVENT_FIELD_RE);
+      if (match) {
+        currentKey = String(match[1] || "").trim();
+        fields[currentKey] = [fields[currentKey], String(match[2] || "").trim()].filter(Boolean).join(PROFILE_EVENT_LF);
+      } else if (currentKey) {
+        fields[currentKey] = [fields[currentKey], line].filter(Boolean).join(PROFILE_EVENT_LF);
+      }
+    }
+    return fields;
+  }
+
+  function profileEventMemoryIndexNumber(value) {
+    const text = String(value ?? "").trim();
+    const digit = text.match(/[1-5]/);
+    if (digit) return Number(digit[0]);
+    const marks = [
+      ["壹", "一"],
+      ["貳", "贰", "二", "两"],
+      ["參", "叁", "三"],
+      ["肆", "四"],
+      ["伍", "五"]
+    ];
+    for (let index = 0; index < marks.length; index += 1) {
+      if (marks[index].some((mark) => text.includes(mark))) return index + 1;
+    }
+    return 0;
+  }
+
+  function profileEventMemoryText(record) {
+    if (!record || typeof record !== "object") return "";
+    const lines = [];
+    if (record.title) lines.push("标题: " + record.title);
+    if (record.summary) lines.push("概要: " + record.summary);
+    if (record.scene) lines.push("关键场面: " + record.scene);
+    if (record.relationship) lines.push("关系变化: " + record.relationship);
+    if (record.aftermath) lines.push("后续钩子: " + record.aftermath);
+    return lines.join(PROFILE_EVENT_LF) || profileEventMemoryCleanText(record.raw || "", 1200);
+  }
+
+  function profileEventMemorySnippet(record, limit = 42) {
+    const text = String(record?.summary || record?.scene || record?.title || record?.raw || "")
+      .replace(PROFILE_EVENT_WHITESPACE_RE, " ")
+      .trim();
+    if (!text) return "";
+    return text.length > limit ? text.slice(0, Math.max(1, limit - 1)) + "…" : text;
+  }
+
+  function normalizeProfileEventMemoryRecord(block, message) {
+    const raw = profileEventMemoryCleanText(block, 1600);
+    if (!raw) return null;
+    const fields = profileEventMemoryParseFields(raw);
+    const roleName = profileEventMemoryFieldValue(fields, ["角色名", "角色", "人物", "姓名"], 80);
+    const eventIndex = profileEventMemoryIndexNumber(profileEventMemoryFieldValue(fields, ["事件序号", "事件", "事件编号", "事件标记"], 32));
+    const bit = eventIndex ? eventIndex - 1 : -1;
+    if (!roleName || bit < 0 || bit > 4) return null;
+    const title = profileEventMemoryFieldValue(fields, ["标题", "事件标题", "题名"], 120);
+    const summary = profileEventMemoryFieldValue(fields, ["概要", "摘要", "简单内容", "事件概要", "内容"], 600);
+    const scene = profileEventMemoryFieldValue(fields, ["关键场面", "场面", "地点与场面", "记忆画面"], 500);
+    const relationship = profileEventMemoryFieldValue(fields, ["关系变化", "情绪变化", "影响"], 500);
+    const aftermath = profileEventMemoryFieldValue(fields, ["后续钩子", "后续", "伏笔", "可回忆点"], 500);
+    const sourceMessageId = String(message?.id ?? "").trim();
+    const sourceHash = profileEventMemoryHash([sourceMessageId, raw].join("|"));
+    return {
+      roleName,
+      eventIndex,
+      bit,
+      numeral: ENCOUNTER_EVENT_NUMERALS[bit] || String(eventIndex),
+      title,
+      summary,
+      scene,
+      relationship,
+      aftermath,
+      raw,
+      text: profileEventMemoryText({ title, summary, scene, relationship, aftermath, raw }),
+      sourceMessageId,
+      sourceHash,
+      updatedAt: Date.now()
+    };
+  }
+
+  function profileEventMemoryMessageBody(message) {
+    if (typeof message === "string") return message;
+    if (!message || typeof message !== "object") return "";
+    return String(message.message ?? message.mes ?? message.text ?? message.content ?? message.raw ?? "");
+  }
+
+  function profileEventMemoryMessageId(message, index = 0) {
+    if (message && typeof message === "object") {
+      for (const value of [message.message_id, message.mesid, message.id]) {
+        if (value !== undefined && value !== null && String(value).trim()) return String(value);
+      }
+    }
+    return String(index);
+  }
+
+  function profileEventMemoryIsUserMessage(message, index = 0) {
+    if (!message || typeof message !== "object") return false;
+    if (message.is_user === true || message.isUser === true || message.from_user === true || message.user === true) return true;
+    if (message.is_user === false || message.isUser === false || message.from_user === false || message.user === false) return false;
+    const role = String(message.role ?? message.type ?? message.sender ?? message.from ?? "").trim().toLowerCase();
+    if (["user", "human"].includes(role)) return true;
+    if (["assistant", "character", "bot", "model", "system"].includes(role)) return false;
+    const context = (() => {
+      try { return window.SillyTavern?.getContext?.() || (typeof getContext === "function" ? getContext() : null); } catch {}
+      return null;
+    })();
+    const userName = String(context?.name1 ?? context?.userName ?? "").trim();
+    const messageName = String(message.name ?? message.senderName ?? message.author ?? "").trim();
+    if (userName && messageName) return userName === messageName;
+    const numericId = Number(message.message_id ?? message.mesid ?? message.id ?? index);
+    return Number.isInteger(numericId) ? numericId % 2 === 1 : false;
+  }
+
+  function profileEventMemoryChatMessages() {
+    const sources = [];
+    try {
+      if (typeof getChatMessages === "function") {
+        const messages = getChatMessages(-1);
+        if (Array.isArray(messages) && messages.length) sources.push(messages);
+      }
+    } catch {}
+    try {
+      const context = window.SillyTavern?.getContext?.() || (typeof getContext === "function" ? getContext() : null);
+      if (Array.isArray(context?.chat) && context.chat.length) sources.push(context.chat);
+    } catch {}
+    try {
+      if (Array.isArray(window.chat) && window.chat.length) sources.push(window.chat);
+    } catch {}
+    const source = sources.sort((a, b) => b.length - a.length).find((items) => Array.isArray(items) && items.length) || [];
+    return source.map((message, index) => ({
+      message,
+      index,
+      id: profileEventMemoryMessageId(message, index),
+      body: profileEventMemoryMessageBody(message),
+      isUser: profileEventMemoryIsUserMessage(message, index)
+    }));
+  }
+
+  function syncProfileEventMemoriesFromChat() {
+    try {
+      const messages = profileEventMemoryChatMessages().filter((item) => {
+        PROFILE_EVENT_MEMORY_BLOCK_RE.lastIndex = 0;
+        return !item.isUser && PROFILE_EVENT_MEMORY_BLOCK_RE.test(item.body);
+      });
+      PROFILE_EVENT_MEMORY_BLOCK_RE.lastIndex = 0;
+      const signature = messages.map((item) => item.id + ":" + profileEventMemoryHash(item.body)).join("|");
+      if (globalThis.__ST_PROFILE_EVENT_MEMORY_SCAN_SIGNATURE__ === signature) return false;
+      globalThis.__ST_PROFILE_EVENT_MEMORY_SCAN_SIGNATURE__ = signature;
+      if (!messages.length) return false;
+      const store = readProfileEventMemoryStore();
+      store.events = store.events && typeof store.events === "object" && !Array.isArray(store.events) ? store.events : {};
+      let changed = false;
+      for (const message of messages) {
+        PROFILE_EVENT_MEMORY_BLOCK_RE.lastIndex = 0;
+        let match;
+        while ((match = PROFILE_EVENT_MEMORY_BLOCK_RE.exec(message.body))) {
+          const record = normalizeProfileEventMemoryRecord(match[1], message);
+          if (!record) continue;
+          const roleBucket = store.events[record.roleName] && typeof store.events[record.roleName] === "object" && !Array.isArray(store.events[record.roleName])
+            ? store.events[record.roleName]
+            : {};
+          const key = String(record.bit);
+          const previous = roleBucket[key];
+          if (!previous || previous.sourceHash !== record.sourceHash || previous.text !== record.text) {
+            roleBucket[key] = { ...previous, ...record, createdAt: previous?.createdAt || Date.now() };
+            store.events[record.roleName] = roleBucket;
+            changed = true;
+          }
+        }
+      }
+      return changed ? writeProfileEventMemoryStore(store) : false;
+    } catch (err) {
+      console.warn("[HypnoOS] 人物档案事件回忆同步失败", err);
+      return false;
+    }
+  }
+
+  function getProfileEventMemory(roleName, bit) {
+    const name = String(roleName || "").trim();
+    const key = String(Math.max(0, Math.min(4, Number(bit) || 0)));
+    if (!name) return null;
+    const store = readProfileEventMemoryStore();
+    const record = store.events?.[name]?.[key];
+    return record && typeof record === "object" && !Array.isArray(record) ? record : null;
+  }
+
+  window.__ST_SYNC_PROFILE_EVENT_MEMORIES__ = syncProfileEventMemoriesFromChat;
+
+  async function syncRoleEventRecordDefaults() {
+    try {
+      if (typeof globalThis.__ST_HYPNOOS_IS_LATEST_MESSAGE_FRONTEND__ === "function" && !globalThis.__ST_HYPNOOS_IS_LATEST_MESSAGE_FRONTEND__()) return false;
+      const data = typeof encounterCurrentMvuData === "function" ? encounterCurrentMvuData() : null;
+      const roles = data?.stat?.["角色"];
+      if (!roles || typeof roles !== "object" || Array.isArray(roles)) return false;
+      const missing = Object.entries(roles)
+        .filter(([, roleData]) => roleData && typeof roleData === "object" && !Array.isArray(roleData) && !Object.prototype.hasOwnProperty.call(roleData, "事件记录"))
+        .map(([name]) => String(name || "").trim())
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b, "zh-Hans-CN"));
+      const scope = String(globalThis.__ST_HYPNOOS_FRONTEND_MESSAGE_SCOPE__?.() || globalThis.__ST_HYPNOOS_FRONTEND_SLOT_SCOPE__?.() || "latest");
+      const signature = scope + "::" + missing.join("|");
+      if (!missing.length) {
+        globalThis.__ST_ROLE_EVENT_RECORD_SYNC_SIGNATURE__ = signature;
+        return false;
+      }
+      if (globalThis.__ST_ROLE_EVENT_RECORD_SYNC_SIGNATURE__ === signature) return false;
+      for (const name of missing) {
+        if (roles[name] && typeof roles[name] === "object" && !Array.isArray(roles[name])) roles[name]["事件记录"] = "00000";
+      }
+      await encounterReplaceMvuData(data);
+      globalThis.__ST_ROLE_EVENT_RECORD_SYNC_SIGNATURE__ = signature;
+      return true;
+    } catch (err) {
+      console.warn("[HypnoOS] 事件记录补全失败", err);
+      return false;
+    }
+  }
+
   async function encounterDeductStarlight(price) {
     const cost = Math.max(0, Math.floor(Number(price) || 0));
     const data = encounterCurrentMvuData();
@@ -16821,6 +21299,35 @@ button.st-work-notice{cursor:pointer}
     };
   }
 
+  function encounterBoundaryWorldbookEntry(comment, order) {
+    const entry = encounterWorldbookEntry(comment, { name: comment }, "");
+    entry.key = [];
+    entry.keys = [];
+    entry.keysecondary = [];
+    entry.secondary_keys = [];
+	    entry.content = "";
+	    entry.constant = false;
+	    entry.selective = true;
+	    entry.enabled = false;
+	    entry.disable = true;
+	    entry.disabled = true;
+	    entry.insertion_order = order;
+    entry.order = order;
+    entry.depth = 0;
+    entry.position = "before_char";
+    entry.extensions = {
+      ...(entry.extensions && typeof entry.extensions === "object" && !Array.isArray(entry.extensions) ? entry.extensions : {}),
+      position: 0,
+      depth: 0,
+      role: 0,
+      exclude_recursion: true,
+      prevent_recursion: true,
+      probability: 100,
+      useProbability: true
+    };
+    return encounterFinalizeWorldbookEntryForInsert(entry);
+  }
+
   function encounterRoleWorldbookKeys(role) {
     return [role?.name].concat(String(role?.aliases || "").split(/[，,、]/)).map((item) => String(item || "").trim()).filter(Boolean);
   }
@@ -16889,6 +21396,29 @@ button.st-work-notice{cursor:pointer}
 	    );
 	  }
 
+  function encounterAffectionChainWorldbookEntry(role) {
+	    const normalized = encounterNormalizeRole(role);
+	    const name = String(normalized.name || "").trim();
+	    const content = encounterAffectionChainWorldbookText(normalized);
+	    if (!name || !String(content || "").trim()) return null;
+	    const template = normalized.affectionEntry || normalized.affectionChainEntry || normalized["好感链世界书"] || normalized["好感事件链世界书"];
+	    const entry = encounterPreparedWorldbookEntry(
+	      template,
+	      "[mvu_plot]" + name + "好感链",
+	      normalized,
+	      content,
+	      { preferFallbackContent: true }
+	    );
+	    const secondary = ["好感链", "好感事件", "触发角色事件", "事件记录", "人物档案事件记录"];
+	    entry.keysecondary = Array.isArray(entry.keysecondary) && entry.keysecondary.length ? entry.keysecondary : secondary;
+	    entry.secondary_keys = Array.isArray(entry.secondary_keys) && entry.secondary_keys.length ? entry.secondary_keys : entry.keysecondary.slice();
+	    entry.insertion_order = Number.isFinite(Number(entry.insertion_order ?? entry.order)) ? Number(entry.insertion_order ?? entry.order) : 92;
+	    entry.order = entry.insertion_order;
+	    entry.depth = Number.isFinite(Number(entry.depth)) ? Number(entry.depth) : 2;
+	    if (entry.extensions && typeof entry.extensions === "object" && !Array.isArray(entry.extensions)) entry.extensions.depth = entry.depth;
+	    return encounterFinalizeWorldbookEntryForInsert(entry);
+	  }
+
 	  function encounterWorldbookEntryList(pkg) {
 	    const list = [];
 	    for (const role of pkg.roles || []) {
@@ -16897,6 +21427,8 @@ button.st-work-notice{cursor:pointer}
       if (variableEntry) list.push(variableEntry);
 	      const personaEntry = encounterPersonaWorldbookEntry(normalized, pkg.name || "角色包");
 	      if (personaEntry) list.push(personaEntry);
+	      const affectionEntry = encounterAffectionChainWorldbookEntry(normalized);
+	      if (affectionEntry) list.push(affectionEntry);
 	    }
 	    return list;
 	  }
@@ -17023,7 +21555,8 @@ button.st-work-notice{cursor:pointer}
   function encounterEntryKind(entry) {
     const title = encounterEntryTitle(entry);
     const text = encounterEntryText(entry);
-    if (/变量列表开始|变量列表结束|角色变量开始|人设开始|人设结束/.test(text)) return "";
+    if (/变量列表.*(?:开始|结束)|角色变量开始|人设.*(?:开始|结束)|好感链.*(?:开始|结束)/.test(text)) return "";
+    if (/\\[mvu_plot\\].*好感(?:事件)?链\\s*$/.test(title) || /^<[^>\\n]{1,40}好感链>/.test(String(entry?.content || "").trim())) return "affection";
     if (/format_message_variable::stat_data\\.角色\\./.test(text)) return "variable";
     if (/\\[mvu_update\\].*变量\\s*$/.test(title)) return "variable";
     if (/\\[mvu_plot\\].*人设\\s*$/.test(title) || /(?:^|\\/)\\s*人设\\s*$/.test(title)) return "persona";
@@ -17123,13 +21656,12 @@ button.st-work-notice{cursor:pointer}
 
   function encounterApplyCharacterWorldbookLayout(entries, existingEntries) {
     const existing = Array.isArray(existingEntries) ? existingEntries : [];
-    if (!existing.length) return entries.map(encounterCloneWorldbookEntry).map(encounterFinalizeWorldbookEntryForInsert);
     const next = entries.map(encounterCloneWorldbookEntry);
-    for (const kind of ["variable", "persona"]) {
+    for (const kind of ["variable", "persona", "affection"]) {
       const targets = next.filter((entry) => encounterEntryKind(entry) === kind);
       if (!targets.length) continue;
       const templates = encounterFindWorldbookTemplates(existing, kind);
-      const fallbackOrder = kind === "variable" ? 23 : 75;
+      const fallbackOrder = kind === "variable" ? 23 : (kind === "persona" ? 75 : 92);
       targets.forEach((entry, index) => {
         const template = templates.length ? templates[index % templates.length] : null;
         encounterApplyWorldbookTemplate(entry, template);
@@ -17139,7 +21671,57 @@ button.st-work-notice{cursor:pointer}
         entry.order = order;
       });
     }
-    return next.map(encounterFinalizeWorldbookEntryForInsert);
+    const allKnown = existing.concat(next);
+    const hasComment = (comment) => allKnown.some((entry) => encounterEntryTitle(entry) === comment);
+    const hasKind = (kind) => next.some((entry) => encounterEntryKind(entry) === kind) || existing.some((entry) => encounterEntryKind(entry) === kind);
+    if (hasKind("variable")) {
+      if (!hasComment(ENCOUNTER_WORLDBOOK_VARIABLE_START_COMMENT)) next.push(encounterBoundaryWorldbookEntry(ENCOUNTER_WORLDBOOK_VARIABLE_START_COMMENT, -1000));
+      if (!hasComment(ENCOUNTER_WORLDBOOK_VARIABLE_END_COMMENT)) next.push(encounterBoundaryWorldbookEntry(ENCOUNTER_WORLDBOOK_VARIABLE_END_COMMENT, 1000));
+    }
+    if (hasKind("persona")) {
+      if (!hasComment(ENCOUNTER_WORLDBOOK_PERSONA_START_COMMENT)) next.push(encounterBoundaryWorldbookEntry(ENCOUNTER_WORLDBOOK_PERSONA_START_COMMENT, 70));
+      if (!hasComment(ENCOUNTER_WORLDBOOK_PERSONA_END_COMMENT)) next.push(encounterBoundaryWorldbookEntry(ENCOUNTER_WORLDBOOK_PERSONA_END_COMMENT, 90));
+    }
+    if (hasKind("affection")) {
+      if (!hasComment(ENCOUNTER_WORLDBOOK_FAVOR_START_COMMENT)) next.push(encounterBoundaryWorldbookEntry(ENCOUNTER_WORLDBOOK_FAVOR_START_COMMENT, 91));
+      if (!hasComment(ENCOUNTER_WORLDBOOK_FAVOR_END_COMMENT)) next.push(encounterBoundaryWorldbookEntry(ENCOUNTER_WORLDBOOK_FAVOR_END_COMMENT, 93));
+    }
+    const ordered = (list) => list.slice().sort((a, b) => {
+      const orderA = Number.isFinite(Number(a?.insertion_order ?? a?.order)) ? Number(a.insertion_order ?? a.order) : 100;
+      const orderB = Number.isFinite(Number(b?.insertion_order ?? b?.order)) ? Number(b.insertion_order ?? b.order) : 100;
+      if (orderA !== orderB) return orderA - orderB;
+      return encounterEntryTitle(a).localeCompare(encounterEntryTitle(b), "zh-CN");
+    });
+    const commentOf = (entry) => encounterEntryTitle(entry);
+    const boundary = (comment) => next.find((entry) => commentOf(entry) === comment);
+    const isBoundary = (entry) => ENCOUNTER_WORLDBOOK_BOUNDARY_COMMENTS.has(commentOf(entry));
+    const variableEntries = ordered(next.filter((entry) => !isBoundary(entry) && encounterEntryKind(entry) === "variable"));
+    const personaEntries = ordered(next.filter((entry) => !isBoundary(entry) && encounterEntryKind(entry) === "persona"));
+    const favorEntries = ordered(next.filter((entry) => !isBoundary(entry) && encounterEntryKind(entry) === "affection"));
+    const grouped = new Set([
+      ...ENCOUNTER_WORLDBOOK_BOUNDARY_COMMENTS,
+      ...variableEntries.map(commentOf),
+      ...personaEntries.map(commentOf),
+      ...favorEntries.map(commentOf)
+    ]);
+    const otherEntries = next.filter((entry) => !grouped.has(commentOf(entry)));
+    const output = [
+      boundary(ENCOUNTER_WORLDBOOK_VARIABLE_START_COMMENT),
+      ...variableEntries,
+      boundary(ENCOUNTER_WORLDBOOK_VARIABLE_END_COMMENT),
+      boundary(ENCOUNTER_WORLDBOOK_PERSONA_START_COMMENT),
+      ...personaEntries,
+      boundary(ENCOUNTER_WORLDBOOK_PERSONA_END_COMMENT),
+      boundary(ENCOUNTER_WORLDBOOK_FAVOR_START_COMMENT),
+      ...favorEntries,
+      boundary(ENCOUNTER_WORLDBOOK_FAVOR_END_COMMENT),
+      ...otherEntries
+    ].filter(Boolean);
+    output.forEach((entry, index) => {
+      entry.extensions = entry.extensions && typeof entry.extensions === "object" && !Array.isArray(entry.extensions) ? entry.extensions : {};
+      entry.extensions.display_index = index;
+    });
+    return output.map(encounterFinalizeWorldbookEntryForInsert);
   }
 
   function encounterCandidateWindows() {
@@ -17722,7 +22304,7 @@ button.st-work-notice{cursor:pointer}
 	    const key = encounterChatWorldbookCacheKey(win, scriptMod);
 	    if (!key) return "";
 	    try {
-	      const map = JSON.parse(localStorage.getItem(ENCOUNTER_CHAT_WORLD_INFO_CACHE_KEY) || "{}");
+	      const map = encounterGetJsonStorage(ENCOUNTER_CHAT_WORLD_INFO_CACHE_KEY) || {};
 	      const value = encounterNormalizeWorldbookMetadataValue(map?.[key]);
 	      return value && !encounterIsBadChatWorldbookName(value) ? value : "";
 	    } catch {
@@ -17735,9 +22317,9 @@ button.st-work-notice{cursor:pointer}
 	    const value = String(worldName || "").trim();
 	    if (!key || !value) return;
 	    try {
-	      const map = JSON.parse(localStorage.getItem(ENCOUNTER_CHAT_WORLD_INFO_CACHE_KEY) || "{}");
+	      const map = encounterGetJsonStorage(ENCOUNTER_CHAT_WORLD_INFO_CACHE_KEY) || {};
 	      map[key] = value;
-	      localStorage.setItem(ENCOUNTER_CHAT_WORLD_INFO_CACHE_KEY, JSON.stringify(map));
+	      encounterSetJsonStorage(ENCOUNTER_CHAT_WORLD_INFO_CACHE_KEY, map);
 	    } catch {}
 	  }
 
@@ -18046,7 +22628,13 @@ button.st-work-notice{cursor:pointer}
         resolve(Boolean(window.confirm?.(message || title)));
         return;
       }
-      targetPage.style.position = targetPage.style.position || "relative";
+      const previousInlinePosition = targetPage.style.position || "";
+      const computedPosition = (() => {
+        try { return window.getComputedStyle?.(targetPage)?.position || ""; } catch { return ""; }
+      })();
+      const needsTemporaryPosition = !previousInlinePosition && (!computedPosition || computedPosition === "static");
+      if (needsTemporaryPosition) targetPage.style.position = "relative";
+      targetPage.classList?.add?.("is-encounter-confirm-open");
       targetPage.querySelectorAll?.(".st-encounter-confirm").forEach((node) => node.remove());
       const overlay = document.createElement("div");
       overlay.className = "st-encounter-confirm";
@@ -18064,6 +22652,8 @@ button.st-work-notice{cursor:pointer}
       const finish = (value) => {
         document.removeEventListener("keydown", onKeyDown, true);
         overlay.remove();
+        targetPage.classList?.remove?.("is-encounter-confirm-open");
+        if (needsTemporaryPosition) targetPage.style.position = previousInlinePosition;
         resolve(Boolean(value));
       };
       const onKeyDown = (event) => {
@@ -18090,40 +22680,24 @@ button.st-work-notice{cursor:pointer}
     const combinedPrompt = encounterPackageCombinedPrompt(pkg);
     const randomRoleName = String(result.randomRoleName || (result.randomRomance ? roles.map((role) => role.name).filter(Boolean).join("、") : "")).trim();
     const plotText = result.randomRomance
-      ? "本次消耗星光点在剧情中表现为{{user}}主动按下随机桃花运。前端已经随机抽中本条记录里的角色；{{user}}只知道自己购买了随机桃花运，不知道会遇到谁或对方来自哪个角色包。具体对象按角色列表执行，不得重新随机或替换。"
+      ? "本次消耗星光点在剧情中表现为{{user}}主动按下随机桃花运。前端已经随机抽中本条记录里的角色；{{user}}只知道自己购买了随机桃花运，不知道会遇到谁或对方来自哪个角色包。具体对象按随机命中角色和AI邂逅提示词执行，不得重新随机或替换。"
       : "本次消耗星光点在剧情中表现为{{user}}主动购买一次桃花运。{{user}}只知道自己购买了桃花运，不知道会遇到谁、会遇到几个角色、对方来自哪个角色包；具体对象由APP暗中安排。";
+    const fillFocusText = "对本次角色包涉及的每个登场/在场角色，重点检查变量中仍为未记录的档案.头发、档案.面部、档案.上衣、档案.下衣和心理；根据已写入的人设世界书与AI邂逅提示词开场尽量补齐为简短具体描述，不要改写已记录项，不要粘贴世界书原文。";
     const executionText = result.randomRomance
-      ? "这个随机桃花运已经由前端抽取并使用。不要重新随机，不要换成其他角色，不要重复扣星光点，不要重复插入世界书，不要对已新增角色重复/add。世界书条目已写入当前对话独有的 Chat Lorebook；初始角色变量已由前端创建，若有同名旧角色则前端已用本角色包初始变量覆盖。请把本次事件写成{{user}}主动购买随机桃花运后，由APP暗中安排的偶遇；剧情中的{{user}}不知道具体对象或角色包内容，不能表现为{{user}}精准点名召唤某角色。请根据角色包、已写入世界书、前端初始变量和各角色出场提示词，在本轮剧情中安排对应角色登场；第一回合必须按“待AI补充变量字段”逐项补齐变量，尤其是档案和第一人称心理；工作价值已是前端按人设估算的0-20数字，不要在第一回合为了补全而覆盖它。后续只按剧情变化更新变量。"
-      : "这个角色包已经被前端使用。不要重复扣星光点，不要重复插入世界书，不要对已新增角色重复/add。世界书条目已写入当前对话独有的 Chat Lorebook；初始角色变量已由前端创建，若有同名旧角色则前端已用本角色包初始变量覆盖。请把本次事件写成{{user}}主动购买桃花运后，由APP暗中安排的偶遇；剧情中的{{user}}不知道具体对象或角色包内容，不能表现为{{user}}精准点名召唤某角色。请根据角色包、已写入世界书、前端初始变量和各角色出场提示词，在本轮剧情中安排对应角色登场；第一回合必须按“待AI补充变量字段”逐项补齐变量，尤其是档案和第一人称心理；工作价值已是前端按人设估算的0-20数字，不要在第一回合为了补全而覆盖它。后续只按剧情变化更新变量。";
-    const rolePayloads = roles.map((role) => {
-      const initialVariable = encounterInitialVariablesObject(role);
-      const missingFields = encounterMissingInitialVariableFields(initialVariable);
-      return {
-        角色名: role.name || "由AI按角色包内容命名",
-        别名: role.aliases || "",
-        档案摘要: role.intro || "",
-        角色出场提示词: encounterRoleEncounterPrompt(role) || "",
-        前端图片缓存: role.imageDataUrl ? "角色图片已由前端缓存到人物档案本地照片，变量出现后自动显示。" : "无",
-        前端初始变量: encounterInitialVariablePromptSnapshot(initialVariable),
-        待AI补充变量字段: missingFields.length ? missingFields.join("、") : "无",
-	        补全依据: "以当前对话 Chat Lorebook 中已经写入的 " + (role.name ? "[mvu_plot]" + role.name + "人设" : "对应人设") + " 为准，补齐待补变量字段。"
-      };
-    });
-    const fillSummary = rolePayloads
-      .filter((role) => role.待AI补充变量字段 !== "无")
-      .map((role) => role.角色名 + "：" + role.待AI补充变量字段);
+      ? "这个随机桃花运已经由前端抽取并使用。不要重新随机，不要换成其他角色，不要重复扣星光点，不要重复插入世界书。世界书条目已写入当前对话独有的 Chat Lorebook；初始角色变量已由前端创建，若有同名旧角色则前端已用本角色包初始变量覆盖。AI只负责描写本次桃花运剧情和必要变量补全，不再创建、重建或补写角色/世界书。请把本次事件写成{{user}}主动购买随机桃花运后，由APP暗中安排的偶遇；剧情中的{{user}}不知道具体对象或角色包内容，不能表现为{{user}}精准点名召唤某角色。请优先按AI邂逅提示词里的整体串联开场安排登场；变量补全按“变量补全重点”执行。工作价值已是前端按人设估算的0-20数字，不要在第一回合为了补全而覆盖它。后续只按剧情变化更新变量。"
+      : "这个角色包已经被前端使用。不要重复扣星光点，不要重复插入世界书。世界书条目已写入当前对话独有的 Chat Lorebook；初始角色变量已由前端创建，若有同名旧角色则前端已用本角色包初始变量覆盖。AI只负责描写本次桃花运剧情和必要变量补全，不再创建、重建或补写角色/世界书。请把本次事件写成{{user}}主动购买桃花运后，由APP暗中安排的偶遇；剧情中的{{user}}不知道会遇到谁、会遇到几个角色、对方来自哪个角色包，不能表现为{{user}}精准点名召唤某角色。请优先按AI邂逅提示词里的整体串联开场安排登场；变量补全按“变量补全重点”执行。工作价值已是前端按人设估算的0-20数字，不要在第一回合为了补全而覆盖它。后续只按剧情变化更新变量。";
     return {
       来源: "邂逅",
       操作: "角色包已使用",
       不可删除: true,
       角色包ID: pkg.id,
       角色包名称: pkg.name || "未命名角色包",
-      角色包介绍: pkg.intro || "无",
+      角色包介绍: encounterProfileSnippet(pkg.intro, 120) || "无",
       ...(result.randomRomance ? { 选择方式: "随机桃花运", 随机命中角色: randomRoleName || "无" } : {}),
-      AI邂逅提示词: combinedPrompt || "无",
+      AI邂逅提示词: combinedPrompt || "见当前对话 Chat Lorebook 中本次写入的角色包/角色条目。",
 	      前端处理: "已由前端扣除星光点、创建初始角色变量、缓存角色图片，并尝试写入当前对话独有的 Chat Lorebook。",
       消耗星光点: result.price ?? encounterPackagePrice(pkg),
-      初始变量新增角色: Array.isArray(result.createdRoles) && result.createdRoles.length ? result.createdRoles.join("、") : "无",
+      前端创建角色变量: Array.isArray(result.createdRoles) && result.createdRoles.length ? result.createdRoles.join("、") : "无",
       初始变量覆盖角色: Array.isArray(result.overwrittenRoles) && result.overwrittenRoles.length ? result.overwrittenRoles.join("、") : "无",
       初始变量跳过角色: Array.isArray(result.skippedRoles) && result.skippedRoles.length ? result.skippedRoles.join("、") : "无",
       世界书写入条目数: result.worldbookCount ?? 0,
@@ -18131,10 +22705,10 @@ button.st-work-notice{cursor:pointer}
 	      当前对话世界书: result.targetWorldbook || "当前对话 Chat Lorebook",
 	      世界书写入方式: result.method || "前端自动写入",
 	      剧情设定: plotText,
-	      角色变量补全要求: "每个角色都已由前端提供并写入一份初始变量；角色列表里的“前端初始变量”就是当前变量骨架。AI只需要补齐“待AI补充变量字段”列出的字段，补齐时必须参照已导入当前对话 Chat Lorebook 里的对应 [mvu_plot]角色名人设 / [mvu_update]角色名变量 条目。不要把世界书原文整段塞进档案字段。工作价值已由前端按人设估算为0-20的星光点/日数字，后续只有角色身份、资源或能力发生长期变化时才更新。",
-      待AI补充变量总览: fillSummary.length ? fillSummary : "无",
-      角色列表: rolePayloads,
-	      AI执行规范: executionText
+		      角色变量补全要求: "每个角色都已由前端创建/覆盖初始变量；AI只补齐仍为未记录的必要字段，参照当前对话 Chat Lorebook 里的对应人设/变量条目。不要把世界书原文整段塞进档案字段。工作价值已由前端按人设估算为0-20的星光点/日数字，后续只有角色身份、资源或能力发生长期变化时才更新。",
+      变量补全重点: fillFocusText,
+      角色处理: "角色变量、图片缓存和世界书写入已由前端处理；AI只按AI邂逅提示词的整体串联开场描写本次相遇，不逐个复述角色单独出场提示。",
+      AI执行规范: executionText
     };
   }
 
@@ -18382,15 +22956,35 @@ button.st-work-notice{cursor:pointer}
       page.dataset.encounterEditRoleIndex = String(event.target.value || "0");
       renderEncounterPage(page);
     });
-    page.querySelector("[data-encounter-search]")?.addEventListener("input", (event) => {
-      page.dataset.encounterSearch = String(event.target.value || "");
+    const focusEncounterSearchInput = (query = "") => {
+      const input = page.querySelector("[data-encounter-search]");
+      if (!input) return;
+      try { input.focus({ preventScroll: true }); } catch { input.focus(); }
+      const caret = String(query || input.value || "").length;
+      try { input.setSelectionRange(caret, caret); } catch {}
+    };
+    const encounterSearchInput = page.querySelector("[data-encounter-search]");
+    encounterSearchInput?.addEventListener("compositionstart", () => {
+      page.dataset.encounterSearchComposing = "true";
+    });
+    encounterSearchInput?.addEventListener("compositionend", (event) => {
+      delete page.dataset.encounterSearchComposing;
+      const query = String(event.target?.value || "");
+      page.dataset.encounterSearch = query;
       page.dataset.encounterRolePage = "1";
       renderEncounterPage(page);
-      window.setTimeout(() => {
-        const input = page.querySelector("[data-encounter-search]");
-        input?.focus?.();
-        try { input?.setSelectionRange?.(input.value.length, input.value.length); } catch {}
-      }, 0);
+      focusEncounterSearchInput(query);
+    });
+    encounterSearchInput?.addEventListener("input", (event) => {
+      if (event.isComposing || page.dataset.encounterSearchComposing === "true") {
+        page.dataset.encounterSearch = String(event.target.value || "");
+        return;
+      }
+      const query = String(event.target.value || "");
+      page.dataset.encounterSearch = query;
+      page.dataset.encounterRolePage = "1";
+      renderEncounterPage(page);
+      focusEncounterSearchInput(query);
     });
     page.querySelector("[data-encounter-package-filter]")?.addEventListener("change", (event) => {
       page.dataset.encounterPackageFilter = String(event.target.value || "all");
@@ -18402,6 +22996,7 @@ button.st-work-notice{cursor:pointer}
         const card = button.closest("[data-encounter-role-card]");
         const name = button.getAttribute("data-encounter-field-jump") || "";
         if (name === "roleInitialVariables") page.dataset.encounterRoleContentSection = "initial";
+        else if (/^roleAffection/u.test(name)) page.dataset.encounterRoleContentSection = "affection";
         else page.dataset.encounterRoleContentSection = "persona";
         if (!card?.querySelector("[name='" + name + "']")?.offsetParent) {
           renderEncounterPage(page);
@@ -18426,31 +23021,32 @@ button.st-work-notice{cursor:pointer}
       const draft = encounterReadDraftFromForm(page);
       draft.coverDataUrl = await encounterFileAsDataUrl(file);
       encounterSaveDraft(draft);
-      page.dataset.encounterStatus = "已更新封面并保存草稿。";
-      renderEncounterPage(page);
+      page.dataset.encounterStatus = encounterLastStorageError || "已更新封面并保存草稿。";
+      renderEncounterPage(page, { preserveScroll: true });
     });
     page.querySelectorAll("[data-encounter-role-image]").forEach((input) => {
       input.addEventListener("change", async (event) => {
         const file = event.target.files?.[0];
         if (!file) return;
         const index = Number(input.getAttribute("data-encounter-role-image"));
+        const slot = Number(input.getAttribute("data-image-slot") || 0);
         const draft = encounterReadDraftFromForm(page);
         if (!draft.roles[index]) draft.roles[index] = encounterBlankRole();
-        draft.roles[index].imageDataUrl = await encounterFileAsDataUrl(file);
+        draft.roles[index] = encounterSetRoleImageSlot(draft.roles[index], slot, await encounterFileAsDataUrl(file));
         encounterSaveDraft(draft);
-        page.dataset.encounterStatus = "已更新角色图片并保存草稿。";
-        renderEncounterPage(page);
+        page.dataset.encounterStatus = encounterLastStorageError || "已更新角色图片并保存草稿。";
+        renderEncounterPage(page, { preserveScroll: true });
       });
     });
-    page.querySelector("[data-encounter-single-role-image]")?.addEventListener("change", async (event) => {
+    page.querySelectorAll("[data-encounter-single-role-image]").forEach((input) => input.addEventListener("change", async (event) => {
       const file = event.target.files?.[0];
       if (!file) return;
+      const slot = Number(input.getAttribute("data-image-slot") || 0);
       const role = encounterReadSingleRoleFromForm(page);
-      role.imageDataUrl = await encounterFileAsDataUrl(file);
-      encounterSaveSingleRoleDraft(role);
-      page.dataset.encounterStatus = "已更新角色图片并保存草稿。";
-      renderEncounterPage(page);
-    });
+      encounterSaveSingleRoleDraft(encounterSetRoleImageSlot(role, slot, await encounterFileAsDataUrl(file)));
+      page.dataset.encounterStatus = encounterLastStorageError || "已更新角色图片并保存草稿。";
+      renderEncounterPage(page, { preserveScroll: true });
+    }));
     page.querySelector("[data-encounter-form]")?.addEventListener("input", () => {
       encounterReadDraftFromForm(page);
       encounterRefreshRoleFieldDots(page);
@@ -18465,6 +23061,27 @@ button.st-work-notice{cursor:pointer}
       button.addEventListener("click", async () => {
         const action = button.getAttribute("data-encounter-action");
         if (button.disabled) return;
+        if (action === "clear-role-image") {
+          const slot = Number(button.getAttribute("data-image-slot") || 0);
+          const isSingle = button.getAttribute("data-single") === "1" || page.dataset.encounterTab === "role";
+          if (isSingle) {
+            const role = encounterReadSingleRoleFromForm(page);
+            encounterSaveSingleRoleDraft(encounterSetRoleImageSlot(role, slot, ""));
+            page.dataset.encounterStatus = encounterLastStorageError || "已删除这个图片槽。";
+            renderEncounterPage(page, { preserveScroll: true });
+            return;
+          }
+          const draft = encounterReadDraftFromForm(page);
+          const index = Number(button.getAttribute("data-role-index"));
+          const safeIndex = Number.isInteger(index) && index >= 0 ? index : encounterEditRoleIndex(page, draft);
+          draft.roles[safeIndex] = encounterSetRoleImageSlot(draft.roles[safeIndex] || encounterBlankRole(), slot, "");
+          encounterSaveDraft(draft);
+          page.dataset.encounterEditSection = "role";
+          page.dataset.encounterEditRoleIndex = String(safeIndex);
+          page.dataset.encounterStatus = encounterLastStorageError || "已删除这个图片槽。";
+          renderEncounterPage(page, { preserveScroll: true });
+          return;
+        }
         if (action === "import-library") {
           page.querySelector("[data-encounter-import-library]")?.click();
           return;
@@ -18477,6 +23094,15 @@ button.st-work-notice{cursor:pointer}
         if (action === "shop-buy-rule-coupon") {
           const quantity = Number(page.querySelector("[data-encounter-shop-rule-coupon-qty]")?.value || 1);
           await encounterShopBuyRuleCoupon(page, quantity);
+          return;
+        }
+        if (action === "shop-buy-timetable-coupon") {
+          const quantity = Number(page.querySelector("[data-encounter-shop-timetable-coupon-qty]")?.value || 1);
+          await encounterShopBuyTimetableCoupon(page, quantity);
+          return;
+        }
+        if (action === "shop-buy-access-pass") {
+          await encounterShopBuyAccessPass(page, button.getAttribute("data-special-location-pass") || "");
           return;
         }
         if (action === "browse-section") {
@@ -18499,20 +23125,51 @@ button.st-work-notice{cursor:pointer}
           await encounterHandleRandomRomance(page);
           return;
         }
-        if (action === "open-package") {
-          page.dataset.encounterTab = "browse";
-          page.dataset.encounterView = "detail";
-          page.dataset.encounterPackageId = button.getAttribute("data-package-id") || "";
-          delete page.dataset.encounterRoleItemId;
-          page.dataset.encounterDetailSection = "package";
-          page.dataset.encounterRoleIndex = "0";
-          renderEncounterPage(page);
-          return;
-        }
-        if (action === "open-role-item") {
-          openRoleItemDetail(button.getAttribute("data-role-item-id") || "");
-          return;
-        }
+	        if (action === "open-package") {
+	          page.dataset.encounterTab = "browse";
+	          page.dataset.encounterView = "detail";
+	          page.dataset.encounterPackageId = button.getAttribute("data-package-id") || "";
+	          delete page.dataset.encounterRoleItemId;
+	          page.dataset.encounterDetailSection = "package";
+	          page.dataset.encounterRoleIndex = "0";
+	          renderEncounterPage(page);
+	          return;
+	        }
+	        if (action === "delete-package") {
+	          const packageId = button.getAttribute("data-package-id") || "";
+	          const pkg = encounterFindPackage(packageId);
+	          if (!pkg || !encounterCanDeletePackage(pkg)) {
+	            encounterSetStatus(page, "初始角色包不能删除。");
+	            return;
+	          }
+	          const label = pkg.name || "未命名角色包";
+	          const ok = await encounterConfirm(page, {
+	            title: "删除角色包",
+	            message: "删除「" + label + "」？\\n\\n这只会从当前聊天的偶遇库移除该自定义/导入角色包；已经写入当前对话世界书的条目、已经创建的角色变量、已经消耗的星光点都不会自动撤销。\\n\\n删除后需要重新导入或重新定制才能再次在偶遇库看到它。",
+	            confirmText: "删除",
+	            cancelText: "取消"
+	          });
+	          if (!ok) return;
+	          if (!encounterDeleteStoredPackage(packageId)) {
+	            encounterSetStatus(page, encounterLastStorageError || "删除失败。");
+	            return;
+	          }
+	          if (page.dataset.encounterPackageFilter === String(packageId)) page.dataset.encounterPackageFilter = "all";
+	          page.dataset.encounterTab = "browse";
+	          page.dataset.encounterBrowseSection = "packages";
+	          delete page.dataset.encounterView;
+	          delete page.dataset.encounterPackageId;
+	          delete page.dataset.encounterRoleItemId;
+	          delete page.dataset.encounterDetailSection;
+	          delete page.dataset.encounterRoleIndex;
+	          page.dataset.encounterStatus = "已删除角色包：" + label;
+	          renderEncounterPage(page);
+	          return;
+	        }
+	        if (action === "open-role-item") {
+	          openRoleItemDetail(button.getAttribute("data-role-item-id") || "");
+	          return;
+	        }
         if (action === "detail-back") {
           delete page.dataset.encounterView;
           delete page.dataset.encounterPackageId;
@@ -18596,26 +23253,13 @@ button.st-work-notice{cursor:pointer}
             encounterSetStatus(page, "找不到这个角色。");
             return;
           }
-          if (item.sourceType === "package" && item.sourcePackage) {
-            encounterSaveDraft(item.sourcePackage);
-            page.dataset.encounterTab = "edit";
-            delete page.dataset.encounterView;
-            delete page.dataset.encounterPackageId;
-            delete page.dataset.encounterRoleItemId;
-            delete page.dataset.encounterDetailSection;
-            page.dataset.encounterEditSection = "role";
-            page.dataset.encounterEditRoleIndex = String(Math.max(0, Number(item.sourceRoleIndex || 0) || 0));
-            page.dataset.encounterStatus = "已填充到角色包定制草稿。此角色也可在偶遇页单独使用。";
-            renderEncounterPage(page);
-            return;
-          }
           encounterSaveSingleRoleDraft(item.role);
           page.dataset.encounterTab = "role";
           delete page.dataset.encounterView;
           delete page.dataset.encounterPackageId;
           delete page.dataset.encounterRoleItemId;
           delete page.dataset.encounterDetailSection;
-          page.dataset.encounterStatus = "已填充到单独角色草稿。";
+          page.dataset.encounterStatus = "已填充到角色定制草稿。";
           renderEncounterPage(page);
           return;
         }
@@ -18629,7 +23273,7 @@ button.st-work-notice{cursor:pointer}
           encounterSaveDraft(draft);
           page.dataset.encounterEditSection = "role";
           page.dataset.encounterEditRoleIndex = String(draft.roles.length - 1);
-          page.dataset.encounterStatus = "已新增角色。";
+          page.dataset.encounterStatus = "已导入角色。";
           renderEncounterPage(page);
           return;
         }
@@ -18656,8 +23300,8 @@ button.st-work-notice{cursor:pointer}
             fields.push({ id: encounterId("persona-field"), key: "自定义字段" + String(fields.length + 1), content: "" });
             role.personaFields = fields;
             encounterSaveSingleRoleDraft(role);
-            page.dataset.encounterStatus = "已新增自定义人设字段。";
-            renderEncounterPage(page);
+            page.dataset.encounterStatus = encounterLastStorageError || "已新增自定义人设字段。";
+            renderEncounterPage(page, { preserveScroll: true });
             return;
           }
           const draft = encounterReadDraftFromForm(page);
@@ -18671,8 +23315,8 @@ button.st-work-notice{cursor:pointer}
           encounterSaveDraft(draft);
           page.dataset.encounterEditSection = "role";
           page.dataset.encounterEditRoleIndex = String(safeIndex);
-          page.dataset.encounterStatus = "已新增自定义人设字段。";
-          renderEncounterPage(page);
+          page.dataset.encounterStatus = encounterLastStorageError || "已新增自定义人设字段。";
+          renderEncounterPage(page, { preserveScroll: true });
           return;
         }
         if (action === "remove-persona-field") {
@@ -18684,8 +23328,8 @@ button.st-work-notice{cursor:pointer}
             if (Number.isInteger(fieldIndex) && fieldIndex >= 0) fields.splice(fieldIndex, 1);
             role.personaFields = fields;
             encounterSaveSingleRoleDraft(role);
-            page.dataset.encounterStatus = "已删除自定义人设字段。";
-            renderEncounterPage(page);
+            page.dataset.encounterStatus = encounterLastStorageError || "已删除自定义人设字段。";
+            renderEncounterPage(page, { preserveScroll: true });
             return;
           }
           const draft = encounterReadDraftFromForm(page);
@@ -18699,8 +23343,8 @@ button.st-work-notice{cursor:pointer}
           encounterSaveDraft(draft);
           page.dataset.encounterEditSection = "role";
           page.dataset.encounterEditRoleIndex = String(safeIndex);
-          page.dataset.encounterStatus = "已删除自定义人设字段。";
-          renderEncounterPage(page);
+          page.dataset.encounterStatus = encounterLastStorageError || "已删除自定义人设字段。";
+          renderEncounterPage(page, { preserveScroll: true });
           return;
         }
         if (action === "save-library") {
@@ -18709,9 +23353,32 @@ button.st-work-notice{cursor:pointer}
             encounterSetStatus(page, "请先填写角色包名字。");
             return;
           }
-          encounterUpsertPackage(draft);
-          encounterSetStatus(page, "已保存到偶遇。");
-          return;
+	          if (!encounterUpsertPackage(draft)) {
+            encounterSetStatus(page, encounterLastStorageError || "保存失败。");
+            return;
+          }
+	          encounterSetStatus(page, "已保存到偶遇。");
+	          return;
+	        }
+        if (action === "save-single-role-package") {
+          const role = encounterReadSingleRoleFromForm(page);
+          if (!String(role.name || "").trim()) {
+            encounterSetStatus(page, "请先填写角色名。");
+            return;
+	          }
+	          const rolePackage = encounterPackageForRole(role, null);
+	          if (!encounterUpsertPackage(rolePackage)) {
+            encounterSetStatus(page, encounterLastStorageError || "保存失败。");
+            return;
+          }
+	          page.dataset.encounterTab = "browse";
+          page.dataset.encounterBrowseSection = "packages";
+          delete page.dataset.encounterView;
+          delete page.dataset.encounterPackageId;
+          delete page.dataset.encounterRoleItemId;
+	          page.dataset.encounterStatus = "已保存到偶遇。";
+	          renderEncounterPage(page);
+	          return;
         }
         if (action === "save-standalone-role") {
           const role = encounterReadSingleRoleFromForm(page);
@@ -18719,10 +23386,21 @@ button.st-work-notice{cursor:pointer}
             encounterSetStatus(page, "请先填写角色名。");
             return;
           }
-          encounterUpsertStandaloneRole(role);
-          encounterSetStatus(page, "已保存到角色库。偶遇页的“角色”里可以看到。");
-          return;
-        }
+	          if (!encounterUpsertStandaloneRole(role)) {
+            encounterSetStatus(page, encounterLastStorageError || "保存失败。");
+            return;
+          }
+          page.dataset.encounterTab = "browse";
+          page.dataset.encounterBrowseSection = "roles";
+          page.dataset.encounterPackageFilter = "standalone";
+          page.dataset.encounterRolePage = "1";
+          delete page.dataset.encounterView;
+          delete page.dataset.encounterPackageId;
+          delete page.dataset.encounterRoleItemId;
+          page.dataset.encounterStatus = "已保存到角色库。";
+          renderEncounterPage(page);
+	          return;
+	        }
         if (action === "use-single-role") {
           const role = encounterReadSingleRoleFromForm(page);
           if (!String(role.name || role.intro || "").trim()) {
@@ -18735,7 +23413,7 @@ button.st-work-notice{cursor:pointer}
         }
         if (action === "export-draft") {
           const draft = encounterReadDraftFromForm(page);
-          const blob = encounterPackageToZipBlob(draft);
+          const blob = await encounterPackageToZipBlob(draft);
           const filename = encounterSafeName(draft.name || "角色包", "role-package") + ".zip";
           encounterDownloadBlob(blob, filename);
           encounterSetStatus(page, "已导出 ZIP。");
@@ -18784,6 +23462,7 @@ button.st-work-notice{cursor:pointer}
       title: "区域地图",
       locations: [
         { id: "school", label: "私立斋明学园", category: "学校", info: "东京近郊的老牌私立升学高中，前千金女校，今年正式改为男女混校。{{user}}目前主要活动的舞台。" },
+        { id: "police-headquarters", label: "警视厅", category: "公共", info: "城镇警务系统的主要据点。报案、询问、监控调取、失踪与异常事件调查会在这里汇集；主角可疑度过高或公开事件扩大时，这里会成为压力来源。" },
         { id: "saionji-company", label: "西园寺企业", category: "商业", info: "西园寺财团相关企业据点，象征爱丽莎家族的财富、人脉和社会影响力。" },
         { id: "saionji-home", label: "西园寺的家", category: "住宅", info: "西园寺爱丽莎的家。豪宅、佣人和严格家族秩序构成她日常生活的背景。" },
         { id: "miyuki-home", label: "深雪的家", category: "住宅", info: "月咏深雪的住处。安静、整洁、书卷气重，适合处理学习、班务和私人阅读情节。" },
@@ -18793,6 +23472,7 @@ button.st-work-notice{cursor:pointer}
     school: {
       title: "学校地图",
       locations: [
+        { id: "school", label: "私立斋明学园", category: "学校", info: "东京近郊的老牌私立升学高中，前千金女校，今年正式改为男女混校。学校地图默认对应这里，不包含特殊地点里的明德大学。" },
         { id: "classroom", label: "教室", category: "学习", info: "二年级教室。日常上课、课间人际、视线交错和班级中心关系最容易发生的地点。" },
         { id: "corridor", label: "走廊", category: "公共", info: "连接教室、社团与各专用教室的公共空间。人来人往，适合短暂偶遇和擦肩而过。" },
         { id: "old-school-building", label: "旧校舍", category: "灵异", info: "破败、阴暗、少有人去的旧建筑。传闻、躲藏、无人目击的偶遇和灵异气氛都容易在这里聚集。" },
@@ -18805,13 +23485,13 @@ button.st-work-notice{cursor:pointer}
   };
   const GRAPH_LOCATION_CATEGORY_PRESETS = {
     world: ["学校", "住宅", "商业", "公共", "交通", "娱乐", "其他"],
-    school: ["学习", "公共", "行政", "体育", "灵异", "社团", "生活", "其他"]
+    school: ["学校", "学习", "公共", "行政", "体育", "灵异", "社团", "生活", "其他"]
   };
   const GRAPH_CUSTOM_CATEGORY_VALUE = "__custom__";
   const SPECIAL_LOCATION_STATIC_ITEMS = [
-    { id: "tropical-rainforest", label: "热带雨林", cost: 100, info: "第1生物特别温室的热带雨林区，被强化玻璃半球笼罩。室内长期高温高湿，喷淋系统定时制造雾气，水汽、汗水和植物气味会迅速改变衣物与身体状态。" },
-    { id: "babel", label: "巴别", cost: 100, info: "旧图书馆塔楼“巴别”，位于校园西北角。红砖塔楼、镂空回旋梯、玻璃回廊、盲点书架和顶层静电阅览室让这里成为偏僻又容易发生意外的特殊地点。" },
-    { id: "university", label: "大学", cost: 5, info: "明德大学，紧邻私立斋明学园的开放式综合大学。这里有中央主楼、商学部、实验楼、图书馆、学生会馆、宿舍区和体育中心，是高中生与大学生圈层交汇的灰色地带。" }
+    { id: "tropical-rainforest", label: "第1生物特别温室", aliases: ["热带雨林", "第1生物特别温室热带雨林区"], cost: SPECIAL_LOCATION_PASS_PRICE, passItem: SPECIAL_LOCATION_PASS_ITEM_NAMES["tropical-rainforest"], gateText: "你被门卫赶了出来", unlockNote: "需要持有「第1生物特别温室准入证」。准入证可在邂逅商店购买；爱丽莎足够信任时，也可能通过她的人情赠送。", info: "第1生物特别温室的热带雨林区，位于私立斋明学园校内，被强化玻璃半球笼罩。室内长期高温高湿，喷淋系统定时制造雾气，水汽、汗水和植物气味会迅速改变衣物与身体状态。" },
+    { id: "babel", label: "旧图书馆塔楼“巴别”", aliases: ["巴别", "旧图书馆塔楼"], cost: SPECIAL_LOCATION_PASS_PRICE, passItem: SPECIAL_LOCATION_PASS_ITEM_NAMES["babel"], gateText: "你被门卫赶了出来", unlockNote: "需要持有「旧图书馆塔楼“巴别”准入证」。准入证可在邂逅商店购买；爱丽莎足够信任时，也可能通过她的人情赠送。", info: "旧图书馆塔楼“巴别”，位于私立斋明学园校园西北角。红砖塔楼、镂空回旋梯、玻璃回廊、盲点书架和顶层静电阅览室让这里成为偏僻又容易发生意外的特殊地点。" },
+    { id: "university", label: "明德大学", aliases: ["大学"], cost: 0, info: "明德大学，紧邻私立斋明学园的开放式综合大学。这里有中央主楼、商学部、实验楼、图书馆、学生会馆、宿舍区和体育中心，是高中生与大学生圈层交汇的灰色地带；它属于城市主地图的一部分，不需要准入证或星光点解锁。" }
   ];
 
 	  function graphScopeKey() {
@@ -18826,16 +23506,111 @@ button.st-work-notice{cursor:pointer}
     return "global";
   }
 
+  function graphCommonScopeKey() {
+    try {
+      const chatScope = window.__ST_HYPNOOS_CHAT_STORAGE_SCOPE__?.();
+      if (chatScope) return String(chatScope);
+    } catch {}
+    try {
+      const chatId = window?.SillyTavern?.getCurrentChatId?.();
+      if (chatId !== undefined && chatId !== null && String(chatId).trim()) return "chat:" + String(chatId).trim();
+    } catch {}
+    return "global";
+  }
+
   function graphStorageKey(scope) {
+    return "hypnoos.static-map." + scope + ".v1:" + graphCommonScopeKey();
+  }
+
+  function graphLegacyStorageKey(scope) {
     return "hypnoos.static-map." + scope + ".v1:" + graphScopeKey();
   }
 
   function graphFavoriteStorageKey(scope) {
+    return "hypnoos.static-map.favorites." + scope + ".v1:" + graphCommonScopeKey();
+  }
+
+  function graphLegacyFavoriteStorageKey(scope) {
     return "hypnoos.static-map.favorites." + scope + ".v1:" + graphScopeKey();
   }
 
   function graphUpdateSeenStorageKey() {
-    return "hypnoos.static-map.update-seen.v1:" + graphScopeKey();
+    return "hypnoos.static-map.update-seen.v1:" + graphCommonScopeKey();
+  }
+
+  function frontendCommonStoragePosition() {
+    try {
+      const position = window.__ST_HYPNOOS_FRONTEND_POSITION__?.();
+      const index = Number(position?.index);
+      return {
+        index: Number.isFinite(index) ? Math.max(0, Math.trunc(index)) : 0,
+        scope: String(position?.scope || "").trim()
+      };
+    } catch {
+      return { index: 0, scope: "" };
+    }
+  }
+
+  function specialLocationUnlockStorageKey() {
+    return "hypnoos.special-location.unlocks.v1:" + graphCommonScopeKey();
+  }
+
+  function normalizeSpecialLocationUnlockRecord(value) {
+    if (!value) return null;
+    if (typeof value === "object" && !Array.isArray(value)) {
+      const rawPosition = value.position ?? value.floor ?? value.messageIndex ?? value["解锁位置"] ?? value["解锁楼层"];
+      const position = Number(rawPosition);
+      const record = { unlocked: true };
+      if (Number.isFinite(position)) record.position = Math.max(0, Math.trunc(position));
+      const scope = String(value.scope ?? value.messageScope ?? value["楼层标识"] ?? "").trim();
+      if (scope) record.scope = scope;
+      const at = Number(value.at ?? value.timestamp ?? value["时间戳"]);
+      if (Number.isFinite(at)) record.at = at;
+      return record;
+    }
+    return { unlocked: true };
+  }
+
+  function readSpecialLocationUnlockRecords() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(specialLocationUnlockStorageKey()) || "{}");
+      const source = parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+      const current = frontendCommonStoragePosition();
+      const records = {};
+      let changed = false;
+      Object.entries(source).forEach(([id, value]) => {
+        const record = normalizeSpecialLocationUnlockRecord(value);
+        if (!record) return;
+        if (typeof record.position === "number" && current.index < record.position) {
+          changed = true;
+          return;
+        }
+        records[String(id)] = record;
+      });
+      if (changed) localStorage.setItem(specialLocationUnlockStorageKey(), JSON.stringify(records));
+      return records;
+    } catch {
+      return {};
+    }
+  }
+
+  function markSpecialLocationUnlocked(id) {
+    const clean = String(id || "").trim();
+    if (!clean) return false;
+    try {
+      const records = readSpecialLocationUnlockRecords();
+      const position = frontendCommonStoragePosition();
+      records[clean] = {
+        unlocked: true,
+        position: position.index,
+        scope: position.scope,
+        at: Date.now()
+      };
+      localStorage.setItem(specialLocationUnlockStorageKey(), JSON.stringify(records));
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   function specialLocationSystemUnlockIds(stat = getLatestStatDataSync()) {
@@ -18874,8 +23649,14 @@ button.st-work-notice{cursor:pointer}
 
   function specialLocationUnlocked(location, stat = getLatestStatDataSync()) {
     if (!location) return false;
+    if (Math.max(0, Math.floor(Number(location.cost) || 0)) <= 0) return true;
+    const passItem = specialLocationPassItemName(location) || String(location.passItem || "").trim();
+    if (passItem && encounterInventoryItemCount(passItem, stat) > 0) return true;
     const ids = specialLocationSystemUnlockIds(stat);
-    return ids.has(String(location.id)) || ids.has(String(location.label));
+    const candidates = [location.id, location.label, ...(Array.isArray(location.aliases) ? location.aliases : [])].map((value) => String(value));
+    if (candidates.some((value) => ids.has(value))) return true;
+    const localUnlocks = readSpecialLocationUnlockRecords();
+    return candidates.some((value) => Boolean(localUnlocks[value]));
   }
 
   function specialLocationPendingUnlock(location) {
@@ -18904,43 +23685,39 @@ button.st-work-notice{cursor:pointer}
   function rerenderSpecialLocationHost(page) {
     if (!page) return;
     if (page.classList.contains("st-special-location-app")) renderSpecialLocationPage(page);
+    else if (page.classList.contains("st-city-map-app") || page.classList.contains("st-campus-map-app") || page.classList.contains("st-school-app")) rerenderGraphHost(page);
     else renderMapPage(page);
+  }
+
+  function rerenderGraphHost(page) {
+    if (!page) return;
+    if (page.classList.contains("st-campus-map-app")) renderCampusPage(page);
+    else if (page.classList.contains("st-city-map-app")) renderCityMapPage(page);
+    else if (page.classList.contains("st-school-app")) renderSchoolPage(page);
+    else renderMapPage(page);
+  }
+
+  function openSpecialLocationShop(page, location) {
+    const itemName = specialLocationPassItemName(location) || "对应准入证";
+    specialLocationSetStatus(page, "请在邂逅商店购买「" + itemName + "」。");
+    try {
+      openEncounterPage(null, "shop");
+      return;
+    } catch {}
+    try {
+      window.__ST_OPEN_ENCOUNTER_APP__?.("shop");
+    } catch {}
   }
 
   async function unlockSpecialLocation(page, id) {
     const location = SPECIAL_LOCATION_STATIC_ITEMS.find((item) => item.id === id);
     if (!location) return;
-    const stat = getLatestStatDataSync() || {};
-    const system = stat["系统"] && typeof stat["系统"] === "object" && !Array.isArray(stat["系统"]) ? stat["系统"] : {};
-    const current = Math.max(0, Math.floor(Number(system["星光点"] ?? 0) || 0));
-    const cost = Math.max(0, Math.floor(Number(location.cost) || 0));
-    if (specialLocationUnlocked(location, stat)) {
-      specialLocationSetStatus(page, "「" + location.label + "」已经解锁。");
+    if (specialLocationUnlocked(location)) {
+      specialLocationSetStatus(page, "已持有「" + location.label + "」的进入资格。");
       rerenderSpecialLocationHost(page);
       return;
     }
-    if (specialLocationPendingUnlock(location)) {
-      specialLocationSetStatus(page, "「" + location.label + "」解锁请求已在暂存区。");
-      rerenderSpecialLocationHost(page);
-      return;
-    }
-    if (current < cost) {
-      specialLocationSetStatus(page, "当前星光点可能不足，解锁「" + location.label + "」需要" + cost + "点；发送后由AI按变量结算。");
-      rerenderSpecialLocationHost(page);
-      return;
-    }
-    appendAppOperation({
-      来源: "地图",
-      操作: "解锁特殊地点",
-      地点ID: location.id,
-      特殊地点: location.label,
-      星光点花费: cost,
-      当前星光点: current,
-      结算提示: "前端只暂存解锁请求，不扣费、不直接写入解锁变量；AI需检查星光点余额，成功时扣除/系统/星光点并写入/系统/特殊地点解锁。余额不足则失败且不扣费。",
-      AI执行规范: "本操作表示{{user}}购买该特殊地点的随意进出权限。成功后写入对应特殊地点解锁变量；后续若剧情移动到该地点，仍需按时间、交通和剧情合理性更新/系统/当前地点。"
-    });
-    specialLocationSetStatus(page, "「" + location.label + "」解锁请求已暂存，发送后由AI扣费并写入变量。");
-    rerenderSpecialLocationHost(page);
+    openSpecialLocationShop(page, location);
   }
 
   function cloneGraph(value) {
@@ -19045,6 +23822,14 @@ button.st-work-notice{cursor:pointer}
     try {
       const parsed = JSON.parse(localStorage.getItem(graphFavoriteStorageKey(scope)) || "[]");
       if (Array.isArray(parsed)) return new Set(parsed.map(String).filter(Boolean));
+    } catch {}
+    try {
+      const parsed = JSON.parse(localStorage.getItem(graphLegacyFavoriteStorageKey(scope)) || "[]");
+      if (Array.isArray(parsed)) {
+        const ids = new Set(parsed.map(String).filter(Boolean));
+        writeGraphFavoriteIds(scope, ids);
+        return ids;
+      }
     } catch {}
     return new Set();
   }
@@ -19157,6 +23942,15 @@ button.st-work-notice{cursor:pointer}
         const graph = normalizeGraphGraph(stored, scope);
         const merged = mergeDefaultStaticGraphLocations(graph, scope);
         if (merged.locations.length !== graph.locations.length) saveStaticGraph(scope, merged);
+        return merged;
+      }
+    } catch {}
+    try {
+      const legacy = JSON.parse(localStorage.getItem(graphLegacyStorageKey(scope)) || "null");
+      if (legacy) {
+        const graph = normalizeGraphGraph(legacy, scope);
+        const merged = mergeDefaultStaticGraphLocations(graph, scope);
+        saveStaticGraph(scope, merged);
         return merged;
       }
     } catch {}
@@ -19286,6 +24080,22 @@ button.st-work-notice{cursor:pointer}
 	    '</details>';
 	  }
 
+	  function renderMapBoardAddLocationCard(scope, graph) {
+	    const currentLocation = getCurrentStoryLocation() || "未知";
+	    const title = scope === "school" ? "新增校内地点" : (scope === "teaching" ? "新增楼内地点" : "新增区域地点");
+	    const tag = scope === "school" ? "<学校地图更新>" : "<地图更新>";
+	    const pendingAdd = hasPendingGraphAddLocationOperation(scope);
+	    return '<section class="st-lite-card st-graph-paper st-graph-add" data-graph-add-scope="' + escapeAttr(scope) + '">' +
+	      '<div class="st-graph-add-summary"><strong>' + title + '</strong><span>交给AI补全分类</span></div>' +
+	      '<div class="st-graph-add-grid">' +
+	        '<input data-graph-add-name autocomplete="off" placeholder="地点名">' +
+	        '<textarea data-graph-add-info placeholder="地点说明、用途、相关角色或剧情倾向"></textarea>' +
+	      '</div>' +
+	      '<p class="st-graph-add-hint">提交后只会加入本轮操作；AI需要输出完整 ' + escapeHtml(tag) + ' 地点列表 JSON，字段包含 id/name/description/category，前端再写入本地。当前地点变量：' + escapeHtml(currentLocation) + '。</p>' +
+	      '<button type="button" data-graph-add-submit data-graph-scope="' + escapeAttr(scope) + '"' + (pendingAdd ? " disabled" : "") + '>' + (pendingAdd ? "已暂存" : "请求新增地点") + '</button>' +
+	    '</section>';
+	  }
+
   function renderStaticGraphCard(scope, page) {
     const graph = loadStaticGraph(scope);
     const currentLocation = getCurrentStoryLocation();
@@ -19331,13 +24141,426 @@ button.st-work-notice{cursor:pointer}
     renderGraphAddLocationCard(scope, graph);
   }
 
+  const ST_CAMPUS_MAP_POINTS = [
+    { id: "babel", specialId: "babel", label: "旧图书馆塔楼“巴别”", short: "巴别", category: "特殊", symbol: "🗼", x: 18, y: 18, w: 74, h: 36, c1: "#e5e7eb", c2: "#6b7280" },
+    { id: "classroom", graphId: "classroom", label: "教学楼", short: "教学楼", category: "学习", symbol: "📘", x: 50, y: 18, w: 104, h: 40, c1: "#fde68a", c2: "#f59e0b", enter: "teaching" },
+    { id: "tropical-rainforest", specialId: "tropical-rainforest", label: "第1生物特别温室", short: "热带雨林", category: "特殊", symbol: "🌿", x: 82, y: 18, w: 84, h: 36, c1: "#bbf7d0", c2: "#16a34a" },
+    { id: "old-school-building", graphId: "old-school-building", label: "旧校舍", short: "旧校舍", category: "灵异", symbol: "🏚", x: 18, y: 48, w: 76, h: 36, c1: "#d6d3d1", c2: "#78716c" },
+    { id: "corridor", graphId: "corridor", label: "中庭连廊", short: "中庭", category: "公共", symbol: "🚶", x: 50, y: 48, w: 86, h: 30, c1: "#e5e7eb", c2: "#9ca3af" },
+    { id: "library", graphId: "library", label: "图书馆", short: "图书馆", category: "学习", symbol: "📚", x: 82, y: 48, w: 76, h: 36, c1: "#c4b5fd", c2: "#8b5cf6" },
+    { id: "field", graphId: "field", label: "操场", short: "操场", category: "体育", symbol: "🏃", x: 18, y: 78, w: 82, h: 36, c1: "#bbf7d0", c2: "#22c55e" },
+    { id: "school", graphId: "school", label: "校门", short: "校门", category: "学校", symbol: "🏫", x: 50, y: 78, w: 70, h: 34, c1: "#bfdbfe", c2: "#60a5fa" },
+    { id: "pool", graphId: "pool", label: "泳池", short: "泳池", category: "体育", symbol: "🏊", x: 82, y: 78, w: 76, h: 36, c1: "#bae6fd", c2: "#38bdf8" }
+  ];
+
+  const ST_CAMPUS_MAP_PATHS = [
+    { x: 16, y: 47, w: 68, h: 6 },
+    { x: 16, y: 77, w: 68, h: 6 },
+    { x: 49, y: 18, w: 6, h: 62 },
+    { x: 17, y: 18, w: 6, h: 62 },
+    { x: 81, y: 18, w: 6, h: 62 }
+  ];
+
+  const ST_CAMPUS_FIELDS = [
+    { x: 6, y: 68, w: 24, h: 18, radius: "18px" },
+    { x: 70, y: 68, w: 24, h: 18, radius: "14px" }
+  ];
+
+  const ST_TEACHING_MAP_POINTS = [
+    { id: "teacher-office", label: "教师办公室", short: "教师办公室", category: "行政", symbol: "🧑‍🏫", x: 20, y: 22, w: 88, h: 34, c1: "#fed7aa", c2: "#fb923c", info: "教师办公室。班主任、任课老师和校内管理信息常在这里交汇。" },
+    { id: "principal", graphId: "principal", label: "校长室", short: "校长室", category: "行政", symbol: "🗂", x: 80, y: 22, w: 78, h: 34, c1: "#fdba74", c2: "#ea580c" },
+    { id: "classroom-1", label: "一年级教室", short: "一年级", category: "学习", symbol: "1", x: 20, y: 48, w: 82, h: 34, c1: "#bfdbfe", c2: "#60a5fa", info: "一年级教室。低年级学生聚集，传闻扩散快，适合轻量校园日常。" },
+    { id: "classroom", graphId: "classroom", label: "二年级教室", short: "二年级", category: "学习", symbol: "2", x: 50, y: 48, w: 90, h: 38, c1: "#fde68a", c2: "#f59e0b" },
+    { id: "classroom-3", label: "三年级教室", short: "三年级", category: "学习", symbol: "3", x: 80, y: 48, w: 82, h: 34, c1: "#ddd6fe", c2: "#8b5cf6", info: "三年级教室。升学压力更重，角色互动会更容易被学业和前后辈关系影响。" },
+    { id: "boys-restroom", label: "男厕所", short: "男厕所", category: "生活", symbol: "♂", x: 20, y: 64, w: 78, h: 34, c1: "#bfdbfe", c2: "#3b82f6", info: "教学楼男厕所。课间会有人进出，容易被脚步声、说话声和同学视线影响。" },
+    { id: "girls-restroom", label: "女厕所", short: "女厕所", category: "生活", symbol: "♀", x: 80, y: 64, w: 78, h: 34, c1: "#fecdd3", c2: "#f472b6", info: "教学楼女厕所。出入更敏感，普通情况下不适合无关人员靠近。" },
+    { id: "nurse-room", label: "保健室", short: "保健室", category: "生活", symbol: "＋", x: 20, y: 82, w: 78, h: 34, c1: "#fecdd3", c2: "#fb7185", info: "保健室。身体不适、临时休息、健康检查和被教师发现后的安置地点。" },
+    { id: "corridor", graphId: "corridor", label: "主走廊", short: "主走廊", category: "公共", symbol: "↔", x: 50, y: 74, w: 96, h: 30, c1: "#e5e7eb", c2: "#9ca3af" },
+    { id: "rooftop", label: "天台", short: "天台", category: "公共", symbol: "⇧", x: 80, y: 82, w: 82, h: 34, c1: "#d1fae5", c2: "#34d399", info: "教学楼天台。通常较安静，适合短暂谈话、躲避视线或独处。" }
+  ];
+
+  const ST_TEACHING_MAP_PATHS = [
+    { x: 18, y: 47, w: 64, h: 6 },
+    { x: 18, y: 73, w: 64, h: 6 },
+    { x: 49, y: 22, w: 6, h: 54 },
+    { x: 19, y: 22, w: 6, h: 54 },
+    { x: 79, y: 22, w: 6, h: 54 }
+  ];
+
+  function campusPointData(graph = loadStaticGraph("school")) {
+    const graphById = new Map((graph.locations || []).map((location) => [String(location.id), location]));
+    return ST_CAMPUS_MAP_POINTS.map((point) => {
+      const specialLocation = point.specialId ? SPECIAL_LOCATION_STATIC_ITEMS.find((item) => item.id === point.specialId) : null;
+      const graphLocation = graphById.get(String(point.graphId || point.id));
+      const location = graphLocation || specialLocation || {
+        id: point.graphId || point.id,
+        label: point.label,
+        category: point.category,
+        info: "暂无地点信息。"
+      };
+      const unlocked = specialLocation ? specialLocationUnlocked(specialLocation) : true;
+      return {
+        ...point,
+        location,
+        specialLocation,
+        unlocked,
+        label: location.label || point.label,
+        short: point.short || location.label || point.label,
+        category: location.category || point.category || "地点",
+        info: location.info || "暂无地点信息。"
+      };
+    });
+  }
+
+  function campusExtraLocations(graph, points) {
+    const pointIds = new Set(points.map((point) => String(point.location?.id || point.graphId || point.id)));
+    return (graph.locations || []).filter((location) => String(location?.id || "") && !pointIds.has(String(location.id)));
+  }
+
+  function teachingPointData(graph = loadStaticGraph("school")) {
+    const graphById = new Map((graph.locations || []).map((location) => [String(location.id), location]));
+    return ST_TEACHING_MAP_POINTS.map((point) => {
+      const graphLocation = point.graphId ? graphById.get(String(point.graphId)) : null;
+      const location = graphLocation || {
+        id: point.graphId || point.id,
+        label: point.label,
+        category: point.category,
+        info: point.info || "暂无地点信息。"
+      };
+      return {
+        ...point,
+        location,
+        label: location.label || point.label,
+        short: point.short || location.label || point.label,
+        category: location.category || point.category || "地点",
+        info: location.info || point.info || "暂无地点信息。"
+      };
+    });
+  }
+
+  function campusSelectedLocation(page, points, extras) {
+    const selected = String(page?.dataset?.campusSelected || "").trim();
+    if (!selected) return null;
+    const point = points.find((item) => String(item.id) === selected || String(item.location?.id) === selected);
+    if (point) return { type: "point", id: point.id, location: point.location, point };
+    const extra = extras.find((location) => String(location.id) === selected);
+    if (extra) return { type: "extra", id: extra.id, location: extra, point: null };
+    return null;
+  }
+
+  function renderCampusInfoPanel(page, selected, extras) {
+    const currentLocation = getCurrentStoryLocation() || "未记录";
+    const pendingStoryLocation = hasPendingStoryLocationOperation();
+    const specialLocation = selected?.point?.specialLocation || null;
+    const lockedSpecial = Boolean(specialLocation && !specialLocationUnlocked(specialLocation));
+    const location = selected?.location || {
+      id: "school",
+      label: "私立斋明学园",
+      category: "学校",
+      info: "从校门、教学楼、旧校舍、图书馆、操场到泳池，斋明学园的主要活动区域被压缩成一张轻量校园图。"
+    };
+    const suggest = selected?.location && !lockedSpecial
+      ? (specialLocation
+        ? '<button type="button" class="st-location-suggest" data-campus-special-suggest="' + escapeAttr(specialLocation.id) + '"' + (pendingStoryLocation ? " disabled" : "") + '>' + (pendingStoryLocation ? "已暂存" : "建议设为地点") + '</button>'
+        : '<button type="button" class="st-location-suggest" data-graph-suggest-location="' + escapeAttr(location.id) + '" data-graph-scope="school"' + (pendingStoryLocation ? " disabled" : "") + '>' + (pendingStoryLocation ? "已暂存" : "建议设为地点") + '</button>')
+      : "";
+    const enter = selected?.point?.enter === "teaching" && !lockedSpecial
+      ? '<button type="button" class="st-campus-enter" data-campus-enter-layer="teaching">进入教学楼</button>'
+      : "";
+    const gate = lockedSpecial
+      ? '<button type="button" class="st-campus-enter is-gate" data-campus-gate-open="' + escapeAttr(specialLocation.id) + '">查看准入证</button>'
+      : "";
+    const extraHtml = extras.length
+      ? '<div class="st-campus-extra"><span class="st-campus-extra-title">更多校内地点</span><div class="st-campus-extra-list">' + extras.map((item) => (
+          '<button type="button" class="' + (String(selected?.id || "") === String(item.id) ? "active" : "") + '" data-campus-extra="' + escapeAttr(item.id) + '">' + escapeHtml(item.label || item.id) + '</button>'
+        )).join("") + '</div></div>'
+      : '<p>后续用户自己添加的校内地点会收在这里，不会挤进主校园图。</p>';
+    return '<section class="st-campus-info">' +
+      '<div class="st-campus-info-head"><strong>' + escapeHtml(location.label || "校园总览") + '</strong><small>' + escapeHtml(location.category || "校园") + '</small></div>' +
+      '<p>' + escapeHtml(lockedSpecial ? ((specialLocation.gateText || "你被门卫赶了出来") + "。" + (specialLocation.unlockNote || "")) : (location.info || "暂无地点信息。")) + '</p>' +
+      '<div class="st-campus-actions">' + suggest + enter + gate + '</div>' +
+      '<div class="st-location-current"><span>当前地点变量</span><strong>' + escapeHtml(operationPanelLocationText(currentLocation)) + '</strong></div>' +
+      extraHtml +
+    '</section>';
+  }
+
+  function renderTeachingInfoPanel(page, selected) {
+    const currentLocation = getCurrentStoryLocation() || "未记录";
+    const pendingStoryLocation = hasPendingStoryLocationOperation();
+    const location = selected?.location || {
+      id: "teaching-building",
+      label: "主教学楼",
+      category: "教学楼",
+      info: "主教学楼按楼内案内図简化为办公室、年级教室、保健室、厕所、主走廊和天台。"
+    };
+    const suggest = selected?.location
+      ? '<button type="button" class="st-location-suggest" data-building-suggest-location="' + escapeAttr(selected.id) + '"' + (pendingStoryLocation ? " disabled" : "") + '>' + (pendingStoryLocation ? "已暂存" : "建议设为地点") + '</button>'
+      : "";
+    return '<section class="st-campus-info">' +
+      '<div class="st-campus-info-head"><strong>' + escapeHtml(location.label || "主教学楼") + '</strong><small>' + escapeHtml(location.category || "教学楼") + '</small></div>' +
+      '<p>' + escapeHtml(location.info || "暂无地点信息。") + '</p>' +
+      '<div class="st-campus-actions">' +
+        '<button type="button" class="st-campus-up" data-campus-back-layer="campus">返回校园图</button>' +
+        suggest +
+      '</div>' +
+      '<div class="st-location-current"><span>当前地点变量</span><strong>' + escapeHtml(operationPanelLocationText(currentLocation)) + '</strong></div>' +
+    '</section>';
+  }
+
+  function renderCampusGateDialog(page) {
+    const specialId = String(page?.dataset?.campusGateSpecial || "").trim();
+    if (!specialId) return "";
+    const location = SPECIAL_LOCATION_STATIC_ITEMS.find((item) => item.id === specialId);
+    if (!location || specialLocationUnlocked(location)) return "";
+    const status = String(page?.dataset?.specialLocationStatus || "").trim();
+    const passItem = specialLocationPassItemName(location) || String(location.passItem || "对应准入证").trim();
+    return '<div class="st-campus-gate-layer" data-campus-gate-layer role="presentation">' +
+      '<section class="st-campus-gate-card" role="dialog" aria-modal="true" aria-label="特殊地点门卫">' +
+        '<h3>' + escapeHtml(location.gateText || "你被门卫赶了出来") + '</h3>' +
+        '<p>' + escapeHtml(location.unlockNote || ("需要持有「" + passItem + "」。可在邂逅商店购买对应准入证。")) + '</p>' +
+        (status ? '<p class="st-campus-gate-status">' + escapeHtml(status) + '</p>' : '') +
+        '<div class="st-campus-gate-actions">' +
+          '<button type="button" data-campus-gate-close>取消</button>' +
+          '<button type="button" class="primary" data-campus-gate-shop="' + escapeAttr(location.id) + '">去邂逅商店</button>' +
+        '</div>' +
+      '</section>' +
+    '</div>';
+  }
+
+  function renderCampusMapCard(page) {
+    const graph = loadStaticGraph("school");
+    const currentLocation = getCurrentStoryLocation();
+    const points = campusPointData(graph);
+    const extras = campusExtraLocations(graph, points);
+    const selected = campusSelectedLocation(page, points, extras);
+    const fields = ST_CAMPUS_FIELDS.map((field) => '<i class="st-campus-field" style="--x:' + field.x + '%;--y:' + field.y + '%;--w:' + field.w + '%;--h:' + field.h + '%;--radius:' + escapeAttr(field.radius || "14px") + '"></i>').join("");
+    const paths = ST_CAMPUS_MAP_PATHS.map((path) => '<i class="st-campus-path" style="--x:' + path.x + '%;--y:' + path.y + '%;--w:' + path.w + '%;--h:' + path.h + '%"></i>').join("");
+    const pointHtml = points.map((point) => {
+      const location = point.location || {};
+      const isSelected = selected?.type === "point" && selected.id === point.id;
+      const isCurrent = isGraphLocationCurrent(location, currentLocation);
+      const locked = Boolean(point.specialLocation && !point.unlocked);
+      const hasEnter = Boolean(point.enter);
+      return '<button type="button" class="st-campus-point ' + (isSelected ? "active " : "") + (isCurrent ? "is-current " : "") + (locked ? "is-locked " : "") + (hasEnter ? "has-enter" : "") + '" data-campus-point="' + escapeAttr(point.id) + '"' + (point.specialLocation ? ' data-campus-special="' + escapeAttr(point.specialLocation.id) + '" data-campus-locked="' + (locked ? "true" : "false") + '"' : "") + ' style="--x:' + point.x + '%;--y:' + point.y + '%;--w:' + point.w + 'px;--h:' + point.h + 'px;--c1:' + escapeAttr(point.c1 || "#fde68a") + ';--c2:' + escapeAttr(point.c2 || "#f59e0b") + '" aria-label="' + escapeAttr(location.label || point.label) + '">' +
+        '<span class="st-campus-block" aria-hidden="true"><span class="st-campus-symbol">' + escapeHtml(point.symbol || "📍") + '</span>' + (hasEnter ? '<span class="st-map-layer-mark">›</span>' : '') + '</span>' +
+        '<span class="st-campus-label">' + escapeHtml(point.short || location.label || point.label) + '</span>' +
+      '</button>';
+    }).join("");
+    return '<section class="st-lite-card st-graph-card st-graph-paper st-campus-card">' +
+      '<div class="st-graph-head"><strong>斋明学园校园图</strong><span>' + graph.locations.length + ' 校内地点</span></div>' +
+      '<section class="st-campus-stage" data-campus-stage aria-label="斋明学园校园地图">' +
+        fields +
+        paths +
+        pointHtml +
+      '</section>' +
+      renderCampusInfoPanel(page, selected, extras) +
+      renderCampusGateDialog(page) +
+    '</section>' +
+    renderGraphAddLocationCard("school", graph);
+  }
+
+  function renderTeachingMapCard(page) {
+    const graph = loadStaticGraph("school");
+    const currentLocation = getCurrentStoryLocation();
+    const points = teachingPointData(graph);
+    const selected = campusSelectedLocation(page, points, []);
+    const paths = ST_TEACHING_MAP_PATHS.map((path) => '<i class="st-campus-path" style="--x:' + path.x + '%;--y:' + path.y + '%;--w:' + path.w + '%;--h:' + path.h + '%"></i>').join("");
+    const pointHtml = points.map((point) => {
+      const location = point.location || {};
+      const isSelected = selected?.type === "point" && selected.id === point.id;
+      const isCurrent = isGraphLocationCurrent(location, currentLocation);
+      return '<button type="button" class="st-campus-point ' + (isSelected ? "active " : "") + (isCurrent ? "is-current " : "") + '" data-teaching-point="' + escapeAttr(point.id) + '" style="--x:' + point.x + '%;--y:' + point.y + '%;--w:' + point.w + 'px;--h:' + point.h + 'px;--c1:' + escapeAttr(point.c1 || "#fde68a") + ';--c2:' + escapeAttr(point.c2 || "#f59e0b") + '" aria-label="' + escapeAttr(location.label || point.label) + '">' +
+        '<span class="st-campus-block" aria-hidden="true"><span class="st-campus-symbol">' + escapeHtml(point.symbol || "📍") + '</span></span>' +
+        '<span class="st-campus-label">' + escapeHtml(point.short || location.label || point.label) + '</span>' +
+      '</button>';
+    }).join("");
+    return '<section class="st-lite-card st-graph-card st-graph-paper st-campus-card">' +
+      '<div class="st-graph-head"><strong>主教学楼案内図</strong><span>楼内地点</span></div>' +
+      '<section class="st-campus-stage is-building" data-teaching-stage aria-label="主教学楼楼内地图">' +
+        paths +
+        pointHtml +
+      '</section>' +
+      renderTeachingInfoPanel(page, selected) +
+    '</section>';
+  }
+
+  function renderCampusPage(page) {
+    if (!page) return;
+    if (!ST_BOARD_MAP_LAYERS[String(page.dataset.mapBoardLayer || "")]) {
+      const legacyLayer = String(page.dataset.campusLayer || "campus");
+      page.dataset.mapBoardLayer = legacyLayer === "teaching" ? "teaching" : "campus";
+    }
+    renderCityMapPage(page);
+  }
+
+  function bindCampusMapActions(page) {
+    page.querySelector("[data-campus-stage]")?.addEventListener("click", (event) => {
+      if (event.target?.closest?.("[data-campus-point]")) return;
+      if (!page.dataset.campusSelected) return;
+      delete page.dataset.campusSelected;
+      renderCampusPage(page);
+    });
+    page.querySelectorAll("[data-campus-point]").forEach((button) => {
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const id = button.getAttribute("data-campus-point") || "";
+        const specialId = button.getAttribute("data-campus-special") || "";
+        if (specialId && button.getAttribute("data-campus-locked") === "true") {
+          page.dataset.campusSelected = id;
+          page.dataset.campusGateSpecial = specialId;
+          renderCampusPage(page);
+          return;
+        }
+        delete page.dataset.campusGateSpecial;
+        if (page.dataset.campusSelected === id) delete page.dataset.campusSelected;
+        else page.dataset.campusSelected = id;
+        renderCampusPage(page);
+      });
+    });
+    page.querySelectorAll("[data-campus-enter-layer]").forEach((button) => {
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        page.dataset.campusLayer = button.getAttribute("data-campus-enter-layer") || "campus";
+        delete page.dataset.campusSelected;
+        delete page.dataset.campusGateSpecial;
+        renderCampusPage(page);
+      });
+    });
+    page.querySelectorAll("[data-campus-gate-open]").forEach((button) => {
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        page.dataset.campusGateSpecial = button.getAttribute("data-campus-gate-open") || "";
+        renderCampusPage(page);
+      });
+    });
+    page.querySelectorAll("[data-campus-gate-close]").forEach((button) => {
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        delete page.dataset.campusGateSpecial;
+        renderCampusPage(page);
+      });
+    });
+    page.querySelector("[data-campus-gate-layer]")?.addEventListener("click", (event) => {
+      if (event.target?.closest?.(".st-campus-gate-card")) return;
+      delete page.dataset.campusGateSpecial;
+      renderCampusPage(page);
+    });
+    page.querySelectorAll("[data-campus-gate-shop]").forEach((button) => {
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const id = button.getAttribute("data-campus-gate-shop") || "";
+        const location = SPECIAL_LOCATION_STATIC_ITEMS.find((item) => item.id === id);
+        openSpecialLocationShop(page, location);
+      });
+    });
+    page.querySelectorAll("[data-campus-special-suggest]").forEach((button) => {
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const id = button.getAttribute("data-campus-special-suggest") || "";
+        const location = SPECIAL_LOCATION_STATIC_ITEMS.find((item) => item.id === id);
+        if (!location) return;
+        if (!specialLocationUnlocked(location)) {
+          page.dataset.campusGateSpecial = id;
+          renderCampusPage(page);
+          return;
+        }
+        if (hasPendingStoryLocationOperation()) {
+          renderCampusPage(page);
+          return;
+        }
+        Promise.resolve(appendAppOperation({
+          来源: "地图",
+          操作: "建议剧情地点",
+          地图类型: "校园特殊地点",
+          地点ID: location.id,
+          建议地点: {
+            名称: location.label,
+            分类: "特殊地点",
+            描述: location.info || "待续"
+          },
+          当前地点变量: getCurrentStoryLocation() || "未知",
+          AI执行规范: "这只是用户希望剧情进入该校内特殊地点的建议；前端不能直接改当前地点。AI应按剧情、时间、权限和世界观判断是否成立，成立时更新/系统/当前地点并展开对应特殊地点剧情；不合理时可拒绝、延后或给出进入条件。"
+        })).then(() => renderCampusPage(page));
+      });
+    });
+    page.querySelectorAll("[data-campus-extra]").forEach((button) => {
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const id = button.getAttribute("data-campus-extra") || "";
+        if (page.dataset.campusSelected === id) delete page.dataset.campusSelected;
+        else page.dataset.campusSelected = id;
+        renderCampusPage(page);
+      });
+    });
+  }
+
+  function bindTeachingMapActions(page) {
+    page.querySelector("[data-teaching-stage]")?.addEventListener("click", (event) => {
+      if (event.target?.closest?.("[data-teaching-point]")) return;
+      if (!page.dataset.campusSelected) return;
+      delete page.dataset.campusSelected;
+      renderCampusPage(page);
+    });
+    page.querySelectorAll("[data-teaching-point]").forEach((button) => {
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const id = button.getAttribute("data-teaching-point") || "";
+        if (page.dataset.campusSelected === id) delete page.dataset.campusSelected;
+        else page.dataset.campusSelected = id;
+        renderCampusPage(page);
+      });
+    });
+    page.querySelectorAll("[data-campus-back-layer]").forEach((button) => {
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        page.dataset.campusLayer = button.getAttribute("data-campus-back-layer") || "campus";
+        delete page.dataset.campusSelected;
+        renderCampusPage(page);
+      });
+    });
+    page.querySelectorAll("[data-building-suggest-location]").forEach((button) => {
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const id = button.getAttribute("data-building-suggest-location") || "";
+        const point = teachingPointData().find((item) => item.id === id);
+        const location = point?.location;
+        if (!location || hasPendingStoryLocationOperation()) {
+          renderCampusPage(page);
+          return;
+        }
+        Promise.resolve(appendAppOperation({
+          来源: "学校地图",
+          操作: "建议剧情地点",
+          当前地点变量: getCurrentStoryLocation() || "未知",
+          建议地点: {
+            名称: location.label || point.label,
+            分类: location.category || point.category || "教学楼",
+            描述: location.info || point.info || "暂无地点信息。",
+            地图类型: "主教学楼案内図"
+          },
+          AI执行规范: "这只是用户希望剧情地点设在这里的建议；前端不能直接改当前地点。AI应按剧情、时间和移动条件判断是否成立，成立时更新/系统/当前地点和/系统/当前事件；/系统/_当前周几、/系统/_当前日程、/系统/_当前特殊日期、/系统/当天课程表、/系统/当天原课程表和/系统/当天魔改课程表为前端只读同步字段，AI不要手写这些字段。不合理时可拒绝或延后。"
+        })).then(() => renderCampusPage(page));
+      });
+    });
+  }
+
   function getSchoolRules() {
     const variables = getLatestStatDataSync();
     const rules = variables?.["校规"] || variables?.["系统"]?.["校规"];
     return rules && typeof rules === "object" && !Array.isArray(rules) ? rules : {};
   }
 
-  const DEFAULT_SCHOOL_RULE_NAMES = new Set(["仪容礼仪", "出勤学习", "校内安全"]);
+  const DEFAULT_SCHOOL_RULE_NAMES = new Set(["仪容礼仪", "出勤学习", "校内安全", "校内风纪", "环境卫生"]);
 
   function isDefaultSchoolRuleName(name) {
     return DEFAULT_SCHOOL_RULE_NAMES.has(String(name || "").trim());
@@ -19358,7 +24581,7 @@ button.st-work-notice{cursor:pointer}
     const blockedReasons = [];
     if (!requirement.vip6) blockedReasons.push("需要VIP6");
     if (requirement.ruleCouponCount < 1) blockedReasons.push("需要校规修改券");
-    if (checkCount && requirement.count >= 3) blockedReasons.push("校规最多3条");
+    if (checkCount && requirement.count >= 5) blockedReasons.push("校规最多5条");
     return blockedReasons;
   }
 
@@ -19409,7 +24632,7 @@ button.st-work-notice{cursor:pointer}
     return paper +
     '<section class="st-lite-card st-rule-form">' +
       '<textarea class="st-rule-input" data-school-rule-input placeholder="输入想制定的校规"></textarea>' +
-      '<div class="st-rule-cost"><span>校规修改券 1</span><span>VIP6</span><span>最多3条</span></div>' +
+      '<div class="st-rule-cost"><span>校规修改券 1</span><span>VIP6</span><span>最多5条</span></div>' +
       '<p class="st-rule-state">当前：' + escapeHtml("VIP6 / 校规修改券 " + requirement.ruleCouponCount + " 张 / 星光点 " + requirement.starlight + " / " + requirement.count + "条") + '。发布新校规消耗1张校规修改券；废止初始校规消耗10星光点。</p>' +
       '<button class="st-rule-button" type="button" data-school-rule-submit' + (canSubmit ? "" : " disabled") + '>' + (canSubmit ? "申请立校规" : blockedReasons.join(" / ")) + '</button>' +
     '</section>';
@@ -19424,8 +24647,7 @@ button.st-work-notice{cursor:pointer}
 	      button.addEventListener("click", () => {
 	        const scope = button.getAttribute("data-graph-scope") || "world";
 	        if (hasPendingGraphAddLocationOperation(scope)) {
-	          if (page.classList.contains("st-school-app")) renderSchoolPage(page);
-	          else renderMapPage(page);
+	          rerenderGraphHost(page);
 	          return;
 	        }
 	        const card = button.closest("[data-graph-add-scope]");
@@ -19463,8 +24685,7 @@ button.st-work-notice{cursor:pointer}
 	            toggleGraphCustomCategoryInput(categoryInput);
 	            if (infoInput) infoInput.value = "";
 	          }
-	          if (page.classList.contains("st-school-app")) renderSchoolPage(page);
-	          else renderMapPage(page);
+	          rerenderGraphHost(page);
 	        });
 	      });
 	    });
@@ -19485,8 +24706,7 @@ button.st-work-notice{cursor:pointer}
         const scope = button.getAttribute("data-graph-scope") || "world";
         rememberGraphUiState(page, scope);
         page.dataset[graphCategoryDatasetKey(scope)] = button.getAttribute("data-graph-category-filter") || "";
-        if (page.classList.contains("st-school-app")) renderSchoolPage(page);
-        else renderMapPage(page);
+        rerenderGraphHost(page);
       });
     });
     page.querySelectorAll("[data-graph-favorite-filter]").forEach((button) => {
@@ -19495,8 +24715,7 @@ button.st-work-notice{cursor:pointer}
         rememberGraphUiState(page, scope);
         const key = graphFavoriteDatasetKey(scope);
         page.dataset[key] = page.dataset[key] === "true" ? "" : "true";
-        if (page.classList.contains("st-school-app")) renderSchoolPage(page);
-        else renderMapPage(page);
+        rerenderGraphHost(page);
       });
     });
     page.querySelectorAll("[data-graph-suggest-location]").forEach((button) => {
@@ -19509,8 +24728,7 @@ button.st-work-notice{cursor:pointer}
 	        const location = graph.locations.find((item) => item.id === id);
 	        if (!location) return;
 	        if (hasPendingStoryLocationOperation()) {
-	          if (page.classList.contains("st-school-app")) renderSchoolPage(page);
-	          else renderMapPage(page);
+	          rerenderGraphHost(page);
 	          return;
 	        }
 	        Promise.resolve(appendAppOperation({
@@ -19523,10 +24741,9 @@ button.st-work-notice{cursor:pointer}
             描述: location.info || "暂无地点信息。",
             地图类型: graph.title
           },
-          AI执行规范: "这只是用户希望剧情地点设在这里的建议；前端不能直接改当前地点。AI应按剧情、时间和移动条件判断是否成立，成立时更新/系统/当前地点，并同步当前事件、当前日程或当前/待上课程；不合理时可拒绝或延后。"
+	          AI执行规范: "这只是用户希望剧情地点设在这里的建议；前端不能直接改当前地点。AI应按剧情、时间和移动条件判断是否成立，成立时更新/系统/当前地点和/系统/当前事件；/系统/_当前周几、/系统/_当前日程、/系统/_当前特殊日期、/系统/当天课程表、/系统/当天原课程表和/系统/当天魔改课程表为前端只读同步字段，AI不要手写这些字段。不合理时可拒绝或延后。"
 	        })).then(() => {
-	          if (page.classList.contains("st-school-app")) renderSchoolPage(page);
-	          else renderMapPage(page);
+	          rerenderGraphHost(page);
 	        });
 	      });
 	    });
@@ -19549,8 +24766,7 @@ button.st-work-notice{cursor:pointer}
           if (!ok) return;
           deleteStaticGraphNode(scope, nodeId);
         }
-        if (page.classList.contains("st-school-app")) renderSchoolPage(page);
-        else renderMapPage(page);
+        rerenderGraphHost(page);
       });
     });
     page.querySelector("[data-school-rule-submit]")?.addEventListener("click", () => {
@@ -19573,7 +24789,7 @@ button.st-work-notice{cursor:pointer}
         操作: "申请立校规",
         校规内容: ruleText,
         目标范围: "未指定则学校内全体人员；也可由校规内容指定个体或群体。",
-        前置条件: "VIP6；库存持有校规修改券>=1；校规少于3条；本次只发布一条。",
+        前置条件: "VIP6；库存持有校规修改券>=1；校规少于5条；本次只发布一条。",
         固定代价: {
           校规修改券: 1
         },
@@ -19597,6 +24813,594 @@ button.st-work-notice{cursor:pointer}
         });
       });
     });
+  }
+
+  const ST_CITY_MAP_POINTS = [
+    { id: "university", specialId: "university", label: "明德大学", short: "明德大学", category: "大学", icon: "university", symbol: "🎓", x: 18, y: 32, intro: "紧邻私立斋明学园的开放式综合大学，是高中生与大学生圈层交汇的灰色地带。它属于特殊地点，但会作为城市主地图的一部分展示。" },
+    { id: "school", graphId: "school", label: "私立斋明学园", short: "斋明学园", category: "校园", icon: "school", symbol: "🏫", x: 50, y: 32, enter: "campus", intro: "东京近郊的老牌私立升学高中，前千金女校，今年正式改为男女混校。这里是主角日常、课程、社团和校内事件的中心。" },
+    { id: "saionji-company", graphId: "saionji-company", label: "西园寺企业", short: "西园寺企业", category: "商业", icon: "company", symbol: "🏢", x: 82, y: 32, intro: "西园寺财团相关企业据点，象征爱丽莎家族的财富、人脉和社会影响力。" },
+    { id: "miyuki-home", graphId: "miyuki-home", label: "深雪的家", short: "深雪的家", category: "住宅", icon: "home", symbol: "🏠", x: 18, y: 72, intro: "月咏深雪的住处。安静、整洁、书卷气重，适合处理学习、班务和私人阅读情节。" },
+    { id: "natsumi-home", graphId: "natsumi-home", label: "夏美的家", short: "夏美的家", category: "住宅", icon: "home", symbol: "🏠", x: 50, y: 72, intro: "犬冢夏美的家。生活气息更强，和运动、饮食、训练后的休息场景容易连接。" },
+    { id: "saionji-home", graphId: "saionji-home", label: "西园寺的家", short: "西园寺宅邸", category: "住宅", icon: "home", symbol: "🏠", x: 82, y: 72, intro: "西园寺爱丽莎的家。豪宅、佣人和严格家族秩序构成她日常生活的背景。" }
+  ];
+
+  const ST_CITY_MAP_ROADS = [
+    { x: 13, y: 51, w: 74, h: 7, axis: "h" },
+    { x: 17, y: 32, w: 7, h: 43, axis: "v" },
+    { x: 49, y: 32, w: 7, h: 43, axis: "v" },
+    { x: 81, y: 32, w: 7, h: 43, axis: "v" }
+  ];
+
+  const ST_CITY_MAP_GREENERY = [
+    { x: 15, y: 44, w: 70, h: 7, axis: "h", count: 8 },
+    { x: 15, y: 59, w: 70, h: 7, axis: "h", count: 8 },
+    { x: 30, y: 24, w: 40, h: 7, axis: "h", count: 5 },
+    { x: 30, y: 80, w: 40, h: 7, axis: "h", count: 5 }
+  ];
+
+  const ST_BOARD_MAP_LAYERS = {
+    city: {
+      title: "地图",
+      subtitle: "城镇棋盘",
+      currentScope: "world",
+      cols: 3,
+      rows: 4,
+      intro: "斋明学园、明德大学、西园寺企业、警视厅与几处主要住宅分布在同一座近郊城镇里。学生日常、家族背景、课外行动和偶遇事件会在这些地点之间交汇。",
+      nodes: [
+        { id: "university", specialId: "university", label: "明德大学", short: "明德大学", category: "大学", icon: "university", symbol: "🎓", col: 1, row: 1, c1: "#c4b5fd", c2: "#8b5cf6", info: "紧邻私立斋明学园的开放式综合大学，是高中生与大学生圈层交汇的灰色地带。它属于城市主地图的一部分，不需要准入证或星光点解锁。" },
+        { id: "school", graphId: "school", label: "私立斋明学园", short: "斋明学园", category: "校园", icon: "school", symbol: "🏫", col: 2, row: 1, enter: "campus", c1: "#bfdbfe", c2: "#60a5fa", info: "东京近郊的老牌私立升学高中，前千金女校，今年正式改为男女混校。这里是主角日常、课程、社团和校内事件的中心。" },
+        { id: "saionji-company", graphId: "saionji-company", label: "西园寺企业", short: "西园寺企业", category: "商业", icon: "company", symbol: "🏢", col: 3, row: 1, c1: "#fdba74", c2: "#f97316", info: "西园寺财团相关企业据点，象征爱丽莎家族的财富、人脉和社会影响力。" },
+        { id: "police-headquarters", graphId: "police-headquarters", label: "警视厅", short: "警视厅", category: "公共", icon: "company", symbol: "🚓", col: 2, row: 2, c1: "#bae6fd", c2: "#0ea5e9", comingSoon: true, comingSoonMessage: "待续", info: "城镇警务系统的主要据点。报案、询问、监控调取、失踪与异常事件调查会在这里汇集；主角可疑度过高或公开事件扩大时，这里会成为压力来源。" },
+        { id: "miyuki-home", graphId: "miyuki-home", label: "深雪的家", short: "深雪的家", category: "住宅", icon: "home", symbol: "🏠", col: 1, row: 3, c1: "#fda4af", c2: "#fb7185", info: "月咏深雪的住处。安静、整洁、书卷气重，适合处理学习、班务和私人阅读情节。" },
+        { id: "natsumi-home", graphId: "natsumi-home", label: "夏美的家", short: "夏美的家", category: "住宅", icon: "home", symbol: "🏠", col: 2, row: 3, c1: "#fda4af", c2: "#fb7185", info: "犬冢夏美的家。生活气息更强，和运动、饮食、训练后的休息场景容易连接。" },
+        { id: "saionji-home", graphId: "saionji-home", label: "西园寺的家", short: "西园寺宅邸", category: "住宅", icon: "home", symbol: "🏠", col: 3, row: 3, c1: "#fda4af", c2: "#fb7185", info: "西园寺爱丽莎的家。豪宅、佣人和严格家族秩序构成她日常生活的背景。" }
+      ]
+    },
+    campus: {
+      title: "校园地图",
+      subtitle: "斋明学园棋盘",
+      parent: "city",
+      currentScope: "school",
+      cols: 3,
+      rows: 5,
+      intro: "私立斋明学园是前千金女校改制后的老牌升学高中。校门、教学楼、旧校舍、图书馆、操场和泳池构成日常活动范围，巴别与特别温室则带有更强的门禁和异常色彩。",
+      nodes: [
+        { id: "babel", specialId: "babel", label: "旧图书馆塔楼“巴别”", short: "巴别", category: "特殊", symbol: "🗼", col: 1, row: 1, c1: "#e5e7eb", c2: "#6b7280" },
+        { id: "classroom", graphId: "classroom", label: "教学楼", short: "教学楼", category: "学习", symbol: "📘", col: 2, row: 1, enter: "teaching", c1: "#fde68a", c2: "#f59e0b" },
+        { id: "tropical-rainforest", specialId: "tropical-rainforest", label: "第1生物特别温室", short: "热带雨林", category: "特殊", symbol: "🌿", col: 3, row: 1, c1: "#bbf7d0", c2: "#16a34a" },
+        { id: "old-school-building", graphId: "old-school-building", label: "旧校舍", short: "旧校舍", category: "灵异", symbol: "🏚", col: 1, row: 3, c1: "#d6d3d1", c2: "#78716c" },
+        { id: "corridor", graphId: "corridor", label: "中庭连廊", short: "中庭", category: "公共", symbol: "🚶", col: 2, row: 3, c1: "#e5e7eb", c2: "#9ca3af" },
+        { id: "library", graphId: "library", label: "图书馆", short: "图书馆", category: "学习", symbol: "📚", col: 3, row: 3, c1: "#c4b5fd", c2: "#8b5cf6" },
+        { id: "field", graphId: "field", label: "操场", short: "操场", category: "体育", symbol: "🏃", col: 1, row: 5, c1: "#bbf7d0", c2: "#22c55e" },
+        { id: "school", graphId: "school", label: "校门", short: "校门", category: "学校", symbol: "🏫", col: 2, row: 5, c1: "#bfdbfe", c2: "#60a5fa" },
+        { id: "pool", graphId: "pool", label: "泳池", short: "泳池", category: "体育", symbol: "🏊", col: 3, row: 5, c1: "#bae6fd", c2: "#38bdf8" }
+      ]
+    },
+    teaching: {
+      title: "教学楼",
+      subtitle: "主教学楼棋盘",
+      parent: "campus",
+      currentScope: "school",
+      cols: 3,
+      rows: 5,
+      intro: "主教学楼是斋明学园日常课程和班级关系的中心。年级教室、办公室、走廊、保健室、厕所和天台把上课、课间、值日与突发事件连接在一起。",
+      nodes: [
+        { id: "teacher-office", label: "教师办公室", short: "教师办公室", category: "行政", symbol: "🧑‍🏫", col: 1, row: 1, c1: "#fed7aa", c2: "#fb923c", info: "教师办公室。班主任、任课老师和校内管理信息常在这里交汇。" },
+        { id: "principal", graphId: "principal", label: "校长室", short: "校长室", category: "行政", symbol: "🗂", col: 3, row: 1, c1: "#fdba74", c2: "#ea580c" },
+        { id: "boys-restroom", label: "男厕所", short: "男厕所", category: "生活", symbol: "♂", col: 1, row: 2, c1: "#bfdbfe", c2: "#3b82f6", info: "教学楼男厕所。课间会有人进出，容易被脚步声、说话声和同学视线影响。" },
+        { id: "corridor", graphId: "corridor", label: "主走廊", short: "主走廊", category: "公共", symbol: "↔", col: 2, row: 2, c1: "#e5e7eb", c2: "#9ca3af" },
+        { id: "girls-restroom", label: "女厕所", short: "女厕所", category: "生活", symbol: "♀", col: 3, row: 2, c1: "#fecdd3", c2: "#f472b6", info: "教学楼女厕所。出入更敏感，普通情况下不适合无关人员靠近。" },
+        { id: "classroom-1", label: "一年级教室", short: "一年级", category: "学习", symbol: "1", col: 1, row: 3, c1: "#bfdbfe", c2: "#60a5fa", info: "一年级教室。低年级学生聚集，传闻扩散快，适合轻量校园日常。" },
+        { id: "classroom", graphId: "classroom", label: "二年级教室", short: "二年级", category: "学习", symbol: "2", col: 2, row: 3, c1: "#fde68a", c2: "#f59e0b" },
+        { id: "classroom-3", label: "三年级教室", short: "三年级", category: "学习", symbol: "3", col: 3, row: 3, c1: "#ddd6fe", c2: "#8b5cf6", info: "三年级教室。升学压力更重，角色互动会更容易被学业和前后辈关系影响。" },
+        { id: "nurse-room", label: "保健室", short: "保健室", category: "生活", symbol: "＋", col: 1, row: 5, c1: "#fecdd3", c2: "#fb7185", info: "保健室。身体不适、临时休息、健康检查和被教师发现后的安置地点。" },
+        { id: "rooftop", label: "天台", short: "天台", category: "公共", symbol: "⇧", col: 3, row: 5, c1: "#d1fae5", c2: "#34d399", info: "教学楼天台。通常较安静，适合短暂谈话、躲避视线或独处。" }
+      ]
+    }
+  };
+
+  function cityMapPointData() {
+    const graph = loadStaticGraph("world");
+    const graphById = new Map((graph.locations || []).map((location) => [String(location.id), location]));
+    const university = SPECIAL_LOCATION_STATIC_ITEMS.find((item) => item.id === "university");
+    return ST_CITY_MAP_POINTS.map((point) => {
+      const graphLocation = point.graphId ? graphById.get(String(point.graphId)) : null;
+      const specialLocation = point.specialId === "university" ? university : null;
+      const unlocked = specialLocation ? specialLocationUnlocked(specialLocation) : true;
+      return {
+        ...point,
+        label: graphLocation?.label || specialLocation?.label || point.label,
+        short: point.short || graphLocation?.label || specialLocation?.label || point.label,
+        category: point.category || graphLocation?.category || "地点",
+        info: graphLocation?.info || specialLocation?.info || point.intro || "暂无地点信息。",
+        unlocked
+      };
+    });
+  }
+
+  function cityMapAdditionalLocations() {
+    const graph = loadStaticGraph("world");
+    const pointIds = new Set(ST_CITY_MAP_POINTS.map((point) => String(point.graphId || point.id)));
+    const pointLabels = new Set(ST_CITY_MAP_POINTS.map((point) => String(point.label || point.short || "")));
+    const defaultIds = defaultGraphNodeIds("world");
+    return (graph.locations || [])
+      .filter((location) => {
+        const id = String(location.id || "");
+        const label = String(location.label || "");
+        return id && !defaultIds.has(id) && !pointIds.has(id) && !pointLabels.has(label);
+      })
+      .slice(0, 16);
+  }
+
+  function cityMapSelectedPoint(page, points, extras = []) {
+    const selected = String(page?.dataset?.cityMapSelected || "").trim();
+    const point = points.find((item) => item.id === selected);
+    if (point) return point;
+    const extra = extras.find((item) => item.id === selected);
+    return extra ? { ...extra, isExtra: true } : null;
+  }
+
+  function mapBoardLayerId(page) {
+    const id = String(page?.dataset?.mapBoardLayer || "").trim();
+    return ST_BOARD_MAP_LAYERS[id] ? id : "city";
+  }
+
+  function mapBoardLayer(page) {
+    return ST_BOARD_MAP_LAYERS[mapBoardLayerId(page)] || ST_BOARD_MAP_LAYERS.city;
+  }
+
+  function mapBoardSetLayer(page, layerId) {
+    if (!page || !ST_BOARD_MAP_LAYERS[layerId]) return;
+    page.dataset.mapBoardLayer = layerId;
+    page.dataset.campusLayer = layerId === "teaching" ? "teaching" : "campus";
+    delete page.dataset.mapBoardSelected;
+    delete page.dataset.mapBoardLastClick;
+    delete page.dataset.mapBoardLastClickAt;
+    delete page.dataset.cityMapSelected;
+    delete page.dataset.campusSelected;
+    delete page.dataset.campusGateSpecial;
+    delete page.dataset.mapBoardDrawerOpen;
+    delete page.dataset.mapBoardAddOpen;
+  }
+
+  function mapBoardNodeData(layerId) {
+    const layer = ST_BOARD_MAP_LAYERS[layerId] || ST_BOARD_MAP_LAYERS.city;
+    const graph = loadStaticGraph(layer.currentScope || "world");
+    const graphById = new Map((graph.locations || []).map((location) => [String(location.id), location]));
+    return (layer.nodes || []).map((node) => {
+      const graphLocation = node.graphId ? graphById.get(String(node.graphId)) : null;
+      const specialLocation = node.specialId ? SPECIAL_LOCATION_STATIC_ITEMS.find((item) => item.id === node.specialId) : null;
+      const fallback = {
+        id: node.graphId || node.specialId || node.id,
+        label: node.label || node.short || node.id,
+        category: node.category || "地点",
+        info: node.info || "暂无地点信息。"
+      };
+      const location = graphLocation || specialLocation || fallback;
+      const unlocked = specialLocation ? specialLocationUnlocked(specialLocation) : true;
+      return {
+        ...node,
+        location,
+        specialLocation,
+        unlocked,
+        label: location.label || node.label || fallback.label,
+        short: node.short || location.label || node.label || fallback.label,
+        category: location.category || node.category || fallback.category,
+        info: location.info || node.info || fallback.info
+      };
+    });
+  }
+
+  function mapBoardExtraLocations(layerId, nodes) {
+    const layer = ST_BOARD_MAP_LAYERS[layerId] || ST_BOARD_MAP_LAYERS.city;
+    const scope = layer.currentScope || "world";
+    const graph = loadStaticGraph(scope);
+    const defaultIds = defaultGraphNodeIds(scope);
+    const nodeIds = new Set(nodes.map((node) => String(node.location?.id || node.graphId || node.specialId || node.id)));
+    const nodeLabels = new Set(nodes.map((node) => String(node.label || node.short || "")));
+    const seen = new Set();
+    return (graph.locations || [])
+      .filter((location) => {
+        const id = String(location.id || "");
+        const label = String(location.label || "");
+        if (!id || defaultIds.has(id) || nodeIds.has(id) || nodeLabels.has(label) || seen.has(id) || (label && seen.has(label))) return false;
+        seen.add(id);
+        if (label) seen.add(label);
+        return true;
+      })
+      .slice(0, 32);
+  }
+
+  function mapBoardSelectedEntry(page, nodes, extras) {
+    const selected = String(page?.dataset?.mapBoardSelected || "").trim();
+    if (!selected) return null;
+    const node = nodes.find((item) => String(item.id) === selected || String(item.location?.id) === selected);
+    if (node) return { type: "node", id: node.id, node, location: node.location };
+    const extra = extras.find((item) => String(item.id) === selected);
+    return extra ? { type: "extra", id: extra.id, node: null, location: extra } : null;
+  }
+
+  function mapBoardCellsHtml(layer) {
+    const cols = Math.max(1, Math.floor(Number(layer.cols) || 3));
+    const rows = Math.max(1, Math.floor(Number(layer.rows) || 5));
+    return Array.from({ length: cols * rows }, (_, index) => {
+      const row = Math.floor(index / cols);
+      const col = index % cols;
+      return '<i class="st-board-cell ' + ((row + col) % 2 ? "alt" : "") + '" aria-hidden="true"></i>';
+    }).join("");
+  }
+
+  function mapBoardExtraTitle(layerId) {
+    if (layerId === "city") return "更多区域";
+    if (layerId === "teaching") return "更多楼内地点";
+    return "更多校内地点";
+  }
+
+  function mapBoardSortedExtras(scope, extras) {
+    const favorites = readGraphFavoriteIds(scope);
+    return (extras || []).slice().sort((left, right) => {
+      const leftId = String(left?.id || "");
+      const rightId = String(right?.id || "");
+      const favDiff = Number(favorites.has(rightId)) - Number(favorites.has(leftId));
+      if (favDiff) return favDiff;
+      return String(left?.label || leftId).localeCompare(String(right?.label || rightId), "zh-Hans-CN");
+    });
+  }
+
+  function renderMapBoardDrawer(page, layerId, layer, extras) {
+    if (page?.dataset?.mapBoardDrawerOpen !== "true") return "";
+    const scope = layer.currentScope || "world";
+    const favorites = readGraphFavoriteIds(scope);
+    const selectedId = String(page?.dataset?.mapBoardSelected || "");
+    const list = mapBoardSortedExtras(scope, extras).map((location) => {
+      const id = String(location?.id || "");
+      const favorite = favorites.has(id);
+      return '<article class="st-board-drawer-row ' + (selectedId === id ? "active" : "") + '">' +
+        '<button type="button" class="st-board-drawer-fav ' + (favorite ? "active" : "") + '" data-board-extra-favorite="' + escapeAttr(id) + '" aria-label="' + (favorite ? "取消收藏" : "收藏") + '">' + (favorite ? "★" : "☆") + '</button>' +
+        '<button type="button" class="st-board-drawer-name" data-board-extra="' + escapeAttr(id) + '" title="' + escapeAttr(location?.info || "") + '">' + escapeHtml(location?.label || id) + '</button>' +
+      '</article>';
+    }).join("") || '<p class="st-board-drawer-empty">暂无后续新增地点。</p>';
+    return '<section class="st-board-drawer" data-board-drawer>' +
+      '<div class="st-board-drawer-head"><strong>' + escapeHtml(mapBoardExtraTitle(layerId)) + '</strong><small>' + extras.length + ' 项</small></div>' +
+      '<div class="st-board-drawer-list">' + list + '</div>' +
+      '<button type="button" class="st-board-drawer-add" data-board-add-open aria-label="新增地点">＋</button>' +
+    '</section>';
+  }
+
+  function renderMapBoardAddDialog(page, layer, graph) {
+    if (page?.dataset?.mapBoardAddOpen !== "true") return "";
+    return '<div class="st-map-add-layer" data-board-add-layer role="presentation">' +
+      '<section class="st-map-add-dialog" role="dialog" aria-modal="true" aria-label="新增地点">' +
+        '<button type="button" class="st-map-add-close" data-board-add-close aria-label="关闭">×</button>' +
+        renderMapBoardAddLocationCard(layer.currentScope || "world", graph) +
+      '</section>' +
+    '</div>';
+  }
+
+  function renderMapBoardInfoPanel(page, layerId, layer, selected, extras) {
+    const currentLocation = getCurrentStoryLocation() || "未记录";
+    const pendingStoryLocation = hasPendingStoryLocationOperation();
+    if (selected?.location) {
+      const location = selected.location;
+      const node = selected.node;
+      const specialLocation = node?.specialLocation || null;
+      const lockedSpecial = Boolean(specialLocation && !node.unlocked);
+      const meta = lockedSpecial
+        ? "特殊地点 / 需准入证"
+        : specialLocation
+          ? "特殊地点 / 可进入"
+          : (location.category || node?.category || "地点");
+      const description = lockedSpecial
+        ? ((specialLocation.gateText || "你被门卫赶了出来") + "。" + (specialLocation.unlockNote || ""))
+        : (location.info || node?.info || "暂无地点信息。");
+      const suggest = lockedSpecial || !location
+        ? ""
+        : '<button type="button" class="st-location-suggest" data-board-suggest' + (pendingStoryLocation ? " disabled" : "") + '>' + (pendingStoryLocation ? "已暂存" : "建议设为地点") + '</button>';
+      const enter = node?.enter && !lockedSpecial
+        ? '<button type="button" class="st-city-enter" data-board-enter="' + escapeAttr(node.enter) + '">进入下层</button>'
+        : "";
+      const gate = lockedSpecial
+        ? '<button type="button" class="st-city-enter is-gate" data-board-gate-open="' + escapeAttr(specialLocation.id) + '">查看准入证</button>'
+        : "";
+      return '<section class="st-city-info-panel">' +
+        '<div class="st-city-info-head"><strong>' + escapeHtml(location.label || node?.label || "地点") + '</strong><small>' + escapeHtml(meta) + '</small></div>' +
+        '<p>' + escapeHtml(description) + '</p>' +
+        '<div class="st-city-actions">' + suggest + enter + gate + '</div>' +
+        '<div class="st-location-current"><span>当前地点变量</span><strong>' + escapeHtml(operationPanelLocationText(currentLocation)) + '</strong></div>' +
+      '</section>';
+    }
+    return '<section class="st-city-info-panel">' +
+      '<div class="st-city-info-head"><strong>' + escapeHtml(layer.title || "地图") + '</strong><small>' + escapeHtml(layer.subtitle || "棋盘地图") + '</small></div>' +
+      '<p>' + escapeHtml(layer.intro || "暂无地点说明。") + '</p>' +
+    '</section>';
+  }
+
+  function mapBoardAppendSuggestion(page) {
+    const layerId = mapBoardLayerId(page);
+    const layer = mapBoardLayer(page);
+    const nodes = mapBoardNodeData(layerId);
+    const extras = mapBoardExtraLocations(layerId, nodes);
+    const selected = mapBoardSelectedEntry(page, nodes, extras);
+    const location = selected?.location;
+    if (!location || hasPendingStoryLocationOperation()) {
+      renderCityMapPage(page);
+      return;
+    }
+    const specialLocation = selected.node?.specialLocation || null;
+    if (specialLocation && !selected.node?.unlocked) {
+      openSpecialLocationShop(page, specialLocation);
+      return;
+    }
+    const source = layer.currentScope === "school" ? "学校地图" : "地图";
+    const mapType = specialLocation ? "校园特殊地点" : (layer.subtitle || layer.title || "棋盘地图");
+    Promise.resolve(appendAppOperation({
+      来源: source,
+      操作: "建议剧情地点",
+      地图类型: mapType,
+      地点ID: location.id || selected.id,
+      当前地点变量: getCurrentStoryLocation() || "未知",
+      建议地点: {
+        名称: location.label || selected.node?.label || "地点",
+        分类: specialLocation ? "特殊地点" : (location.category || selected.node?.category || "未分类"),
+        描述: location.info || selected.node?.info || "暂无地点信息。",
+        地图层级: layer.title || layerId
+      },
+      AI执行规范: specialLocation
+        ? "这只是用户希望剧情进入该校内特殊地点的建议；前端不能直接改当前地点。AI应按剧情、时间、权限和世界观判断是否成立，成立时更新/系统/当前地点并展开对应特殊地点剧情；不合理时可拒绝、延后或给出进入条件。"
+        : "这只是用户希望剧情地点设在这里的建议；前端不能直接改当前地点。AI应按剧情、时间和移动条件判断是否成立，成立时更新/系统/当前地点和/系统/当前事件；/系统/_当前周几、/系统/_当前日程、/系统/_当前特殊日期、/系统/当天课程表、/系统/当天原课程表和/系统/当天魔改课程表为前端只读同步字段，AI不要手写这些字段。不合理时可拒绝或延后。"
+    })).then(() => renderCityMapPage(page));
+  }
+
+  function renderCityMapInfoPanel(page, selected, extras) {
+    if (selected) {
+      const meta = selected.isExtra
+        ? (selected.category || "更多地点")
+        : selected.specialId
+        ? (selected.unlocked ? "特殊地点 / 已解锁" : "特殊地点 / 未解锁")
+        : selected.category;
+      return '<section class="st-city-info-panel">' +
+        '<div class="st-city-info-head"><strong>' + escapeHtml(selected.label) + '</strong><small>' + escapeHtml(meta || "地点") + '</small></div>' +
+        '<p>' + escapeHtml(selected.info || "暂无地点信息。") + '</p>' +
+        (selected.enter === "campus" ? '<div class="st-city-actions"><button type="button" class="st-city-enter" data-city-map-enter="campus">进入校园地图</button></div>' : '') +
+      '</section>';
+    }
+    const extraHtml = extras.length
+      ? '<div class="st-city-extra-list">' + extras.map((location) => '<button type="button" class="' + (String(page?.dataset?.cityMapSelected || "") === String(location.id) ? "active" : "") + '" data-city-extra="' + escapeAttr(location.id) + '" title="' + escapeAttr(location.info || "") + '">' + escapeHtml(location.label || location.id) + '</button>').join("") + '</div>'
+      : '<p>后续用户自己添加的区域地点会收在这里，不会挤进大地图。</p>';
+    return '<section class="st-city-info-panel">' +
+      '<div class="st-city-info-head"><strong>城市地图</strong><small>主要地点</small></div>' +
+      '<p>城镇地图收纳斋明学园、明德大学、住宅区与西园寺企业等主要地点。点击地点查看介绍；有下层结构的地点可进入更细的地图。</p>' +
+      extraHtml +
+    '</section>';
+  }
+
+  function renderCityMapPage(page) {
+    const layerId = mapBoardLayerId(page);
+    const layer = mapBoardLayer(page);
+    const nodes = mapBoardNodeData(layerId);
+    const extras = mapBoardExtraLocations(layerId, nodes);
+    const selected = mapBoardSelectedEntry(page, nodes, extras);
+    const graph = loadStaticGraph(layer.currentScope || "world");
+    const currentLocation = getCurrentStoryLocation() || "未记录";
+    page.classList.toggle("st-campus-map-app", layerId !== "city");
+    setPhoneActiveApp(page.parentElement, layerId === "city" ? "city-map" : "campus-map");
+    const nodeHtml = nodes.map((node) => {
+      const location = node.location || {};
+      const isSelected = selected?.type === "node" && selected.id === node.id;
+      const isCurrent = isGraphLocationCurrent(location, currentLocation) || (location.label && currentLocation.includes(String(location.label)));
+      const locked = Boolean(node.specialLocation && !node.unlocked);
+      const hasEnter = Boolean(node.enter);
+      const comingSoon = Boolean(node.comingSoon);
+      return '<button type="button" class="st-board-node ' + (isSelected ? "active " : "") + (isCurrent ? "is-current " : "") + (locked ? "is-locked " : "") + (hasEnter ? "has-enter" : "") + '" data-board-node="' + escapeAttr(node.id) + '"' + (hasEnter ? ' data-board-enter-layer="' + escapeAttr(node.enter) + '"' : "") + (node.specialLocation ? ' data-board-special="' + escapeAttr(node.specialLocation.id) + '" data-board-locked="' + (locked ? "true" : "false") + '"' : "") + (comingSoon ? ' data-board-coming-soon="' + escapeAttr(node.comingSoonMessage || "待续") + '"' : "") + ' style="--col:' + Math.max(1, Math.floor(Number(node.col) || 1)) + ';--row:' + Math.max(1, Math.floor(Number(node.row) || 1)) + ';--c1:' + escapeAttr(node.c1 || "#fde68a") + ';--c2:' + escapeAttr(node.c2 || "#f59e0b") + '" aria-label="' + escapeAttr(location.label || node.label) + '">' +
+        '<span class="st-board-symbol" aria-hidden="true">' + escapeHtml(node.symbol || "•") + '</span>' +
+        '<span class="st-board-name">' + escapeHtml(node.short || location.label || node.label) + '</span>' +
+        '<span class="st-board-tag">' + escapeHtml(locked ? "门禁" : (node.category || location.category || "地点")) + '</span>' +
+      '</button>';
+    }).join("");
+    const drawerOpen = page.dataset.mapBoardDrawerOpen === "true";
+    const drawerToggle = '<div class="st-board-map-toolbar"><button type="button" class="st-board-drawer-toggle ' + (drawerOpen ? "active" : "") + '" data-board-drawer-toggle aria-expanded="' + (drawerOpen ? "true" : "false") + '">' + escapeHtml(mapBoardExtraTitle(layerId)) + '</button></div>';
+    page.innerHTML =
+      renderLiteHeader(page, { title: layer.title || "地图", html: '<strong>' + escapeHtml(operationPanelLocationText(currentLocation)) + '</strong>' }) +
+      '<main class="st-lite-body">' +
+        drawerToggle +
+        renderMapBoardDrawer(page, layerId, layer, extras) +
+        '<section class="st-board-map-stage" data-board-stage style="--cols:' + Math.max(1, Math.floor(Number(layer.cols) || 3)) + ';--rows:' + Math.max(1, Math.floor(Number(layer.rows) || 5)) + '" aria-label="' + escapeAttr(layer.title || "棋盘地图") + '">' +
+          mapBoardCellsHtml(layer) +
+          nodeHtml +
+        '</section>' +
+        renderMapBoardInfoPanel(page, layerId, layer, selected, extras) +
+        renderCampusGateDialog(page) +
+        renderMapBoardAddDialog(page, layer, graph) +
+      '</main>';
+    bindLiteHeader(page, () => renderCityMapPage(page));
+    page.querySelector('[data-lite-action="back"]')?.addEventListener("click", () => {
+      if (layer.parent) {
+        mapBoardSetLayer(page, layer.parent);
+        renderCityMapPage(page);
+        return;
+      }
+      const root = page.parentElement;
+      setPhoneActiveApp(root, "");
+      page.__stCampusCleanup?.();
+      page.remove();
+    });
+    page.querySelector("[data-board-drawer-toggle]")?.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (page.dataset.mapBoardDrawerOpen === "true") delete page.dataset.mapBoardDrawerOpen;
+      else page.dataset.mapBoardDrawerOpen = "true";
+      delete page.dataset.mapBoardAddOpen;
+      renderCityMapPage(page);
+    });
+    page.querySelector("[data-board-stage]")?.addEventListener("click", (event) => {
+      if (event.target?.closest?.("[data-board-node]")) return;
+      if (!page.dataset.mapBoardSelected) return;
+      delete page.dataset.mapBoardSelected;
+      delete page.dataset.mapBoardLastClick;
+      delete page.dataset.mapBoardLastClickAt;
+      delete page.dataset.campusGateSpecial;
+      renderCityMapPage(page);
+    });
+    page.querySelectorAll("[data-board-node]").forEach((button) => {
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const id = button.getAttribute("data-board-node") || "";
+        const comingSoon = button.getAttribute("data-board-coming-soon") || "";
+        if (comingSoon) {
+          window.alert?.(comingSoon);
+          return;
+        }
+        const specialId = button.getAttribute("data-board-special") || "";
+        if (specialId && button.getAttribute("data-board-locked") === "true") {
+          page.dataset.mapBoardSelected = id;
+          page.dataset.campusGateSpecial = specialId;
+          renderCityMapPage(page);
+          return;
+        }
+        delete page.dataset.campusGateSpecial;
+        const nextLayer = button.getAttribute("data-board-enter-layer") || "";
+        const now = Date.now();
+        const lastId = String(page.dataset.mapBoardLastClick || "");
+        const lastAt = Number(page.dataset.mapBoardLastClickAt || 0);
+        if (nextLayer && lastId === id && now - lastAt <= 520 && ST_BOARD_MAP_LAYERS[nextLayer]) {
+          mapBoardSetLayer(page, nextLayer);
+          renderCityMapPage(page);
+          return;
+        }
+        page.dataset.mapBoardLastClick = id;
+        page.dataset.mapBoardLastClickAt = String(now);
+        page.dataset.mapBoardSelected = id;
+        renderCityMapPage(page);
+      });
+      button.addEventListener("dblclick", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const nextLayer = button.getAttribute("data-board-enter-layer") || "";
+        if (!nextLayer || !ST_BOARD_MAP_LAYERS[nextLayer]) return;
+        mapBoardSetLayer(page, nextLayer);
+        renderCityMapPage(page);
+      });
+    });
+    page.querySelectorAll("[data-board-extra]").forEach((button) => {
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        delete page.dataset.mapBoardLastClick;
+        delete page.dataset.mapBoardLastClickAt;
+        page.dataset.mapBoardSelected = button.getAttribute("data-board-extra") || "";
+        renderCityMapPage(page);
+      });
+    });
+    page.querySelectorAll("[data-board-extra-favorite]").forEach((button) => {
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const id = button.getAttribute("data-board-extra-favorite") || "";
+        toggleGraphFavorite(layer.currentScope || "world", id);
+        renderCityMapPage(page);
+      });
+    });
+    page.querySelector("[data-board-add-open]")?.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      page.dataset.mapBoardAddOpen = "true";
+      renderCityMapPage(page);
+    });
+    page.querySelector("[data-board-add-close]")?.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      delete page.dataset.mapBoardAddOpen;
+      renderCityMapPage(page);
+    });
+    page.querySelector("[data-board-add-layer]")?.addEventListener("click", (event) => {
+      if (event.target?.closest?.(".st-map-add-dialog")) return;
+      delete page.dataset.mapBoardAddOpen;
+      renderCityMapPage(page);
+    });
+    page.querySelector("[data-board-enter]")?.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const nextLayer = event.currentTarget?.getAttribute?.("data-board-enter") || "";
+      if (!nextLayer || !ST_BOARD_MAP_LAYERS[nextLayer]) return;
+      mapBoardSetLayer(page, nextLayer);
+      renderCityMapPage(page);
+    });
+    page.querySelector("[data-board-gate-open]")?.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const id = event.currentTarget?.getAttribute?.("data-board-gate-open") || "";
+      page.dataset.campusGateSpecial = id;
+      renderCityMapPage(page);
+    });
+    page.querySelectorAll("[data-campus-gate-close]").forEach((button) => {
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        delete page.dataset.campusGateSpecial;
+        renderCityMapPage(page);
+      });
+    });
+    page.querySelector("[data-campus-gate-layer]")?.addEventListener("click", (event) => {
+      if (event.target?.closest?.(".st-campus-gate-card")) return;
+      delete page.dataset.campusGateSpecial;
+      renderCityMapPage(page);
+    });
+    page.querySelectorAll("[data-campus-gate-shop]").forEach((button) => {
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const id = event.currentTarget?.getAttribute?.("data-campus-gate-shop") || "";
+        delete page.dataset.campusGateSpecial;
+      openSpecialLocationShop(page, SPECIAL_LOCATION_STATIC_ITEMS.find((item) => item.id === id));
+      });
+    });
+    page.querySelector("[data-board-suggest]")?.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      mapBoardAppendSuggestion(page);
+    });
+    bindGraphPageActions(page);
+  }
+
+  function openCityMapPage(tile) {
+    ensureStyle();
+    ensurePhoneDarkThemeStyle();
+    const root = findPhoneRoot(tile);
+    setPhoneActiveApp(root, "city-map");
+    root.style.position = root.style.position || "relative";
+    clearPhoneInternalOverlays(root);
+    const page = document.createElement("section");
+    page.className = "st-lite-app st-city-map-app";
+    page.setAttribute("aria-label", "地图");
+    page.dataset.mapBoardLayer = "city";
+    root.appendChild(page);
+    renderCityMapPage(page);
+  }
+
+  function openCampusMapPage(tile) {
+    ensureStyle();
+    ensurePhoneDarkThemeStyle();
+    const root = findPhoneRoot(tile);
+    setPhoneActiveApp(root, "campus-map");
+    root.style.position = root.style.position || "relative";
+    clearPhoneInternalOverlays(root);
+    const page = document.createElement("section");
+    page.className = "st-lite-app st-city-map-app st-campus-map-app";
+    page.setAttribute("aria-label", "校园地图");
+    page.dataset.mapBoardLayer = "campus";
+    page.dataset.campusLayer = "campus";
+    root.appendChild(page);
+    renderCampusPage(page);
+    const refreshFromOperationQueue = () => {
+      if (!page.isConnected) {
+        window.removeEventListener("HYPNOOS_OPERATION_QUEUE_CHANGED", refreshFromOperationQueue);
+        return;
+      }
+      renderCampusPage(page);
+    };
+    page.__stCampusCleanup = () => window.removeEventListener("HYPNOOS_OPERATION_QUEUE_CHANGED", refreshFromOperationQueue);
+    window.addEventListener("HYPNOOS_OPERATION_QUEUE_CHANGED", refreshFromOperationQueue);
   }
 
   function renderMapPage(page) {
@@ -19633,18 +25437,13 @@ button.st-work-notice{cursor:pointer}
   }
 
   function renderSchoolPage(page) {
-    const active = page.dataset.schoolTab || "map";
     const rules = getSchoolRules();
     const ruleCount = Object.keys(rules).length;
     const totalCount = Math.max(3, ruleCount);
     page.innerHTML =
-      renderLiteHeader(page, { title: "学校", html: '<strong>校规 ' + ruleCount + ' / ' + totalCount + '</strong>' }) +
+      renderLiteHeader(page, { title: "校规", html: '<strong>校规 ' + ruleCount + ' / ' + totalCount + '</strong>' }) +
       '<main class="st-lite-body">' +
-        '<section class="st-graph-tabs">' +
-          '<button type="button" class="st-graph-tab ' + (active === "map" ? "active" : "") + '" data-school-tab="map">学校地图</button>' +
-          '<button type="button" class="st-graph-tab ' + (active === "rules" ? "active" : "") + '" data-school-tab="rules">校规</button>' +
-        '</section>' +
-        (active === "rules" ? renderSchoolRulesCard() : renderStaticGraphCard("school", page)) +
+        renderSchoolRulesCard() +
       '</main>';
     bindLiteHeader(page, () => renderSchoolPage(page));
 	    page.querySelector('[data-lite-action="back"]')?.addEventListener("click", () => {
@@ -19653,14 +25452,7 @@ button.st-work-notice{cursor:pointer}
 	      page.__stMapCleanup?.();
 	      page.remove();
 	    });
-    page.querySelectorAll("[data-school-tab]").forEach((button) => {
-      button.addEventListener("click", () => {
-        page.dataset.schoolTab = button.getAttribute("data-school-tab") || "map";
-        renderSchoolPage(page);
-      });
-    });
     bindGraphPageActions(page);
-    restoreGraphUiState(page, "school");
   }
 
 	  function renderSpecialLocationCard(page) {
@@ -19669,11 +25461,12 @@ button.st-work-notice{cursor:pointer}
 	    const pendingStoryLocation = hasPendingStoryLocationOperation();
 	    const locations = SPECIAL_LOCATION_STATIC_ITEMS.map((location) => {
 	      const unlocked = specialLocationUnlocked(location, stat);
-	      const pendingUnlock = specialLocationPendingUnlock(location);
-	      const meta = unlocked ? "已解锁" : pendingUnlock ? "解锁待发送" : ("解锁 " + location.cost + " 星光点");
+	      const cost = Math.max(0, Math.floor(Number(location.cost) || 0));
+	      const passItem = specialLocationPassItemName(location) || String(location.passItem || "").trim();
+	      const meta = cost <= 0 ? "可进入" : unlocked ? "持有准入证" : ("需要" + (passItem || "准入证"));
 	      const action = unlocked
 	        ? '<button type="button" class="st-location-suggest" data-special-location-suggest="' + escapeAttr(location.id) + '"' + (pendingStoryLocation ? " disabled" : "") + '>' + (pendingStoryLocation ? "已暂存" : "建议设为地点") + '</button>'
-	        : '<button type="button" class="st-location-suggest" data-special-location-unlock="' + escapeAttr(location.id) + '"' + (pendingUnlock ? " disabled" : "") + '>' + (pendingUnlock ? "已暂存" : "解锁") + '</button>';
+	        : '<button type="button" class="st-location-suggest" data-special-location-shop="' + escapeAttr(location.id) + '">去商店</button>';
       return '<details class="st-location-item" data-special-location-id="' + escapeAttr(location.id) + '">' +
         '<summary class="st-location-summary">' +
           '<span class="st-location-title">' +
@@ -19695,11 +25488,13 @@ button.st-work-notice{cursor:pointer}
   }
 
   function bindSpecialLocationActions(page) {
-    page.querySelectorAll("[data-special-location-unlock]").forEach((button) => {
+    page.querySelectorAll("[data-special-location-shop]").forEach((button) => {
       button.addEventListener("click", (event) => {
         event.preventDefault();
         event.stopPropagation();
-        unlockSpecialLocation(page, button.getAttribute("data-special-location-unlock") || "");
+        const id = button.getAttribute("data-special-location-shop") || "";
+        const location = SPECIAL_LOCATION_STATIC_ITEMS.find((item) => item.id === id);
+        openSpecialLocationShop(page, location);
       });
     });
     page.querySelectorAll("[data-special-location-suggest]").forEach((button) => {
@@ -19710,7 +25505,8 @@ button.st-work-notice{cursor:pointer}
         const location = SPECIAL_LOCATION_STATIC_ITEMS.find((item) => item.id === id);
         if (!location) return;
 	        if (!specialLocationUnlocked(location)) {
-	          specialLocationSetStatus(page, "请先消耗" + location.cost + "星光点解锁「" + location.label + "」的随意进出权限。");
+	          const passItem = specialLocationPassItemName(location) || String(location.passItem || "对应准入证").trim();
+	          specialLocationSetStatus(page, "需要持有「" + passItem + "」才能建议前往「" + location.label + "」。");
 	          rerenderSpecialLocationHost(page);
 	          return;
 	        }
@@ -19804,15 +25600,15 @@ button.st-work-notice{cursor:pointer}
     { title: "催眠APP", tag: "指令", body: "选择催眠命令、补充MC能量、查看VIP买断；启动后会把本轮催眠操作暂存给AI结算。" },
     { title: "人物档案", tag: "角色", body: "查看已记录角色的衣着、信息、状态、敏感度和效果，也能在符合条件时触发少量角色专属操作。" },
     { title: "日历", tag: "时间", body: "查看日期与日程；点选某天可以看当天详情，月份切换不会强行改掉原本选中的日期。" },
-    { title: "课程表", tag: "学校", body: "查看当天课程与待上课程，用来判断上课、逃课、打工等时间冲突。" },
-    { title: "时钟", tag: "时间", body: "查看和选择当前时间；部分操作会参考这里选择的时间来安排开始或结束。" },
+    { title: "课程表", tag: "学校", body: "查看今天当前及后续课程，用来判断上课、逃课、打工等时间冲突。" },
+    { title: "时钟", tag: "时间", body: "设置本轮剧情时间锚点；打工有自己的开始时间弹窗，二者同轮存在时视为两件分开的剧情事实。" },
     { title: "成就和任务", tag: "奖励", body: "领取已达成成就、查看任务、接受每日任务；奖励以星光点和物品为主。" },
     { title: "库存", tag: "物品", body: "查看持有物品与数量，点选物品后能看简短说明。" },
     { title: "MC匿名版", tag: "论坛", body: "浏览匿名帖子和楼层，作为世界内的轻量信息来源。" },
-    { title: "地图", tag: "地点", body: "查看当前地点、常用地点和特殊地点入口；普通剧情地点不一定会被写进前端列表。" },
-    { title: "学校", tag: "校规", body: "查看学校地图和校规；高VIP后可通过规则相关操作影响校规。" },
+    { title: "地图", tag: "城市", body: "用桌游棋盘查看主要地标；双击带角标的地点进入下层结构，用户新增地点会收在更多地点列表。" },
+    { title: "校规", tag: "学校", body: "查看现行校规；高VIP后可通过规则相关操作影响校规。" },
     { title: "监控", tag: "厕所", body: "查看男厕门位状态并发起派遣相关操作。" },
-    { title: "打工", tag: "零工", body: "查看可接零工，按社畜值解锁更高级的短工；工作会暂存给AI处理剧情与结算。" },
+    { title: "打工", tag: "零工", body: "查看可接零工，按社畜值解锁更高级的短工；确认后前端直接结算工资、社畜值、buff和时间，有偶遇才交给AI写互动。" },
     { title: "邂逅", tag: "桃花运", body: "用星光点购买角色包或角色的偶遇机会，也可定制角色包、角色和查看邂逅商店。" }
   ];
 
@@ -19884,8 +25680,9 @@ button.st-work-notice{cursor:pointer}
   window.__ST_OPEN_LITE_CALENDAR_APP__ = () => openLiteCalendarPage();
   window.__ST_OPEN_TIMETABLE_APP__ = () => openTimetablePage();
   window.__ST_OPEN_CLOCK_APP__ = () => openClockPage();
-  window.__ST_OPEN_MAP_APP__ = () => openTodoPage(null, "map", "st-map-app", "地图", "区域信息");
-  window.__ST_OPEN_SCHOOL_APP__ = () => openTodoPage(null, "school", "st-school-app", "学校", "学校地图与校规", true);
+  window.__ST_OPEN_MAP_APP__ = () => openCityMapPage(null);
+  window.__ST_OPEN_CITY_MAP_APP__ = () => openCityMapPage(null);
+  window.__ST_OPEN_SCHOOL_APP__ = () => openTodoPage(null, "school", "st-school-app", "校规", "校规", true);
   window.__ST_OPEN_SPECIAL_LOCATION_APP__ = () => openSpecialLocationPage(null);
   window.__ST_OPEN_MONITOR_APP__ = () => openMonitorPage();
   window.__ST_OPEN_WORK_APP__ = () => openWorkPage();
@@ -19899,7 +25696,7 @@ button.st-work-notice{cursor:pointer}
   function looksLikePhoneHome(root) {
     const rootText = root?.innerText || "";
     return ["催眠APP", "日历", "成就和任务", "库存", "MC匿名版"].every((label) => rootText.includes(label)) &&
-      !root.querySelector(".st-mchan-internal-app, .st-calendar-lite-app, .st-timetable-app, .st-clock-app, .st-profile-app, .st-map-app, .st-school-app, .st-special-location-app, .st-monitor-app, .st-work-app, .st-encounter-app, .st-inventory-app, .st-reward-app, .st-hypnosis-lite-app, .st-help-app, .st-placeholder-app");
+      !root.querySelector(".st-mchan-internal-app, .st-calendar-lite-app, .st-timetable-app, .st-clock-app, .st-profile-app, .st-map-app, .st-city-map-app, .st-school-app, .st-special-location-app, .st-monitor-app, .st-work-app, .st-encounter-app, .st-inventory-app, .st-reward-app, .st-hypnosis-lite-app, .st-help-app, .st-placeholder-app");
   }
 
   function getHomeHeader(root) {
@@ -19914,7 +25711,7 @@ button.st-work-notice{cursor:pointer}
     if (existing?.textContent === ST_HOME_AUTHOR_STATUS) return;
     const rootRect = root.getBoundingClientRect();
     const candidates = Array.from(root.querySelectorAll("span,div,time")).filter((element) => {
-      if (element.closest(".st-mchan-internal-app,.st-calendar-lite-app,.st-timetable-app,.st-clock-app,.st-profile-app,.st-map-app,.st-school-app,.st-special-location-app,.st-monitor-app,.st-work-app,.st-encounter-app,.st-inventory-app,.st-reward-app,.st-hypnosis-lite-app,.st-help-app,.st-placeholder-app")) return false;
+      if (element.closest(".st-mchan-internal-app,.st-calendar-lite-app,.st-timetable-app,.st-clock-app,.st-profile-app,.st-map-app,.st-city-map-app,.st-school-app,.st-special-location-app,.st-monitor-app,.st-work-app,.st-encounter-app,.st-inventory-app,.st-reward-app,.st-hypnosis-lite-app,.st-help-app,.st-placeholder-app")) return false;
       const text = element.textContent?.trim() || "";
       if (!element.classList?.contains("st-home-author-status") && !/^\\d{1,2}:\\d{2}$/.test(text)) return false;
       if (element.children.length > 0) return false;
@@ -19938,10 +25735,206 @@ button.st-work-notice{cursor:pointer}
   function pendingOperationCount() {
     try {
       const pending = window.__ST_GET_PENDING_OPERATION_INPUT_LOG__?.();
-      return Array.isArray(pending) ? pending.length : 0;
+      const note = String(window.__ST_GET_PENDING_OPERATION_NOTE__?.() || "").trim();
+      return (Array.isArray(pending) ? pending.length : 0) + (note ? 1 : 0);
     } catch {
       return 0;
     }
+  }
+
+  function readOperationPanelNote() {
+    try {
+      return String(window.__ST_GET_PENDING_OPERATION_NOTE__?.() || "");
+    } catch {
+      return "";
+    }
+  }
+
+  function writeOperationPanelNote(value, options) {
+    try {
+      window.__ST_SET_PENDING_OPERATION_NOTE__?.(value, options);
+    } catch {}
+  }
+
+  const ST_OPERATION_FLOAT_MODE_KEY = "st_operation_desktop_float_mode";
+  const ST_OPERATION_FLOAT_POS_KEY = "st_operation_desktop_float_position";
+  let operationFloatBallDrag = null;
+
+  function isPhonePortFrontend() {
+    return document.documentElement.classList.contains("st-hypnoos-phone-port");
+  }
+
+  function readOperationFloatMode() {
+    if (isPhonePortFrontend()) return false;
+    try {
+      return localStorage.getItem(ST_OPERATION_FLOAT_MODE_KEY) === "1";
+    } catch {
+      return false;
+    }
+  }
+
+  function writeOperationFloatMode(value) {
+    try {
+      localStorage.setItem(ST_OPERATION_FLOAT_MODE_KEY, value ? "1" : "0");
+    } catch {}
+  }
+
+  function operationFloatNumber(value, fallback) {
+    const parsed = Number.parseFloat(String(value || "").replace("px", ""));
+    return Number.isFinite(parsed) ? parsed : fallback;
+  }
+
+  function operationFloatClamp(value, min, max) {
+    if (max < min) return min;
+    return Math.max(min, Math.min(max, value));
+  }
+
+  function readOperationFloatPosition() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(ST_OPERATION_FLOAT_POS_KEY) || "null");
+      if (parsed && Number.isFinite(Number(parsed.left)) && Number.isFinite(Number(parsed.top))) {
+        return { left: Number(parsed.left), top: Number(parsed.top) };
+      }
+    } catch {}
+    return null;
+  }
+
+  function writeOperationFloatPosition(left, top) {
+    try {
+      localStorage.setItem(ST_OPERATION_FLOAT_POS_KEY, JSON.stringify({ left: Math.round(left), top: Math.round(top) }));
+    } catch {}
+  }
+
+  function setOperationFloatBallPosition(left, top, persist = false) {
+    const button = document.getElementById("st-operation-float-ball");
+    if (!button) return;
+    const width = Math.max(1, window.innerWidth || document.documentElement.clientWidth || 430);
+    const height = Math.max(1, window.innerHeight || document.documentElement.clientHeight || 760);
+    const size = Math.max(44, Math.round(button.offsetWidth || 54));
+    const clampedLeft = operationFloatClamp(Math.round(left), 8, width - size - 8);
+    const clampedTop = operationFloatClamp(Math.round(top), 8, height - size - 8);
+    button.style.setProperty("--st-operation-float-left", clampedLeft + "px");
+    button.style.setProperty("--st-operation-float-top", clampedTop + "px");
+    if (persist) writeOperationFloatPosition(clampedLeft, clampedTop);
+  }
+
+  function clampOperationFloatBallPosition() {
+    const button = document.getElementById("st-operation-float-ball");
+    if (!button) return;
+    const saved = readOperationFloatPosition();
+    const fallbackLeft = (window.innerWidth || document.documentElement.clientWidth || 430) - Math.max(44, button.offsetWidth || 54) - 18;
+    const fallbackTop = Math.round((window.innerHeight || document.documentElement.clientHeight || 760) * 0.62);
+    const left = operationFloatNumber(button.style.getPropertyValue("--st-operation-float-left"), saved?.left ?? fallbackLeft);
+    const top = operationFloatNumber(button.style.getPropertyValue("--st-operation-float-top"), saved?.top ?? fallbackTop);
+    setOperationFloatBallPosition(left, top, false);
+  }
+
+  function setOperationFloatingOpen(open) {
+    document.body.classList.toggle("st-operation-floating-open", Boolean(open));
+    syncOperationFloatBall();
+  }
+
+  function syncOperationFloatMode() {
+    const enabled = readOperationFloatMode();
+    document.body.classList.toggle("st-operation-floating", enabled);
+    if (!enabled) document.body.classList.remove("st-operation-floating-open");
+    ensureOperationFloatBall();
+    syncOperationFloatBall();
+  }
+
+  function enableOperationFloatMode(value) {
+    writeOperationFloatMode(Boolean(value));
+    syncOperationFloatMode();
+    setOperationFloatingOpen(Boolean(value));
+    const panel = document.getElementById("st-operation-side-panel");
+    if (panel) {
+      panel.dataset.signature = "";
+      updateOperationSidePanel();
+    }
+  }
+
+  function ensureOperationFloatBall() {
+    let button = document.getElementById("st-operation-float-ball");
+    if (!button) {
+      button = document.createElement("button");
+      button.id = "st-operation-float-ball";
+      button.type = "button";
+      button.innerHTML = '<span class="st-operation-float-label">本轮</span><span class="st-operation-float-count">0</span>';
+      document.body.appendChild(button);
+    } else if (button.parentElement !== document.body) {
+      document.body.appendChild(button);
+    }
+    if (button.dataset.bound !== "true") {
+      button.dataset.bound = "true";
+      button.addEventListener("pointerdown", (event) => {
+        if (!readOperationFloatMode()) return;
+        const left = operationFloatNumber(button.style.getPropertyValue("--st-operation-float-left"), button.offsetLeft || 0);
+        const top = operationFloatNumber(button.style.getPropertyValue("--st-operation-float-top"), button.offsetTop || 0);
+        operationFloatBallDrag = {
+          pointerId: event.pointerId,
+          startX: event.clientX,
+          startY: event.clientY,
+          startLeft: left,
+          startTop: top,
+          moved: false
+        };
+        button.classList.add("is-dragging");
+        try { button.setPointerCapture(event.pointerId); } catch {}
+        event.preventDefault();
+      }, true);
+      button.addEventListener("pointermove", (event) => {
+        if (!operationFloatBallDrag || operationFloatBallDrag.pointerId !== event.pointerId) return;
+        const dx = event.clientX - operationFloatBallDrag.startX;
+        const dy = event.clientY - operationFloatBallDrag.startY;
+        if (Math.abs(dx) > 4 || Math.abs(dy) > 4) operationFloatBallDrag.moved = true;
+        setOperationFloatBallPosition(operationFloatBallDrag.startLeft + dx, operationFloatBallDrag.startTop + dy, false);
+        event.preventDefault();
+      }, true);
+      button.addEventListener("pointerup", (event) => {
+        if (!operationFloatBallDrag || operationFloatBallDrag.pointerId !== event.pointerId) return;
+        const moved = Boolean(operationFloatBallDrag.moved);
+        const left = operationFloatNumber(button.style.getPropertyValue("--st-operation-float-left"), button.offsetLeft || 0);
+        const top = operationFloatNumber(button.style.getPropertyValue("--st-operation-float-top"), button.offsetTop || 0);
+        writeOperationFloatPosition(left, top);
+        operationFloatBallDrag = null;
+        button.classList.remove("is-dragging");
+        try { button.releasePointerCapture(event.pointerId); } catch {}
+        if (!moved) setOperationFloatingOpen(!document.body.classList.contains("st-operation-floating-open"));
+        event.preventDefault();
+      }, true);
+      button.addEventListener("pointercancel", (event) => {
+        if (!operationFloatBallDrag || operationFloatBallDrag.pointerId !== event.pointerId) return;
+        operationFloatBallDrag = null;
+        button.classList.remove("is-dragging");
+      }, true);
+      button.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        if (!readOperationFloatMode()) return;
+        setOperationFloatingOpen(!document.body.classList.contains("st-operation-floating-open"));
+        event.preventDefault();
+      }, true);
+    }
+    if (!window.__ST_OPERATION_FLOAT_RESIZE_BOUND__) {
+      window.__ST_OPERATION_FLOAT_RESIZE_BOUND__ = true;
+      window.addEventListener("resize", () => {
+        if (readOperationFloatMode()) clampOperationFloatBallPosition();
+      }, { passive: true });
+    }
+    clampOperationFloatBallPosition();
+    return button;
+  }
+
+  function syncOperationFloatBall() {
+    const button = ensureOperationFloatBall();
+    if (!button) return;
+    const count = pendingOperationCount();
+    const badge = button.querySelector(".st-operation-float-count");
+    if (badge) badge.textContent = String(count);
+    const open = document.body.classList.contains("st-operation-floating-open");
+    button.classList.toggle("is-open", open);
+    button.setAttribute("aria-expanded", open ? "true" : "false");
+    button.setAttribute("aria-label", "本轮操作暂存区，当前 " + count + " 条");
+    if (readOperationFloatMode()) clampOperationFloatBallPosition();
   }
 
   function removeHomeOperationConfirm(root) {
@@ -19972,18 +25965,20 @@ button.st-work-notice{cursor:pointer}
 
   function clearOperationSidePanelWithWarning() {
     const items = getPendingOperationViews();
-    if (!items.length) return false;
+    const note = readOperationPanelNote().trim();
+    if (!items.length && !note) return false;
     const lockedCount = items.filter((item) => Boolean(item.locked)).length;
-    const removableCount = Math.max(0, items.length - lockedCount);
+    const removableCount = Math.max(0, items.length - lockedCount) + (note ? 1 : 0);
     if (!removableCount) {
-      window.alert?.("暂存区里只有锁定操作，不能清空。角色包/角色购买等已产生前端副作用的操作会一直保留到确认写入。");
+      window.alert?.("暂存区里只有锁定操作，不能清空。角色包/角色购买、邂逅商店购买等已产生前端副作用的操作会一直保留到确认写入。");
       return false;
     }
-    const message = "确认清空暂存区里的 " + removableCount + " 条未锁定操作？"
-      + (lockedCount ? "\\n\\n另外 " + lockedCount + " 条锁定操作会保留，例如角色包/角色购买或进行中的派遣、打工锁。" : "")
-      + "\\n\\n清空后这些未锁定操作不会写入本轮输入。";
+    const message = "确认清空暂存区里的 " + removableCount + " 条未锁定内容？"
+      + (lockedCount ? "\\n\\n另外 " + lockedCount + " 条锁定操作会保留，例如角色包/角色购买、邂逅商店购买或进行中的派遣、打工锁。" : "")
+      + "\\n\\n清空后这些未锁定内容不会写入本轮输入。";
     if (!window.confirm?.(message)) return false;
     window.__ST_CLEAR_OPERATION_INPUT_LOG__?.();
+    writeOperationPanelNote("");
     return true;
   }
 
@@ -20016,10 +26011,16 @@ button.st-work-notice{cursor:pointer}
     '</div>';
   }
 
+  function operationPanelLocationText(value) {
+    const text = String(value || "").trim();
+    const shortened = text.replace(/^私立斋明学园\s*[\/／]\s*/u, "").trim();
+    return shortened || text;
+  }
+
   function operationPanelContextSnapshot() {
     try {
       const system = getSystemState();
-      const location = firstMeaningfulSystemText(system, ["当前地点", "当前位置", "地点", "所在地点", "位置"]) || "未记录";
+      const location = operationPanelLocationText(firstMeaningfulSystemText(system, ["当前地点", "当前位置", "地点", "所在地点", "位置"]) || "未记录");
       const state = readMonitorState();
       const gates = [0, 1, 2].map((index) => {
         const gate = state?.gates?.[index] || {};
@@ -20048,6 +26049,35 @@ button.st-work-notice{cursor:pointer}
     '</div>';
   }
 
+  function operationPanelEventHints() {
+    try {
+      const roles = getLatestStatDataSync()?.["角色"];
+      if (!roles || typeof roles !== "object" || Array.isArray(roles)) return [];
+      const hints = [];
+      for (const config of ROLE_EVENT_HINT_CONFIG) {
+        const role = roles[config.role];
+        if (!role || typeof role !== "object" || Array.isArray(role)) continue;
+        const value = Number(role[config.valueKey || "好感度"] ?? 0);
+        if (!Number.isFinite(value)) continue;
+        const record = normalizedRoleEventRecord(role["事件记录"]);
+        for (const threshold of config.thresholds || []) {
+          const bit = Math.max(0, Math.min(4, Number(threshold.bit) || 0));
+          if (value >= Number(threshold.value || 0) && record[bit] !== "1") {
+            hints.push(config.role + " " + threshold.label);
+          }
+        }
+      }
+      return hints.slice(0, 4);
+    } catch {
+      return [];
+    }
+  }
+
+  function operationPanelEventHintHtml(hints) {
+    if (!Array.isArray(hints) || !hints.length) return "";
+    return '<div class="st-operation-panel-advice is-event"><strong>可触发事件</strong> · ' + escapeHtml(hints.join(" / ")) + '</div>';
+  }
+
   function compactOperationPanelSummary(item) {
     const text = String(item?.summary || item?.line || "");
     const segments = text.replace(/^-\\s*/, "").split("｜").map((part) => part.trim()).filter(Boolean);
@@ -20056,6 +26086,28 @@ button.st-work-notice{cursor:pointer}
       const segment = segments.find((part) => part.startsWith(marker));
       return segment ? segment.slice(marker.length).trim() : "";
     };
+    const shorten = (value, limit = 28) => {
+      const output = String(value || "").trim();
+      return output.length > limit ? output.slice(0, limit) + "..." : output;
+    };
+    if (String(item?.source || "") === "打工" && String(item?.action || "") === "打工buff提醒") {
+      const buff = readField("当前buff") || readField("暂存摘要");
+      const endText = readField("buff结束时间") || segments.find((part) => /^持续至/.test(part))?.replace(/^持续至\s*/, "");
+      const summary = [buff, endText ? "持续至 " + endText : ""].filter(Boolean).join("｜");
+      if (summary) return shorten(summary, 34);
+    }
+    if (String(item?.action || "").includes("资源兑换")) {
+      const explicit = readField("暂存摘要");
+      if (explicit) return shorten(explicit, 32);
+      const project = readField("项目") || readField("功能") || readField("名称") || "资源兑换";
+      const gain = readField("获得资源")
+        || (readField("实际获得MC能量") ? "MC能量 +" + readField("实际获得MC能量") + "点" : "")
+        || (readField("获得MC能量") ? "MC能量 +" + readField("获得MC能量") + "点" : "")
+        || (readField("获得MC能量上限") ? "MC能量上限 +" + readField("获得MC能量上限") + "点" : "");
+      const cost = readField("消耗资源") || (readField("消耗零花钱") ? "资金 ¥" + readField("消耗零花钱") : "");
+      const summary = [project, gain, cost].filter(Boolean).join("｜");
+      if (summary) return shorten(summary, 32);
+    }
     const keys = String(item?.action || "").includes("成就")
       ? ["成就", "名称", "目标", "角色"]
       : String(item?.action || "").includes("任务")
@@ -20063,7 +26115,7 @@ button.st-work-notice{cursor:pointer}
         : ["暂存摘要", "新绰号", "设置方式", "校规内容", "校规名", "功能", "命令", "目标", "角色", "角色名", "名称", "等级", "数量"];
     for (const key of keys) {
       const value = readField(key);
-      if (value) return value.length > 18 ? value.slice(0, 18) + "..." : value;
+      if (value) return shorten(value, 18);
     }
     const cleaned = text.replace(/^-\\s*/, "").trim();
     return cleaned.length <= 18 && !cleaned.includes("｜") ? cleaned : "";
@@ -20087,6 +26139,7 @@ button.st-work-notice{cursor:pointer}
   }
 
   function syncOperationSidePanelSize(panel) {
+    if (readOperationFloatMode()) return;
     const workspace = document.getElementById("st-operation-workspace");
     const phone = document.querySelector("#st-operation-workspace #app .w-full.h-full.bg-black.overflow-hidden.relative")
       || document.querySelector("#st-operation-workspace #app > div");
@@ -20101,6 +26154,7 @@ button.st-work-notice{cursor:pointer}
   function updateOperationSidePanel() {
     const panel = document.getElementById("st-operation-side-panel");
     if (!panel) return;
+    if (panel.dataset.operationNoteComposing === "true") return;
     syncOperationSidePanelSize(panel);
     const items = getPendingOperationViews();
     const count = pendingOperationCount();
@@ -20108,10 +26162,12 @@ button.st-work-notice{cursor:pointer}
     try {
       block = window.__ST_BUILD_PENDING_OPERATION_BLOCK__?.() || "";
     } catch {}
+    const note = readOperationPanelNote();
     const keepAfterFlush = readOperationKeepAfterFlush();
+    const floatMode = readOperationFloatMode();
     const resources = operationPanelResourceSnapshot();
     const context = operationPanelContextSnapshot();
-    const signature = JSON.stringify(items.map((item) => [item.id, item.key, item.source, item.action, item.summary, item.line, item.at, item.locked])) + "\\n" + block + "\\nkeep=" + String(keepAfterFlush) + "\\nres=" + JSON.stringify(resources) + "\\nctx=" + JSON.stringify(context);
+    const signature = JSON.stringify(items.map((item) => [item.id, item.key, item.source, item.action, item.summary, item.line, item.at, item.locked])) + "\\n" + block + "\\nnote=" + note + "\\nkeep=" + String(keepAfterFlush) + "\\nfloat=" + String(floatMode) + "\\nres=" + JSON.stringify(resources) + "\\nctx=" + JSON.stringify(context);
     if (panel.dataset.signature === signature) return;
     panel.dataset.signature = signature;
     const listHtml = items.length
@@ -20139,6 +26195,10 @@ button.st-work-notice{cursor:pointer}
       '</header>' +
       '<div class="st-operation-panel-list">' + listHtml + '</div>' +
       adviceHtml +
+      '<label class="st-operation-note">' +
+        '<span>备注</span>' +
+        '<textarea data-operation-note rows="2" placeholder="写给AI的普通备注，会放在本轮操作外">' + escapeHtml(note) + '</textarea>' +
+      '</label>' +
       '<details class="st-operation-panel-preview">' +
         '<summary>将写入输入框的内容</summary>' +
         '<pre>' + escapeHtml(block || "暂无待写入内容") + '</pre>' +
@@ -20148,14 +26208,46 @@ button.st-work-notice{cursor:pointer}
         '<span>确认写入后不清空暂存</span>' +
       '</label>' +
       '<div class="st-operation-panel-actions">' +
+        '<button class="st-operation-float-toggle" type="button" data-operation-panel-action="float">' + (floatMode ? "停靠暂存区" : "悬浮球模式") + '</button>' +
         '<button type="button" data-operation-panel-action="clear" ' + (count ? "" : "disabled") + '>清空</button>' +
         '<button class="primary" type="button" data-operation-panel-action="flush" ' + (count ? "" : "disabled") + '>确认写入</button>' +
       '</div>';
+    syncOperationFloatBall();
   }
 
   function bindOperationSidePanel(panel) {
     if (!panel || panel.dataset.bound === "true") return;
     panel.dataset.bound = "true";
+    panel.addEventListener("input", (event) => {
+      const noteInput = event.target?.closest?.("[data-operation-note]");
+      if (!noteInput) return;
+      writeOperationPanelNote(noteInput.value, { emit: false });
+      const count = pendingOperationCount();
+      panel.querySelectorAll('[data-operation-panel-action="clear"],[data-operation-panel-action="flush"]').forEach((button) => {
+        button.disabled = !count;
+      });
+      const badge = panel.querySelector(".st-operation-count-pill");
+      if (badge) badge.textContent = String(count);
+      syncOperationFloatBall();
+    });
+    panel.addEventListener("compositionstart", (event) => {
+      const noteInput = event.target?.closest?.("[data-operation-note]");
+      if (!noteInput) return;
+      panel.dataset.operationNoteComposing = "true";
+    });
+    panel.addEventListener("compositionend", (event) => {
+      const noteInput = event.target?.closest?.("[data-operation-note]");
+      if (!noteInput) return;
+      panel.dataset.operationNoteComposing = "";
+      writeOperationPanelNote(noteInput.value, { emit: false });
+    });
+    panel.addEventListener("focusout", (event) => {
+      const noteInput = event.target?.closest?.("[data-operation-note]");
+      if (!noteInput) return;
+      panel.dataset.operationNoteComposing = "";
+      writeOperationPanelNote(noteInput.value, { emit: true });
+      updateOperationSidePanel();
+    });
     panel.addEventListener("change", (event) => {
       const toggle = event.target?.closest?.("[data-operation-keep-after-flush]");
       if (!toggle) return;
@@ -20178,6 +26270,10 @@ button.st-work-notice{cursor:pointer}
       event.preventDefault();
       event.stopPropagation();
       const action = actionButton.dataset.operationPanelAction;
+      if (action === "float") {
+        enableOperationFloatMode(!readOperationFloatMode());
+        return;
+      }
       if (action === "clear") {
         clearOperationSidePanelWithWarning();
         updateOperationSidePanel();
@@ -20193,6 +26289,13 @@ button.st-work-notice{cursor:pointer}
         }
       }
     });
+    panel.addEventListener("click", (event) => {
+      if (!readOperationFloatMode()) return;
+      const head = event.target?.closest?.(".st-operation-panel-head");
+      if (!head || !panel.contains(head)) return;
+      if (event.target?.closest?.("button,input,a,summary")) return;
+      setOperationFloatingOpen(false);
+    }, true);
   }
 
   function ensureOperationSidePanel() {
@@ -20218,6 +26321,7 @@ button.st-work-notice{cursor:pointer}
     } else if (panel.parentElement !== workspace) {
       workspace.appendChild(panel);
     }
+    syncOperationFloatMode();
     bindOperationSidePanel(panel);
     updateOperationSidePanel();
     return panel;
@@ -20297,46 +26401,10 @@ button.st-work-notice{cursor:pointer}
   function patchMapAndSchoolTiles() {
     const root = findPhoneRoot(document.body);
     if (!root || !looksLikePhoneHome(root)) return;
-    const anchor = findHomeTileByText("MC匿名版") || findHomeTileByText("库存") || findHomeTileByText("成就和任务");
-    if (!anchor?.parentElement) return;
-    const parent = anchor.parentElement;
-    let mapTile = dedupeHomeTilesByText("地图") || parent.querySelector('[data-st-map-tile="true"]');
-    let createdMap = false;
-    if (!mapTile) {
-      mapTile = anchor.cloneNode(true);
-      createdMap = true;
-      mapTile.removeAttribute("data-st-mchan-internal-patched");
-      setHomeTileLabel(mapTile, "地图");
-      mapTile.querySelectorAll("[id]").forEach((node) => node.removeAttribute("id"));
-      anchor.insertAdjacentElement("afterend", mapTile);
-    }
-    mapTile.dataset.stMapTile = "true";
-    if (createdMap) setHomeTileIcon(mapTile, ST_APP_ICONS.map, "地图");
-    bindHomeTileAction(mapTile, "stMapTilePatched", "打开地图", (tile) => openTodoPage(tile, "map", "st-map-app", "地图", "区域信息"));
-    let schoolTile = dedupeHomeTilesByText("学校") || parent.querySelector('[data-st-school-tile="true"]');
-    let createdSchool = false;
-    if (!schoolTile) {
-      schoolTile = mapTile.cloneNode(true);
-      createdSchool = true;
-      schoolTile.removeAttribute("data-st-map-tile");
-      setHomeTileLabel(schoolTile, "学校");
-      schoolTile.querySelectorAll("[id]").forEach((node) => node.removeAttribute("id"));
-      mapTile.insertAdjacentElement("afterend", schoolTile);
-    }
-    schoolTile.dataset.stSchoolTile = "true";
-    schoolTile.removeAttribute("data-st-map-tile");
-    if (createdSchool) {
-      setHomeTileLabel(schoolTile, "学校");
-      setHomeTileIcon(schoolTile, ST_APP_ICONS.school, "学校");
-    }
-    bindHomeTileAction(schoolTile, "stSchoolTilePatched", "打开学校", (tile) => openTodoPage(tile, "school", "st-school-app", "学校", "学校地图与校规", true));
-    const staleSpecialTiles = new Set([
-      ...homeTilesByText("特殊地点"),
-      ...Array.from(parent.querySelectorAll('[data-st-special-location-tile="true"]'))
-    ]);
-    staleSpecialTiles.forEach((tile) => {
-      if (tile && tile !== mapTile && tile !== schoolTile) tile.remove();
-    });
+    const mapTile = findHomeTileByText("地图");
+    if (mapTile) bindHomeTileAction(mapTile, "stMapTilePatched", "打开地图", openCityMapPage);
+    const schoolTile = findHomeTileByText("校规");
+    if (schoolTile) bindHomeTileAction(schoolTile, "stSchoolTilePatched", "打开校规", (tile) => openTodoPage(tile, "school", "st-school-app", "校规", "校规", true));
   }
 
   function patchInternalCoreAppTiles() {
@@ -20372,7 +26440,7 @@ button.st-work-notice{cursor:pointer}
     patchCalendarAndTimetableTiles();
     patchMapAndSchoolTiles();
     const labels = Array.from(document.querySelectorAll("span,button,div"))
-      .filter((element) => !element.closest(".st-mchan-internal-app,.st-calendar-lite-app,.st-timetable-app,.st-clock-app,.st-profile-app,.st-map-app,.st-school-app,.st-special-location-app,.st-monitor-app,.st-work-app,.st-encounter-app,.st-inventory-app,.st-reward-app,.st-hypnosis-lite-app,.st-help-app,.st-placeholder-app") && element.textContent?.trim() === "MC匿名版");
+      .filter((element) => !element.closest(".st-mchan-internal-app,.st-calendar-lite-app,.st-timetable-app,.st-clock-app,.st-profile-app,.st-map-app,.st-city-map-app,.st-school-app,.st-special-location-app,.st-monitor-app,.st-work-app,.st-encounter-app,.st-inventory-app,.st-reward-app,.st-hypnosis-lite-app,.st-help-app,.st-placeholder-app") && element.textContent?.trim() === "MC匿名版");
     for (const label of labels) {
       const tile = findTileFromLabel(label);
       if (!tile || tile.dataset.stMchanInternalPatched === "true") continue;
@@ -20394,11 +26462,15 @@ button.st-work-notice{cursor:pointer}
   function refreshPhoneVariableViews() {
     patchHomeTile();
     updatePhoneDarkTheme();
+    syncProfileEventMemoriesFromChat();
     updateOpenPersonProfilePage();
     if (isLatestPhoneVariableView()) syncMonitorDispatchCompletionReminder();
     if (isLatestPhoneVariableView()) {
       syncWorkStatusReminder();
       syncWorkBuffStatusReminder();
+      Promise.resolve(syncRoleEventRecordDefaults()).then((changed) => {
+        if (changed) updateOpenPersonProfilePage();
+      }).catch(() => {});
     }
     updateOperationSidePanel();
   }
@@ -20407,9 +26479,9 @@ button.st-work-notice{cursor:pointer}
     const phone = document.querySelector(".w-full.h-full.bg-black.overflow-hidden.relative");
     if (!phone) return false;
     if (phone.dataset?.stPhoneApp) return true;
-    if (document.querySelector('.st-mchan-internal-app, .st-calendar-lite-app, .st-timetable-app, .st-clock-app, .st-profile-app, .st-map-app, .st-school-app, .st-special-location-app, .st-monitor-app, .st-work-app, .st-encounter-app, .st-inventory-app, .st-reward-app, .st-hypnosis-lite-app, .st-help-app, .st-placeholder-app')) return true;
+    if (document.querySelector('.st-mchan-internal-app, .st-calendar-lite-app, .st-timetable-app, .st-clock-app, .st-profile-app, .st-map-app, .st-city-map-app, .st-school-app, .st-special-location-app, .st-monitor-app, .st-work-app, .st-encounter-app, .st-inventory-app, .st-reward-app, .st-hypnosis-lite-app, .st-help-app, .st-placeholder-app')) return true;
     if (looksLikePhoneHome(phone)) {
-      const requiredHomeLabels = ["人物档案", "课程表", "时钟", "地图", "学校"];
+      const requiredHomeLabels = ["人物档案", "课程表", "时钟", "地图", "校规"];
       return requiredHomeLabels.every((label) => Boolean(dedupeHomeTilesByText(label) || findHomeTileByText(label)));
     }
     return false;
@@ -20434,15 +26506,16 @@ button.st-work-notice{cursor:pointer}
     ensurePhoneDarkThemeStyle();
     refreshUntilFirstPatch();
     let refreshScheduled = false;
-    const schedulePhoneVariableRefresh = () => {
-      if (!isLatestPhoneVariableView()) return;
-      if (refreshScheduled) return;
-      refreshScheduled = true;
-      window.requestAnimationFrame(() => {
-        refreshScheduled = false;
-        refreshPhoneVariableViews();
-      });
-    };
+	    const schedulePhoneVariableRefresh = () => {
+	      if (!isLatestPhoneVariableView()) return;
+	      if (refreshScheduled) return;
+	      refreshScheduled = true;
+	      window.requestAnimationFrame(() => {
+	        refreshScheduled = false;
+	        refreshPhoneVariableViews();
+	      });
+	    };
+	    window.__ST_HYPNOOS_REFRESH_FRONTEND__ = schedulePhoneVariableRefresh;
     try {
       const appRoot = document.getElementById("app") || document.body;
       const observer = new MutationObserver(schedulePhoneVariableRefresh);
@@ -20477,7 +26550,7 @@ button.st-work-notice{cursor:pointer}
 }
 
 function previewVariableRuntime() {
-  const defaultRoles = jsonForInlineScript(DEFAULT_PREVIEW_ROLES);
+  const defaultRoles = jsonForInlineScript({});
   return `
 const __stLocalPreview = Boolean(globalThis.__ST_LOCAL_PREVIEW__);
 const __stClone = (value) => JSON.parse(JSON.stringify(value ?? {}));
@@ -20489,30 +26562,40 @@ const __stDefaultVariables = () => ({
     "持有零花钱": 6000,
     "社畜值": 0,
     "buff": "",
+    "buff结束时间": "",
     "主角可疑度": 0,
-    "当前日期": "4月9日 星期三",
-    "当前时间": "12:00",
-    "当前日程": "4限 · 现代文",
-	    "当前/待上课程": "4限 现代文",
-	    "当天课程表": {
-	      "日期": "4月9日",
-	      "星期": "星期三",
-	      "当前课段": { "名称": "4限 · 现代文", "时间": "11:40-12:30" },
-	      "当前或待上课程": "4限 现代文",
-	      "当前或下个特殊日期": "4月10-14日 社团招新周",
-	      "课表": [
-        { "课节": "1限", "时间": "08:40-09:30", "科目": "英语" },
-        { "课节": "2限", "时间": "09:40-10:30", "科目": "世界史" },
-        { "课节": "3限", "时间": "10:40-11:30", "科目": "生物" },
-        { "课节": "4限", "时间": "11:40-12:30", "科目": "现代文" },
-        { "课节": "5限", "时间": "13:20-14:10", "科目": "体育（游泳）" },
-        { "课节": "6限", "时间": "14:20-15:10", "科目": "信息" }
-      ],
-      "次日第一节": { "日期": "4月10日", "星期": "星期四", "课节": "1限", "时间": "08:40-09:30", "科目": "数学" }
-	    },
-	    "当前事件": "4限 · 现代文",
-	    "当前或下个特殊日期": "4月10-14日 社团招新周",
+    "当前日期": "4月9日",
+    "_当前周几": "星期三",
+    "当前时间": "12:30",
+    "_当前日程": "午休",
+    "_当前特殊日期": "",
+	    "当天课程表": [
+	      { "课节": "1限", "科目": "英语" },
+	      { "课节": "2限", "科目": "世界史" },
+	      { "课节": "3限", "科目": "生物" },
+	      { "课节": "4限", "科目": "现代文" },
+	      { "课节": "5限", "科目": "体育（游泳）" },
+	      { "课节": "6限", "科目": "信息" }
+	    ],
+	    "当天原课程表": [
+	      { "课节": "1限", "科目": "英语" },
+	      { "课节": "2限", "科目": "世界史" },
+	      { "课节": "3限", "科目": "生物" },
+	      { "课节": "4限", "科目": "现代文" },
+	      { "课节": "5限", "科目": "体育（游泳）" },
+	      { "课节": "6限", "科目": "信息" }
+	    ],
+	    "当天魔改课程表": [
+	      { "课节": "1限", "科目": "英语" },
+	      { "课节": "2限", "科目": "世界史" },
+	      { "课节": "3限", "科目": "生物" },
+	      { "课节": "4限", "科目": "现代文" },
+	      { "课节": "5限", "科目": "体育（游泳）" },
+	      { "课节": "6限", "科目": "信息" }
+	    ],
+		    "当前事件": "午休前最后一节课下课",
 	    "当前地点": "教室",
+	    "user身份": {},
 	    "阿宅性别": "男",
     "hypnoos": {}
   },
@@ -20530,8 +26613,20 @@ const __stDefaultVariables = () => ({
       "来源": "初始校规"
     },
     "校内安全": {
-      "内容": "任何人不得在校内进行暴力、胁迫、危险恶作剧或无许可进入限制区域；发现异常情况应优先保证学生安全并向教职员报告。",
+      "内容": "任何人不得在校内进行暴力、胁迫、危险恶作剧或高风险实验；发现异常情况应优先保证学生安全并向教职员报告。",
       "目标范围": "学校内全体人员",
+      "生效范围": "学校内",
+      "来源": "初始校规"
+    },
+    "校内风纪": {
+      "内容": "学生在校内公共区域应维持基本风纪，不得以露骨、猥亵或恶意骚扰方式影响他人学习生活；特殊事件按剧情合理处理。",
+      "目标范围": "学校内学生",
+      "生效范围": "学校内",
+      "来源": "初始校规"
+    },
+    "环境卫生": {
+      "内容": "学生应维护教室、走廊和公共区域整洁，按值日或清扫安排完成清扫，不得故意破坏公物、乱扔垃圾或污染设施。",
+      "目标范围": "学校内学生",
       "生效范围": "学校内",
       "来源": "初始校规"
     }
