@@ -21529,6 +21529,28 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     return base + "-" + Date.now().toString(36);
   }
 
+  function graphFallbackLocationInfo(scope, label, category) {
+    const name = String(label || "新地点").trim() || "新地点";
+    const type = String(category || "").trim();
+    const scopeText = graphSupplementScope(scope) === "school" ? "校内地点" : "区域地点";
+    return name + "。由用户新增的" + (type ? type : scopeText) + "，具体用途、氛围、可互动对象和剧情功能等待AI在后续回复中补充。";
+  }
+
+  function isGraphPlaceholderLocationInfo(value) {
+    const text = String(value || "").trim();
+    return !text || text === "暂无地点信息。" || text.includes("等待AI在后续回复中补充");
+  }
+
+  function graphLocationSupplementFormat(scope, location) {
+    return "<新增地点补充>" + JSON.stringify({
+      地图: graphSupplementScope(scope),
+      id: String(location?.id || ""),
+      名称: String(location?.label || location?.name || "地点"),
+      分类: "由AI决定",
+      信息: "由AI补充地点用途、氛围、相关角色或剧情倾向"
+    }) + "</新增地点补充>";
+  }
+
   function addStaticGraphLocation(scope, item) {
     const label = String(item?.label || item?.name || item?.["名称"] || "").trim();
     const info = String(item?.info || item?.description || item?.["描述"] || item?.["说明"] || "").trim();
@@ -21538,7 +21560,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     const location = {
       id,
       label: label || "新地点",
-      info: info || "暂无地点信息。",
+      info: info || graphFallbackLocationInfo(scope, label || "新地点", item?.category || item?.["分类"] || ""),
       category: String(item?.category || item?.["分类"] || "").trim()
     };
     saveStaticGraph(scope, { ...graph, locations: (graph.locations || []).concat(location) });
@@ -22359,13 +22381,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	        const graph = loadStaticGraph(scope);
 	        const currentLocation = getCurrentStoryLocation() || "未知";
 	        const needsAiSupplement = !infoText;
-	        const supplementFormat = "<新增地点补充>" + JSON.stringify({
-	          地图: scope === "school" ? "school" : "world",
-	          id: addedLocation.id,
-	          名称: addedLocation.label,
-	          分类: "由AI决定",
-	          信息: "由AI补充地点用途、氛围、相关角色或剧情倾向"
-	        }) + "</新增地点补充>";
+	        const supplementFormat = graphLocationSupplementFormat(scope, addedLocation);
 		        const added = await appendAppOperation({
 	          来源: scope === "school" ? "学校地图" : "地图",
 	          操作: "请求新增地点",
@@ -22438,6 +22454,8 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	          rerenderGraphHost(page);
 	          return;
 	        }
+	        const needsAiSupplement = isGraphPlaceholderLocationInfo(location.info);
+	        const supplementFormat = graphLocationSupplementFormat(scope, location);
 	        Promise.resolve(appendAppOperation({
 	          来源: scope === "school" ? "学校地图" : "地图",
 	          操作: "建议剧情地点",
@@ -22449,6 +22467,8 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
             描述: location.info || "暂无地点信息。",
             地图类型: graph.title
           },
+          需要AI补充地点描述: needsAiSupplement,
+          补充写回格式: needsAiSupplement ? supplementFormat : "",
           地点信息更新格式: "<地点信息更新>" + JSON.stringify({
             地图: scope === "school" ? "school" : "world",
             id: location.id,
@@ -22456,7 +22476,9 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
             分类: location.category || "未分类",
             信息: "仅当本轮用户行动造成地点环境或用途重大改变时填写新描述"
           }) + "</地点信息更新>",
-	          AI执行规范: "这只是用户希望剧情地点设在这里的建议；前端不能直接改当前地点。AI应按剧情、时间和移动条件判断是否成立，成立时更新/系统/当前地点和/系统/当前事件；/系统/_当前周几、/系统/_当前日程、/系统/_当前特殊日期和/系统/_课程表为前端只读同步字段，AI不要手写这些字段。不合理时可拒绝或延后。通常不要改地点描述；只有用户在该地点的行动造成环境、用途、可进入性或剧情功能出现重大且持续的改变时，才在回复末尾额外输出一个<地点信息更新>{...}</地点信息更新>单地点JSON，供前端低频更新本地地图。不得输出完整地图JSON，不得删除或重排其他地点。"
+	          AI执行规范: needsAiSupplement
+	            ? "这只是用户希望剧情地点设在这里的建议；前端不能直接改当前地点。AI应按剧情、时间和移动条件判断是否成立，成立时更新/系统/当前地点和/系统/当前事件；/系统/_当前周几、/系统/_当前日程、/系统/_当前特殊日期和/系统/_课程表为前端只读同步字段，AI不要手写这些字段。该地点描述仍是前端占位，本轮必须在回复末尾额外输出一个<新增地点补充>{...}</新增地点补充>单地点JSON，按建议ID补充地点信息/分类；不得输出完整地图JSON，不得删除或重排其他地点。"
+	            : "这只是用户希望剧情地点设在这里的建议；前端不能直接改当前地点。AI应按剧情、时间和移动条件判断是否成立，成立时更新/系统/当前地点和/系统/当前事件；/系统/_当前周几、/系统/_当前日程、/系统/_当前特殊日期和/系统/_课程表为前端只读同步字段，AI不要手写这些字段。不合理时可拒绝或延后。通常不要改地点描述；只有用户在该地点的行动造成环境、用途、可进入性或剧情功能出现重大且持续的改变时，才在回复末尾额外输出一个<地点信息更新>{...}</地点信息更新>单地点JSON，供前端低频更新本地地图。不得输出完整地图JSON，不得删除或重排其他地点。"
 	        })).then(() => {
 	          rerenderGraphHost(page);
 	        });
@@ -22821,10 +22843,15 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       const gate = lockedSpecial
         ? '<button type="button" class="st-city-enter is-gate" data-board-gate-open="' + escapeAttr(specialLocation.id) + '">查看准入证</button>'
         : "";
+      const scope = layer.currentScope || "world";
+      const deletable = Boolean(selected.isExtra && location.id && !defaultGraphNodeIds(scope).has(String(location.id)));
+      const deleteButton = deletable
+        ? '<button class="st-graph-delete" type="button" data-board-delete-location="' + escapeAttr(location.id) + '" data-graph-scope="' + escapeAttr(scope) + '">删除</button>'
+        : "";
       return '<section class="st-city-info-panel">' +
         '<div class="st-city-info-head"><strong>' + escapeHtml(location.label || node?.label || "地点") + '</strong><small>' + escapeHtml(meta) + '</small></div>' +
         '<p>' + escapeHtml(description) + '</p>' +
-        '<div class="st-city-actions">' + suggest + enter + gate + '</div>' +
+        '<div class="st-city-actions">' + suggest + enter + gate + deleteButton + '</div>' +
         '<div class="st-location-current"><span>当前地点变量</span><strong>' + escapeHtml(operationPanelLocationText(currentLocation)) + '</strong></div>' +
       '</section>';
     }
@@ -22852,21 +22879,32 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     }
     const source = layer.currentScope === "school" ? "学校地图" : "地图";
     const mapType = specialLocation ? "校园特殊地点" : (layer.subtitle || layer.title || "棋盘地图");
+    const locationForPrompt = {
+      ...location,
+      id: location.id || selected.id,
+      label: location.label || selected.node?.label || "地点"
+    };
+    const needsAiSupplement = !specialLocation && isGraphPlaceholderLocationInfo(location.info || selected.node?.info);
+    const supplementFormat = graphLocationSupplementFormat(layer.currentScope || "world", locationForPrompt);
     Promise.resolve(appendAppOperation({
       来源: source,
       操作: "建议剧情地点",
       地图类型: mapType,
-      地点ID: location.id || selected.id,
+      地点ID: locationForPrompt.id,
       当前地点变量: getCurrentStoryLocation() || "未知",
       建议地点: {
-        名称: location.label || selected.node?.label || "地点",
+        名称: locationForPrompt.label,
         分类: specialLocation ? "特殊地点" : (location.category || selected.node?.category || "未分类"),
         描述: location.info || selected.node?.info || "暂无地点信息。",
         地图层级: layer.title || layerId
       },
+      需要AI补充地点描述: needsAiSupplement,
+      补充写回格式: needsAiSupplement ? supplementFormat : "",
       AI执行规范: specialLocation
         ? "这只是用户希望剧情进入该校内特殊地点的建议；前端不能直接改当前地点。AI应按剧情、时间、权限和世界观判断是否成立，成立时更新/系统/当前地点并展开对应特殊地点剧情；不合理时可拒绝、延后或给出进入条件。"
-        : "这只是用户希望剧情地点设在这里的建议；前端不能直接改当前地点。AI应按剧情、时间和移动条件判断是否成立，成立时更新/系统/当前地点和/系统/当前事件；/系统/_当前周几、/系统/_当前日程、/系统/_当前特殊日期和/系统/_课程表为前端只读同步字段，AI不要手写这些字段。不合理时可拒绝或延后。"
+        : needsAiSupplement
+          ? "这只是用户希望剧情地点设在这里的建议；前端不能直接改当前地点。AI应按剧情、时间和移动条件判断是否成立，成立时更新/系统/当前地点和/系统/当前事件；/系统/_当前周几、/系统/_当前日程、/系统/_当前特殊日期和/系统/_课程表为前端只读同步字段，AI不要手写这些字段。该地点描述仍是前端占位，本轮必须在回复末尾额外输出一个<新增地点补充>{...}</新增地点补充>单地点JSON，按建议ID补充地点信息/分类；不得输出完整地图JSON，不得删除或重排其他地点。"
+          : "这只是用户希望剧情地点设在这里的建议；前端不能直接改当前地点。AI应按剧情、时间和移动条件判断是否成立，成立时更新/系统/当前地点和/系统/当前事件；/系统/_当前周几、/系统/_当前日程、/系统/_当前特殊日期和/系统/_课程表为前端只读同步字段，AI不要手写这些字段。不合理时可拒绝或延后。"
     })).then(() => renderCityMapPage(page));
   }
 
@@ -23078,6 +23116,27 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       event.preventDefault();
       event.stopPropagation();
       mapBoardAppendSuggestion(page);
+    });
+    page.querySelector("[data-board-delete-location]")?.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const button = event.currentTarget;
+      const nodeId = button?.getAttribute?.("data-board-delete-location") || "";
+      const scope = button?.getAttribute?.("data-graph-scope") || layer.currentScope || "world";
+      if (!nodeId) return;
+      const graph = loadStaticGraph(scope);
+      const location = (graph.locations || []).find((item) => String(item?.id || "") === String(nodeId));
+      const label = String(location?.label || nodeId);
+      if (!window.confirm?.("删除新增地点「" + label + "」？")) return;
+      const ok = deleteStaticGraphNode(scope, nodeId);
+      if (!ok) {
+        window.alert?.("默认地点不能删除。");
+        return;
+      }
+      if (page.dataset.mapBoardSelected === nodeId) delete page.dataset.mapBoardSelected;
+      delete page.dataset.mapBoardLastClick;
+      delete page.dataset.mapBoardLastClickAt;
+      renderCityMapPage(page);
     });
     bindGraphPageActions(page);
   }
