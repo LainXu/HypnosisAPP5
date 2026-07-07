@@ -13,6 +13,7 @@ const BANNED_ENTRY_COMMENTS = [
 const DAILY_SETTLEMENT_SCRIPT_ID = "77618567-3f61-4303-908f-9ee59ab45cd2";
 const DAILY_SETTLEMENT_SCRIPT_NAME = "数值控制脚本";
 const MOBILE_MAIN_FRONTEND_TEST_GREETING = "<StatusPlaceHolderImpl/>";
+const DEBUG_TEST_GREETING = "Debug测试\n<StatusPlaceHolderImpl/>";
 const BANNED_TEXT_PATTERNS = [
   /MC能量.*恢复.*一半/,
   /恢复.*MC能量上限.*一半/,
@@ -89,8 +90,10 @@ const initContent = String(init?.content || "");
 assert(init, "missing [initvar]变量初始化不需要开");
 assert(Array.isArray(data.alternate_greetings), "alternate greetings must be an array");
 assert(
-  data.alternate_greetings.length === 1 && String(data.alternate_greetings[0] || "").trim() === MOBILE_MAIN_FRONTEND_TEST_GREETING,
-  `alternate greetings must contain only the mobile frontend test placeholder, found ${JSON.stringify(data.alternate_greetings)}`
+  data.alternate_greetings.length === 2
+  && String(data.alternate_greetings[0] || "").trim() === MOBILE_MAIN_FRONTEND_TEST_GREETING
+  && String(data.alternate_greetings[1] || "").trim() === DEBUG_TEST_GREETING,
+  `alternate greetings must contain mobile frontend placeholder and Debug测试 placeholder, found ${JSON.stringify(data.alternate_greetings)}`
 );
 
 const positions = Object.fromEntries(

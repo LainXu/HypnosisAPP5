@@ -39,9 +39,12 @@ const IDENTITY_FRONTEND_SENTINEL = "HYPNOOS_IDENTITY_FRONTDESK_IMPL";
 const IDENTITY_FRONTEND_OPENING_TEXT = "请选择你的身份\n首楼身份选择界面载入中。";
 const IDENTITY_FRONTEND_PLACEHOLDER = `${IDENTITY_FRONTEND_OPENING_TEXT}\n${IDENTITY_FRONTEND_SENTINEL}`;
 const MOBILE_MAIN_FRONTEND_TEST_GREETING = "<StatusPlaceHolderImpl/>";
+const DEBUG_TEST_GREETING = `Debug测试
+<StatusPlaceHolderImpl/>`;
 const IDENTITY_FRONTEND_SCRIPT_ID = "24624365-b2bb-46be-92eb-8aa6e4c61a05";
 const IDENTITY_FRONTEND_SCRIPT_NAME = "首楼身份选择前端";
 const NATSUMI_KNOWN_ALT_SCRIPT_ID = "2f6a03cb-fb49-4e36-b468-6db44a9b2f6e";
+const DEBUG_TEST_ALT_SCRIPT_ID = "b9bff1e1-c605-43c4-8cf5-d8e01a8f053e";
 const IDENTITY_MAIN_WORLDBOOK_COMMENTS = new Set([
   "[mvu_update]角色变量开始",
   "[mvu_update]西园寺爱丽莎变量",
@@ -737,6 +740,381 @@ const natsumiKnownAlternateGreetingInitScript = `(() => {
   registerEvents();
 })();`;
 
+const debugTestAlternateGreetingInitScript = `(() => {
+  const GLOBAL_KEY = "__HYPNOOS_DEBUG_TEST_ALT_INIT__";
+  const DEBUG_ANCHOR = "Debug测试";
+  const ZERO_WIDTH = "\\u200B";
+  const WEEKLY_TIMETABLE = {
+    1: ["现代文", "数学", "英语", "日本史", "体育（田径）", "家庭科"],
+    2: ["古典", "化学", "数学", "英语", "美术", "班会"],
+    3: ["英语", "世界史", "生物", "现代文", "体育（游泳）", "信息"],
+    4: ["数学", "古典", "英语", "化学", "音乐", "保健"],
+    5: ["现代文", "日本史", "生物", "英语", "体育（球技）", "综合探究"]
+  };
+  const CLASS_PERIODS = ["1限", "2限", "3限", "4限", "5限", "6限"];
+  const DEBUG_SYSTEM = {
+    "当前日期": "4月10日",
+    "_当前周几": "星期四",
+    "当前时间": "12:35",
+    "_当前日程": "午休",
+    "_当前特殊日期": "",
+    "当前地点": "催眠APP调试室",
+    "当前事件": "Debug测试",
+    "MC能量": 999999,
+    "MC能量上限": 999999,
+    "持有零花钱": 999999999,
+    "星光点": 99999,
+    "催眠APP订阅等级": "VIP6",
+    "主角可疑度": 0,
+    "_社畜值": 200,
+    "_buff": "全盛出击",
+    "_buff结束时间": "4月10日 18:35",
+    "阿宅性别": "男",
+    "user身份": {
+      模板ID: "debug_test",
+      难度: "Debug",
+      姓名: "{{user}}",
+      年龄: "17",
+      班级: "二年A组",
+      个人信息: "破解测试版调试身份；用于一次性验证前端、变量、派遣、课程表和人物档案边界。",
+      来源: "Debug测试开场白",
+      已选择: true
+    },
+    "持有物品": {
+      "星光点兑换券": { "名称": "星光点兑换券", "数量": 99, "描述": "Debug测试用。VIP5及以上可兑换星光点。" },
+      "校规修改券": { "名称": "校规修改券", "数量": 99, "描述": "Debug测试用。VIP6发布新校规的凭证。" },
+      "课程表魔改券": { "名称": "课程表魔改券", "数量": 99, "描述": "Debug测试用。课程表APP保存单格修改时消耗。" },
+      "屋顶准入证": { "名称": "屋顶准入证", "数量": 1, "描述": "Debug测试用特殊地点准入证。" },
+      "旧校舍地下室准入证": { "名称": "旧校舍地下室准入证", "数量": 1, "描述": "Debug测试用特殊地点准入证。" }
+    },
+    "派遣岗位": {
+      "1号门": { "角色名": "犬冢夏美", "派遣工作": "轻口味的NSFW直播", "派遣开始时间": "4月7日 12:35", "派遣结束时间": "4月14日 12:35", "工作价值": 3 },
+      "2号门": { "角色名": "", "派遣工作": "", "派遣开始时间": "", "派遣结束时间": "", "工作价值": 0 },
+      "3号门": { "角色名": "", "派遣工作": "", "派遣开始时间": "", "派遣结束时间": "", "工作价值": 0 }
+    }
+  };
+  const DEBUG_SCHOOL_RULES = {
+    "Debug通行许可": { "内容": "Debug测试期间，{{user}}可进入已解锁的测试地点并查看所有手机应用状态。", "目标范围": "{{user}}", "生效范围": "学校内", "来源": "Debug测试" },
+    "调试信息公开": { "内容": "与Debug测试有关的数值、暂存和前端状态可以被{{user}}检查，不视为剧情角色认知。", "目标范围": "{{user}}", "生效范围": "学校内", "来源": "Debug测试" },
+    "派遣区保密": { "内容": "男厕派遣区的测试占用状态不会被普通学生主动围观或公开传播。", "目标范围": "学校内全体人员", "生效范围": "学校内", "来源": "Debug测试" },
+    "课表调试周": { "内容": "课程表APP的所有格子处于魔改测试态，但视觉课程名保持原课程。", "目标范围": "学校内学生", "生效范围": "学校内", "来源": "Debug测试" },
+    "校规测试上限": { "内容": "当前校规数固定为5条，用于测试新增、删除和上限显示。", "目标范围": "{{user}}", "生效范围": "学校内", "来源": "Debug测试" }
+  };
+  const DEBUG_ALISA_TEMP = {
+    "大小姐顺从测试": { "名称": "大小姐顺从测试", "描述": "听见{{user}}提出调试请求时，会优先以大小姐式矜持配合完成测试。", "结束时间": "4月10日 18:35", "来源": "Debug测试" },
+    "羞耻阈值降低": { "名称": "羞耻阈值降低", "描述": "在非公开测试场景中更容易承认自己的兴趣和反应。", "结束时间": "4月10日 18:35", "来源": "Debug测试" },
+    "注意力锁定": { "名称": "注意力锁定", "描述": "当前调试回合会自然把注意力集中到{{user}}和催眠APP。", "结束时间": "4月10日 18:35", "来源": "Debug测试" },
+    "语气软化": { "名称": "语气软化", "描述": "对{{user}}说话时傲慢感降低，更容易流露亲近感。", "结束时间": "4月10日 18:35", "来源": "Debug测试" }
+  };
+  const DEBUG_ALISA_PERM = {
+    "隐藏宅趣承认": { "名称": "隐藏宅趣承认", "描述": "会在信任{{user}}时承认自己对动漫与角色文化的兴趣。", "来源": "Debug测试" },
+    "恋爱优先权": { "名称": "恋爱优先权", "描述": "把与{{user}}的关系视为比班级视线更重要的私人事项。", "来源": "Debug测试" },
+    "阿宅旁观合理化": { "名称": "阿宅旁观合理化", "描述": "在阿宅目击亲密场面时，会本能地把这理解成对关系的确认。", "来源": "Debug测试" },
+    "调试协力者": { "名称": "调试协力者", "描述": "理解自己是Debug测试中的关键角色之一，会配合确认人物档案、效果页和事件页状态。", "来源": "Debug测试" }
+  };
+  const state = globalThis[GLOBAL_KEY] ||= { registered: false, pending: false, applying: false, applied: false };
+  if (state.registered) return;
+  state.registered = true;
+
+  function isPlainObject(value) {
+    return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+  }
+
+  function valueContainsDebugAnchor(value, depth = 0, seen = new Set()) {
+    if (depth > 4 || value === undefined || value === null) return false;
+    if (typeof value === "string") return value.includes(DEBUG_ANCHOR);
+    if (typeof value !== "object") return false;
+    if (seen.has(value)) return false;
+    seen.add(value);
+    if (Array.isArray(value)) return value.some((item) => valueContainsDebugAnchor(item, depth + 1, seen));
+    for (const key of ["output", "message", "mes", "content", "text", "swipe", "swipes", "data", "detail"]) {
+      if (valueContainsDebugAnchor(value[key], depth + 1, seen)) return true;
+    }
+    return false;
+  }
+
+  function messageText(message) {
+    if (!message || typeof message !== "object") return "";
+    return [message.message, message.mes, message.content, message.text, message.output]
+      .filter((value) => typeof value === "string")
+      .join("\\n");
+  }
+
+  function activeMessageHasDebugAnchor(message) {
+    if (!message) return false;
+    if (typeof message === "string") return message.includes(DEBUG_ANCHOR);
+    if (!isPlainObject(message)) return false;
+    if (messageText(message).includes(DEBUG_ANCHOR)) return true;
+    const swipes = Array.isArray(message.swipes) ? message.swipes : [];
+    if (!swipes.length) return false;
+    const rawIndex = message.swipe_id ?? message.swipeId ?? message.swipe_index ?? message.swipeIndex ?? message.current_swipe ?? message.currentSwipe;
+    const index = Number(rawIndex);
+    if (!Number.isInteger(index) || index < 0 || index >= swipes.length) return false;
+    const activeSwipe = swipes[index];
+    if (typeof activeSwipe === "string") return activeSwipe.includes(DEBUG_ANCHOR);
+    return messageText(activeSwipe).includes(DEBUG_ANCHOR);
+  }
+
+  function firstMessageHasDebugAnchor() {
+    try {
+      const contextChat = globalThis.SillyTavern?.getContext?.()?.chat;
+      if (Array.isArray(contextChat) && contextChat[0] && activeMessageHasDebugAnchor(contextChat[0])) return true;
+    } catch {}
+    try {
+      if (typeof getChatMessages === "function") {
+        for (const id of [0, "0"]) {
+          const messages = getChatMessages(id);
+          if (Array.isArray(messages) && messages.some((message) => activeMessageHasDebugAnchor(message))) return true;
+        }
+      }
+    } catch {}
+    return false;
+  }
+
+  function chatLength() {
+    try {
+      const contextChat = globalThis.SillyTavern?.getContext?.()?.chat;
+      if (Array.isArray(contextChat)) return contextChat.length;
+    } catch {}
+    return null;
+  }
+
+  function freshEnoughToInitialize() {
+    const length = chatLength();
+    return length === null || length <= 1;
+  }
+
+  function firstMessageOptions() {
+    const ids = [0, "0"];
+    try {
+      const contextChat = globalThis.SillyTavern?.getContext?.()?.chat;
+      const first = Array.isArray(contextChat) ? contextChat[0] : null;
+      for (const value of [first?.message_id, first?.mesid, first?.id]) {
+        if (value !== undefined && value !== null) ids.push(value);
+      }
+    } catch {}
+    const seen = new Set();
+    const options = [];
+    for (const id of ids) {
+      const key = "message:" + String(id);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      options.push({ type: "message", message_id: id });
+    }
+    options.push({ type: "message", message_id: "latest" });
+    return options;
+  }
+
+  function variableRoot(container) {
+    if (!isPlainObject(container)) return null;
+    return isPlainObject(container.stat_data) ? container.stat_data : container;
+  }
+
+  function debugCourseRows(day = 4) {
+    const row = WEEKLY_TIMETABLE[day] || [];
+    return CLASS_PERIODS.map((label, index) => ({
+      "课节": label,
+      "科目": row[index] || "自习",
+      "是否魔改": true,
+      "魔改课程": ""
+    }));
+  }
+
+  function debugStoredTimetable() {
+    const table = {};
+    for (let day = 1; day <= 5; day += 1) {
+      table[day] = (WEEKLY_TIMETABLE[day] || []).map((subject) => String(subject || "自习") + ZERO_WIDTH);
+    }
+    return table;
+  }
+
+  function patchRoleLuxury(role, roleName) {
+    if (!isPlainObject(role)) return;
+    role["好感度"] = 200;
+    role["警戒度"] = 0;
+    role["服从度"] = 200;
+    role["性欲"] = Math.max(100, Number(role["性欲"]) || 0);
+    role["快感值"] = 0;
+    role["_事件记录"] = "111110";
+    role["事件记录"] = "111110";
+    role["至关重要记忆"] = "Debug测试：前五档好感事件均视为已完成，可用于测试回忆和重温。";
+    role["心理"] = roleName + "正在配合Debug测试，数值、档案、事件和效果都处于高配测试状态。";
+    if (roleName === "犬冢夏美") {
+      role["是否派遣中"] = true;
+      role["工作价值"] = 3;
+      role["心理"] = "已经在派遣区连续工作三天，仍处于派遣中；只能远程或隔门交流，等待监控结算测试。";
+    }
+    if (roleName === "西园寺爱丽莎") {
+      role["临时催眠效果"] = DEBUG_ALISA_TEMP;
+      role["永久催眠效果"] = DEBUG_ALISA_PERM;
+    } else {
+      role["临时催眠效果"] = isPlainObject(role["临时催眠效果"]) ? role["临时催眠效果"] : {};
+      role["永久催眠效果"] = isPlainObject(role["永久催眠效果"]) ? role["永久催眠效果"] : {};
+    }
+  }
+
+  function patchRoot(root) {
+    if (!isPlainObject(root)) return false;
+    root["系统"] = isPlainObject(root["系统"]) ? root["系统"] : {};
+    root["校规"] = DEBUG_SCHOOL_RULES;
+    root["任务"] = isPlainObject(root["任务"]) ? root["任务"] : {};
+    root["角色"] = isPlainObject(root["角色"]) ? root["角色"] : {};
+    Object.assign(root["系统"], DEBUG_SYSTEM, { "_课程表": debugCourseRows(4) });
+    for (const roleName of ["西园寺爱丽莎", "月咏深雪", "犬冢夏美", "阿宅"]) {
+      root["角色"][roleName] = isPlainObject(root["角色"][roleName]) ? root["角色"][roleName] : {};
+      patchRoleLuxury(root["角色"][roleName], roleName);
+    }
+    return true;
+  }
+
+  function storageScope() {
+    try {
+      const scope = globalThis.__ST_HYPNOOS_CHAT_STORAGE_SCOPE__?.();
+      if (scope) return String(scope);
+    } catch {}
+    try {
+      const chatId = globalThis.SillyTavern?.getCurrentChatId?.();
+      if (chatId !== undefined && chatId !== null && String(chatId).trim()) return String(chatId).trim();
+    } catch {}
+    return "global";
+  }
+
+  function graphScope() {
+    try {
+      const scope = globalThis.__ST_HYPNOOS_CHAT_STORAGE_SCOPE__?.();
+      if (scope) return String(scope);
+    } catch {}
+    try {
+      const chatId = globalThis.SillyTavern?.getCurrentChatId?.();
+      if (chatId !== undefined && chatId !== null && String(chatId).trim()) return "chat:" + String(chatId).trim();
+    } catch {}
+    return "global";
+  }
+
+  function writeJsonStorage(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+  }
+
+  function applyDebugFrontendStorage() {
+    const scope = storageScope();
+    const graph = graphScope();
+    writeJsonStorage("hypnoos.timetable.overrides.v1:" + graph, debugStoredTimetable());
+    writeJsonStorage("hypnoos:favorite-roles:v1:" + scope, ["西园寺爱丽莎", "犬冢夏美", "月咏深雪", "阿宅"]);
+    writeJsonStorage("hypnoos:favorite-roles:v1:message-0", ["西园寺爱丽莎", "犬冢夏美", "月咏深雪", "阿宅"]);
+    writeJsonStorage("hypnoos.profile.eventMemories.v1:" + encodeURIComponent(scope).slice(0, 220), {
+      version: 1,
+      updatedAt: Date.now(),
+      replayTombstones: {},
+      events: {
+        "西园寺爱丽莎": {
+          "1": { title: "Debug事件一", summary: "Debug测试用已收录事件。", detail: "用于测试人物档案事件回忆与重温覆盖。", updatedAt: Date.now() },
+          "2": { title: "Debug事件二", summary: "Debug测试用已收录事件。", detail: "用于测试事件位图与前端回忆分离。", updatedAt: Date.now() }
+        },
+        "犬冢夏美": {
+          "1": { title: "派遣区测试记录", summary: "夏美已在派遣区三天。", detail: "用于测试监控结算与派遣中限制。", updatedAt: Date.now() }
+        }
+      }
+    });
+    writeJsonStorage("hypnoos.special-location.unlocks.v1:" + graph, {
+      "school:rooftop": { id: "rooftop", label: "屋顶", source: "Debug测试", unlockedAt: Date.now() },
+      "school:old-building-basement": { id: "old-building-basement", label: "旧校舍地下室", source: "Debug测试", unlockedAt: Date.now() }
+    });
+    writeJsonStorage("hypnoos.static-map.update-seen.v1:" + graph, ["Debug测试"]);
+    writeJsonStorage("hypnoos.static-map.favorite.world.v1:" + graph, ["station", "mall"]);
+    writeJsonStorage("hypnoos.static-map.favorite.school.v1:" + graph, ["classroom-2a", "restroom-male", "rooftop"]);
+  }
+
+  async function applyWithMvu(option) {
+    if (!globalThis.Mvu?.getMvuData || !globalThis.Mvu?.replaceMvuData) return false;
+    const mvu = globalThis.Mvu.getMvuData(option);
+    const root = variableRoot(mvu);
+    if (!patchRoot(root)) return false;
+    const result = globalThis.Mvu.replaceMvuData(mvu, option);
+    if (result && typeof result.then === "function") await result;
+    return true;
+  }
+
+  async function applyWithVariables(option) {
+    if (typeof updateVariablesWith !== "function") return false;
+    let patched = false;
+    const result = updateVariablesWith((variables) => {
+      const root = variableRoot(variables);
+      patched = patchRoot(root);
+      return variables;
+    }, option);
+    if (result && typeof result.then === "function") await result;
+    return patched;
+  }
+
+  async function tryApply(reason) {
+    if (!state.pending || state.applying || state.applied) return;
+    if (!freshEnoughToInitialize()) {
+      state.pending = false;
+      return;
+    }
+    if (!firstMessageHasDebugAnchor()) return;
+    state.applying = true;
+    try {
+      for (const option of firstMessageOptions()) {
+        try {
+          if (await applyWithMvu(option) || await applyWithVariables(option)) {
+            state.pending = false;
+            state.applied = true;
+            applyDebugFrontendStorage();
+            try { console.info("[HypnoOS] 已应用Debug测试开场白初始变量与前端存储。"); } catch {}
+            return;
+          }
+        } catch (error) {
+          try { console.warn("[HypnoOS] Debug测试开场白变量写入失败，尝试下一个位置。", error); } catch {}
+        }
+      }
+    } finally {
+      state.applying = false;
+    }
+  }
+
+  function scheduleApply(reason) {
+    state.pending = true;
+    for (const delay of [0, 150, 500, 1200, 2500, 5000]) {
+      setTimeout(() => void tryApply(reason), delay);
+    }
+  }
+
+  function handlePotentialSelection(reason, args) {
+    if (!valueContainsDebugAnchor(args) && !firstMessageHasDebugAnchor()) return;
+    scheduleApply(reason);
+  }
+
+  function registerEvents() {
+    if (typeof eventOn !== "function") {
+      setTimeout(registerEvents, 250);
+      return;
+    }
+    const eventNames = [
+      globalThis.tavern_events?.CHARACTER_FIRST_MESSAGE_SELECTED,
+      "character_first_message_selected",
+      globalThis.tavern_events?.MESSAGE_SWIPED,
+      "message_swiped"
+    ].filter(Boolean);
+    const seen = new Set();
+    for (const eventName of eventNames) {
+      if (seen.has(eventName)) continue;
+      seen.add(eventName);
+      eventOn(eventName, (...args) => handlePotentialSelection(String(eventName || "event"), args));
+    }
+    try {
+      if (globalThis.Mvu?.events?.VARIABLE_INITIALIZED) {
+        eventOn(globalThis.Mvu.events.VARIABLE_INITIALIZED, () => {
+          if (state.pending) scheduleApply("mvu-initialized");
+        });
+      }
+    } catch {}
+  }
+
+  registerEvents();
+  scheduleApply("boot");
+})();`;
+
 function appendOpeningUsageScene(text) {
   const raw = String(text ?? "");
   let next = raw
@@ -806,6 +1184,33 @@ function upsertNatsumiKnownAlternateGreetingInitScript(data) {
     id: "2f6a03cb-fb49-4e36-b468-6db44a9b2f6e",
     content: natsumiKnownAlternateGreetingInitScript,
     info: "监听酒馆助手开场白选择事件；选择夏美备用开场白时写入首楼消息变量。",
+    button: {
+      enabled: true,
+      buttons: []
+    },
+    data: {},
+    export_with: {
+      data: true,
+      button: true
+    }
+  };
+  const index = scripts.findIndex((item) => item?.id === script.id || item?.name === script.name);
+  if (index >= 0) scripts[index] = { ...scripts[index], ...script };
+  else scripts.push(script);
+  data.extensions.tavern_helper.scripts = scripts;
+}
+
+function upsertDebugTestAlternateGreetingInitScript(data) {
+  data.extensions ??= {};
+  data.extensions.tavern_helper ??= {};
+  const scripts = Array.isArray(data.extensions.tavern_helper.scripts) ? data.extensions.tavern_helper.scripts : [];
+  const script = {
+    type: "script",
+    enabled: true,
+    name: "Debug测试开场白变量初始化",
+    id: DEBUG_TEST_ALT_SCRIPT_ID,
+    content: debugTestAlternateGreetingInitScript,
+    info: "监听酒馆助手开场白选择事件；选择Debug测试开场白时写入首楼消息变量和测试用前端存储。",
     button: {
       enabled: true,
       buttons: []
@@ -3004,15 +3409,17 @@ function removeLegacyOpeningState(data) {
   const scripts = Array.isArray(data.extensions.tavern_helper.scripts) ? data.extensions.tavern_helper.scripts : [];
   data.extensions.tavern_helper.scripts = scripts.filter((script) =>
     script?.id !== NATSUMI_KNOWN_ALT_SCRIPT_ID &&
-    script?.name !== "备用开场白变量初始化"
+    script?.id !== DEBUG_TEST_ALT_SCRIPT_ID &&
+    script?.name !== "备用开场白变量初始化" &&
+    script?.name !== "Debug测试开场白变量初始化"
   );
 }
 
 function setIdentityOpening(card, data) {
   data.first_mes = IDENTITY_FRONTEND_PLACEHOLDER;
   card.first_mes = IDENTITY_FRONTEND_PLACEHOLDER;
-  card.alternate_greetings = [MOBILE_MAIN_FRONTEND_TEST_GREETING];
-  data.alternate_greetings = [MOBILE_MAIN_FRONTEND_TEST_GREETING];
+  card.alternate_greetings = [MOBILE_MAIN_FRONTEND_TEST_GREETING, DEBUG_TEST_GREETING];
+  data.alternate_greetings = [MOBILE_MAIN_FRONTEND_TEST_GREETING, DEBUG_TEST_GREETING];
 }
 
 function removeDailySettlementScript(data) {
@@ -3363,6 +3770,7 @@ function patchCard(card) {
   data.extensions.world = worldName;
   removeLegacyOpeningState(data);
   setIdentityOpening(card, data);
+  upsertDebugTestAlternateGreetingInitScript(data);
   removeMvuSchemaReconcileScript(data);
   removeDailySettlementScript(data);
   card.alternate_greetings = Array.isArray(data.alternate_greetings) ? data.alternate_greetings.slice() : [];
