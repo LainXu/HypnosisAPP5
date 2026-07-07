@@ -7803,9 +7803,10 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 
   function profileEventExtractAffectionBlock(content, bit) {
     const safeBit = Math.max(0, Math.min(4, Number(bit) || 0));
-    const numeral = ENCOUNTER_EVENT_NUMERALS[safeBit] || String(safeBit + 1);
+    const numeralPatterns = ["壹|一|1", "贰|貳|二|2", "叁|參|三|3", "肆|四|4", "伍|五|5"];
+    const numeralPattern = numeralPatterns[safeBit] || String(ENCOUNTER_EVENT_NUMERALS[safeBit] || safeBit + 1);
     const text = String(content || "");
-    const pattern = new RegExp("-\s*事件" + numeral + "\s*[:：]?([\s\S]*?)(?=\n\s*-\s*事件[壹贰貳叁參肆伍一二三四五]|\n\s*</|$)");
+    const pattern = new RegExp("-\\s*事件(?:" + numeralPattern + ")\\s*[:：]?([\\s\\S]*?)(?=\\n\\s*-\\s*事件(?:壹|贰|貳|叁|參|肆|伍|一|二|三|四|五|1|2|3|4|5)|\\n\\s*</|$)");
     const match = text.match(pattern);
     return match ? String(match[1] || "").trim() : "";
   }
@@ -7813,7 +7814,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
   function profileEventFieldFromBlock(block, names) {
     const text = String(block || "");
     for (const name of names) {
-      const pattern = new RegExp("^\s*" + name + "\s*[:：]\s*([\s\S]*?)(?=\n\s*(?:好感阈值|服从阈值|事件名|事件描述|通用事件主题)\s*[:：]|$)", "m");
+      const pattern = new RegExp("^\\s*" + name + "\\s*[:：]\\s*([\\s\\S]*?)(?=\\n\\s*(?:好感阈值|服从阈值|事件名|事件描述|通用事件主题)\\s*[:：]|$)", "m");
       const match = text.match(pattern);
       const value = String(match?.[1] || "").trim();
       if (value) return value;
@@ -7865,7 +7866,12 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     }
     if (worldbook?.item) return { item: worldbook.item, source: worldbook.item.source };
     const builtIn = roleEventSpecificThreshold(roleName, safeBit);
-    if (builtIn && worldbookReadFailed) return { item: builtIn, source: builtIn.source + "（世界书读取失败时的兼容镜像）" };
+    if (builtIn && (worldbookReadFailed || !worldbook?.foundEntry)) {
+      return {
+        item: builtIn,
+        source: builtIn.source + (worldbookReadFailed ? "（世界书读取失败时的兼容镜像）" : "（主卡世界书镜像）")
+      };
+    }
     const generic = roleEventThresholds("").find((threshold) => Number(threshold.bit) === safeBit) || {
       value: ENCOUNTER_AFFECTION_CHAIN_THRESHOLDS[safeBit] || 0,
       bit: safeBit,
@@ -17644,7 +17650,89 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	          summary: "爱丽莎在全班面前宣布和{{user}}的恋情并亲吻{{user}}，并有意识地让阿宅看见两人的亲密关系；可对阿宅炫耀{{user}}已是自己的恋人，或在阿宅已有绿帽倾向时轻蔑刺激他被排除的位置。"
 	        }
 	      ]
-	    }
+	    },
+    {
+      role: "月咏深雪",
+      valueKey: "好感度",
+      thresholds: [
+        {
+          value: 40,
+          bit: 0,
+          label: "40 深雪推荐的小说",
+          title: "深雪推荐的小说",
+          summary: "深雪给{{user}}挑选一本自己很喜欢的小说。重点是她不是随便借书，而是根据{{user}}近期表现、谈话细节或她希望{{user}}理解的一面来选择作品，并以安静克制的方式分享私人喜好。"
+        },
+        {
+          value: 70,
+          bit: 1,
+          label: "70 手心里的恶作剧",
+          title: "手心里的恶作剧",
+          summary: "深雪握住{{user}}的手，并用指尖轻轻挠{{user}}手心。这个动作可以发生在图书室、走廊、班务间隙或人群遮挡下；重点是她端正外表下主动做出小小越界，并观察{{user}}反应。"
+        },
+        {
+          value: 100,
+          bit: 2,
+          label: "100 手作笔记本",
+          title: "手作笔记本",
+          summary: "深雪赠送{{user}}一本自己制作的笔记本。笔记本可以带有她精心整理的目录、书签、手写扉页或只给{{user}}看的备注；重点是她把秩序感、关照和私人心意装进一件可长期使用的礼物里。"
+        },
+        {
+          value: 140,
+          bit: 3,
+          label: "140 卧室里的边界告白",
+          title: "卧室里的边界告白",
+          summary: "深雪将{{user}}带回自己的卧室，让{{user}}进入她最私人的生活空间。事件重点是她在安静、封闭、无人打扰的环境里坦白自己想把更私密的一面交给{{user}}，并认真确认彼此边界、信任和关系选择；当前角色仍处于未成年设定时不要描写露骨性行为。"
+        },
+        {
+          value: 200,
+          bit: 4,
+          label: "200 深雪的公开示爱",
+          title: "深雪的公开示爱",
+          summary: "深雪主动向{{user}}示爱，并在大家面前公开两人的恋情。她的公开方式应符合委员长与图书委员的克制感，可以是在班级、图书室、学生会或重要校园场景中牵起{{user}}的手，用清楚、平静却坚定的话承认恋人关系。"
+        }
+      ]
+    },
+    {
+      role: "犬冢夏美",
+      valueKey: "好感度",
+      thresholds: [
+        {
+          value: 40,
+          bit: 0,
+          label: "40 炒面面包突击",
+          title: "炒面面包突击",
+          summary: "夏美拉着{{user}}一起去抢午休限定的炒面面包，或在抢到后分给{{user}}一起吃。重点是她把{{user}}自然纳入自己的节奏，把“顺手闹一下的人”推进为可以一起分享食物和胜利感的人。"
+        },
+        {
+          value: 70,
+          bit: 1,
+          label: "70 放学跑步与毛巾",
+          title: "放学跑步与毛巾",
+          summary: "夏美邀请{{user}}一起跑步训练。结束后两人气喘吁吁地停下，互相递水、用毛巾替对方擦掉额头或颈侧汗水；重点是运动后的距离感缩短，以及夏美大大咧咧外表下突然意识到亲近的害羞。"
+        },
+        {
+          value: 100,
+          bit: 2,
+          label: "100 手作小甜品",
+          title: "手作小甜品",
+          summary: "夏美把自己制作的小甜品送给{{user}}。甜品很难吃、形状也粗糙，但她仍然大大咧咧地笑着观察{{user}}反应；重点是她笨拙认真地为{{user}}准备礼物，并在被吐槽或被鼓励时建立只属于两人的轻松默契。"
+        },
+        {
+          value: 140,
+          bit: 3,
+          label: "140 两人的温泉",
+          title: "两人的温泉",
+          summary: "夏美和{{user}}一起去温泉，场景只聚焦两人在合法、安全、私密空间中的坦诚谈话、羞涩距离、身体边界确认和关系升温；当前角色仍处于未成年设定时不要描写露骨性行为。"
+        },
+        {
+          value: 200,
+          bit: 4,
+          label: "200 直球告白与公开恋情",
+          title: "直球告白与公开恋情",
+          summary: "夏美主动向{{user}}示爱，并在大家面前公开两人的恋情。她的方式应直率、热烈、藏不住情绪，可以在班级、操场、田径部或午休人群前牵住{{user}}，把“我喜欢他”说得清清楚楚。"
+        }
+      ]
+    }
 	  ];
 
   function normalizedRoleEventRecord(value) {
