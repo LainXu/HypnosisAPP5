@@ -186,9 +186,22 @@ assertNoBannedText("worldbook", allWorldbookText);
 for (const pattern of BANNED_PROMPT_MACRO_PATTERNS) {
   assert(!pattern.test(allWorldbookText), `banned variable macro exposes private/full root data: ${pattern}`);
 }
+assert(
+  allWorldbookText.includes("<新增地点补充>")
+  && allWorldbookText.includes("前端尚未")
+  && allWorldbookText.includes("前端收到后才保存"),
+  "worldbook must require AI to emit <新增地点补充> before frontend stores custom locations"
+);
 for (const needle of ["/系统/_社畜值", "/系统/_buff", "/系统/_buff结束时间", "/系统/_课程表"]) {
   assert(allWorldbookText.includes(needle), `worldbook missing readonly path: ${needle}`);
 }
+
+const finalizerText = await readText("scripts/finalize-card-v1_6.mjs");
+assert(
+  finalizerText.includes("dynamicRecordSchema")
+  && ["校规", "任务", "临时催眠效果", "永久催眠效果"].every((key) => finalizerText.includes(`"${key}"`)),
+  "finalizer must keep dynamic MVU dictionary schema repair for school rules, tasks and hypnosis effects"
+);
 
 const regexText = JSON.stringify(data.extensions?.regex_scripts || []);
 assert(regexText.includes(`cdn.jsdelivr.net/gh/${DIST_REPO}@`), "card regex does not use commit-pinned CDN");
