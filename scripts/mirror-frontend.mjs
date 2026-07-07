@@ -723,6 +723,9 @@ html.st-hypnoos-booting.st-hypnoos-boot-failed body::after{content:"前端加载
 	        if (/^(奖励星光点|奖励物品)$/.test(name) && details["奖励"] !== undefined) return true;
 	        if (/^新增任务$/.test(action) && /^(变量日期|每日任务种子|当前已接任务数|暂存区新增任务数)$/.test(name)) return true;
 	      }
+	      if (/^人物档案$/.test(source) && /催眠效果已前端删除提醒|催眠效果解除事实提醒/.test(action)) {
+	        if (/^(效果类型|效果键名|效果名称|前端删除催眠效果)$/.test(name)) return true;
+	      }
 	      if (/^催眠APP$/.test(source) && /^资源兑换$/.test(action)) {
 	        if (/^(购买数量|消耗零花钱|消耗星光点|基础获得MC能量|实际获得MC能量|获得MC能量|获得MC能量上限|当前VIP等级|当前星光点)$/.test(name)) return true;
 	      }
@@ -783,7 +786,7 @@ html.st-hypnoos-booting.st-hypnoos-boot-failed body::after{content:"前端加载
 	      }
 	      if (text === "人物档案") {
 	        const parts = ["人物档案是纸质资料操作；设置绰号、删除角色或效果只改目标路径，不连带改催眠APP、真实姓名或其他变量；固定初始角色永远不能删除"];
-        if (operationHasAction(records, /删除催眠效果/)) parts.push("删除催眠效果已由前端直接写入目标角色的临时/永久催眠效果变量；AI只承认该效果不再生效，不得再次输出remove补删，也不得删除校规、系统、其他角色或其他字段");
+        if (operationHasAction(records, /删除催眠效果|催眠效果已前端删除提醒|催眠效果解除事实提醒/)) parts.push("催眠效果解除已由前端直接写入变量，本轮只是事实提醒；AI只承认该效果不再生效，绝对不要输出remove补删，否则会因为路径已不存在而报错");
         if (operationHasAction(records, /触发角色事件/)) parts.push("_事件记录位图已由前端写入，AI只写对应事件剧情，不得二次改_事件记录或重复触发；本次回复末尾必须输出完整闭合的<人物档案事件记录>块，包含角色名、事件序号、标题、概要、关键场面、关系变化和后续钩子，最后单独一行写</人物档案事件记录>，供前端本地保存回忆摘要，不写入MVU变量");
         if (operationHasAction(records, /回忆角色事件/)) parts.push("回忆角色事件已由前端把本地保存的事件摘要写入对应角色的至关重要记忆；AI读取该字段让对应角色围绕该事件自然聊天，不改_事件记录、不当作新事件触发");
         if (operationHasAction(records, /重温角色事件/)) parts.push("重温角色事件表示{{user}}主动提出之前的事件不够美好，想和该角色重新来一次；前端已将旧事件记录标记作废，AI按指定事件重新生成剧情并在回复末尾输出新的完整<人物档案事件记录>块来覆盖本地事件记录；不要修改_事件记录位图或自动发奖");
@@ -12557,7 +12560,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
         message: "催眠效果已删除并锁定暂存。",
         payload: {
           来源: "人物档案",
-          操作: "删除催眠效果",
+          操作: "催眠效果解除事实提醒",
           暂存摘要: roleName + " / " + safeEffectType + " / " + (effectTitle || effectKey),
           角色名: roleName,
           效果类型: safeEffectType,
@@ -12566,7 +12569,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
           前端处理: "已由前端直接写入变量",
           变量写入路径: "/角色/" + roleName + "/" + safeEffectType,
           前端删除催眠效果: effectTitle || effectKey,
-          AI执行规范: "这个催眠效果已经由前端从角色的" + safeEffectType + "变量中删除。AI只承认该效果不再生效，不得再次输出remove补删，不得删除校规、系统变量、任务、成就、其他角色或这个角色的其他催眠效果；若剧情需要反应，只能描写角色对效果解除后的合理状态。",
+          AI执行规范: "这个催眠效果已经由前端从角色的" + safeEffectType + "变量中删除。本条不是待执行删除命令；AI只承认该效果不再生效，绝对不要输出remove补删，否则会因为路径已不存在而报错。不得删除校规、系统变量、任务、成就、其他角色或这个角色的其他催眠效果；若剧情需要反应，只能描写角色对效果解除后的合理状态。",
           不可删除: true,
           forceLocked: true
         }
@@ -18848,8 +18851,6 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	      "工作价值": workValue,
 	      "绰号": "",
 	      "绰号已认可": false,
-      "_事件记录": "000000",
-      "事件记录": "000000",
 	      "至关重要记忆": "",
 	      "档案": {
 	        "照片": "",
@@ -18921,10 +18922,8 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	      output["绰号已认可"] = output["绰号已认可"] === true || /^true$/i.test(String(output["绰号已认可"] ?? output["绰号已認可"] ?? "").trim());
 	    }
     if (encounterLooksLikeWorldbookChunk(output["心理"])) output["心理"] = "未记录";
-    output["_事件记录"] = roleEventRecordValue(output);
-    output["事件记录"] = normalizedRoleEventRecord(output["事件记录"]);
-	    output["至关重要记忆"] = encounterPlainLine(output["至关重要记忆"] || "");
-	    return output;
+		    output["至关重要记忆"] = encounterPlainLine(output["至关重要记忆"] || "");
+		    return output;
 	  }
 
 	  function encounterProfileSnippet(value, limit = 76) {
@@ -20968,13 +20967,11 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     { path: "性欲", label: "性欲", type: "number", min: -200, max: 200 },
     { path: "快感值", label: "快感值", type: "number", min: -200, max: 200 },
     { path: "工作价值", label: "工作价值", type: "number", min: 0, max: 20 },
-    { path: "是否派遣中", label: "是否派遣中", type: "boolean" },
-    { path: "绰号", label: "绰号", type: "text" },
-    { path: "绰号已认可", label: "绰号已认可", type: "boolean" },
-    { path: "_事件记录", label: "_事件记录", type: "eventRecord" },
-    { path: "事件记录", label: "事件记录(兼容)", type: "eventRecord" },
-    { path: "至关重要记忆", label: "至关重要记忆", type: "text" }
-  ];
+	    { path: "是否派遣中", label: "是否派遣中", type: "boolean" },
+	    { path: "绰号", label: "绰号", type: "text" },
+	    { path: "绰号已认可", label: "绰号已认可", type: "boolean" },
+	    { path: "至关重要记忆", label: "至关重要记忆", type: "text" }
+	  ];
   const ENCOUNTER_INITIAL_PROFILE_FIELD_SPECS = [
     { path: "档案.照片", label: "照片", type: "text" },
     { path: "档案.姓名", label: "姓名", type: "text" },
@@ -22559,26 +22556,121 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     return PROFILE_EVENT_MEMORY_STORAGE_PREFIX + "global";
   }
 
-	  function readProfileEventMemoryStore() {
-	    try {
-	      const parsed = JSON.parse(localStorage.getItem(profileEventMemoryStorageKey()) || "null");
-	      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-	        const events = parsed.events && typeof parsed.events === "object" && !Array.isArray(parsed.events) ? parsed.events : {};
-	        const replayTombstones = parsed.replayTombstones && typeof parsed.replayTombstones === "object" && !Array.isArray(parsed.replayTombstones) ? parsed.replayTombstones : {};
-	        return { version: 1, updatedAt: Number(parsed.updatedAt || 0) || 0, events, replayTombstones };
-	      }
-	    } catch {}
-	    return { version: 1, updatedAt: 0, events: {}, replayTombstones: {} };
-	  }
+  function profileEventMemoryStorageKeys() {
+    const keys = [];
+    const add = (key) => {
+      const text = String(key || "").trim();
+      if (text && !keys.includes(text)) keys.push(text);
+    };
+    const addEncoded = (value) => {
+      const scope = profileEventMemoryScopeText(value);
+      if (scope) add(PROFILE_EVENT_MEMORY_STORAGE_PREFIX + scope);
+    };
+    try {
+      const chatScope = window.__ST_HYPNOOS_CHAT_STORAGE_SCOPE__?.();
+      addEncoded(chatScope);
+    } catch {}
+    try {
+      const chatId = window.SillyTavern?.getCurrentChatId?.();
+      const chatText = String(chatId ?? "").trim();
+      if (chatText) {
+        add(PROFILE_EVENT_MEMORY_STORAGE_PREFIX + "chat:" + profileEventMemoryScopeText(chatText));
+        addEncoded("chat:" + chatText);
+      }
+    } catch {}
+    try {
+      const context = window.SillyTavern?.getContext?.() || (typeof getContext === "function" ? getContext() : null);
+      const values = [context?.chatId, context?.chat_id, context?.chatFile, context?.chat_file, context?.characterId, context?.groupId];
+      const found = values.find((item) => String(item ?? "").trim());
+      if (found !== undefined && found !== null) {
+        const text = String(found).trim();
+        add(PROFILE_EVENT_MEMORY_STORAGE_PREFIX + "ctx:" + profileEventMemoryScopeText(text));
+        addEncoded("ctx:" + text);
+      }
+    } catch {}
+    add(profileEventMemoryStorageKey());
+    add(PROFILE_EVENT_MEMORY_STORAGE_PREFIX + "global");
+    return keys;
+  }
 
-	  function writeProfileEventMemoryStore(store) {
-	    try {
-	      localStorage.setItem(profileEventMemoryStorageKey(), JSON.stringify({
-	        version: 1,
-	        updatedAt: Date.now(),
-	        events: store?.events && typeof store.events === "object" ? store.events : {},
-	        replayTombstones: store?.replayTombstones && typeof store.replayTombstones === "object" ? store.replayTombstones : {}
-	      }));
+  function normalizeProfileEventMemoryStore(value) {
+    const parsed = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+    const events = {};
+    const rawEvents = parsed.events && typeof parsed.events === "object" && !Array.isArray(parsed.events) ? parsed.events : {};
+    Object.entries(rawEvents).forEach(([roleName, bucket]) => {
+      if (!bucket || typeof bucket !== "object" || Array.isArray(bucket)) return;
+      const keys = Object.keys(bucket);
+      const likelyOneBased = !keys.includes("0") && keys.length > 0 && keys.every((key) => /^[1-6]$/.test(key));
+      const nextBucket = {};
+      Object.entries(bucket).forEach(([rawKey, rawRecord]) => {
+        const record = rawRecord && typeof rawRecord === "object" && !Array.isArray(rawRecord) ? rawRecord : {};
+        let bit = Number(record.bit);
+        if (!Number.isFinite(bit)) {
+          const eventIndex = Number(record.eventIndex);
+          if (Number.isFinite(eventIndex)) bit = eventIndex - 1;
+        }
+        if (!Number.isFinite(bit)) {
+          const keyNumber = Number(rawKey);
+          bit = likelyOneBased ? keyNumber - 1 : keyNumber;
+        }
+        if (!Number.isFinite(bit) || bit < 0 || bit >= ROLE_EVENT_RECORD_LENGTH) return;
+        const cleanBit = String(Math.max(0, Math.min(ROLE_EVENT_RECORD_LENGTH - 1, Math.trunc(bit))));
+        nextBucket[cleanBit] = {
+          ...record,
+          roleName: String(record.roleName || roleName || "").trim(),
+          eventIndex: Number(record.eventIndex || Number(cleanBit) + 1) || Number(cleanBit) + 1,
+          bit: Number(cleanBit),
+          numeral: record.numeral || ENCOUNTER_EVENT_NUMERALS[Number(cleanBit)] || String(Number(cleanBit) + 1),
+          updatedAt: Number(record.updatedAt || parsed.updatedAt || 0) || 0
+        };
+      });
+      if (Object.keys(nextBucket).length) events[String(roleName)] = nextBucket;
+    });
+    const replayTombstones = parsed.replayTombstones && typeof parsed.replayTombstones === "object" && !Array.isArray(parsed.replayTombstones) ? parsed.replayTombstones : {};
+    return { version: 1, updatedAt: Number(parsed.updatedAt || 0) || 0, events, replayTombstones };
+  }
+
+  function mergeProfileEventMemoryStores(stores) {
+    const result = { version: 1, updatedAt: 0, events: {}, replayTombstones: {} };
+    for (const store of stores || []) {
+      const clean = normalizeProfileEventMemoryStore(store);
+      result.updatedAt = Math.max(result.updatedAt, Number(clean.updatedAt || 0) || 0);
+      Object.entries(clean.events || {}).forEach(([roleName, bucket]) => {
+        const target = result.events[roleName] && typeof result.events[roleName] === "object" && !Array.isArray(result.events[roleName]) ? result.events[roleName] : {};
+        Object.entries(bucket || {}).forEach(([bit, record]) => {
+          const previous = target[bit];
+          if (!previous || Number(record?.updatedAt || 0) >= Number(previous?.updatedAt || 0)) target[bit] = record;
+        });
+        result.events[roleName] = target;
+      });
+      Object.entries(clean.replayTombstones || {}).forEach(([roleName, bucket]) => {
+        if (!bucket || typeof bucket !== "object" || Array.isArray(bucket)) return;
+        result.replayTombstones[roleName] = { ...(result.replayTombstones[roleName] || {}), ...bucket };
+      });
+    }
+    return result;
+  }
+
+		  function readProfileEventMemoryStore() {
+		    const stores = [];
+		    for (const key of profileEventMemoryStorageKeys()) {
+		      try {
+		        const parsed = JSON.parse(localStorage.getItem(key) || "null");
+		        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) stores.push(parsed);
+		      } catch {}
+		    }
+		    return stores.length ? mergeProfileEventMemoryStores(stores) : { version: 1, updatedAt: 0, events: {}, replayTombstones: {} };
+		  }
+
+		  function writeProfileEventMemoryStore(store) {
+		    try {
+		      const clean = normalizeProfileEventMemoryStore(store);
+		      localStorage.setItem(profileEventMemoryStorageKey(), JSON.stringify({
+		        version: 1,
+		        updatedAt: Date.now(),
+		        events: clean.events,
+		        replayTombstones: clean.replayTombstones
+		      }));
 	      return true;
     } catch (err) {
       console.warn("[HypnoOS] 人物档案事件回忆保存失败", err);
@@ -22660,13 +22752,13 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 
   function profileEventMemoryText(record) {
     if (!record || typeof record !== "object") return "";
-    const lines = [];
-    if (record.title) lines.push("标题: " + record.title);
-    if (record.summary) lines.push("概要: " + record.summary);
-    if (record.scene) lines.push("关键场面: " + record.scene);
-    if (record.relationship) lines.push("关系变化: " + record.relationship);
-    if (record.aftermath) lines.push("后续钩子: " + record.aftermath);
-    return lines.join(PROFILE_EVENT_LF) || profileEventMemoryCleanText(record.raw || "", 1200);
+    const summary = profileEventMemoryCleanText(record.summary || "", 280);
+    if (summary) return summary;
+    const parts = [record.scene, record.relationship, record.aftermath]
+      .map((item) => String(item || "").replace(PROFILE_EVENT_WHITESPACE_RE, " ").trim())
+      .filter(Boolean);
+    if (parts.length) return profileEventMemoryCleanText(parts.join("；"), 280);
+    return profileEventMemoryCleanText(record.raw || "", 280);
   }
 
   function profileEventMemorySnippet(record, limit = 42) {
@@ -22861,50 +22953,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 
 	  window.__ST_SYNC_PROFILE_EVENT_MEMORIES__ = syncProfileEventMemoriesFromChat;
 
-  async function syncRoleEventRecordDefaults() {
-    try {
-      if (typeof globalThis.__ST_HYPNOOS_IS_LATEST_MESSAGE_FRONTEND__ === "function" && !globalThis.__ST_HYPNOOS_IS_LATEST_MESSAGE_FRONTEND__()) return false;
-      const data = typeof encounterCurrentMvuData === "function" ? encounterCurrentMvuData() : null;
-      const roles = data?.stat?.["角色"];
-      if (!roles || typeof roles !== "object" || Array.isArray(roles)) return false;
-      const updates = Object.entries(roles)
-        .filter(([, roleData]) => roleData && typeof roleData === "object" && !Array.isArray(roleData))
-        .map(([name, roleData]) => {
-          const roleName = String(name || "").trim();
-          const hasPrimary = Object.prototype.hasOwnProperty.call(roleData, "_事件记录");
-          const primary = hasPrimary ? String(roleData["_事件记录"] ?? "").trim() : "";
-          const legacy = Object.prototype.hasOwnProperty.call(roleData, "事件记录") ? String(roleData["事件记录"] ?? "").trim() : "";
-          const normalizedPrimary = hasPrimary ? normalizedRoleEventRecord(primary) : normalizedRoleEventRecord(legacy);
-          const normalizedLegacy = normalizedRoleEventRecord(legacy);
-          const needsPrimary = !hasPrimary || primary !== normalizedPrimary;
-          const needsLegacy = legacy && legacy !== normalizedLegacy;
-          return roleName && (needsPrimary || needsLegacy) ? { name: roleName, normalizedPrimary, normalizedLegacy, needsLegacy } : null;
-        })
-        .filter(Boolean)
-        .sort((a, b) => a.name.localeCompare(b.name, "zh-Hans-CN"));
-      const scope = String(globalThis.__ST_HYPNOOS_FRONTEND_MESSAGE_SCOPE__?.() || globalThis.__ST_HYPNOOS_FRONTEND_SLOT_SCOPE__?.() || "latest");
-      const signature = scope + "::" + updates.map((item) => item.name + "=" + item.normalizedPrimary + "/" + item.normalizedLegacy).join("|");
-      if (!updates.length) {
-        globalThis.__ST_ROLE_EVENT_RECORD_SYNC_SIGNATURE__ = signature;
-        return false;
-      }
-      if (globalThis.__ST_ROLE_EVENT_RECORD_SYNC_SIGNATURE__ === signature) return false;
-      for (const item of updates) {
-        if (roles[item.name] && typeof roles[item.name] === "object" && !Array.isArray(roles[item.name])) {
-          roles[item.name]["_事件记录"] = item.normalizedPrimary;
-          if (item.needsLegacy) roles[item.name]["事件记录"] = item.normalizedLegacy;
-        }
-      }
-      await encounterReplaceMvuData(data);
-      globalThis.__ST_ROLE_EVENT_RECORD_SYNC_SIGNATURE__ = signature;
-      return true;
-    } catch (err) {
-      console.warn("[HypnoOS] 事件记录补全失败", err);
-      return false;
-    }
-  }
-
-  async function encounterDeductStarlight(price) {
+	  async function encounterDeductStarlight(price) {
     const cost = Math.max(0, Math.floor(Number(price) || 0));
     const data = encounterCurrentMvuData();
     if (!data) return { ok: cost === 0, previous: encounterCurrentStarlight(), reason: "MVU变量接口未就绪。" };
@@ -25934,6 +25983,38 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     return graph;
   }
 
+  function settingsStaticGraphLocationSignature(location) {
+    const source = location && typeof location === "object" && !Array.isArray(location) ? location : {};
+    return JSON.stringify({
+      id: String(source.id || ""),
+      label: String(source.label || source.name || source["地点"] || ""),
+      info: String(source.info || source.description || source.desc || source["描述"] || ""),
+      category: String(source.category || source["分类"] || source.type || source["类型"] || "")
+    });
+  }
+
+  function settingsExportCustomStaticGraph(scope) {
+    const normalizedScope = graphSupplementScope(scope);
+    const current = loadStaticGraph(normalizedScope);
+    const defaults = normalizeGraphGraph(cloneGraph(STATIC_GRAPH_DEFAULTS[normalizedScope]), normalizedScope);
+    const defaultById = new Map((defaults.locations || []).map((location) => [String(location.id || ""), location]));
+    const customLocations = (current.locations || []).filter((location) => {
+      const id = String(location?.id || "");
+      const fallback = defaultById.get(id);
+      if (!fallback) return true;
+      return settingsStaticGraphLocationSignature(location) !== settingsStaticGraphLocationSignature(fallback);
+    });
+    return {
+      title: current.title,
+      locations: customLocations.map((location) => ({
+        id: String(location.id || ""),
+        label: String(location.label || ""),
+        info: String(location.info || ""),
+        category: String(location.category || "")
+      }))
+    };
+  }
+
   function graphSuggestedNodeId(name) {
     const base = String(name || "")
       .trim()
@@ -27858,28 +27939,24 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 		    } catch {}
 		  }
 
-		  function settingsManagedLocalStorageKeys() {
-		    const keys = [
-		      typeof frontendRewardStateKey === "function" ? frontendRewardStateKey() : "",
-		      typeof frontendRewardSharedStateKey === "function" ? frontendRewardSharedStateKey() : "",
-		      typeof frontendRewardCountKey === "function" ? frontendRewardCountKey() : "",
-		      timetableStorageKey(),
-		      roleFavoriteStorageKey(),
-		      profileEventMemoryStorageKey(),
-	      graphStorageKey("world"),
-	      graphStorageKey("school"),
-	      graphFavoriteStorageKey("world"),
-	      graphFavoriteStorageKey("school"),
-	      graphUpdateSeenStorageKey(),
-	      specialLocationUnlockStorageKey()
-		    ];
+	  function settingsManagedLocalStorageKeys() {
+	    const keys = [
+	      typeof frontendRewardStateKey === "function" ? frontendRewardStateKey() : "",
+	      typeof frontendRewardSharedStateKey === "function" ? frontendRewardSharedStateKey() : "",
+	      typeof frontendRewardCountKey === "function" ? frontendRewardCountKey() : "",
+	      timetableStorageKey(),
+	      roleFavoriteStorageKey(),
+	      profileEventMemoryStorageKey(),
+      graphFavoriteStorageKey("world"),
+      graphFavoriteStorageKey("school"),
+      graphUpdateSeenStorageKey(),
+      specialLocationUnlockStorageKey()
+	    ];
 		    return keys.filter(Boolean);
 		  }
 
 	  function settingsManagedLocalStoragePrefixes() {
-	    return [
-	      SETTINGS_DAILY_ROLL_PREFIX
-	    ];
+	    return [];
 	  }
 
 	  function settingsManagedLocalStorageSnapshot() {
@@ -27896,6 +27973,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	    settingsManagedLocalStoragePrefixes().forEach((prefix) => settingsOverwriteStoragePrefix(prefix, {}));
 	    if (entries && typeof entries === "object" && !Array.isArray(entries)) {
 	      Object.entries(entries).forEach(([key, value]) => {
+	        if (String(key || "").startsWith(SETTINGS_DAILY_ROLL_PREFIX)) return;
 	        try { localStorage.setItem(String(key), String(value ?? "")); } catch {}
 	      });
 	    }
@@ -28131,8 +28209,9 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	  }
 
 	  async function settingsExportPayload() {
-	    const worldGraph = loadStaticGraph("world");
-	    const schoolGraph = loadStaticGraph("school");
+	    try { syncProfileEventMemoriesFromChat(); } catch {}
+	    const worldGraph = settingsExportCustomStaticGraph("world");
+	    const schoolGraph = settingsExportCustomStaticGraph("school");
 	    const recentMessages = await settingsExportRecentMvuSnapshots(3);
 	    return {
       version: SETTINGS_EXPORT_VERSION,
@@ -28141,8 +28220,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       sections: {
 	        rewards: {
 	          state: settingsReadFrontendRewardStateSafe(),
-	          counts: settingsReadFrontendRewardCountsSafe(),
-	          dailyRolls: settingsStorageEntriesByPrefix(SETTINGS_DAILY_ROLL_PREFIX)
+	          counts: settingsReadFrontendRewardCountsSafe()
         },
         encounter: {
           purchases: Array.from(encounterReadPurchasedIds())
@@ -28175,6 +28253,11 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	    };
 	  }
 
+  function settingsProfileEventMemoryCount(store) {
+    const events = settingsObject(store?.events);
+    return Object.values(events).reduce((total, bucket) => total + Object.keys(settingsObject(bucket)).length, 0);
+  }
+
   function settingsPayloadSummary(payload) {
     const sections = settingsObject(payload?.sections);
     const rewards = settingsObject(sections.rewards);
@@ -28189,11 +28272,10 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     const variableCount = Array.isArray(variables.recentMessages) ? variables.recentMessages.length : (Array.isArray(variableSectionRaw) ? variableSectionRaw.length : 0);
     const rows = [];
     rows.push("成就任务状态 " + Object.keys(settingsObject(rewards.state?.achievements)).length + " 成就 / " + Object.keys(settingsObject(rewards.state?.quests)).length + " 任务");
-    rows.push("每日任务抽签 " + Object.keys(settingsObject(rewards.dailyRolls)).length + " 条");
     rows.push("邂逅购买记录 " + settingsArray(encounter.purchases).length + " 条");
     rows.push("地点 " + worldCount + " 城市 / " + schoolCount + " 学校");
     rows.push("收藏角色 " + settingsArray(profile.favoriteRoles).length + " 名");
-    rows.push("事件回忆 " + Object.keys(settingsObject(profile.eventMemories?.events)).length + " 条");
+    rows.push("事件回忆 " + settingsProfileEventMemoryCount(profile.eventMemories) + " 条");
     rows.push("变量快照 " + variableCount + " 层");
     rows.push(timetable.overrides ? "课表覆盖 已包含" : "课表覆盖 未包含");
     return rows;
@@ -28314,7 +28396,6 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	      settingsWriteFrontendRewardStateSafe(rewards.state);
 	    }
 	    if (Object.prototype.hasOwnProperty.call(rewards, "counts")) settingsWriteFrontendRewardCountsSafe(rewards.counts);
-    if (Object.prototype.hasOwnProperty.call(rewards, "dailyRolls")) settingsOverwriteStoragePrefix(SETTINGS_DAILY_ROLL_PREFIX, rewards.dailyRolls);
 
     const encounter = settingsObject(sections.encounter);
     if (Object.prototype.hasOwnProperty.call(encounter, "purchases")) await settingsWriteEncounterPurchases(encounter.purchases);
@@ -28387,12 +28468,10 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     "性欲": 0,
     "快感值": 0,
     "是否派遣中": false,
-    "工作价值": 0,
-    "绰号": "",
-    "绰号已认可": false,
-    "_事件记录": "000000",
-    "事件记录": "000000",
-    "至关重要记忆": "",
+	    "工作价值": 0,
+	    "绰号": "",
+	    "绰号已认可": false,
+	    "至关重要记忆": "",
     "心理": "",
 	    "档案": {},
 	    "临时催眠效果": {},
@@ -28412,6 +28491,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	  };
 	  const SETTINGS_PROFILE_OPTIONAL_KEYS = new Set(["性别", "身份", "三围", "阴茎长度"]);
 	  const SETTINGS_ROLE_OPTIONAL_KEYS = new Set([
+	    "_事件记录",
 	    "事件记录",
 	    "身价",
 	    ...ST_SENSITIVITY_STATS,
@@ -29602,10 +29682,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       void repairPendingWorkCurrentLayerVariables().catch((error) => console.warn("[HypnoOS] 修复打工当层变量失败", error));
       syncWorkBuffStatusReminder();
       syncExpiredTemporaryHypnosisReminder();
-      Promise.resolve(syncRoleEventRecordDefaults()).then((changed) => {
-        if (changed) updateOpenPersonProfilePage();
-      }).catch(() => {});
-    }
+	    }
     updateOperationSidePanel();
   }
 
