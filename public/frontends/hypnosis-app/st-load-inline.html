@@ -721,7 +721,10 @@ html.st-hypnoos-booting.st-hypnoos-boot-failed body::after{content:"前端加载
 	        return ["- AI执行规范｜地点建议不是瞬移；请求新增地点只是用户建议，前端尚未写入地图；AI需要按当前剧情判断是否接受，接受时只输出<新增地点补充>{...}</新增地点补充>单地点JSON，前端收到后才保存；用户建议已有地点时，只有用户行动造成地点环境或用途重大改变，才可低频输出<地点信息更新>{...}</地点信息更新>单地点JSON，不要输出完整地图JSON；特殊地点需持有对应准入证，未持证时不要写成普通通行成功。"];
 	      }
 	      if (text === "学校") {
-	        return ["- AI执行规范｜校规按VIP、券、星光点和数量限制判定；校规不是催眠效果，禁止写入角色临时/永久催眠效果。"];
+	        const parts = ["校规按VIP、券、星光点和数量限制判定；校规不是催眠效果，禁止写入角色临时/永久催眠效果"];
+	        if (operationHasAction(records, /废止初始校规|删除校规/)) parts.push("删除/废止校规若标明前端处理，表示前端已从/校规删除目标并完成扣费；AI只承认该校规不再生效，绝对不要输出remove /校规/校规名补删，避免路径已不存在时报错");
+	        if (operationHasAction(records, /申请立校规|发布新校规/)) parts.push("申请/发布新校规成功时写入/校规/校规名，当前MVU schema会由前端窄修为允许新增校规键");
+	        return ["- AI执行规范｜" + parts.join("；") + "。"];
 	      }
 	      return [];
 	    };
@@ -25020,8 +25023,83 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     return latest;
   }
 
+  function mvuSchemaChild(node, key) {
+    const properties = node && typeof node === "object" && !Array.isArray(node) ? node.properties : null;
+    return properties && typeof properties === "object" && !Array.isArray(properties) ? properties[key] : null;
+  }
+
+  function openDynamicMvuSchemaNode(node) {
+    if (!node || typeof node !== "object" || Array.isArray(node)) return false;
+    let changed = false;
+    if (node.extensible !== true) {
+      node.extensible = true;
+      changed = true;
+    }
+    if (node.recursiveExtensible !== true) {
+      node.recursiveExtensible = true;
+      changed = true;
+    }
+    return changed;
+  }
+
+  function repairDynamicMvuSchemaTree(schema) {
+    if (!schema || typeof schema !== "object" || Array.isArray(schema)) return false;
+    let changed = false;
+    for (const key of ["校规", "任务"]) {
+      if (openDynamicMvuSchemaNode(mvuSchemaChild(schema, key))) changed = true;
+    }
+    const roleRoot = mvuSchemaChild(schema, "角色");
+    const roleProperties = roleRoot && typeof roleRoot === "object" && !Array.isArray(roleRoot) ? roleRoot.properties : null;
+    if (roleProperties && typeof roleProperties === "object" && !Array.isArray(roleProperties)) {
+      for (const roleSchema of Object.values(roleProperties)) {
+        if (openDynamicMvuSchemaNode(mvuSchemaChild(roleSchema, "临时催眠效果"))) changed = true;
+        if (openDynamicMvuSchemaNode(mvuSchemaChild(roleSchema, "永久催眠效果"))) changed = true;
+      }
+    }
+    const visit = (node) => {
+      if (!node || typeof node !== "object" || Array.isArray(node)) return;
+      const properties = node.properties;
+      if (!properties || typeof properties !== "object" || Array.isArray(properties)) return;
+      for (const [key, child] of Object.entries(properties)) {
+        if (key === "临时催眠效果" || key === "永久催眠效果") {
+          if (openDynamicMvuSchemaNode(child)) changed = true;
+        }
+        visit(child);
+      }
+    };
+    visit(schema);
+    return changed;
+  }
+
+  async function repairCurrentMvuDynamicSchema() {
+    if (!isLatestPhoneVariableView()) return false;
+    const option = getCurrentVariableOption();
+    if (!option || !window.Mvu?.getMvuData || !window.Mvu?.replaceMvuData) return false;
+    const signature = String(option.type || "message") + ":" + String(option.message_id ?? "latest");
+    try {
+      const mvu = window.Mvu.getMvuData(option);
+      if (!mvu || typeof mvu.then === "function" || !mvu.schema) return false;
+      const changed = repairDynamicMvuSchemaTree(mvu.schema);
+      if (!changed) {
+        if (window.__ST_HYPNOOS_DYNAMIC_SCHEMA_REPAIRED__ !== signature) window.__ST_HYPNOOS_DYNAMIC_SCHEMA_REPAIRED__ = signature;
+        return false;
+      }
+      const result = window.Mvu.replaceMvuData(mvu, option);
+      if (result && typeof result.then === "function") await result;
+      window.__ST_HYPNOOS_DYNAMIC_SCHEMA_REPAIRED__ = signature;
+      return true;
+    } catch (error) {
+      if (window.__ST_HYPNOOS_DYNAMIC_SCHEMA_REPAIR_WARNED__ !== signature) {
+        window.__ST_HYPNOOS_DYNAMIC_SCHEMA_REPAIR_WARNED__ = signature;
+        console.warn("[HypnoOS] 修复MVU动态字典schema失败", error);
+      }
+      return false;
+    }
+  }
+
   function refreshPhoneVariableViews() {
     if (!syncLatestPhoneVariableViewVisibility()) return;
+    void repairCurrentMvuDynamicSchema().catch((error) => console.warn("[HypnoOS] 修复MVU动态schema失败", error));
     patchHomeTile();
     updatePhoneDarkTheme();
     syncProfileEventMemoriesFromChat();

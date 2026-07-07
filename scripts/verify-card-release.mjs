@@ -252,6 +252,9 @@ for (const needle of BANNED_FRONTEND_TEXT) {
 for (const needle of ['system["_buff结束时间"]', 'setCurrentLayerSystemField("_buff结束时间"', "/系统/_buff结束时间"]) {
   assert(frontendTexts.includes(needle), `frontend missing work buff end write path: ${needle}`);
 }
+for (const needle of ["repairCurrentMvuDynamicSchema", "repairDynamicMvuSchemaTree", "recursiveExtensible", "删除/废止校规若标明前端处理"]) {
+  assert(frontendTexts.includes(needle), `frontend missing dynamic schema/school-rule safety text: ${needle}`);
+}
 assert(frontendTexts.includes("st-hypnoos-identity-port"), "identity frontend missing phone-style port wrapper");
 assert(!frontendTexts.includes("st-hypnoos-identity-portal-frame"), "identity frontend must not create a top-level portal frame");
 assert(!frontendTexts.includes("insertBootstrapEntries"), "identity frontend must not write chat worldbooks");
