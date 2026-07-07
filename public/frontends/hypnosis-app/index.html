@@ -22767,10 +22767,10 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     }
   }
 
-  function settingsStorageEntriesByPrefix(prefix) {
-    const entries = {};
-    try {
-      const storage = globalThis.localStorage;
+	  function settingsStorageEntriesByPrefix(prefix) {
+	    const entries = {};
+	    try {
+	      const storage = globalThis.localStorage;
       if (!storage) return entries;
       for (let index = 0; index < storage.length; index += 1) {
         const key = storage.key(index);
@@ -22778,8 +22778,63 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
         entries[key] = storage.getItem(key);
       }
     } catch {}
-    return entries;
-  }
+	    return entries;
+	  }
+
+	  function settingsStorageEntriesByKeys(keys) {
+	    const entries = {};
+	    try {
+	      const storage = globalThis.localStorage;
+	      if (!storage) return entries;
+	      for (const key of Array.from(new Set((Array.isArray(keys) ? keys : []).map(String).filter(Boolean)))) {
+	        const value = storage.getItem(key);
+	        if (value !== null) entries[key] = value;
+	      }
+	    } catch {}
+	    return entries;
+	  }
+
+	  function settingsManagedLocalStorageKeys() {
+	    return [
+	      frontendRewardStateKey(),
+	      frontendRewardSharedStateKey(),
+	      frontendRewardCountKey(),
+	      timetableStorageKey(),
+	      roleFavoriteStorageKey(),
+	      profileEventMemoryStorageKey(),
+	      graphStorageKey("world"),
+	      graphStorageKey("school"),
+	      graphFavoriteStorageKey("world"),
+	      graphFavoriteStorageKey("school"),
+	      graphUpdateSeenStorageKey(),
+	      specialLocationUnlockStorageKey()
+	    ].filter(Boolean);
+	  }
+
+	  function settingsManagedLocalStoragePrefixes() {
+	    return [
+	      SETTINGS_DAILY_ROLL_PREFIX
+	    ];
+	  }
+
+	  function settingsManagedLocalStorageSnapshot() {
+	    return {
+	      ...settingsStorageEntriesByKeys(settingsManagedLocalStorageKeys()),
+	      ...settingsManagedLocalStoragePrefixes().reduce((entries, prefix) => ({ ...entries, ...settingsStorageEntriesByPrefix(prefix) }), {})
+	    };
+	  }
+
+	  function settingsOverwriteManagedLocalStorage(entries) {
+	    settingsManagedLocalStorageKeys().forEach((key) => {
+	      try { localStorage.removeItem(key); } catch {}
+	    });
+	    settingsManagedLocalStoragePrefixes().forEach((prefix) => settingsOverwriteStoragePrefix(prefix, {}));
+	    if (entries && typeof entries === "object" && !Array.isArray(entries)) {
+	      Object.entries(entries).forEach(([key, value]) => {
+	        try { localStorage.setItem(String(key), String(value ?? "")); } catch {}
+	      });
+	    }
+	  }
 
   function settingsOverwriteStoragePrefix(prefix, entries) {
     try {
@@ -22803,14 +22858,34 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     return Array.isArray(value) ? value.map(String).filter(Boolean) : [];
   }
 
-  function settingsObject(value) {
-    return value && typeof value === "object" && !Array.isArray(value) ? value : {};
-  }
+	  function settingsObject(value) {
+	    return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+	  }
 
-  function settingsExportPayload() {
-    const worldGraph = loadStaticGraph("world");
-    const schoolGraph = loadStaticGraph("school");
-    return {
+	  async function settingsEncounterRawStorageSnapshot() {
+	    const entries = {};
+	    for (const key of encounterStorageKeysForCurrentScope()) {
+	      await encounterHydrateJsonStorage(key);
+	      const value = encounterGetJsonStorage(key);
+	      if (value !== null) entries[key] = value;
+	    }
+	    return entries;
+	  }
+
+	  async function settingsWriteEncounterRawStorage(entries) {
+	    if (!entries || typeof entries !== "object" || Array.isArray(entries)) return;
+	    for (const [key, value] of Object.entries(entries)) {
+	      encounterRememberJsonStorage(key, value);
+	      try { localStorage.removeItem(key); } catch {}
+	      const ok = await encounterSetJsonStorageIdb(key, JSON.stringify(value));
+	      if (!ok) encounterSetJsonStorage(key, value);
+	    }
+	  }
+
+	  async function settingsExportPayload() {
+	    const worldGraph = loadStaticGraph("world");
+	    const schoolGraph = loadStaticGraph("school");
+	    return {
       version: SETTINGS_EXPORT_VERSION,
       exportedAt: new Date().toISOString(),
       source: "HypnoOS frontend storage",
@@ -22836,13 +22911,17 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
         timetable: {
           overrides: readWeeklyTimetable()
         },
-        profile: {
-          favoriteRoles: readFavoriteRoleNames(),
-          eventMemories: readProfileEventMemoryStore()
-        }
-      }
-    };
-  }
+	        profile: {
+	          favoriteRoles: readFavoriteRoleNames(),
+	          eventMemories: readProfileEventMemoryStore()
+	        }
+	      },
+	      rawStorage: {
+	        localStorage: settingsManagedLocalStorageSnapshot(),
+	        encounterIndexedDbJson: await settingsEncounterRawStorageSnapshot()
+	      }
+	    };
+	  }
 
   function settingsPayloadSummary(payload) {
     const sections = settingsObject(payload?.sections);
@@ -22875,11 +22954,18 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     return true;
   }
 
-  async function settingsImportPayload(payload) {
-    const sections = settingsObject(payload?.sections || payload);
-    const rewards = settingsObject(sections.rewards);
-    if (Object.prototype.hasOwnProperty.call(rewards, "state")) {
-      try {
+	  async function settingsImportPayload(payload) {
+	    const sections = settingsObject(payload?.sections || payload);
+	    const rawStorage = settingsObject(payload?.rawStorage);
+	    if (Object.prototype.hasOwnProperty.call(rawStorage, "localStorage")) {
+	      settingsOverwriteManagedLocalStorage(rawStorage.localStorage);
+	    }
+	    if (Object.prototype.hasOwnProperty.call(rawStorage, "encounterIndexedDbJson")) {
+	      await settingsWriteEncounterRawStorage(rawStorage.encounterIndexedDbJson);
+	    }
+	    const rewards = settingsObject(sections.rewards);
+	    if (Object.prototype.hasOwnProperty.call(rewards, "state")) {
+	      try {
         frontendRewardStateReadScopes().forEach((scope) => localStorage.removeItem(frontendRewardStateKeyForScope(scope)));
         localStorage.removeItem(frontendRewardSharedStateKey());
       } catch {}
@@ -22905,11 +22991,14 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     const timetable = settingsObject(sections.timetable);
     if (Object.prototype.hasOwnProperty.call(timetable, "overrides")) writeWeeklyTimetable(timetable.overrides);
 
-    const profile = settingsObject(sections.profile);
-    if (Object.prototype.hasOwnProperty.call(profile, "favoriteRoles")) writeFavoriteRoleNames(settingsArray(profile.favoriteRoles));
-    if (Object.prototype.hasOwnProperty.call(profile, "eventMemories")) writeProfileEventMemoryStore(profile.eventMemories);
-    return true;
-  }
+	    const profile = settingsObject(sections.profile);
+	    if (Object.prototype.hasOwnProperty.call(profile, "favoriteRoles")) writeFavoriteRoleNames(settingsArray(profile.favoriteRoles));
+	    if (Object.prototype.hasOwnProperty.call(profile, "eventMemories")) writeProfileEventMemoryStore(profile.eventMemories);
+	    try { globalThis.__ST_HYPNOOS_DAILY_SCHEDULE_SYNC_SIGNATURE__ = ""; } catch {}
+	    try { window.dispatchEvent(new CustomEvent("HYPNOOS_FRONTEND_STORAGE_IMPORTED")); } catch {}
+	    try { window.dispatchEvent(new CustomEvent("HYPNOOS_OPERATION_QUEUE_CHANGED")); } catch {}
+	    return true;
+	  }
 
   const SETTINGS_TOP_DEFAULTS = {
     "系统": {},
@@ -22939,14 +23028,14 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     "催眠APP订阅等级": "VIP0",
     "主角可疑度": 0,
     "派遣岗位": SETTINGS_DISPATCH_DEFAULT,
-    "持有物品": {},
-    "特殊地点解锁": {},
-    "_社畜值": 0,
-    "_buff": "",
-    "_buff结束时间": "",
-    "user身份": {}
-  };
-  const SETTINGS_ROLE_DEFAULTS = {
+	    "持有物品": {},
+	    "_社畜值": 0,
+	    "_buff": "",
+	    "_buff结束时间": "",
+	    "阿宅性别": "男",
+	    "user身份": {}
+	  };
+	  const SETTINGS_ROLE_DEFAULTS = {
     "好感度": 0,
     "警戒度": 0,
     "服从度": 0,
@@ -22960,26 +23049,31 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     "事件记录": "000000",
     "至关重要记忆": "",
     "心理": "",
-    "档案": {},
-    "临时催眠效果": {},
-    "永久催眠效果": {},
-    "部位敏感度": {}
-  };
-  const SETTINGS_PROFILE_DEFAULTS = {
-    "照片": "",
-    "姓名": "",
-    "性别": "",
-    "年龄": "",
-    "身份": "",
-    "社团/职业": "",
-    "身高": "",
-    "体重": "",
-    "三围": "",
-    "头发": "",
-    "面部": "",
-    "上衣": "",
-    "下衣": ""
-  };
+	    "档案": {},
+	    "临时催眠效果": {},
+	    "永久催眠效果": {}
+	  };
+	  const SETTINGS_PROFILE_DEFAULTS = {
+	    "照片": "",
+	    "姓名": "",
+	    "年龄": "",
+	    "社团/职业": "",
+	    "身高": "",
+	    "体重": "",
+	    "头发": "",
+	    "面部": "",
+	    "上衣": "",
+	    "下衣": ""
+	  };
+	  const SETTINGS_PROFILE_OPTIONAL_KEYS = new Set(["性别", "身份", "三围", "阴茎长度"]);
+	  const SETTINGS_ROLE_OPTIONAL_KEYS = new Set([
+	    "事件记录",
+	    "身价",
+	    ...ST_SENSITIVITY_STATS,
+	    ...ST_MALE_SENSITIVITY_STATS,
+	    ...ST_COUNT_STATS,
+	    ...ST_MALE_COUNT_STATS
+	  ]);
 
   function settingsPathText(path) {
     return "/" + path.map((part) => String(part)).join("/");
@@ -22999,11 +23093,15 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     });
   }
 
-  function settingsVariableReport(rootInput = null) {
-    const root = rootInput || getLatestStatDataSync();
-    const report = { hasData: Boolean(root && typeof root === "object" && !Array.isArray(root)), missing: [], extra: [] };
-    if (!report.hasData) return report;
-    settingsScanDefaults(report, root, [], SETTINGS_TOP_DEFAULTS);
+	  function settingsUnwrapStatRoot(value) {
+	    return value?.stat_data && typeof value.stat_data === "object" && !Array.isArray(value.stat_data) ? value.stat_data : value;
+	  }
+
+	  function settingsVariableReport(rootInput = null) {
+	    const root = settingsUnwrapStatRoot(rootInput || getLatestStatDataSync());
+	    const report = { hasData: Boolean(root && typeof root === "object" && !Array.isArray(root)), missing: [], extra: [] };
+	    if (!report.hasData) return report;
+	    settingsScanDefaults(report, root, [], SETTINGS_TOP_DEFAULTS);
     const topAllowed = new Set(Object.keys(SETTINGS_TOP_DEFAULTS));
     Object.keys(root).forEach((key) => {
       if (!topAllowed.has(key)) report.extra.push({ path: [key] });
@@ -23015,23 +23113,23 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       if (!systemAllowed.has(key)) report.extra.push({ path: ["系统", key] });
     });
     const roles = settingsObject(root["角色"]);
-    const roleAllowed = new Set(Object.keys(SETTINGS_ROLE_DEFAULTS));
-    const profileAllowed = new Set(Object.keys(SETTINGS_PROFILE_DEFAULTS));
-    Object.entries(roles).forEach(([roleName, rawRole]) => {
-      const role = settingsObject(rawRole);
-      settingsScanDefaults(report, role, ["角色", roleName], SETTINGS_ROLE_DEFAULTS);
-      Object.keys(role).forEach((key) => {
-        if (!roleAllowed.has(key)) report.extra.push({ path: ["角色", roleName, key] });
-      });
-      const profile = settingsObject(role["档案"]);
-      settingsScanDefaults(report, profile, ["角色", roleName, "档案"], {
-        ...SETTINGS_PROFILE_DEFAULTS,
-        "姓名": String(profile["姓名"] || roleName || "")
-      });
-      Object.keys(profile).forEach((key) => {
-        if (!profileAllowed.has(key)) report.extra.push({ path: ["角色", roleName, "档案", key] });
-      });
-    });
+	    const roleAllowed = new Set(Object.keys(SETTINGS_ROLE_DEFAULTS));
+	    const profileAllowed = new Set(Object.keys(SETTINGS_PROFILE_DEFAULTS));
+	    Object.entries(roles).forEach(([roleName, rawRole]) => {
+	      const role = settingsObject(rawRole);
+	      settingsScanDefaults(report, role, ["角色", roleName], SETTINGS_ROLE_DEFAULTS);
+	      Object.keys(role).forEach((key) => {
+	        if (!roleAllowed.has(key) && !SETTINGS_ROLE_OPTIONAL_KEYS.has(key)) report.extra.push({ path: ["角色", roleName, key] });
+	      });
+	      const profile = settingsObject(role["档案"]);
+	      settingsScanDefaults(report, profile, ["角色", roleName, "档案"], {
+	        ...SETTINGS_PROFILE_DEFAULTS,
+	        "姓名": String(profile["姓名"] || roleName || "")
+	      });
+	      Object.keys(profile).forEach((key) => {
+	        if (!profileAllowed.has(key) && !SETTINGS_PROFILE_OPTIONAL_KEYS.has(key)) report.extra.push({ path: ["角色", roleName, "档案", key] });
+	      });
+	    });
     return report;
   }
 
@@ -23061,7 +23159,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     return { ok: true, count };
   }
 
-  function renderSettingsReport(report) {
+	  function renderSettingsReport(report) {
     if (!report.hasData) {
       return '<section><strong>未读到当前变量</strong><small>请确认本楼层已经有MVU变量，或稍后再刷新。</small></section>';
     }
@@ -23072,8 +23170,13 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     return [
       '<section><strong>缺少字段：' + report.missing.length + '</strong><small>' + escapeHtml(missingPreview.join("、") || "无") + (moreMissing ? " 等 " + moreMissing + " 项" : "") + '</small></section>',
       '<section><strong>多出字段：' + report.extra.length + '</strong><small>' + escapeHtml(extraPreview.join("、") || "无") + (moreExtra ? " 等 " + moreExtra + " 项" : "") + '</small></section>'
-    ].join("");
-  }
+	    ].join("");
+	  }
+
+	  function settingsStopEvent(event) {
+	    try { event?.preventDefault?.(); } catch {}
+	    try { event?.stopPropagation?.(); } catch {}
+	  }
 
   function renderSettingsPage(page) {
     const exportText = String(page.dataset.settingsExportText || "");
@@ -23088,9 +23191,9 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
           '<h3>前端存储迁移</h3>' +
           '<p>导出成就任务、邂逅购买记录、地点、魔改课表覆盖、收藏角色、事件回忆摘要/重温。不包含照片、角色包正文和图片缓存。</p>' +
           '<div class="st-settings-actions is-three">' +
-            '<button class="st-settings-button primary" data-settings-action="export">导出JSON</button>' +
-            '<button class="st-settings-button" data-settings-action="copy" ' + (exportText ? "" : "disabled") + '>复制</button>' +
-            '<button class="st-settings-button" data-settings-action="download" ' + (exportText ? "" : "disabled") + '>下载</button>' +
+	            '<button type="button" class="st-settings-button primary" data-settings-action="export">导出JSON</button>' +
+	            '<button type="button" class="st-settings-button" data-settings-action="copy" ' + (exportText ? "" : "disabled") + '>复制</button>' +
+	            '<button type="button" class="st-settings-button" data-settings-action="download" ' + (exportText ? "" : "disabled") + '>下载</button>' +
           '</div>' +
           '<textarea class="st-settings-code" readonly placeholder="点击导出后这里会出现JSON。">' + escapeHtml(exportText) + '</textarea>' +
         '</section>' +
@@ -23099,14 +23202,14 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
           '<p>用于旧版聊天记录迁移。导入会覆盖本聊天当前前端存储，请先确认已经导出备份。</p>' +
           '<input class="st-settings-file" type="file" accept="application/json,.json" data-settings-action="file" />' +
           '<textarea class="st-settings-code" data-settings-role="import" placeholder="也可以直接粘贴导出的JSON。">' + escapeHtml(importText) + '</textarea>' +
-          '<button class="st-settings-button danger" data-settings-action="import">导入并覆盖前端存储</button>' +
+	          '<button type="button" class="st-settings-button danger" data-settings-action="import">导入并覆盖前端存储</button>' +
         '</section>' +
         '<section class="st-settings-panel">' +
           '<h3>当前变量格式</h3>' +
           '<p>检查stat_data常用字段。少字段可以自动补齐，多字段只提示，建议在变量面板里自行确认后修改。</p>' +
           '<div class="st-settings-actions">' +
-            '<button class="st-settings-button" data-settings-action="refresh">刷新检查</button>' +
-            '<button class="st-settings-button primary" data-settings-action="fill" ' + (!report.hasData || !report.missing.length ? "disabled" : "") + '>一键补少字段</button>' +
+	            '<button type="button" class="st-settings-button" data-settings-action="refresh">刷新检查</button>' +
+	            '<button type="button" class="st-settings-button primary" data-settings-action="fill" ' + (!report.hasData || !report.missing.length ? "disabled" : "") + '>一键补少字段</button>' +
           '</div>' +
           '<div class="st-settings-report">' + renderSettingsReport(report) + '</div>' +
         '</section>' +
@@ -23120,23 +23223,32 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     page.querySelector('[data-settings-role="import"]')?.addEventListener("input", (event) => {
       page.dataset.settingsImportText = event.target.value || "";
     });
-    page.querySelector('[data-settings-action="export"]')?.addEventListener("click", () => {
-      const payload = settingsExportPayload();
-      page.dataset.settingsExportText = JSON.stringify(payload, null, 2);
-      page.dataset.settingsStatus = "已导出：" + settingsPayloadSummary(payload).join("；");
-      renderSettingsPage(page);
-    });
-    page.querySelector('[data-settings-action="copy"]')?.addEventListener("click", async () => {
-      try {
-        await navigator.clipboard?.writeText?.(page.dataset.settingsExportText || "");
+	    page.querySelector('[data-settings-action="export"]')?.addEventListener("click", async (event) => {
+	      settingsStopEvent(event);
+	      page.dataset.settingsStatus = "正在导出前端存储...";
+	      renderSettingsPage(page);
+	      try {
+	        const payload = await settingsExportPayload();
+	        page.dataset.settingsExportText = JSON.stringify(payload, null, 2);
+	        page.dataset.settingsStatus = "已导出：" + settingsPayloadSummary(payload).join("；");
+	      } catch (error) {
+	        page.dataset.settingsStatus = "导出失败：" + String(error?.message || error || "未知错误");
+	      }
+	      renderSettingsPage(page);
+	    });
+	    page.querySelector('[data-settings-action="copy"]')?.addEventListener("click", async (event) => {
+	      settingsStopEvent(event);
+	      try {
+	        await navigator.clipboard?.writeText?.(page.dataset.settingsExportText || "");
         page.dataset.settingsStatus = "已复制导出JSON。";
       } catch {
         page.dataset.settingsStatus = "复制失败，可以手动全选文本。";
-      }
-      renderSettingsPage(page);
-    });
-    page.querySelector('[data-settings-action="download"]')?.addEventListener("click", () => {
-      try {
+	      }
+	      renderSettingsPage(page);
+	    });
+	    page.querySelector('[data-settings-action="download"]')?.addEventListener("click", (event) => {
+	      settingsStopEvent(event);
+	      try {
         const blob = new Blob([page.dataset.settingsExportText || ""], { type: "application/json;charset=utf-8" });
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
@@ -23147,9 +23259,9 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
         page.dataset.settingsStatus = "已下载导出JSON。";
       } catch {
         page.dataset.settingsStatus = "下载失败，可以复制文本保存。";
-      }
-      renderSettingsPage(page);
-    });
+	      }
+	      renderSettingsPage(page);
+	    });
     page.querySelector('[data-settings-action="file"]')?.addEventListener("change", (event) => {
       const file = event.target.files?.[0];
       if (!file) return;
@@ -23165,8 +23277,9 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       };
       reader.readAsText(file, "utf-8");
     });
-    page.querySelector('[data-settings-action="import"]')?.addEventListener("click", async () => {
-      const text = String(page.dataset.settingsImportText || "").trim();
+	    page.querySelector('[data-settings-action="import"]')?.addEventListener("click", async (event) => {
+	      settingsStopEvent(event);
+	      const text = String(page.dataset.settingsImportText || "").trim();
       if (!text) {
         page.dataset.settingsStatus = "请先粘贴或选择要导入的JSON。";
         renderSettingsPage(page);
@@ -23188,14 +23301,16 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       } catch (error) {
         page.dataset.settingsStatus = "导入失败：" + String(error?.message || error || "未知错误");
       }
-      renderSettingsPage(page);
-    });
-    page.querySelector('[data-settings-action="refresh"]')?.addEventListener("click", () => {
-      page.dataset.settingsStatus = "已刷新当前变量格式检查。";
-      renderSettingsPage(page);
-    });
-    page.querySelector('[data-settings-action="fill"]')?.addEventListener("click", async () => {
-      const result = await settingsFillMissingVariables();
+	      renderSettingsPage(page);
+	    });
+	    page.querySelector('[data-settings-action="refresh"]')?.addEventListener("click", (event) => {
+	      settingsStopEvent(event);
+	      page.dataset.settingsStatus = "已刷新当前变量格式检查。";
+	      renderSettingsPage(page);
+	    });
+	    page.querySelector('[data-settings-action="fill"]')?.addEventListener("click", async (event) => {
+	      settingsStopEvent(event);
+	      const result = await settingsFillMissingVariables();
       page.dataset.settingsStatus = result.ok ? ("已补齐缺少字段 " + result.count + " 项。") : "未能写入当前变量，请确认MVU接口可用。";
       renderSettingsPage(page);
     });

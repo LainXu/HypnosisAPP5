@@ -5,7 +5,7 @@
 ## 当前真源
 
 - 当前版本：`v2.4`
-- 唯一卡文件：`public/cards/催眠app二改MVU v2.4.png`
+- 本地卡输出：`public/cards/催眠app二改MVU v2.4.png`（`public/cards/` 已忽略，不提交到主仓库）
 - 本地前端镜像：`public/frontends/hypnosis-app/`
 - 手机前端镜像：`public/frontends/hypnosis-app-phone/`
 - 前端生成脚本：`scripts/mirror-frontend.mjs`
@@ -15,11 +15,12 @@
 - 远程 dist 仓库：`LainXu/HypnosisAPP5-dist`
 - 远程前端路径：`dist/webview/st-load-inline.html`
 
-不再维护这些旧目标：
+不再维护或提交这些旧目标：
 
 - `public/cards/hypnosis-app.png`
 - `public/cards/催眠app二改MVU.png`
 - `public/cards/hypnosis-app-workbench-current.json`
+- `public/cards/` 里的 PNG 发布产物
 - 任何工作台中间产物或多版本卡库
 
 ## 一次性工作流
@@ -110,8 +111,8 @@
 6. 若 dist 有变化，则提交并推送。
 7. 读取 dist 的 HEAD commit。
 8. 用 `HYPNOOS_REMOTE_COMMIT=<commit>` 运行 `scripts/finalize-card-v1_6.mjs`。
-9. 只回写唯一卡文件。
-10. 发布后运行 `npm run verify:card`，确认唯一卡已经写入 commit-pinned CDN URL。
+9. 只回写本地卡输出文件；`public/cards/` 是 ignored 发布产物目录，不提交到主仓库。
+10. 发布后运行 `npm run verify:card`，确认本地卡已经写入 commit-pinned CDN URL。
 
 ## 新对话建议开场
 
