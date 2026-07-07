@@ -1886,8 +1886,7 @@ function normalizeInitVariableSectionOrder(content) {
   }
 
   ({ content: next } = removeTopLevelSection(next, "校规"));
-  const achievement = removeTopLevelSection(next, "成就");
-  next = achievement.content;
+  ({ content: next } = removeTopLevelSection(next, "成就"));
   const task = removeTopLevelSection(next, "任务");
   next = task.content;
   const role = removeTopLevelSection(next, "角色");
@@ -1897,7 +1896,6 @@ function normalizeInitVariableSectionOrder(content) {
   const blocks = [
     next.trimEnd(),
     "校规:\n" + defaultSchoolRuleVariableBlocks.join("").trimEnd(),
-    (achievement.block || "成就: {}").trimEnd(),
     (task.block || "任务: {}").trimEnd(),
     roleBlock.trimEnd()
   ].filter(Boolean);

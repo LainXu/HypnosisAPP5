@@ -993,7 +993,7 @@ html.st-hypnoos-phone-port .st-operation-panel-preview pre {
         if (operationHasAction(records, /删除催眠效果/)) parts.push("删除催眠效果已由前端直接写入目标角色的临时/永久催眠效果变量；AI只承认该效果不再生效，不得再次输出remove补删，也不得删除校规、系统、其他角色或其他字段");
         if (operationHasAction(records, /触发角色事件/)) parts.push("_事件记录位图已由前端写入，AI只写对应事件剧情，不得二次改_事件记录或重复触发；本次回复末尾必须输出完整闭合的<人物档案事件记录>块，包含角色名、事件序号、标题、概要、关键场面、关系变化和后续钩子，最后单独一行写</人物档案事件记录>，供前端本地保存回忆摘要，不写入MVU变量");
         if (operationHasAction(records, /回忆角色事件/)) parts.push("回忆角色事件已由前端把本地保存的事件摘要写入对应角色的至关重要记忆；AI读取该字段让对应角色围绕该事件自然聊天，不改_事件记录、不当作新事件触发");
-        if (operationHasAction(records, /重温角色事件/)) parts.push("重温角色事件表示{{user}}主动提出之前的事件不够美好，想和该角色重新来一次；前端已清空该事件的本地回忆摘要，AI按指定事件重新生成剧情并在回复末尾输出新的完整<人物档案事件记录>块；不要修改_事件记录位图或自动发奖");
+        if (operationHasAction(records, /重温角色事件/)) parts.push("重温角色事件表示{{user}}主动提出之前的事件不够美好，想和该角色重新来一次；前端已将旧事件记录标记作废，AI按指定事件重新生成剧情并在回复末尾输出新的完整<人物档案事件记录>块来覆盖本地事件记录；不要修改_事件记录位图或自动发奖");
         return ["- AI执行规范｜" + parts.join("；") + "。"];
       }
 	      if (text === "时钟") {
@@ -1009,7 +1009,7 @@ html.st-hypnoos-phone-port .st-operation-panel-preview pre {
 	        return ["- AI执行规范｜前端已扣星光点、创建/覆盖初始角色变量并写入角色卡世界书；AI只按命中角色的人设、角色出场提示和当前上下文安排登场，并补未记录变量，不再创建或补写角色/世界书。"];
 	      }
 	      if (/^(地图|学校地图|主教学楼地图)$/.test(text)) {
-	        return ["- AI执行规范｜地点建议不是瞬移；请求新增地点由前端按用户输入保存，AI只承认该地点存在并可补剧情细节；若暂存要求补充地点信息，只能输出<新增地点补充>{...}</新增地点补充>单地点JSON，不要输出完整地图JSON；特殊地点需持有对应准入证，未持证时不要写成普通通行成功。"];
+	        return ["- AI执行规范｜地点建议不是瞬移；请求新增地点由前端按用户输入保存，AI只承认该地点存在并可补剧情细节；若暂存要求补充地点信息，只能输出<新增地点补充>{...}</新增地点补充>单地点JSON；用户建议已有地点时，只有用户行动造成地点环境或用途重大改变，才可低频输出<地点信息更新>{...}</地点信息更新>单地点JSON，不要输出完整地图JSON；特殊地点需持有对应准入证，未持证时不要写成普通通行成功。"];
 	      }
 	      if (text === "学校") {
 	        return ["- AI执行规范｜校规按VIP、券、星光点和数量限制判定；校规不是催眠效果，禁止写入角色临时/永久催眠效果。"];
@@ -8466,13 +8466,14 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       当前警戒度: statValue(roleData, "警戒度"),
       当前性欲: statValue(roleData, "性欲"),
       当前快感值: statValue(roleData, "快感值"),
-      前端处理: "已由前端清除该角色该事件的本地回忆摘要；未修改_事件记录、好感度或其他MVU变量",
-      前端清除回忆摘要: removedMemory ? "已清除" : "原本未收录",
-      AI执行规范: "这是{{user}}在人物档案中主动提出：之前事件" + numeral + "的经过不够美好，想和" + roleName + "重新来一次。好感链来源为“" + chainSource + "”。AI应把这当作同一事件序号的重温/重演请求，按本操作里的事件名、事件描述、角色变量和当前剧情重新生成一段新的事件剧情；若来源是通用好感链，说明没有读到该角色前五档对应专属好感链或该档缺失，必须按通用好感链重写。不得修改/角色/" + roleName + "/_事件记录，不得重置好感度、服从度或自动发奖。回复末尾必须输出新的完整闭合<人物档案事件记录>块，最后单独一行写</人物档案事件记录>，供前端保存替换后的回忆摘要。",
+      前端处理: "已由前端将该角色该事件的旧本地事件记录标记作废；等待AI输出新的<人物档案事件记录>块后覆盖本地事件记录；未修改_事件记录、好感度或其他MVU变量",
+      前端作废旧事件记录: removedMemory ? "已作废" : "原本未收录",
+      事件记录变更方式: "AI回复末尾输出新的完整闭合<人物档案事件记录>块；前端按角色名和事件序号覆盖本地事件记录",
+      AI执行规范: "这是{{user}}在人物档案中主动提出：之前事件" + numeral + "的经过不够美好，想和" + roleName + "重新来一次。好感链来源为“" + chainSource + "”。AI应把这当作同一事件序号的重温/重演请求，按本操作里的事件名、事件描述、角色变量和当前剧情重新生成一段新的事件剧情；若来源是通用好感链，说明没有读到该角色前五档对应专属好感链或该档缺失，必须按通用好感链重写。不得修改/角色/" + roleName + "/_事件记录，不得重置好感度、服从度或自动发奖。回复末尾必须输出新的完整闭合<人物档案事件记录>块，最后单独一行写</人物档案事件记录>，供前端保存并覆盖本地事件记录。",
       不可删除: true
     };
     const added = await appendAppOperation(payload);
-    page.dataset.profileEventNotice = added ? "事件" + numeral + "重温已暂存。" : "事件" + numeral + "重温已在暂存区。";
+    page.dataset.profileEventNotice = added ? "事件" + numeral + "重温已暂存，发送后将改写事件记录。" : "事件" + numeral + "重温已在暂存区。";
     renderPersonProfilePage(page);
   }
 
@@ -21304,7 +21305,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 
   function parseStaticGraphUpdateText(text) {
     const source = String(text || "");
-    if (!source.includes("<地图更新>") && !source.includes("<学校地图更新>") && !source.includes("<新增地点补充>")) return 0;
+    if (!source.includes("<地图更新>") && !source.includes("<学校地图更新>") && !source.includes("<新增地点补充>") && !source.includes("<地点信息更新>")) return 0;
     let applied = 0;
     const specs = [
       { scope: "world", re: /<地图更新>([\s\S]*?)<\/地图更新>/g },
@@ -21319,6 +21320,15 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       }
     }
     for (const match of source.matchAll(/<新增地点补充>([\s\S]*?)<\/新增地点补充>/g)) {
+      try {
+        const parsed = JSON.parse(String(match[1] || "").trim());
+        const items = Array.isArray(parsed) ? parsed : [parsed];
+        for (const item of items) {
+          if (applyGraphLocationSupplement(item)) applied += 1;
+        }
+      } catch {}
+    }
+    for (const match of source.matchAll(/<地点信息更新>([\s\S]*?)<\/地点信息更新>/g)) {
       try {
         const parsed = JSON.parse(String(match[1] || "").trim());
         const items = Array.isArray(parsed) ? parsed : [parsed];
@@ -21354,7 +21364,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     if (!Array.isArray(source)) return;
     source.forEach((message, index) => {
       const body = graphMessageBody(message);
-      if (!body.includes("<地图更新>") && !body.includes("<学校地图更新>") && !body.includes("<新增地点补充>")) return;
+      if (!body.includes("<地图更新>") && !body.includes("<学校地图更新>") && !body.includes("<新增地点补充>") && !body.includes("<地点信息更新>")) return;
       const id = message && typeof message === "object"
         ? (message.message_id ?? message.mesid ?? message.id ?? index)
         : index;
@@ -22352,12 +22362,20 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	          操作: "建议剧情地点",
           当前地点变量: getCurrentStoryLocation() || "未知",
           建议地点: {
+            地点ID: location.id,
             名称: location.label,
             分类: location.category || "未分类",
             描述: location.info || "暂无地点信息。",
             地图类型: graph.title
           },
-	          AI执行规范: "这只是用户希望剧情地点设在这里的建议；前端不能直接改当前地点。AI应按剧情、时间和移动条件判断是否成立，成立时更新/系统/当前地点和/系统/当前事件；/系统/_当前周几、/系统/_当前日程、/系统/_当前特殊日期和/系统/_课程表为前端只读同步字段，AI不要手写这些字段。不合理时可拒绝或延后。"
+          地点信息更新格式: "<地点信息更新>" + JSON.stringify({
+            地图: scope === "school" ? "school" : "world",
+            id: location.id,
+            名称: location.label,
+            分类: location.category || "未分类",
+            信息: "仅当本轮用户行动造成地点环境或用途重大改变时填写新描述"
+          }) + "</地点信息更新>",
+	          AI执行规范: "这只是用户希望剧情地点设在这里的建议；前端不能直接改当前地点。AI应按剧情、时间和移动条件判断是否成立，成立时更新/系统/当前地点和/系统/当前事件；/系统/_当前周几、/系统/_当前日程、/系统/_当前特殊日期和/系统/_课程表为前端只读同步字段，AI不要手写这些字段。不合理时可拒绝或延后。通常不要改地点描述；只有用户在该地点的行动造成环境、用途、可进入性或剧情功能出现重大且持续的改变时，才在回复末尾额外输出一个<地点信息更新>{...}</地点信息更新>单地点JSON，供前端低频更新本地地图。不得输出完整地图JSON，不得删除或重排其他地点。"
 	        })).then(() => {
 	          rerenderGraphHost(page);
 	        });
@@ -23422,9 +23440,193 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	    }
 	  }
 
+	  function settingsCandidateWindows() {
+	    const list = [];
+	    for (const view of [window, window.parent, window.top, globalThis]) {
+	      try {
+	        if (view && !list.includes(view)) list.push(view);
+	      } catch {}
+	    }
+	    return list;
+	  }
+
+	  function settingsMvuStatRoot(value) {
+	    const root = value?.stat_data && typeof value.stat_data === "object" && !Array.isArray(value.stat_data) ? value.stat_data : value;
+	    return root && typeof root === "object" && !Array.isArray(root) ? root : null;
+	  }
+
+	  function settingsSanitizeMvuStatRoot(root) {
+	    const clean = settingsMvuStatRoot(root);
+	    const next = clean ? settingsClone(clean) : null;
+	    if (next && typeof next === "object" && !Array.isArray(next)) delete next["成就"];
+	    return next;
+	  }
+
+	  function settingsScoreMvuStatRoot(root) {
+	    try {
+	      if (typeof encounterScoreMvuStatData === "function") return encounterScoreMvuStatData(root);
+	    } catch {}
+	    if (!root || typeof root !== "object" || Array.isArray(root)) return -1;
+	    let score = 0;
+	    if (root["系统"] && typeof root["系统"] === "object" && !Array.isArray(root["系统"])) score += 30;
+	    if (root["角色"] && typeof root["角色"] === "object" && !Array.isArray(root["角色"])) score += 20 + Object.keys(root["角色"]).length * 3;
+	    if (root["校规"] && typeof root["校规"] === "object" && !Array.isArray(root["校规"])) score += 10;
+	    if (root["任务"] && typeof root["任务"] === "object" && !Array.isArray(root["任务"])) score += 6;
+	    return score || -1;
+	  }
+
+	  function settingsMessageId(message, index = 0) {
+	    if (message && typeof message === "object") {
+	      for (const value of [message.message_id, message.mesid, message.id]) {
+	        if (value !== undefined && value !== null && String(value).trim()) return String(value);
+	      }
+	    }
+	    return String(index);
+	  }
+
+	  function settingsChatMessages() {
+	    const sources = [];
+	    try {
+	      if (typeof getChatMessages === "function") {
+	        const messages = getChatMessages(-1);
+	        if (Array.isArray(messages) && messages.length) sources.push(messages);
+	      }
+	    } catch {}
+	    try {
+	      const context = window.SillyTavern?.getContext?.() || (typeof getContext === "function" ? getContext() : null);
+	      if (Array.isArray(context?.chat) && context.chat.length) sources.push(context.chat);
+	    } catch {}
+	    try {
+	      if (Array.isArray(window.chat) && window.chat.length) sources.push(window.chat);
+	    } catch {}
+	    return sources.sort((a, b) => b.length - a.length).find((items) => Array.isArray(items) && items.length) || [];
+	  }
+
+	  function settingsRecentMessageIds(limit = 3) {
+	    const ids = [];
+	    const seen = new Set();
+	    const messages = settingsChatMessages();
+	    for (let index = messages.length - 1; index >= 0 && ids.length < limit; index -= 1) {
+	      const id = settingsMessageId(messages[index], index);
+	      if (!id || seen.has(id)) continue;
+	      seen.add(id);
+	      ids.push(id);
+	    }
+	    for (const fallback of [
+	      globalThis.__ST_HYPNOOS_CURRENT_FRONTEND_MESSAGE_ID__?.(),
+	      globalThis.__ST_HYPNOOS_LATEST_FRONTEND_MESSAGE_ID__?.()
+	    ]) {
+	      const id = String(fallback ?? "").trim();
+	      if (id && !seen.has(id) && ids.length < limit) {
+	        seen.add(id);
+	        ids.push(id);
+	      }
+	    }
+	    return ids;
+	  }
+
+	  async function settingsReadMvuCandidateForOption(option, { requireReplace = false } = {}) {
+	    const candidates = [];
+	    for (const view of settingsCandidateWindows()) {
+	      try {
+	        if (view?.Mvu?.getMvuData) {
+	          const raw = option === undefined ? view.Mvu.getMvuData() : view.Mvu.getMvuData(option);
+	          const mvu = raw && typeof raw.then === "function" ? await raw : raw;
+	          const stat = settingsMvuStatRoot(mvu);
+	          const score = settingsScoreMvuStatRoot(stat);
+	          const canReplace = typeof view?.Mvu?.replaceMvuData === "function";
+	          if (score >= 0 && (!requireReplace || canReplace)) {
+	            candidates.push({
+	              mvu,
+	              stat,
+	              option,
+	              score: score + (canReplace ? 20 : 0),
+	              replace: canReplace ? ((nextMvu, nextOption) => view.Mvu.replaceMvuData(nextMvu, nextOption)) : null
+	            });
+	          }
+	        }
+	      } catch {}
+	      if (!requireReplace) {
+	        try {
+	          if (typeof view?.getVariables === "function") {
+	            const raw = option === undefined ? view.getVariables() : view.getVariables(option);
+	            const vars = raw && typeof raw.then === "function" ? await raw : raw;
+	            const stat = settingsMvuStatRoot(vars);
+	            const score = settingsScoreMvuStatRoot(stat);
+	            if (score >= 0) candidates.push({ mvu: vars, stat, option, score, replace: null });
+	          }
+	        } catch {}
+	      }
+	    }
+	    candidates.sort((a, b) => b.score - a.score);
+	    return candidates[0] || null;
+	  }
+
+	  async function settingsExportRecentMvuSnapshots(limit = 3) {
+	    const snapshots = [];
+	    const ids = settingsRecentMessageIds(limit);
+	    for (const id of ids) {
+	      const option = { type: "message", message_id: id };
+	      const candidate = await settingsReadMvuCandidateForOption(option);
+	      if (!candidate?.stat) continue;
+	      snapshots.push({
+	        message_id: id,
+	        option,
+	        exportedAt: new Date().toISOString(),
+	        stat_data: settingsSanitizeMvuStatRoot(candidate.stat)
+	      });
+	    }
+	    return snapshots;
+	  }
+
+	  function settingsSnapshotJson(value) {
+	    try {
+	      return JSON.stringify(value);
+	    } catch {
+	      return "";
+	    }
+	  }
+
+	  async function settingsImportRecentMvuSnapshots(snapshots) {
+	    const list = Array.isArray(snapshots) ? snapshots : [];
+	    const result = { total: list.length, written: 0, skipped: [], mismatched: [] };
+	    for (const item of list) {
+	      const messageId = String(item?.message_id ?? item?.option?.message_id ?? "").trim();
+	      const stat = settingsSanitizeMvuStatRoot(item?.stat_data ?? item?.stat ?? item?.variables ?? item?.mvu);
+	      if (!messageId || !stat) {
+	        result.skipped.push(messageId || "unknown");
+	        continue;
+	      }
+	      const option = { type: "message", message_id: messageId };
+	      const candidate = await settingsReadMvuCandidateForOption(option, { requireReplace: true });
+	      if (!candidate?.replace) {
+	        result.skipped.push(messageId);
+	        continue;
+	      }
+	      const nextMvu = candidate.mvu && typeof candidate.mvu === "object" && !Array.isArray(candidate.mvu)
+	        ? settingsClone(candidate.mvu)
+	        : {};
+	      if (nextMvu && typeof nextMvu === "object" && !Array.isArray(nextMvu) && Object.prototype.hasOwnProperty.call(nextMvu, "stat_data")) {
+	        nextMvu.stat_data = settingsClone(stat);
+	      } else {
+	        Object.keys(nextMvu).forEach((key) => delete nextMvu[key]);
+	        Object.assign(nextMvu, settingsClone(stat));
+	      }
+	      const writeResult = candidate.replace(nextMvu, option);
+	      if (writeResult && typeof writeResult.then === "function") await writeResult;
+	      const readBack = await settingsReadMvuCandidateForOption(option);
+	      const expected = settingsSnapshotJson(settingsSanitizeMvuStatRoot(stat));
+	      const actual = settingsSnapshotJson(readBack?.stat);
+	      if (expected && actual && expected !== actual) result.mismatched.push(messageId);
+	      result.written += 1;
+	    }
+	    return result;
+	  }
+
 	  async function settingsExportPayload() {
 	    const worldGraph = loadStaticGraph("world");
 	    const schoolGraph = loadStaticGraph("school");
+	    const recentMessages = await settingsExportRecentMvuSnapshots(3);
 	    return {
       version: SETTINGS_EXPORT_VERSION,
       exportedAt: new Date().toISOString(),
@@ -23454,6 +23656,9 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	        profile: {
 	          favoriteRoles: readFavoriteRoleNames(),
 	          eventMemories: readProfileEventMemoryStore()
+	        },
+	        variables: {
+	          recentMessages
 	        }
 	      },
 	      rawStorage: {
@@ -23470,8 +23675,11 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     const locations = settingsObject(sections.locations);
     const timetable = settingsObject(sections.timetable);
     const profile = settingsObject(sections.profile);
+    const variableSectionRaw = sections.variables ?? sections.mvuSnapshots;
+    const variables = settingsObject(variableSectionRaw);
     const worldCount = Array.isArray(locations.world?.locations) ? locations.world.locations.length : 0;
     const schoolCount = Array.isArray(locations.school?.locations) ? locations.school.locations.length : 0;
+    const variableCount = Array.isArray(variables.recentMessages) ? variables.recentMessages.length : (Array.isArray(variableSectionRaw) ? variableSectionRaw.length : 0);
     const rows = [];
     rows.push("成就任务状态 " + Object.keys(settingsObject(rewards.state?.achievements)).length + " 成就 / " + Object.keys(settingsObject(rewards.state?.quests)).length + " 任务");
     rows.push("每日任务抽签 " + Object.keys(settingsObject(rewards.dailyRolls)).length + " 条");
@@ -23479,9 +23687,100 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     rows.push("地点 " + worldCount + " 城市 / " + schoolCount + " 学校");
     rows.push("收藏角色 " + settingsArray(profile.favoriteRoles).length + " 名");
     rows.push("事件回忆 " + Object.keys(settingsObject(profile.eventMemories?.events)).length + " 条");
+    rows.push("变量快照 " + variableCount + " 层");
     rows.push(timetable.overrides ? "课表覆盖 已包含" : "课表覆盖 未包含");
     return rows;
   }
+
+	  function settingsAddRoleDependency(map, rawName) {
+	    const name = String(rawName || "").trim();
+	    if (!name || /^(角色|角色名|姓名|未命名|未知|AI生成事件名)$/u.test(name)) return;
+	    const key = encounterRoleNameKey(name);
+	    if (!key) return;
+	    if (!map.has(key)) map.set(key, name);
+	  }
+
+	  function settingsCollectRoleDependencies(value, map, depth = 0) {
+	    if (depth > 5 || value == null) return;
+	    if (Array.isArray(value)) {
+	      value.forEach((item) => settingsCollectRoleDependencies(item, map, depth + 1));
+	      return;
+	    }
+	    if (!value || typeof value !== "object") return;
+	    for (const [key, raw] of Object.entries(value)) {
+	      if (/^(角色名|角色|roleName|characterName)$/i.test(String(key))) settingsAddRoleDependency(map, raw);
+	      if (/^(name|姓名)$/i.test(String(key)) && (settingsHasOwn(value, "角色") || settingsHasOwn(value, "roleName") || settingsHasOwn(value, "档案"))) settingsAddRoleDependency(map, raw);
+	      settingsCollectRoleDependencies(raw, map, depth + 1);
+	    }
+	  }
+
+	  function settingsParseStoredJson(value) {
+	    if (value && typeof value === "object") return value;
+	    if (typeof value !== "string") return null;
+	    try { return JSON.parse(value); } catch { return null; }
+	  }
+
+	  function settingsPayloadReferencedRoleNames(payload) {
+	    const result = new Map();
+	    const sections = settingsObject(payload?.sections || payload);
+	    const profile = settingsObject(sections.profile);
+	    settingsArray(profile.favoriteRoles).forEach((name) => settingsAddRoleDependency(result, name));
+	    const eventMemories = settingsObject(profile.eventMemories?.events);
+	    Object.keys(eventMemories).forEach((name) => settingsAddRoleDependency(result, name));
+	    settingsCollectRoleDependencies(settingsObject(sections.encounter), result);
+	    const rawStorage = settingsObject(payload?.rawStorage);
+	    settingsCollectRoleDependencies(rawStorage.encounterIndexedDbJson, result);
+	    const local = settingsObject(rawStorage.localStorage);
+	    Object.entries(local).forEach(([key, value]) => {
+	      if (/favorite|profile|event|encounter|role|character/i.test(key)) {
+	        settingsCollectRoleDependencies(settingsParseStoredJson(value), result);
+	      }
+	    });
+	    return result;
+	  }
+
+	  function settingsPayloadVariableRoleNames(payload) {
+	    const result = new Set();
+	    const addRolesFromRoot = (root) => {
+	      const roles = settingsObject(settingsMvuStatRoot(root)?.["角色"]);
+	      Object.keys(roles).forEach((name) => {
+	        const key = encounterRoleNameKey(name);
+	        if (key) result.add(key);
+	      });
+	    };
+	    addRolesFromRoot(getLatestStatDataSync());
+	    const sections = settingsObject(payload?.sections || payload);
+	    const variables = settingsObject(sections.variables || {});
+	    const snapshots = Array.isArray(variables.recentMessages) ? variables.recentMessages : (Array.isArray(sections.mvuSnapshots) ? sections.mvuSnapshots : []);
+	    snapshots.forEach((item) => addRolesFromRoot(item?.stat_data ?? item?.stat ?? item?.variables ?? item?.mvu));
+	    return result;
+	  }
+
+	  async function settingsCurrentWorldbookRoleNames() {
+	    try {
+	      const snapshot = await encounterReadCharacterWorldEntries(encounterBlankDraft());
+	      return new Set(encounterWorldbookRoleNamesFromEntries(snapshot?.entries || []).map(encounterRoleNameKey).filter(Boolean));
+	    } catch {
+	      return new Set();
+	    }
+	  }
+
+	  async function settingsImportDependencyWarnings(payload) {
+	    const referenced = settingsPayloadReferencedRoleNames(payload);
+	    if (!referenced.size) return [];
+	    const variableNames = settingsPayloadVariableRoleNames(payload);
+	    const worldbookNames = await settingsCurrentWorldbookRoleNames();
+	    const missingVariables = [];
+	    const missingWorldbook = [];
+	    for (const [key, name] of referenced) {
+	      if (!variableNames.has(key)) missingVariables.push(name);
+	      if (!worldbookNames.has(key)) missingWorldbook.push(name);
+	    }
+	    const rows = [];
+	    if (missingVariables.length) rows.push("前端存储引用了这些角色，但当前变量/导入变量快照未包含：" + missingVariables.slice(0, 12).join("、") + (missingVariables.length > 12 ? " 等" + missingVariables.length + "名" : "") + "。请先迁移对应角色初始变量，或确认本次变量快照包含这些角色。");
+	    if (missingWorldbook.length) rows.push("前端存储引用了这些角色，但当前角色卡世界书未读到对应人设/变量条目：" + missingWorldbook.slice(0, 12).join("、") + (missingWorldbook.length > 12 ? " 等" + missingWorldbook.length + "名" : "") + "。请先迁移对应世界书，否则导入后人物档案/邂逅可能只有前端记录。");
+	    return rows;
+	  }
 
   async function settingsWriteEncounterPurchases(ids) {
     const key = encounterPurchaseStorageKey();
@@ -23530,16 +23829,19 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	    const profile = settingsObject(sections.profile);
 	    if (Object.prototype.hasOwnProperty.call(profile, "favoriteRoles")) writeFavoriteRoleNames(settingsArray(profile.favoriteRoles));
 	    if (Object.prototype.hasOwnProperty.call(profile, "eventMemories")) writeProfileEventMemoryStore(profile.eventMemories);
+	    const variables = settingsObject(sections.variables || {});
+	    const legacySnapshots = Array.isArray(sections.mvuSnapshots) ? sections.mvuSnapshots : null;
+	    const recentMessages = Array.isArray(variables.recentMessages) ? variables.recentMessages : legacySnapshots;
+	    const variableImport = Array.isArray(recentMessages) ? await settingsImportRecentMvuSnapshots(recentMessages) : { total: 0, written: 0, skipped: [], mismatched: [] };
 	    try { globalThis.__ST_HYPNOOS_DAILY_SCHEDULE_SYNC_SIGNATURE__ = ""; } catch {}
 	    try { window.dispatchEvent(new CustomEvent("HYPNOOS_FRONTEND_STORAGE_IMPORTED")); } catch {}
 	    try { window.dispatchEvent(new CustomEvent("HYPNOOS_OPERATION_QUEUE_CHANGED")); } catch {}
-	    return true;
+	    return { ok: true, variableImport };
 	  }
 
   const SETTINGS_TOP_DEFAULTS = {
     "系统": {},
     "校规": {},
-    "成就": {},
     "任务": {},
     "角色": {}
   };
@@ -23725,7 +24027,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
         (status ? '<div class="st-settings-status">' + escapeHtml(status) + '</div>' : '') +
         '<section class="st-settings-panel">' +
           '<h3>前端存储迁移</h3>' +
-          '<p>导出成就任务、邂逅购买记录、地点、魔改课表覆盖、收藏角色、事件回忆摘要/重温。不包含照片、角色包正文和图片缓存。</p>' +
+          '<p>导出成就任务、邂逅购买记录、地点、魔改课表覆盖、收藏角色、事件记录/重温摘要，以及最新3个楼层的MVU变量快照。不包含照片、角色包正文和图片缓存。</p>' +
           '<div class="st-settings-actions is-three">' +
 	            '<button type="button" class="st-settings-button primary" data-settings-action="export">导出JSON</button>' +
 	            '<button type="button" class="st-settings-button" data-settings-action="copy" ' + (exportText ? "" : "disabled") + '>复制</button>' +
@@ -23735,7 +24037,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
         '</section>' +
         '<section class="st-settings-panel">' +
           '<h3>导入覆盖</h3>' +
-          '<p>用于旧版聊天记录迁移。导入会覆盖本聊天当前前端存储，请先确认已经导出备份。</p>' +
+          '<p>用于旧版聊天记录迁移。导入会覆盖本聊天当前前端存储；若JSON包含变量快照，会尝试按原楼层写回最近3层变量。请先确认已经导出备份。</p>' +
           '<input class="st-settings-file" type="file" accept="application/json,.json" data-settings-action="file" />' +
           '<textarea class="st-settings-code" data-settings-role="import" placeholder="也可以直接粘贴导出的JSON。">' + escapeHtml(importText) + '</textarea>' +
 	          '<button type="button" class="st-settings-button danger" data-settings-action="import">导入并覆盖前端存储</button>' +
@@ -23829,11 +24131,19 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
         renderSettingsPage(page);
         return;
       }
-      const summary = settingsPayloadSummary(payload).join("；");
-      if (!confirm("导入会覆盖当前聊天的前端存储，适合和旧版聊天记录迁移一起使用。\n\n" + summary + "\n\n确认继续？")) return;
+	      const summary = settingsPayloadSummary(payload).join("；");
+	      page.dataset.settingsStatus = "正在检查导入依赖...";
+	      renderSettingsPage(page);
+	      const dependencyWarnings = await settingsImportDependencyWarnings(payload);
+	      const warningText = dependencyWarnings.length ? "\n\n导入提示：\n" + dependencyWarnings.join("\n") : "";
+	      if (!confirm("导入会覆盖当前聊天的前端存储，适合和旧版聊天记录迁移一起使用。\n\n" + summary + warningText + "\n\n确认继续？")) return;
       try {
-        await settingsImportPayload(payload);
-        page.dataset.settingsStatus = "导入完成：" + summary;
+        const result = await settingsImportPayload(payload);
+        const variableImport = result?.variableImport;
+        const variableText = variableImport && variableImport.total
+          ? "；变量快照写入 " + variableImport.written + "/" + variableImport.total + " 层" + (variableImport.skipped?.length ? "，跳过 " + variableImport.skipped.length + " 层" : "") + (variableImport.mismatched?.length ? "，读回不同 " + variableImport.mismatched.length + " 层" : "")
+          : "";
+        page.dataset.settingsStatus = "导入完成：" + summary + variableText;
       } catch (error) {
         page.dataset.settingsStatus = "导入失败：" + String(error?.message || error || "未知错误");
       }

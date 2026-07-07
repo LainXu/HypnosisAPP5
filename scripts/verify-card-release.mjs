@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { CARD_PATH, DIST_REPO } from "./card-config.mjs";
 import { parseCharacterCard } from "../src/card-parser.js";
 
-const REQUIRED_SECTIONS = ["系统", "校规", "成就", "任务", "角色"];
+const REQUIRED_SECTIONS = ["系统", "校规", "任务", "角色"];
 const DEFAULT_ROLES = ["西园寺爱丽莎", "月咏深雪", "犬冢夏美", "阿宅"];
 const BANNED_INITIAL_ROLES = ["阿宅君"];
 const DEFAULT_SCHOOL_RULES = ["仪容礼仪", "出勤学习", "校内安全", "校内风纪", "环境卫生"];
@@ -117,7 +117,7 @@ assert(
   "legacy writable work/schedule variable leaked into system init block"
 );
 
-const schoolBlock = initContent.slice(positions["校规"], positions["成就"]);
+const schoolBlock = initContent.slice(positions["校规"], positions["任务"]);
 const missingSchoolRules = DEFAULT_SCHOOL_RULES.filter((name) => !schoolBlock.includes(name));
 assert(!missingSchoolRules.length, `missing default school rules: ${missingSchoolRules.join(", ")}`);
 
