@@ -1,6 +1,6 @@
-export const VERSION_NAME = "v2.3";
-export const CARD_BASENAME = `催眠app二改MVU ${VERSION_NAME}.png`;
-export const CARD_PATH = `public/cards/${CARD_BASENAME}`;
+export const VERSION_NAME = process.env.HYPNOOS_VERSION_NAME || "v2.4";
+export const CARD_BASENAME = process.env.HYPNOOS_CARD_BASENAME || `催眠app二改MVU ${VERSION_NAME}.png`;
+export const CARD_PATH = process.env.HYPNOOS_CARD_PATH || `public/cards/${CARD_BASENAME}`;
 export const DIST_REPO = "LainXu/HypnosisAPP5-dist";
 export const DIST_REPO_URL = `https://github.com/${DIST_REPO}.git`;
 export const DIST_WEBVIEW_DIR = "dist/webview";

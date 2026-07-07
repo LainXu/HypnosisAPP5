@@ -8,7 +8,7 @@ const ENCOUNTER_FORMAT = "hypnoos-role-package";
 
 function usage() {
   console.log(`Usage:
-  node scripts/prepare-encounter-worldbook-package.mjs <worldbook.json> [--out <dir>] [--package-name <name>] [--images <dir>] [--encounter-prompt <text>] [--encounter-prompt-file <file>] [--zip <file>]
+  node scripts/prepare-encounter-worldbook-package.mjs <worldbook.json> [--out <dir>] [--package-name <name>] [--images <dir>] [--zip <file>]
 
 Notes:
   - Extracts [mvu_plot]{name}人设 and [mvu_update]{name}变量 entries.
@@ -19,7 +19,7 @@ Notes:
 }
 
 function parseArgs(argv) {
-  const args = { input: "", out: "", packageName: DEFAULT_PACKAGE_NAME, images: "", zip: "", encounterPrompt: "", encounterPromptFile: "" };
+  const args = { input: "", out: "", packageName: DEFAULT_PACKAGE_NAME, images: "", zip: "" };
   const rest = [...argv];
   while (rest.length) {
     const item = rest.shift();
@@ -32,8 +32,6 @@ function parseArgs(argv) {
     else if (item === "--package-name") args.packageName = rest.shift() || DEFAULT_PACKAGE_NAME;
     else if (item === "--images") args.images = rest.shift() || "";
     else if (item === "--zip") args.zip = rest.shift() || "";
-    else if (item === "--encounter-prompt") args.encounterPrompt = rest.shift() || "";
-    else if (item === "--encounter-prompt-file") args.encounterPromptFile = rest.shift() || "";
     else if (!args.input) args.input = item;
     else throw new Error("Unknown argument: " + item);
   }
@@ -312,12 +310,6 @@ function findRoleImage(imagesDir, name) {
 }
 
 function buildPackage(roles, options, templates, outDir) {
-  let previousPrompt = "";
-  try {
-    const previous = JSON.parse(fs.readFileSync(path.join(outDir, "package.json"), "utf8"));
-    previousPrompt = String(previous?.encounterPrompt || "");
-  } catch {}
-  const encounterPrompt = String(options.encounterPrompt || previousPrompt || "");
   const manifestRoles = [];
   const report = {
     source: path.basename(options.input),
@@ -353,7 +345,6 @@ function buildPackage(roles, options, templates, outDir) {
       name: role.name,
       aliases: "",
       intro: compactText(personaIntro(originalPersona?.content || originalVariable?.content || role.name), 180),
-      encounterPrompt: "",
       variables: originalVariable?.content || "",
       variableEntry: variableEntry || undefined,
       personaEntry: personaEntry || undefined,
@@ -382,8 +373,7 @@ function buildPackage(roles, options, templates, outDir) {
     format: ENCOUNTER_FORMAT,
     version: 1,
     name: options.packageName,
-    intro: "由静态世界书 JSON 抽取生成的邂逅角色包草稿。图片和整体剧情提示词可在打包前补充。",
-    encounterPrompt,
+    intro: "由静态世界书 JSON 抽取生成的邂逅角色包草稿。图片可在打包前补充。",
     price: manifestRoles.length * 4,
     variableWorldbook: "人物变量世界书",
     personaWorldbook: "人设世界书",
@@ -392,7 +382,6 @@ function buildPackage(roles, options, templates, outDir) {
   writeJson(path.join(outDir, "package.json"), manifest);
   writeJson(path.join(outDir, "layout", "worldbook-layout-report.json"), report);
   writeText(path.join(outDir, "prompts", "role-image-prompts-oneline.txt"), roles.map(imagePromptForRole).join("\n") + "\n");
-  writeText(path.join(outDir, "prompts", "encounter-plot-oneline-template.txt"), "请基于这些角色的人设，生成一行可放入邂逅角色包 encounterPrompt 的整体剧情串联提示词；要求自然引出所有角色，只写邂逅场景与剧情钩子，角色变量与世界书写入由前端处理。\n");
   writeText(path.join(outDir, "README.md"), [
     "# 邂逅角色包草稿",
     "",
@@ -495,7 +484,6 @@ function main() {
   args.out = path.resolve(args.out || path.join("tmp", "encounter-worldbook-package"));
   if (args.images) args.images = path.resolve(args.images);
   if (args.zip) args.zip = path.resolve(args.zip);
-  if (args.encounterPromptFile) args.encounterPrompt = fs.readFileSync(path.resolve(args.encounterPromptFile), "utf8").trim();
   const entries = worldEntryValues(readJson(args.input));
   if (!entries.length) throw new Error("No worldbook entries found in " + args.input);
   const templates = findDefaultTemplates(entries);

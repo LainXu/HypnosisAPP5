@@ -1,0 +1,227 @@
+# 多 Agent 轻量工作流
+
+目标：把单个臃肿工作流拆成按需协作的 5 个 agent。每次只启动相关 agent，统筹 agent 负责裁剪上下文、合并补丁和验证，不让所有 agent 都读全量脚本/世界书。
+
+## 总原则
+
+1. 统筹 agent 是唯一入口。它读用户需求、`docs/PROJECT_STATE.md` 和本文档，然后决定需要哪些专门 agent。
+2. 专门 agent 只读自己的锚点文件和统筹给的任务合同，不读完整聊天历史，不读无关生成物。
+3. 变量名和写入路径先定合同，再让世界书、前端和脚本消费；不要让各 agent 各自发明字段。
+4. 只有统筹 agent 合并代码、运行构建/验证、提交/发布。专门 agent 输出补丁建议或局部实现，不单独发布。
+5. 每个 agent 的输出必须短：变更点、文件/锚点、风险、需要的验证。不要粘贴整段世界书或整份 HTML。
+
+## 统一任务合同
+
+统筹 agent 分发任务时只给这 8 项：
+
+```text
+需求摘要：
+涉及层级：变量 / 世界书 / 前端正则 / 酒馆助手脚本 / 发布
+已确认变量合同：
+相关文件：
+必须保留：
+必须删除或禁止：
+验证点：
+开放问题：
+```
+
+专门 agent 返回：
+
+```text
+结论：
+建议改动：
+文件锚点：
+兼容/风险：
+验证命令：
+是否需要其他 agent：
+```
+
+## 1. 统筹 Agent
+
+职责：
+
+- 拆需求，判断要不要启动其他 agent。
+- 维护变量合同和跨层一致性。
+- 合并专门 agent 的结论，避免重复规则和重复实现。
+- 最后运行验证、提交或发布。
+
+默认读取：
+
+- `docs/PROJECT_STATE.md`
+- `docs/MULTI_AGENT_WORKFLOW.md`
+- 用户明确要求相关的文件锚点
+
+禁止：
+
+- 不把整份 `scripts/mirror-frontend.mjs`、`scripts/finalize-card-v1_6.mjs` 发给所有 agent。
+- 不让多个 agent 同时修改同一段代码。
+- 不在变量合同未定时让前端先写字段。
+
+决策顺序：
+
+1. 先问：这是变量合同变化吗？
+2. 再问：AI 需要靠世界书理解吗？
+3. 再问：前端是否需要按钮、暂存、localStorage、MVU 读写或正则入口？
+4. 再问：酒馆助手脚本是否需要事件监听、自动修复或数值脚本？
+5. 最后只启动必要 agent。
+
+## 2. 变量 Agent
+
+职责：
+
+- 设计 MVU 字段、默认值、只读/可写规则、JSON Patch 路径。
+- 维护 `[initvar]变量初始化不需要开`、schema、变量说明中的字段一致性。
+- 判断字段应该由 AI 写、前端写、脚本写，还是只读派生。
+
+主要文件：
+
+- `scripts/finalize-card-v1_6.mjs`
+- `scripts/verify-card-release.mjs`
+
+输出必须包含：
+
+- 字段名和路径，例如 `/系统/_buff结束时间`
+- 默认值
+- 写入方：AI / 前端 / 酒馆助手脚本 / 只读派生
+- 是否允许旧字段兼容
+- 必须加入的验证断言
+
+边界：
+
+- 不写 UI。
+- 不写剧情解释。
+- 不改酒馆助手事件脚本，除非只是指出需要脚本 agent 接手。
+
+## 3. 世界书 Agent
+
+职责：
+
+- 维护角色卡世界书条目、AI 执行规则、好感链、角色人设和变量条目说明。
+- 清理重复、过时、互相冲突的规则。
+- 让世界书只解释必要规则，不塞前端已经处理的细节。
+
+主要文件：
+
+- `scripts/finalize-card-v1_6.mjs`
+- `docs/邂逅世界书角色包工作流.md`，仅在处理角色包时读取
+
+输出必须包含：
+
+- 要改的 entry comment 或文本锚点
+- 新规则摘要
+- 删除/压缩了哪些旧规则
+- 是否依赖变量 agent 的字段合同
+
+边界：
+
+- 不决定新变量名。
+- 不写前端暂存结构。
+- 不把只读变量塞进每轮 `<相关变量>`，除非变量 agent 明确要求。
+
+## 4. 正则/前端 Agent
+
+职责：
+
+- 维护手机/桌面前端、正则注入入口、首楼身份前端、暂存区、localStorage、MVU 读写、角色卡世界书前端管理。
+- 用户说“正则”时也归此 agent，因为正则主要负责前端加载/注入。
+
+主要文件：
+
+- `scripts/mirror-frontend.mjs`
+- `public/frontends/hypnosis-app/source.html`，只在源前端本身需要改时读取
+- `scripts/finalize-card-v1_6.mjs` 中的 `regex_scripts` 生成段，仅当前端加载正则需要改时读取
+
+输出必须包含：
+
+- UI 状态变化
+- MVU 读写路径
+- 暂存区 payload 字段
+- localStorage key/scope 是否新增或删减
+- 桌面端和手机端是否都需要重建
+
+边界：
+
+- 不改世界书叙事规则。
+- 不新增变量名；只能消费变量 agent 给出的合同。
+- 不手改生成出的 HTML，除非是验证输出；真实改动回到 `scripts/mirror-frontend.mjs`。
+
+## 5. 酒馆助手脚本 Agent
+
+职责：
+
+- 维护 `data.extensions.tavern_helper.scripts` 内的酒馆助手脚本。
+- 处理 MVU 事件监听、跨日补救、变量初始化、自动修复、脚本依赖/CDN 清理。
+- 判断脚本是否应该继续存在，还是交给前端或世界书。
+
+主要文件：
+
+- `scripts/finalize-card-v1_6.mjs`
+- 酒馆助手相关文档链接，只在需要确认接口时打开
+
+输出必须包含：
+
+- 脚本名和 id
+- 触发事件
+- 读写变量路径
+- 是否引入外部链接/CDN
+- 是否和前端/世界书功能重叠
+
+边界：
+
+- 不写 UI。
+- 不写剧情规则。
+- 不做可由前端轻量完成的每帧/每轮重扫描。
+
+## 冲突裁决
+
+- 变量名、默认值、读写权限：变量 agent 优先。
+- UI、暂存、localStorage、MVU 实际读写：正则/前端 agent 优先。
+- AI 应如何理解/执行：世界书 agent 优先，但必须服从变量合同。
+- 事件监听和自动修复：酒馆助手脚本 agent 优先，但不得覆盖前端已经处理的状态。
+- 跨层冲突无法解决时：统筹 agent 收束为一个最小变更方案。
+
+## 低 Token 操作规矩
+
+- 搜索用 `rg`，读取用小窗口 `sed -n` / `nl -ba`，不要整文件 `cat` 大脚本。
+- 只读生成 HTML 做验证，不在设计阶段读完整 HTML。
+- PNG 元数据只在改 finalizer、世界书、正则或发布前抽检一次。
+- 每个专门 agent 最多读 2 个主文件和 1 个验证文件；超过就回报统筹拆任务。
+- 专门 agent 不互相长聊，只通过统筹的变量合同和短结论交接。
+- 没涉及某层就不启动该 agent。
+
+## 路由表
+
+| 需求关键词 | 启动 agent |
+| --- | --- |
+| 新变量、默认值、只读、可写、JSON Patch | 变量 |
+| 世界书、人设、好感链、AI规则、剧情限制 | 世界书 |
+| 按钮、手机界面、暂存区、localStorage、首楼、邂逅前端、正则注入 | 正则/前端 |
+| 数值控制脚本、酒馆助手脚本、MVU事件监听、CDN、自动修复 | 酒馆助手脚本 |
+| 发布、合并、冲突、验证失败 | 统筹 |
+
+## 最小验证矩阵
+
+按实际改动选择，不要全量滥跑：
+
+```bash
+node --check scripts/finalize-card-v1_6.mjs
+node --check scripts/mirror-frontend.mjs
+node --check scripts/build-phone-frontend.mjs
+node scripts/mirror-frontend.mjs
+node scripts/build-phone-frontend.mjs
+node scripts/finalize-card-v1_6.mjs
+npm run verify:card
+```
+
+规则：
+
+- 只改世界书/变量：`finalize` + `verify:card`。
+- 只改前端：`mirror` + `build-phone` + 关键 `rg`。
+- 改正则加载或卡内脚本：`finalize` + `verify:card`。
+- 要发布：由统筹 agent 运行发布脚本或按用户指定 git 推送。
+
+## 推荐开场
+
+```text
+读取 docs/PROJECT_STATE.md 和 docs/MULTI_AGENT_WORKFLOW.md。按多 agent 轻量工作流继续，只启动相关 agent。
+```

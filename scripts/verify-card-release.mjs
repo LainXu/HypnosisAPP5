@@ -12,6 +12,7 @@ const BANNED_ENTRY_COMMENTS = [
 ];
 const DAILY_SETTLEMENT_SCRIPT_ID = "77618567-3f61-4303-908f-9ee59ab45cd2";
 const DAILY_SETTLEMENT_SCRIPT_NAME = "数值控制脚本";
+const MOBILE_MAIN_FRONTEND_TEST_GREETING = "<StatusPlaceHolderImpl/>";
 const BANNED_TEXT_PATTERNS = [
   /MC能量.*恢复.*一半/,
   /恢复.*MC能量上限.*一半/,
@@ -23,13 +24,20 @@ const BANNED_TEXT_PATTERNS = [
   /每天降低[^。\n]*(主角可疑度|警戒度)/,
   /每个角色每\s*5\s*点[^。\n]*警戒度[^。\n]*(主角可疑度|可疑度)/,
   /dailySuspicionIncrease/,
-  /nextAlertness/
+  /nextAlertness/,
+  /registerMvuSchema/,
+  /mvu_zod/,
+  /变量结构\s*01\/14/,
+  /Reconciling schema/i
 ];
 const BANNED_FRONTEND_TEXT = [
   "encounterSystemWorldbookEntries",
   "encounterEnsureSystemWorldbooks",
   "邂逅系统世界书",
   "特殊地点准入证规则"
+];
+const BANNED_PROMPT_MACRO_PATTERNS = [
+  /\{\{(?:get|format)_message_variable::stat_data\s*(?:\}\}|$)/
 ];
 
 function assert(condition, message) {
@@ -79,6 +87,11 @@ const init = entries.find((entry) => String(entry.comment || "") === "[initvar]�
 const initContent = String(init?.content || "");
 
 assert(init, "missing [initvar]变量初始化不需要开");
+assert(Array.isArray(data.alternate_greetings), "alternate greetings must be an array");
+assert(
+  data.alternate_greetings.length === 1 && String(data.alternate_greetings[0] || "").trim() === MOBILE_MAIN_FRONTEND_TEST_GREETING,
+  `alternate greetings must contain only the mobile frontend test placeholder, found ${JSON.stringify(data.alternate_greetings)}`
+);
 
 const positions = Object.fromEntries(
   REQUIRED_SECTIONS.map((name) => [name, initContent.search(new RegExp("^" + name + ":", "m"))])
@@ -167,6 +180,9 @@ for (const comment of BANNED_ENTRY_COMMENTS) {
 
 const allWorldbookText = entries.map((entry) => String(entry.content || "")).join("\n");
 assertNoBannedText("worldbook", allWorldbookText);
+for (const pattern of BANNED_PROMPT_MACRO_PATTERNS) {
+  assert(!pattern.test(allWorldbookText), `banned variable macro exposes private/full root data: ${pattern}`);
+}
 for (const needle of ["/系统/_社畜值", "/系统/_buff", "/系统/_buff结束时间", "/系统/_课程表"]) {
   assert(allWorldbookText.includes(needle), `worldbook missing readonly path: ${needle}`);
 }
@@ -200,20 +216,12 @@ const tavernHelperScripts = data.extensions?.tavern_helper?.scripts || [];
 const dailySettlementScripts = tavernHelperScripts.filter((script) =>
   String(script?.id || "") === DAILY_SETTLEMENT_SCRIPT_ID || String(script?.name || "") === DAILY_SETTLEMENT_SCRIPT_NAME
 );
-assert(dailySettlementScripts.length === 1, `expected one daily settlement script, found ${dailySettlementScripts.length}`);
+assert(dailySettlementScripts.length === 0, `daily settlement helper script must not be bundled, found ${dailySettlementScripts.length}`);
 for (const script of tavernHelperScripts) {
   const id = String(script?.id || "");
   const name = String(script?.name || "");
   const text = scriptText(script);
   assertNoBannedText(`tavern_helper script ${name || id || "unknown"}`, text);
-  if (id === DAILY_SETTLEMENT_SCRIPT_ID || name === DAILY_SETTLEMENT_SCRIPT_NAME) {
-    assert(text.includes("跨日日期补救"), "daily settlement script is not the reduced date-repair version");
-    assert(text.includes("resolveMissingDateAdvance"), "daily settlement script is missing date repair logic");
-    assert(!text.includes("系统.主角可疑度"), "daily settlement script must not touch suspicion");
-    assert(!text.includes("角色.*.警戒度"), "daily settlement script must not touch alertness");
-    assert(!text.includes("系统.MC能量"), "daily settlement script must not touch MC energy");
-    assert(!text.includes("系统._当前周几"), "daily settlement script must not touch readonly schedule fields");
-  }
 }
 
 const frontendTexts = [

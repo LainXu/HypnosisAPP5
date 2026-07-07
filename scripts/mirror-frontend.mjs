@@ -9,7 +9,7 @@ const DEFAULT_OUTPUT = "public/frontends/hypnosis-app/index.html";
 const MCHAN_STATIC_SOURCE = "public/frontends/mchan/index.html";
 const DEFAULT_FRONTEND_REWARD_STARLIGHT = 5;
 const DEFAULT_FRONTEND_REWARD_DATABASE = buildDefaultRewardDatabase();
-const SCAN_ROLE_COST_STARLIGHT = 6;
+const SCAN_ROLE_COST_STARLIGHT = 5;
 const ENCOUNTER_SHOP_MONEY_PER_STARLIGHT = 10000;
 const ENCOUNTER_SHOP_RULE_COUPON_PRICE = 100;
 const TIMETABLE_MOD_COUPON_PRICE = ENCOUNTER_SHOP_RULE_COUPON_PRICE;
@@ -574,11 +574,14 @@ html.st-hypnoos-booting.st-hypnoos-boot-failed body::after{content:"前端加载
 	      copyField("MC能量", "MC能量", "_MC能量");
 	      copyField("MC能量上限", "MC能量上限", "_MC能量上限");
 	      copyField("星光点", "星光点");
-	      copyField("持有零花钱", "持有零花钱");
-	      copyField("持有物品", "持有物品");
-	      copyField("社畜值", "_社畜值");
-	      copyField("buff", "_buff");
-	      copyField("buff结束时间", "_buff结束时间");
+      copyField("持有零花钱", "持有零花钱");
+      copyField("持有物品", "持有物品");
+      copyField("社畜值", "_社畜值");
+      copyField("_社畜值", "_社畜值");
+      copyField("buff", "_buff");
+      copyField("buff结束时间", "_buff结束时间");
+      copyField("_buff", "_buff");
+      copyField("_buff结束时间", "_buff结束时间");
 	      copyField("阿宅性别", "阿宅性别", "阿宅性別", "阿宅身体性别");
 	      copyField("当前日期", "当前日期");
 	      copyField("_当前周几", "_当前周几", "当前周几");
@@ -618,11 +621,12 @@ html.st-hypnoos-booting.st-hypnoos-boot-failed body::after{content:"前端加载
 	      if (/领取成就|领取任务奖励|领取奖励|完成任务|任务完成|成就奖励|任务奖励/.test(action)) addOperationVariableFields(fields, ["星光点", "持有物品"]);
 	      if (/派遣结束提醒|取消派遣/.test(action)) addOperationVariableFields(fields, ["当前日期", "当前时间", "星光点", "派遣岗位"]);
 	      if (/派遣角色/.test(action)) addOperationVariableFields(fields, ["当前日期", "当前时间", "主角可疑度", "派遣岗位"]);
-	      if (/^打工$/.test(source) && /开始打工|有偶遇|打工中提醒|打工偶遇/.test(action)) {
-	        if (/开始打工/.test(action)) addOperationVariableFields(fields, ["持有零花钱"]);
-	        if (/全盛出击|MC能量|恢复/.test(text)) addOperationVariableFields(fields, ["MC能量", "MC能量上限"]);
-	      }
-	      if (/购买角色包|角色包/.test(action)) addOperationVariableFields(fields, ["星光点"]);
+      if (/^打工$/.test(source) && /开始打工|有偶遇|打工中提醒|打工偶遇|打工buff提醒/.test(action)) {
+        if (/开始打工/.test(action)) addOperationVariableFields(fields, ["持有零花钱", "_社畜值", "_buff", "_buff结束时间"]);
+        if (/打工buff提醒/.test(action)) addOperationVariableFields(fields, ["_buff", "_buff结束时间"]);
+        if (/全盛出击|MC能量|恢复/.test(text)) addOperationVariableFields(fields, ["MC能量", "MC能量上限"]);
+      }
+		      if (/购买角色包|角色包|角色已使用|随机桃花运已使用/.test(action)) addOperationVariableFields(fields, ["星光点"]);
 	      if (/^邂逅$/.test(source) && /兑换星光点|购买校规修改券|购买课程表魔改券|购买特殊地点准入证/.test(action)) addOperationVariableFields(fields, ["星光点", "持有零花钱", "持有物品"]);
 	      if (/^课程表$/.test(source) && /课程表魔改券/.test(action)) addOperationVariableFields(fields, ["持有物品", "课程表"]);
 	      if (/^地图$/.test(source) && /^解锁特殊地点$/.test(action)) addOperationVariableFields(fields, ["星光点", "特殊地点解锁"]);
@@ -632,7 +636,7 @@ html.st-hypnoos-booting.st-hypnoos-boot-failed body::after{content:"前端加载
 	        if (/定制趣味物品|库存物品|衣物|性道具/.test(item + text)) addOperationVariableFields(fields, ["星光点", "催眠APP订阅等级", "持有物品"]);
 	      }
 	      if (/^库存$/.test(source) && /使用物品|删除物品/.test(action)) addOperationVariableFields(fields, ["当前日期", "当前时间", "当前地点", "持有物品", "主角可疑度"]);
-	      if (/申请立校规|废止初始校规/.test(action)) addOperationVariableFields(fields, ["催眠APP订阅等级", "星光点", "持有物品", "当前校规数"]);
+	      if (/申请立校规|废止初始校规|删除校规/.test(action)) addOperationVariableFields(fields, ["催眠APP订阅等级", "星光点", "持有物品", "当前校规数"]);
 	      return [...fields];
 	    };
 	    const OPERATION_CURRENT_DETAIL_KEYS = new Set([
@@ -700,7 +704,9 @@ html.st-hypnoos-booting.st-hypnoos-boot-failed body::after{content:"前端加载
 	      "变量写入路径",
 	      "合并次数",
 	      "locked",
-	      "forceLocked"
+      "forceLocked",
+      "楼层锁剩余",
+      "楼层锁规则"
 	    ]);
 	    const operationShouldHideDetail = (record, key, mode = "prompt") => {
 	      const name = cleanOperationText(key);
@@ -756,7 +762,7 @@ html.st-hypnoos-booting.st-hypnoos-boot-failed body::after{content:"前端加载
 	        const parts = [];
 	        if (operationHasAction(records, /启动催眠|追加催眠/)) parts.push("启动/追加催眠代表{{user}}已实际施术；条件满足则成功，条件不足/越级/强阻碍才失败或部分失败；不得写看屏不足、系统警告或事前劝退，失败需承担相应后果");
 	        if (operationHasAction(records, /取消催眠/)) parts.push("取消催眠只结束当前临时催眠状态，不移除永久催眠效果");
-	        if (operationHasAction(records, /临时催眠到期提醒/)) parts.push("临时催眠结束时间已到或已过；AI必须按目标效果到期处理，移除对应临时催眠效果，不要延期、补回或把它当永久效果");
+	        if (operationHasAction(records, /临时催眠到期提醒/)) parts.push("临时催眠结束时间已到或已过；前端已删除对应临时催眠效果，AI只按到期后的状态描写和更新非效果字段，不要延期、补回、再次remove或把它当永久效果");
 	        return parts.length ? ["- AI执行规范｜" + parts.join("；") + "。"] : [];
 	      }
 	      if (text === "催眠资源") {
@@ -776,24 +782,26 @@ html.st-hypnoos-booting.st-hypnoos-boot-failed body::after{content:"前端加载
 	      }
 	      if (text === "人物档案") {
 	        const parts = ["人物档案是纸质资料操作；设置绰号、删除角色或效果只改目标路径，不连带改催眠APP、真实姓名或其他变量；固定初始角色永远不能删除"];
-	        if (operationHasAction(records, /触发角色事件/)) parts.push("事件记录位图已由前端写入，AI只写对应事件剧情，不得二次改事件记录或重复触发；本次回复末尾必须输出完整闭合的<人物档案事件记录>块，包含角色名、事件序号、标题、概要、关键场面、关系变化和后续钩子，最后单独一行写</人物档案事件记录>，供前端本地保存回忆摘要，不写入MVU变量");
-	        if (operationHasAction(records, /回忆角色事件/)) parts.push("回忆角色事件已由前端把本地保存的事件摘要写入对应角色的至关重要记忆；AI读取该字段让对应角色围绕该事件自然聊天，不改事件记录、不当作新事件触发");
-	        return ["- AI执行规范｜" + parts.join("；") + "。"];
-	      }
+        if (operationHasAction(records, /删除催眠效果/)) parts.push("删除催眠效果已由前端直接写入目标角色的临时/永久催眠效果变量；AI只承认该效果不再生效，不得再次输出remove补删，也不得删除校规、系统、其他角色或其他字段");
+        if (operationHasAction(records, /触发角色事件/)) parts.push("_事件记录位图已由前端写入，AI只写对应事件剧情，不得二次改_事件记录或重复触发；本次回复末尾必须输出完整闭合的<人物档案事件记录>块，包含角色名、事件序号、标题、概要、关键场面、关系变化和后续钩子，最后单独一行写</人物档案事件记录>，供前端本地保存回忆摘要，不写入MVU变量");
+        if (operationHasAction(records, /回忆角色事件/)) parts.push("回忆角色事件已由前端把本地保存的事件摘要写入对应角色的至关重要记忆；AI读取该字段让对应角色围绕该事件自然聊天，不改_事件记录、不当作新事件触发");
+        if (operationHasAction(records, /重温角色事件/)) parts.push("重温角色事件表示{{user}}主动提出之前的事件不够美好，想和该角色重新来一次；前端已清空该事件的本地回忆摘要，AI按指定事件重新生成剧情并在回复末尾输出新的完整<人物档案事件记录>块；不要修改_事件记录位图或自动发奖");
+        return ["- AI执行规范｜" + parts.join("；") + "。"];
+      }
 	      if (text === "时钟") {
 	        return ["- AI执行规范｜强制时间锚点不可忽略；前端已判断目标日期和跨天，AI按目标日期/时间推进，只改当前日期、时间、事件等必要字段。"];
 	      }
 	      if (text === "监控") {
 	        return ["- AI执行规范｜派遣按字段和目标条件判定；结束/取消按前端完整天数收益结算，成功解除派遣并按工作风险处理主角可疑度。"];
 	      }
-	      if (text === "打工") {
-	        return ["- AI执行规范｜打工只承载本轮已发生的工作事实；打工偶遇（剧情进行中）时只处理互动并收束到预计结束时间，不要把打工写成催眠APP效果或角色赠送资源。"];
-	      }
+      if (text === "打工") {
+        return ["- AI执行规范｜打工只承载本轮已发生的工作事实；若打工开始/偶遇/结束时间与当前变量时间或同轮时钟锚点差距较大，AI必须按时间顺序写多个时空段并把最终变量写到正文最晚剧情节点；打工偶遇（剧情进行中）是不可删除的一回合偶遇锁：若{{user}}还没有在偶遇场景中主动行动，AI必须停在把主动权交给{{user}}的节点；若最新用户发言已经是该主动行动，再处理互动并收束到预计结束时间；打工buff只读，AI不得改写或清空。"];
+      }
 	      if (text === "邂逅") {
-	        return ["- AI执行规范｜前端已扣星光点、创建/覆盖初始角色变量并写入角色卡世界书；AI只按AI邂逅提示词安排登场和补未记录变量，不再创建或补写角色/世界书。"];
+	        return ["- AI执行规范｜前端已扣星光点、创建/覆盖初始角色变量并写入角色卡世界书；AI只按命中角色的人设、角色出场提示和当前上下文安排登场，并补未记录变量，不再创建或补写角色/世界书。"];
 	      }
 	      if (/^(地图|学校地图|主教学楼地图)$/.test(text)) {
-	        return ["- AI执行规范｜地点建议不是瞬移；请求新增地点需输出完整地点列表JSON；特殊地点需持有对应准入证，未持证时不要写成普通通行成功。"];
+	        return ["- AI执行规范｜地点建议不是瞬移；请求新增地点由前端按用户输入保存，AI只承认该地点存在并可补剧情细节，不要输出完整地图JSON；特殊地点需持有对应准入证，未持证时不要写成普通通行成功。"];
 	      }
 	      if (text === "学校") {
 	        return ["- AI执行规范｜校规按VIP、券、星光点和数量限制判定；校规不是催眠效果，禁止写入角色临时/永久催眠效果。"];
@@ -951,6 +959,7 @@ html.st-hypnoos-booting.st-hypnoos-boot-failed body::after{content:"前端加载
         }
       }
 		      if (/^打工$/.test(source) && /^(开始打工|有偶遇|打工中提醒|打工偶遇（剧情进行中）)$/.test(action)) return "work:active";
+		      if (/^打工$/.test(source) && /^打工buff提醒$/.test(action)) return "work:buff";
 	      if (/^时钟$/.test(source) && /强制剧情开始时间|强制时间|目标时间|建议剧情开始时间|建议时间|当前时间|推进到该时间/.test(action)) return "clock:suggest-time";
 	      if (/^(地图|学校地图)$/.test(source)) {
 	        if (/^建议剧情地点$/.test(action)) return "map:suggest-location";
@@ -965,11 +974,16 @@ html.st-hypnoos-booting.st-hypnoos-boot-failed body::after{content:"前端加载
 	        const role = cleanOperationText(object["角色名"] ?? object["目标角色"] ?? "");
 	        return "profile:nickname:" + role;
 	      }
-	      if (/^人物档案$/.test(source) && /^回忆角色事件$/.test(action)) {
-	        const role = cleanOperationText(object["角色名"] ?? object["目标角色"] ?? "");
-	        const bit = cleanOperationText(object["事件位"] ?? object["事件序号"] ?? "");
-	        return "profile:event-recall:" + role + ":" + bit;
-	      }
+      if (/^人物档案$/.test(source) && /^回忆角色事件$/.test(action)) {
+        const role = cleanOperationText(object["角色名"] ?? object["目标角色"] ?? "");
+        const bit = cleanOperationText(object["事件位"] ?? object["事件序号"] ?? "");
+        return "profile:event-recall:" + role + ":" + bit;
+      }
+      if (/^人物档案$/.test(source) && /^重温角色事件$/.test(action)) {
+        const role = cleanOperationText(object["角色名"] ?? object["目标角色"] ?? "");
+        const bit = cleanOperationText(object["事件位"] ?? object["事件序号"] ?? "");
+        return "profile:event-replay:" + role + ":" + bit;
+      }
 	      if (/^库存$/.test(source)) {
 	        const itemName = cleanOperationText(object["物品名"] ?? object["物品"] ?? object["名称"] ?? "");
 	        if (/^删除物品$/.test(action)) return "inventory:delete:" + itemName;
@@ -989,11 +1003,15 @@ html.st-hypnoos-booting.st-hypnoos-boot-failed body::after{content:"前端加载
         const effect = cleanOperationText(object["效果名"] ?? object["临时催眠"] ?? "");
         return "hypnosis:expired-temp:" + role + ":" + effect;
       }
-      if (/^邂逅$/.test(source) && /购买角色包|角色包已使用/.test(action)) {
-        return "encounter:purchase:active";
+	      if (/^邂逅$/.test(source) && /购买角色包|角色包已使用|角色已使用|随机桃花运已使用/.test(action)) {
+	        return "encounter:purchase:active";
+	      }
+      if (/^学校$/.test(source) && /废止初始校规|删除校规/.test(action)) {
+        const ruleName = cleanOperationText(object["校规名"] ?? object["目标校规"] ?? "");
+        return "school:delete-rule:" + ruleName;
       }
-      return "";
-    };
+	      return "";
+	    };
 			    const makeOperationEntry = (payload) => {
 			      const locked = Boolean(payload && typeof payload === "object" && (payload["不可删除"] || payload.locked || payload.forceLocked));
 			      const cleanPayload = stripOperationVariableFields(payload);
@@ -1066,29 +1084,93 @@ html.st-hypnoos-booting.st-hypnoos-boot-failed body::after{content:"前端加载
 	        window.__ST_OPERATION_INPUT_LOG__.push(entry);
 	      }
 	    };
-		    const OPERATION_LOCKED_LOG_STORAGE_PREFIX = "hypnoos.operation.lockedInputLog.v3:";
-	    const operationLockedStorageKey = () => {
-	      return OPERATION_LOCKED_LOG_STORAGE_PREFIX + operationCurrentStorageScope();
+			    const OPERATION_LOCKED_LOG_STORAGE_PREFIX = "hypnoos.operation.lockedInputLog.v3:";
+		    const operationLockedStorageKey = (scope = operationCurrentStorageScope()) => {
+		      return OPERATION_LOCKED_LOG_STORAGE_PREFIX + String(scope || operationCurrentStorageScope());
+		    };
+	    const normalizeStoredOperationEntry = (entry, options = {}) => {
+	      const payload = operationEntryPayload(entry);
+	      if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
+	      const nextPayload = { ...payload, 不可删除: true };
+	      if (options.decrementFloorLock) {
+	        if (!Object.prototype.hasOwnProperty.call(nextPayload, "楼层锁剩余")) return null;
+	        const remaining = Math.max(0, Math.floor(Number(nextPayload["楼层锁剩余"]) || 0) - 1);
+	        if (remaining <= 0) return null;
+	        nextPayload["楼层锁剩余"] = remaining;
+	      }
+	      const next = makeOperationEntry(nextPayload);
+	      if (entry?.id) next.id = String(entry.id);
+	      if (Number.isFinite(Number(entry?.at))) next.at = Number(entry.at);
+	      next.locked = true;
+	      return next;
 	    };
-    const normalizeStoredOperationEntry = (entry) => {
-      const payload = operationEntryPayload(entry);
-      if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
-      const next = makeOperationEntry({ ...payload, 不可删除: true });
-      if (entry?.id) next.id = String(entry.id);
-      if (Number.isFinite(Number(entry?.at))) next.at = Number(entry.at);
-      next.locked = true;
-      return next;
-    };
-    const readLockedOperationInputLog = () => {
+    const readLockedOperationEntriesFromKey = (key, options = {}) => {
+	      try {
+	        const raw = localStorage.getItem(key);
+	        const parsed = JSON.parse(raw || "[]");
+	        if (!Array.isArray(parsed)) return [];
+	        return parsed.map((entry) => normalizeStoredOperationEntry(entry, options)).filter(Boolean);
+	      } catch {
+	        return [];
+	      }
+	    };
+    const consumeLockedOperationEntriesFromKey = (key, options = {}) => {
       try {
-        const raw = localStorage.getItem(operationLockedStorageKey());
+        const raw = localStorage.getItem(key);
         const parsed = JSON.parse(raw || "[]");
         if (!Array.isArray(parsed)) return [];
-        return parsed.map(normalizeStoredOperationEntry).filter(Boolean);
+        const consumed = [];
+        const survivors = [];
+        for (const item of parsed) {
+          const entry = normalizeStoredOperationEntry(item, options);
+          if (entry) consumed.push(entry);
+          if (!entry) continue;
+          if (!options.decrementFloorLock) {
+            if (entry) survivors.push(entry);
+            continue;
+          }
+          const payload = operationEntryPayload(entry);
+          if (!payload || !Object.prototype.hasOwnProperty.call(payload, "楼层锁剩余")) continue;
+          if (Number(payload["楼层锁剩余"]) > 0) survivors.push(entry);
+        }
+        if (options.decrementFloorLock) {
+          if (survivors.length) {
+            localStorage.setItem(key, JSON.stringify(survivors.map((entry) => ({
+              id: entry.id,
+              at: entry.at,
+              payload: entry.payload,
+              locked: true
+            }))));
+          } else {
+            localStorage.removeItem(key);
+          }
+        }
+        return consumed;
       } catch {
         return [];
       }
     };
+	    const readLockedOperationInputLog = () => {
+	      const entries = [];
+	      const seenKeys = new Set();
+	      const addEntries = (items) => {
+	        for (const entry of items || []) {
+	          const key = entry.key || operationRecordKey(rawOperationEntryPayload(entry));
+	          if (seenKeys.has(key)) continue;
+	          seenKeys.add(key);
+	          entries.push(entry);
+	        }
+	      };
+	      addEntries(readLockedOperationEntriesFromKey(operationLockedStorageKey()));
+	      try {
+	        const current = String(window.__ST_HYPNOOS_FRONTEND_MESSAGE_SCOPE__?.() || "").trim();
+	        const previous = String(window.__ST_HYPNOOS_PREVIOUS_FRONTEND_MESSAGE_SCOPE__?.() || "").trim();
+	        if (previous && previous !== current) {
+	          addEntries(consumeLockedOperationEntriesFromKey(operationLockedStorageKey(previous), { decrementFloorLock: true }));
+	        }
+	      } catch {}
+	      return entries;
+	    };
     persistLockedOperationInputLog = () => {
       try {
         const locked = window.__ST_OPERATION_INPUT_LOG__.filter((entry) => Boolean(entry?.locked));
@@ -1199,8 +1281,8 @@ html.st-hypnoos-booting.st-hypnoos-boot-failed body::after{content:"前端加载
       if (/^监控$/.test(source) && /派遣结束提醒|取消派遣/.test(action)) {
 		        addOperationRoleVariableFields(selected, variables, roleName, ["是否派遣中", "工作价值"]);
 		      }
-      if (/^人物档案$/.test(source) && /触发角色事件|回忆角色事件/.test(action)) {
-        addOperationRoleVariableFields(selected, variables, roleName, ["好感度", "服从度", "警戒度", "性欲", "快感值", "事件记录", "至关重要记忆"]);
+      if (/^人物档案$/.test(source) && /触发角色事件|回忆角色事件|重温角色事件/.test(action)) {
+        addOperationRoleVariableFields(selected, variables, roleName, ["好感度", "服从度", "警戒度", "性欲", "快感值", "_事件记录", "事件记录", "至关重要记忆"]);
       }
       if (/^催眠命令$/.test(source) && /^临时催眠到期提醒$/.test(action)) {
         addOperationRoleVariableFields(selected, variables, roleName, ["临时催眠效果", "好感度", "警戒度", "服从度"]);
@@ -1216,7 +1298,7 @@ html.st-hypnoos-booting.st-hypnoos-boot-failed body::after{content:"前端加载
 		        const source = cleanOperationText(record.source || "");
 		        const action = cleanOperationText(record.action || "");
 		        if (!/^邂逅$/.test(source)) continue;
-		        const isEncounterPurchase = /购买角色包|角色包已使用/.test(action);
+			        const isEncounterPurchase = /购买角色包|角色包已使用|角色已使用|随机桃花运已使用/.test(action);
 		        const isEncounterShopSettled = /兑换星光点|购买校规修改券|购买课程表魔改券|购买特殊地点准入证/.test(action);
 		        if (!isEncounterPurchase && !isEncounterShopSettled) continue;
 		        if (isEncounterPurchase) hasEncounterPurchase = true;
@@ -1278,7 +1360,7 @@ html.st-hypnoos-booting.st-hypnoos-boot-failed body::after{content:"前端加载
 		        const source = cleanOperationText(record.source || "");
 		        const action = cleanOperationText(record.action || "");
 		        if (/^催眠APP$/.test(source)) hasHypnosisAppOperation = true;
-		        if (/申请立校规|废止初始校规/.test(action) || /^校规$/.test(source)) hasSchoolRuleOperation = true;
+	        if (/申请立校规|废止初始校规|删除校规/.test(action) || /^校规$/.test(source)) hasSchoolRuleOperation = true;
 		      }
 		      if (hasHypnosisAppOperation || hasSchoolRuleOperation) return "";
 		      return "- AI提醒｜本轮没有催眠APP或校规操作；AI不得自行新增催眠命令、催眠成功或催眠效果。";
@@ -1490,6 +1572,14 @@ html.st-hypnoos-booting.st-hypnoos-boot-failed body::after{content:"前端加载
 	      window.__ST_OPERATION_INPUT_LOG__ = force
 	        ? []
 	        : window.__ST_OPERATION_INPUT_LOG__.filter((entry) => Boolean(describeOperationEntry(entry).locked));
+	      if (force) {
+	        try { localStorage.removeItem(operationLockedStorageKey()); } catch {}
+	        try {
+	          const current = String(window.__ST_HYPNOOS_FRONTEND_MESSAGE_SCOPE__?.() || "").trim();
+	          const previous = String(window.__ST_HYPNOOS_PREVIOUS_FRONTEND_MESSAGE_SCOPE__?.() || "").trim();
+	          if (previous && previous !== current) localStorage.removeItem(operationLockedStorageKey(previous));
+	        } catch {}
+	      }
 	      if (clearNote) writeOperationNote("", { emit: false });
 	      const changed = before !== window.__ST_OPERATION_INPUT_LOG__.length || hadNote;
 	      if (changed) emitOperationQueueChanged();
@@ -1579,8 +1669,7 @@ html.st-hypnoos-booting.st-hypnoos-boot-failed body::after{content:"前端加载
         if (changed) emitOperationQueueChanged();
         return changed;
       }
-	      const shouldLock = Boolean(payload?.["不可删除"] || payload?.locked || payload?.forceLocked);
-	      const nextEntry = makeOperationEntry(shouldLock ? { ...payload, 不可删除: true } : payload);
+		      const nextEntry = makeOperationEntry({ ...payload, 不可删除: true, locked: true, forceLocked: true });
       const existing = window.__ST_OPERATION_INPUT_LOG__.filter(isTarget);
       if (existing.length === 1 && describeOperationEntry(existing[0]).key === nextEntry.key) return false;
       window.__ST_OPERATION_INPUT_LOG__ = window.__ST_OPERATION_INPUT_LOG__.filter((entry) => !isTarget(entry));
@@ -2155,9 +2244,10 @@ function patchAchievementAppModule(code) {
         try {
             let counts = normalizeFrontendRewardCounts(null);
             for (const scope of frontendRewardCountReadScopes()) {
-                const raw = globalThis.localStorage?.getItem(frontendRewardCountKeyForScope(scope));
-                if (raw)
-                    counts = normalizeFrontendRewardCounts(JSON.parse(raw));
+                const key = frontendRewardCountKeyForScope(scope);
+                const parsed = JSON.parse(globalThis.localStorage?.getItem(key) || 'null');
+                if (parsed)
+                    counts = normalizeFrontendRewardCounts(parsed);
             }
             return counts;
         }
@@ -2880,6 +2970,7 @@ function withTimeout`
     const WorkIcon = makeLineIcon('<rect x="4" y="7" width="16" height="12" rx="2"/><path d="M9 7V5h6v2"/><path d="M4 12h16"/><path d="M12 12v2"/><path d="M8 17h8"/>');
     const EncounterIcon = makeLineIcon('<path d="M8 19c0-3 2-5 4-5s4 2 4 5"/><circle cx="12" cy="9" r="3"/><path d="M4 8c1.5-3 4.5-4 8-4s6.5 1 8 4"/><path d="M19 4l1 2 2 1-2 1-1 2-1-2-2-1 2-1 1-2"/>');
     const HelpIcon = makeLineIcon('<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.6 2.6 0 0 1 5 1c0 1.8-2.5 2-2.5 4"/><path d="M12 17h.01"/>');
+    const SettingsIcon = makeLineIcon('<circle cx="12" cy="12" r="3"/><path d="M12 3v3"/><path d="M12 18v3"/><path d="M3 12h3"/><path d="M18 12h3"/><path d="m5.6 5.6 2.1 2.1"/><path d="m16.3 16.3 2.1 2.1"/><path d="m18.4 5.6-2.1 2.1"/><path d="m7.7 16.3-2.1 2.1"/>');
     const ST_HOME_APP_ORDER_KEY = 'hypnoos:home-app-order:v1';
     const readHomeAppOrder = () => {
         try {
@@ -2917,6 +3008,7 @@ function withTimeout`
         else if (name === 'work') window.__ST_OPEN_WORK_APP__?.();
         else if (name === 'encounter') window.__ST_OPEN_ENCOUNTER_APP__?.();
         else if (name === 'help') window.__ST_OPEN_HELP_APP__?.();
+        else if (name === 'settings') window.__ST_OPEN_SETTINGS_APP__?.();
     };
     const visibleApps = [
         { id: 'hypno', name: '催眠APP', icon: _components_HypnosisApp__WEBPACK_IMPORTED_MODULE_3__.HypnoLogoSVG, color: 'bg-gradient-to-br from-purple-600 to-pink-600', mode: _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.HOME, disabled: false, action: openInternalApp('hypnosis') },
@@ -2933,6 +3025,7 @@ function withTimeout`
         { id: 'work', name: '打工', icon: WorkIcon, color: 'bg-amber-600', mode: _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.HOME, disabled: false, action: openInternalApp('work') },
         { id: 'encounter', name: '邂逅', icon: EncounterIcon, color: 'bg-rose-500', mode: _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.HOME, disabled: false, action: openInternalApp('encounter') },
         { id: 'help', name: '帮助', icon: HelpIcon, color: 'bg-slate-500', mode: _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.HOME, disabled: false, action: openInternalApp('help') },
+        { id: 'settings', name: '设置', icon: SettingsIcon, color: 'bg-zinc-700', mode: _types__WEBPACK_IMPORTED_MODULE_8__.AppMode.HOME, disabled: false, action: openInternalApp('settings') },
     ];
     const normalizeHomeOrder = (ids) => {
         const available = new Set(visibleApps.map(app => app.id));
@@ -3216,11 +3309,15 @@ async function getMvuData() {
 		            ].join('\\u0001');
 	            if (signature && globalThis.__ST_HYPNOOS_DAILY_SCHEDULE_SYNC_SIGNATURE__ === signature)
 		                return false;
-		            let changed = false;
-		            const system = mvu?.stat_data?.["系统"];
-		            if (system) {
-			                for (const key of ["当天课程表", "当天原课程表", "当天魔改课程表", "课程表"]) {
-		                    if (Object.prototype.hasOwnProperty.call(system, key)) {
+			            let changed = false;
+			            const system = mvu?.stat_data?.["系统"];
+			            const coreDateText = String(system?.["当前日期"] ?? '').trim();
+			            const coreTimeText = String(system?.["当前时间"] ?? '').trim();
+			            if (!coreDateText || !coreTimeText)
+			                return false;
+			            if (system) {
+				                for (const key of ["当天课程表", "当天原课程表", "当天魔改课程表", "课程表"]) {
+			                    if (Object.prototype.hasOwnProperty.call(system, key)) {
 		                        delete system[key];
 		                        changed = true;
 		                    }
@@ -4557,6 +4654,7 @@ function scoreStatDataCandidate(value) {
     const system = value['系统'];
     const roles = value['角色'];
     const tasks = value['任务'];
+    const rules = value['校规'];
 	    if (isPlainVariableObject(system)) {
 	        score += 20;
 	        if (system['当前日期'] != null)
@@ -4579,6 +4677,8 @@ function scoreStatDataCandidate(value) {
     }
     if (isPlainVariableObject(roles))
         score += 30 + Object.keys(roles).length * 5;
+    if (isPlainVariableObject(rules))
+        score += 12 + Object.keys(rules).length * 2;
     if (isPlainVariableObject(tasks))
         score += 8 + Object.keys(tasks).length;
     return score;
@@ -4592,14 +4692,14 @@ function getFallbackVariableOptions() {
 }
 function getCurrentVariableOption() {
     const currentMessageId = getCurrentMessageIdSafe();
-    return currentMessageId !== null && currentMessageId !== 'latest'
+    return currentMessageId !== null
         ? { type: 'message', message_id: currentMessageId }
         : null;
 }
 function getCurrentMessageIdSafe() {
     try {
         const scopedMessageId = globalThis.__ST_HYPNOOS_CURRENT_FRONTEND_MESSAGE_ID__?.();
-        if (scopedMessageId !== undefined && scopedMessageId !== null && scopedMessageId !== 'latest' && String(scopedMessageId).trim())
+        if (scopedMessageId !== undefined && scopedMessageId !== null && String(scopedMessageId).trim())
             return scopedMessageId;
     }
     catch {
@@ -4607,7 +4707,7 @@ function getCurrentMessageIdSafe() {
     }
     try {
         const currentMessageId = getCurrentMessageId();
-        if (currentMessageId !== undefined && currentMessageId !== null && currentMessageId !== 'latest')
+        if (currentMessageId !== undefined && currentMessageId !== null && String(currentMessageId).trim())
             return currentMessageId;
     }
     catch {
@@ -6406,6 +6506,18 @@ function encounterStablePackageIdFromSource(source) {
 function normalizeEncounterBuiltinPackageAssetPaths(pkg, source) {
   if (!pkg || typeof pkg !== "object" || Array.isArray(pkg)) return pkg;
   const next = { ...pkg };
+  [
+    "encounterPrompt",
+    "roleEncounterPrompt",
+    "appearancePrompt",
+    "storyPrompt",
+    "prompt",
+    "出场提示词",
+    "角色出场提示词",
+    "AI出场提示词",
+    "邂逅提示词",
+    "AI邂逅提示词"
+  ].forEach((key) => delete next[key]);
   if (!next.id && !next.packageId) next.id = encounterStablePackageIdFromSource(source);
   if (next.cover) next.cover = encounterPackageRelativeAssetPath(source, next.cover);
   if (next.coverDataUrl) next.coverDataUrl = encounterPackageRelativeAssetPath(source, next.coverDataUrl);
@@ -6690,7 +6802,7 @@ function upgradeInternalMchanApp(html) {
 
   function getCurrentVariableOption() {
     const currentMessageId = getCurrentMessageIdSafe();
-    return currentMessageId !== null && currentMessageId !== "latest"
+    return currentMessageId !== null
       ? { type: "message", message_id: currentMessageId }
       : null;
   }
@@ -6698,11 +6810,11 @@ function upgradeInternalMchanApp(html) {
   function getCurrentMessageIdSafe() {
     try {
       const scopedMessageId = window.__ST_HYPNOOS_CURRENT_FRONTEND_MESSAGE_ID__?.();
-      if (scopedMessageId !== undefined && scopedMessageId !== null && scopedMessageId !== "latest" && String(scopedMessageId).trim()) return scopedMessageId;
+      if (scopedMessageId !== undefined && scopedMessageId !== null && String(scopedMessageId).trim()) return scopedMessageId;
     } catch {}
     try {
       const currentMessageId = getCurrentMessageId();
-      if (currentMessageId !== undefined && currentMessageId !== null && currentMessageId !== "latest") return currentMessageId;
+      if (currentMessageId !== undefined && currentMessageId !== null && String(currentMessageId).trim()) return currentMessageId;
     } catch {}
     return null;
   }
@@ -6746,6 +6858,7 @@ function upgradeInternalMchanApp(html) {
     const system = value["系统"];
     const roles = value["角色"];
     const tasks = value["任务"];
+    const rules = value["校规"];
     if (system && typeof system === "object" && !Array.isArray(system)) {
 	      score += 20;
 	      if (system["当前日期"] != null) score += 5;
@@ -6763,6 +6876,7 @@ function upgradeInternalMchanApp(html) {
     }
     if (roles && typeof roles === "object" && !Array.isArray(roles)) score += 30 + Object.keys(roles).length * 5;
     if (tasks && typeof tasks === "object" && !Array.isArray(tasks)) score += 8 + Object.keys(tasks).length;
+    if (rules && typeof rules === "object" && !Array.isArray(rules)) score += 12 + Object.keys(rules).length * 2;
     return score;
   }
 
@@ -7844,6 +7958,24 @@ function injectInternalMchanApp(html, staticSeed, encounterBuiltinPackages = [])
 .st-help-card strong{min-width:0;color:#f8fafc;font-size:14px;line-height:1.25}
 .st-help-card span{align-self:start;border:1px solid rgba(125,211,252,.18);border-radius:999px;background:rgba(14,165,233,.1);color:#93c5fd;font-size:9px;font-weight:950;padding:3px 7px;white-space:nowrap}
 .st-help-card p{grid-column:1/-1;margin:0;color:rgba(226,232,240,.72);font-size:12px;line-height:1.5}
+.st-settings-app{background:radial-gradient(circle at 20% -8%,rgba(148,163,184,.18),transparent 34%),linear-gradient(180deg,#111827,#0b1020 58%,#05070d);color:#f8fafc}
+.st-settings-app .st-lite-body{padding:10px 12px 16px;gap:10px}
+.st-settings-panel{border:1px solid rgba(148,163,184,.16);border-radius:10px;background:linear-gradient(180deg,rgba(255,255,255,.075),rgba(255,255,255,.035));padding:10px;display:grid;gap:8px;box-shadow:0 12px 26px rgba(0,0,0,.18)}
+.st-settings-panel h3{margin:0;color:#f8fafc;font-size:15px;line-height:1.25;font-weight:950}
+.st-settings-panel p,.st-settings-list{margin:0;color:rgba(226,232,240,.72);font-size:11px;line-height:1.5}
+.st-settings-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.st-settings-actions.is-three{grid-template-columns:1fr 1fr 1fr}
+.st-settings-button{min-width:0;border:1px solid rgba(148,163,184,.22);border-radius:9px;background:rgba(255,255,255,.07);color:rgba(248,250,252,.88);padding:9px 8px;font-size:11px;font-weight:950;cursor:pointer}
+.st-settings-button.primary{border-color:rgba(45,212,191,.42);background:linear-gradient(135deg,rgba(20,184,166,.38),rgba(14,165,233,.26));color:#fff}
+.st-settings-button.danger{border-color:rgba(248,113,113,.34);background:rgba(127,29,29,.28);color:#fecaca}
+.st-settings-button:disabled{opacity:.46;cursor:not-allowed;filter:saturate(.6)}
+.st-settings-code{width:100%;min-height:96px;border:1px solid rgba(148,163,184,.18);border-radius:9px;background:rgba(2,6,23,.54);color:#dbeafe;outline:none;padding:9px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:10px;line-height:1.45;resize:vertical}
+.st-settings-file{width:100%;min-width:0;border:1px dashed rgba(148,163,184,.24);border-radius:9px;background:rgba(255,255,255,.045);color:rgba(226,232,240,.76);padding:8px;font-size:10px}
+.st-settings-status{border:1px solid rgba(45,212,191,.16);border-radius:9px;background:rgba(20,184,166,.08);color:#99f6e4;padding:8px 9px;font-size:11px;line-height:1.45}
+.st-settings-report{display:grid;gap:7px;max-height:180px;overflow:auto;scrollbar-width:thin}
+.st-settings-report section{border:1px solid rgba(148,163,184,.12);border-radius:8px;background:rgba(255,255,255,.04);padding:8px;display:grid;gap:5px}
+.st-settings-report strong{color:#f8fafc;font-size:12px;line-height:1.25}
+.st-settings-report small{color:rgba(226,232,240,.56);font-size:10px;line-height:1.4;word-break:break-all}
 .st-hypnosis-tier{border:1px solid rgba(244,114,182,.18);border-radius:12px;background:rgba(255,255,255,.045);overflow:visible}
 .st-hypnosis-tier[open]{background:linear-gradient(180deg,rgba(236,72,153,.12),rgba(255,255,255,.035))}
 .st-hypnosis-tier-summary{list-style:none;display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center;padding:10px 11px;cursor:pointer}
@@ -7993,6 +8125,8 @@ function injectInternalMchanApp(html, staticSeed, encounterBuiltinPackages = [])
 .st-calendar-lite-app .st-cal-event strong{color:#2f241c}
 .st-calendar-lite-app .st-cal-event span{color:rgba(61,47,37,.62)}
 .st-timetable-app .st-tt-week{padding:8px;gap:5px;border-radius:8px}
+.st-timetable-app .st-tt-day.is-active{border-color:rgba(146,64,14,.46)!important;background:linear-gradient(180deg,rgba(254,243,199,.58),rgba(255,250,240,.46))!important;box-shadow:0 0 0 2px rgba(146,64,14,.12),0 12px 24px rgba(92,64,38,.13)!important}
+.st-timetable-app .st-tt-day.is-active h3{color:#78350f}
 .st-timetable-app .st-tt-period{border-color:rgba(92,64,38,.14);background:rgba(255,250,240,.52);border-radius:6px}
 .st-timetable-app .st-tt-period.is-current{border-color:rgba(146,64,14,.45);background:linear-gradient(135deg,rgba(254,243,199,.72),rgba(217,119,6,.14));box-shadow:0 8px 18px rgba(92,64,38,.12)}
 .st-timetable-app .st-tt-period em,.st-timetable-app .st-tt-badge,.st-timetable-app .st-tt-rhythm-item span{color:#92400e}
@@ -8124,7 +8258,7 @@ button.st-work-notice{cursor:pointer}
 .st-encounter-app .st-lite-header{padding:9px 12px 7px;background:transparent;border-bottom:0;color:#352b25}
 .st-encounter-app .st-lite-title{display:none!important}
 .st-encounter-app .st-lite-back{color:#8a3a1c;border-color:rgba(138,58,28,.2);background:rgba(255,255,255,.74)}
-.st-encounter-app .st-lite-body{gap:8px;padding:9px 12px 15px}
+.st-encounter-app .st-lite-body{gap:6px;padding:8px 12px 15px}
 .st-encounter-app.is-encounter-confirm-open .st-lite-body{overflow:hidden}
 .st-encounter-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;border:1px solid rgba(127,88,47,.13);border-radius:8px;background:rgba(255,255,255,.58);padding:3px;box-shadow:0 8px 20px rgba(75,54,35,.07)}
 .st-encounter-tab{height:29px;border:0;border-radius:6px;background:transparent;color:rgba(70,57,47,.64);font-size:12px;font-weight:950;cursor:pointer}
@@ -8170,7 +8304,10 @@ button.st-work-notice{cursor:pointer}
 .st-encounter-browse-tools input,.st-encounter-browse-tools select{height:30px;min-width:0;border:1px solid rgba(127,88,47,.14);border-radius:8px;background:rgba(255,255,255,.72);color:#352b25;padding:0 9px;font-size:11px;font-weight:900;outline:none}
 .st-encounter-browse-tools span{height:30px;border:1px solid rgba(127,88,47,.12);border-radius:8px;background:rgba(255,250,243,.62);color:rgba(70,57,47,.56);display:grid;place-items:center;font-size:10px;font-weight:950}
 .st-encounter-browse-tools input:focus,.st-encounter-browse-tools select:focus{border-color:rgba(217,155,55,.42);box-shadow:0 0 0 3px rgba(217,155,55,.1)}
-.st-encounter-random{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px;align-items:center;border:1px solid rgba(217,155,55,.18);border-radius:8px;background:linear-gradient(135deg,rgba(255,247,221,.78),rgba(255,255,255,.66));padding:7px 8px;box-shadow:0 8px 18px rgba(75,54,35,.08)}
+.st-encounter-browse-meta{display:flex;align-items:center;justify-content:flex-end;gap:6px;min-width:0}
+.st-encounter-duplicate-toggle{height:24px;min-width:0;border:1px solid rgba(127,88,47,.14);border-radius:999px;background:rgba(255,250,243,.76);color:rgba(70,57,47,.68);padding:0 8px;font-size:9px;font-weight:950;cursor:pointer;white-space:nowrap}
+.st-encounter-duplicate-toggle.active{border-color:rgba(14,116,144,.26);background:rgba(14,116,144,.1);color:#0f766e}
+.st-encounter-random{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px;align-items:center;border:1px solid rgba(217,155,55,.18);border-radius:8px;background:linear-gradient(135deg,rgba(255,247,221,.78),rgba(255,255,255,.66));padding:7px 8px;margin-top:0;box-shadow:0 8px 18px rgba(75,54,35,.08)}
 .st-encounter-random button{height:31px;border:1px solid rgba(217,155,55,.28);border-radius:8px;background:linear-gradient(135deg,#ef6f61,#d99b37);color:#fff;font-size:12px;font-weight:950;cursor:pointer;box-shadow:0 8px 16px rgba(217,115,70,.18)}
 .st-encounter-random button:disabled{opacity:.45;cursor:not-allowed;filter:grayscale(.32);box-shadow:none}
 .st-encounter-random span{min-width:0;color:rgba(70,57,47,.64);font-size:10px;font-weight:900;line-height:1.35;text-align:right}
@@ -8207,9 +8344,6 @@ button.st-work-notice{cursor:pointer}
 .st-encounter-detail-panel{border:1px solid rgba(127,88,47,.14);border-radius:8px;background:rgba(255,255,255,.68);padding:10px;display:grid;gap:9px}
 .st-encounter-detail-panel h3{margin:0;color:#352b25;font-size:13px;line-height:1.2;font-weight:950}
 .st-encounter-detail-text{margin:0;color:rgba(70,57,47,.72);font-size:11px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}
-.st-encounter-prompt-preview{border:1px solid rgba(14,116,144,.14);border-radius:8px;background:rgba(224,247,244,.58);padding:8px 9px;display:grid;gap:5px}
-.st-encounter-prompt-preview strong{color:#244c4a;font-size:11px;line-height:1.2;font-weight:950}
-.st-encounter-prompt-preview p{margin:0;color:rgba(47,79,77,.76);font-size:11px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}
 .st-encounter-used-note{border:1px solid rgba(15,118,110,.18);border-radius:8px;background:rgba(204,251,241,.42);color:#0f766e;padding:8px 9px;font-size:11px;font-weight:900;line-height:1.4}
 .st-encounter-used-note.is-warning{border-color:rgba(225,29,72,.2);background:rgba(255,228,230,.52);color:#be123c}
 .st-encounter-kv{display:grid;grid-template-columns:1fr 1fr;gap:6px}
@@ -8233,9 +8367,6 @@ button.st-work-notice{cursor:pointer}
 .st-encounter-role-detail-label{color:rgba(70,57,47,.58);font-size:10px;font-weight:950;line-height:1.45;word-break:break-word}
 .st-encounter-role-detail-value{min-width:0;color:rgba(70,57,47,.78);font-size:11px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word}
 .st-encounter-role-detail-value.is-empty{color:rgba(70,57,47,.42);font-style:italic}
-.st-encounter-edit-tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.st-encounter-edit-tabs button{height:30px;border:1px solid rgba(127,88,47,.14);border-radius:8px;background:rgba(255,255,255,.66);color:rgba(70,57,47,.66);font-size:11px;font-weight:950;cursor:pointer}
-.st-encounter-edit-tabs button.active{border-color:rgba(217,155,55,.28);background:linear-gradient(135deg,rgba(217,155,55,.16),rgba(14,116,144,.12));color:#4b3b24}
 .st-encounter-role-content-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
 .st-encounter-role-content-tabs button{height:30px;border:1px solid rgba(127,88,47,.14);border-radius:8px;background:rgba(255,255,255,.62);color:rgba(70,57,47,.62);font-size:11px;font-weight:950;cursor:pointer}
 .st-encounter-role-content-tabs button.active{border-color:rgba(14,116,144,.24);background:linear-gradient(135deg,rgba(14,116,144,.14),rgba(217,155,55,.12));color:#244c4a}
@@ -8392,6 +8523,7 @@ button.st-work-notice{cursor:pointer}
 .st-operation-panel-actions{flex:0 0 auto;padding:9px;border-top:1px solid rgba(255,255,255,.08);display:grid;grid-template-columns:1fr;gap:7px}
 .st-operation-panel-actions button{height:34px;border-radius:11px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.07);color:rgba(226,232,240,.88);font-size:11px;font-weight:900;cursor:pointer}
 .st-operation-panel-actions button.primary{background:linear-gradient(135deg,#8b5cf6,#ec4899);border-color:rgba(255,255,255,.18);color:white;box-shadow:0 10px 22px rgba(131,24,67,.22)}
+.st-operation-panel-actions button.danger{border-color:rgba(244,63,94,.25);background:rgba(244,63,94,.12);color:#fecdd3}
 .st-operation-panel-actions button:disabled{opacity:.42;cursor:not-allowed;box-shadow:none;filter:grayscale(.35)}
 .st-operation-panel-actions button:not(:disabled):active{transform:scale(.98)}
 .st-operation-float-toggle{border-color:rgba(125,211,252,.2)!important;background:rgba(14,165,233,.1)!important;color:#bae6fd!important}
@@ -8678,27 +8810,28 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 .st-person-body-panel-head strong{color:#33291f;font-size:13px;font-weight:950;letter-spacing:.08em;white-space:nowrap}
 .st-person-body-panel-head span{min-width:0;color:rgba(68,54,42,.54);font-size:10px;font-weight:850;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .st-person-note{margin:0;color:#30261d;font-size:12px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}
-.st-profile-event-grid{display:grid;grid-auto-flow:column;grid-template-rows:repeat(2,minmax(58px,auto));grid-auto-columns:clamp(218px,68%,266px);gap:7px 8px;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scroll-snap-type:x proximity;scrollbar-width:none;padding:1px 2px 5px;cursor:grab;touch-action:pan-x}
-.st-profile-event-grid::-webkit-scrollbar{display:none}
-.st-profile-event-grid.is-dragging{cursor:grabbing;scroll-snap-type:none}
-.st-profile-event-card{position:relative;min-width:0;border:1px solid rgba(81,64,49,.2);border-radius:999px;background:rgba(247,241,229,.7);padding:7px 8px;display:grid;grid-template-columns:34px minmax(0,1fr) 58px;align-items:center;gap:8px;justify-items:stretch;box-shadow:inset 0 1px 0 rgba(255,255,255,.46);scroll-snap-align:start}
-.st-profile-event-card.is-available{border-color:rgba(47,109,98,.32);background:linear-gradient(180deg,rgba(255,251,241,.82),rgba(226,246,238,.58))}
-.st-profile-event-card.is-pending{border-color:rgba(164,126,68,.32);background:linear-gradient(180deg,rgba(255,251,241,.82),rgba(248,232,190,.5))}
-.st-profile-event-card.is-done{border-color:rgba(128,55,43,.28);background:linear-gradient(180deg,rgba(255,251,241,.8),rgba(244,221,216,.5))}
-.st-profile-event-card.has-memory{border-color:rgba(47,109,98,.3);background:linear-gradient(180deg,rgba(255,251,241,.82),rgba(231,242,236,.58))}
-.st-profile-event-mark{position:relative;display:grid;place-items:center;width:31px;height:31px;border:1px solid rgba(81,64,49,.18);border-radius:999px;background:rgba(255,251,241,.68)}
-.st-profile-event-mark strong{color:#33291f;font-family:"Kaiti SC","STKaiti","HanziPen SC","Noto Serif SC",serif;font-size:15px;font-weight:950;line-height:1}
-.st-profile-event-mark i{position:absolute;right:-4px;top:-8px;color:#7e3026;font-family:"HanziPen SC","Kaiti SC","STKaiti",cursive;font-size:24px;font-style:normal;font-weight:950;line-height:1;transform:rotate(-11deg);text-shadow:0 1px 0 rgba(255,251,241,.7)}
-.st-profile-event-memory{width:100%;min-height:0;margin:0;color:rgba(68,54,42,.7);font-size:10px;font-weight:850;line-height:1.28;text-align:left;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
-.st-profile-event-memory.is-empty{color:rgba(68,54,42,.38);text-align:left}
-.st-profile-event-actions{width:100%;display:grid;gap:4px}
-.st-profile-event-card button{width:100%;min-width:0;height:27px;border:1px solid rgba(81,64,49,.2);border-radius:999px;background:rgba(255,251,241,.72);color:rgba(68,54,42,.72);font-size:10px;font-weight:950;cursor:pointer;padding:0 4px;white-space:nowrap}
-.st-profile-event-card.is-available button{border-color:rgba(47,109,98,.32);background:rgba(47,109,98,.1);color:#2f6d62}
-.st-profile-event-card button.is-recall{border-color:rgba(47,109,98,.34);background:rgba(47,109,98,.11);color:#2f6d62}
-.st-profile-event-card.is-pending button,.st-profile-event-card.is-done button,.st-profile-event-card.is-locked button:disabled{opacity:.58;cursor:not-allowed}
-.st-profile-event-card.is-done button.is-recall{opacity:1;cursor:pointer}
-.st-profile-event-card button:disabled{opacity:.5!important;cursor:not-allowed!important}
-.st-profile-event-notice{margin:7px 0 0;color:#7d3025;font-size:11px;font-weight:900;line-height:1.45}
+.st-profile-chain-page{display:grid;gap:8px;margin-top:6px}
+.st-profile-chain-segments{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.st-profile-chain-segments button{min-width:0;height:30px;border:1px solid rgba(81,64,49,.2);border-radius:999px;background:rgba(247,241,229,.66);color:rgba(68,54,42,.68);display:flex;align-items:center;justify-content:center;gap:4px;padding:0 6px;font-size:11px;font-weight:950;cursor:pointer;box-shadow:inset 0 1px 0 rgba(255,255,255,.42)}
+.st-profile-chain-segments button.active{border-color:rgba(81,64,49,.42);background:rgba(81,64,49,.9);color:#fff8ed}
+.st-profile-chain-segments button span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.st-profile-chain-panel{border:1px solid rgba(81,64,49,.22);border-radius:8px;background:rgba(247,241,229,.72);overflow:hidden;box-shadow:inset 0 1px 0 rgba(255,255,255,.42);min-width:0}
+.st-profile-chain-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 9px;background:rgba(81,64,49,.08);border-bottom:1px dashed rgba(81,64,49,.2)}
+.st-profile-chain-title{min-width:0;display:grid;gap:2px}
+.st-profile-chain-title strong{min-width:0;color:#33291f;font-size:13px;font-weight:950;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.st-profile-chain-title small{min-width:0;color:rgba(68,54,42,.54);font-size:10px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.st-profile-chain-badge{flex:0 0 auto;border:1px solid rgba(81,64,49,.18);border-radius:999px;background:rgba(255,251,241,.7);padding:3px 7px;color:rgba(68,54,42,.68);font-size:10px;font-weight:950}
+.st-profile-chain-body{display:grid;gap:8px;max-height:172px;overflow:auto;padding:9px;scrollbar-width:thin}
+.st-profile-chain-body p{margin:0;color:rgba(68,54,42,.76);font-size:11px;font-weight:850;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
+.st-profile-chain-body p.is-empty{color:rgba(68,54,42,.48)}
+.st-profile-chain-body strong{display:block;margin-bottom:2px;color:#6b3f22;font-size:10px;font-weight:950}
+.st-profile-chain-body label{display:grid;gap:5px;color:rgba(68,54,42,.68);font-size:10px;font-weight:950}
+.st-profile-chain-body textarea{width:100%;min-height:78px;max-height:132px;resize:vertical;border:1px solid rgba(81,64,49,.18);border-radius:8px;background:rgba(255,251,241,.72);color:#33291f;outline:none;padding:8px;font-size:11px;font-weight:850;line-height:1.45;box-sizing:border-box}
+.st-profile-chain-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;padding:0 9px 9px}
+.st-profile-chain-actions button{width:100%;min-width:0;height:29px;border:1px solid rgba(81,64,49,.2);border-radius:999px;background:rgba(255,251,241,.72);color:rgba(68,54,42,.72);font-size:10px;font-weight:950;cursor:pointer;padding:0 4px;white-space:nowrap}
+.st-profile-chain-actions button.is-recall{border-color:rgba(47,109,98,.34);background:rgba(47,109,98,.11);color:#2f6d62}
+.st-profile-chain-actions button:disabled{opacity:.5!important;cursor:not-allowed!important}
+.st-profile-chain-notice{margin:0;color:#7d3025;font-size:11px;font-weight:900;line-height:1.45}
 .st-profile-app .st-meter-grid{display:grid;grid-template-columns:1fr;gap:7px;padding:0}
 .st-profile-app .st-meter{min-width:0;border:1px solid rgba(81,64,49,.2);border-radius:8px;background:rgba(247,241,229,.72);padding:7px 8px;box-shadow:inset 0 1px 0 rgba(255,255,255,.45)}
 .st-profile-app .st-meter-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:6px}
@@ -8820,7 +8953,8 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
   }
 
   function clearPhoneInternalOverlays(root) {
-    root?.querySelectorAll?.(".st-mchan-internal-app,.st-calendar-lite-app,.st-timetable-app,.st-clock-app,.st-profile-app,.st-map-app,.st-city-map-app,.st-school-app,.st-special-location-app,.st-monitor-app,.st-work-app,.st-encounter-app,.st-inventory-app,.st-reward-app,.st-hypnosis-lite-app,.st-help-app,.st-placeholder-app,.st-hypnosis-trance-overlay").forEach((element) => element.remove());
+    try { document.activeElement?.blur?.(); } catch {}
+    root?.querySelectorAll?.(".st-mchan-internal-app,.st-calendar-lite-app,.st-timetable-app,.st-clock-app,.st-profile-app,.st-map-app,.st-city-map-app,.st-school-app,.st-special-location-app,.st-monitor-app,.st-work-app,.st-encounter-app,.st-inventory-app,.st-reward-app,.st-hypnosis-lite-app,.st-help-app,.st-settings-app,.st-placeholder-app,.st-hypnosis-trance-overlay,#st-hypnoos-identity-inline-frame,[data-st-hypnoos-identity-inline],#st-hypnoos-identity-frontend-host,#identityRoot,.identity-root").forEach((element) => element.remove());
   }
 
   function ensureActiveThread(state) {
@@ -8968,6 +9102,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     if (root.querySelector(".st-reward-app")) return "reward-lite";
     if (root.querySelector(".st-hypnosis-lite-app")) return "hypnosis-lite";
     if (root.querySelector(".st-help-app")) return "help";
+    if (root.querySelector(".st-settings-app")) return "settings";
     if (root.querySelector(".st-placeholder-app")) return "placeholder";
     const text = root.innerText || "";
     const compactPhoneText = text.replace(/\s+/g, " ");
@@ -9472,8 +9607,10 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     data.stat["系统"] = data.stat["系统"] && typeof data.stat["系统"] === "object" && !Array.isArray(data.stat["系统"]) ? data.stat["系统"] : {};
     const result = mutator(data.stat["系统"], data.stat);
     if (!result?.ok) return result || { ok: false, message: "购买失败。" };
-    if (typeof encounterReplaceMvuData === "function") await encounterReplaceMvuData(data);
-    else if (data?.replace) await data.replace(data.mvu, data.option);
+    const written = typeof encounterReplaceMvuData === "function"
+      ? await encounterReplaceMvuData(data)
+      : (data?.replace ? (await data.replace(data.mvu, data.option), true) : false);
+    if (!written) return { ok: false, message: "变量写入失败，未锁定本轮操作。" };
     return result;
   }
 
@@ -10026,8 +10163,10 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     data.stat["系统"] = data.stat["系统"] && typeof data.stat["系统"] === "object" && !Array.isArray(data.stat["系统"]) ? data.stat["系统"] : {};
     const result = mutator(data.stat["系统"], data.stat);
     if (!result?.ok) return result || { ok: false, message: "奖励领取失败。" };
-    if (typeof encounterReplaceMvuData === "function") await encounterReplaceMvuData(data);
-    else if (data?.replace) await data.replace(data.mvu, data.option);
+    const written = typeof encounterReplaceMvuData === "function"
+      ? await encounterReplaceMvuData(data)
+      : (data?.replace ? (await data.replace(data.mvu, data.option), true) : false);
+    if (!written) return { ok: false, message: "变量写入失败，未锁定本轮操作。" };
     return result;
   }
 
@@ -11548,7 +11687,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 
   function getCurrentVariableOption() {
     const currentMessageId = getCurrentMessageIdSafe();
-    return currentMessageId !== null && currentMessageId !== "latest"
+    return currentMessageId !== null
       ? { type: "message", message_id: currentMessageId }
       : null;
   }
@@ -11556,11 +11695,11 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
   function getCurrentMessageIdSafe() {
     try {
       const scopedMessageId = window.__ST_HYPNOOS_CURRENT_FRONTEND_MESSAGE_ID__?.();
-      if (scopedMessageId !== undefined && scopedMessageId !== null && scopedMessageId !== "latest" && String(scopedMessageId).trim()) return scopedMessageId;
+      if (scopedMessageId !== undefined && scopedMessageId !== null && String(scopedMessageId).trim()) return scopedMessageId;
     } catch {}
     try {
       const currentMessageId = getCurrentMessageId();
-      if (currentMessageId !== undefined && currentMessageId !== null && currentMessageId !== "latest") return currentMessageId;
+      if (currentMessageId !== undefined && currentMessageId !== null && String(currentMessageId).trim()) return currentMessageId;
     } catch {}
     return null;
   }
@@ -11604,6 +11743,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     const system = value["系统"];
     const roles = value["角色"];
     const tasks = value["任务"];
+    const rules = value["校规"];
     if (system && typeof system === "object" && !Array.isArray(system)) {
 	      score += 20;
 	      if (system["当前日期"] != null) score += 5;
@@ -11621,6 +11761,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     }
     if (roles && typeof roles === "object" && !Array.isArray(roles)) score += 30 + Object.keys(roles).length * 5;
     if (tasks && typeof tasks === "object" && !Array.isArray(tasks)) score += 8 + Object.keys(tasks).length;
+    if (rules && typeof rules === "object" && !Array.isArray(rules)) score += 12 + Object.keys(rules).length * 2;
     return score;
   }
 
@@ -11673,11 +11814,43 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     return roles && typeof roles === "object" && !Array.isArray(roles) ? roles : {};
   }
 
-  function setCurrentLayerSystemField(key, value) {
+  function getCurrentLayerSystemSnapshot() {
+    const option = getCurrentVariableOption();
+    if (!option) return null;
+    const unwrap = (value) => {
+      const root = value?.stat_data && typeof value.stat_data === "object" && !Array.isArray(value.stat_data) ? value.stat_data : value;
+      const system = root?.["系统"];
+      return system && typeof system === "object" && !Array.isArray(system) ? system : null;
+    };
+    try {
+      const mvu = window.Mvu?.getMvuData?.(option);
+      if (mvu && typeof mvu.then !== "function") {
+        const system = unwrap(mvu);
+        if (system) return system;
+      }
+    } catch {}
+    try {
+      const vars = typeof getVariables === "function" ? getVariables(option) : null;
+      const system = unwrap(vars);
+      if (system) return system;
+    } catch {}
+    return null;
+  }
+
+  function currentLayerSystemFieldMatches(key, value) {
+    const field = String(key || "").trim();
+    if (!field) return false;
+    const system = getCurrentLayerSystemSnapshot();
+    if (!system) return false;
+    return String(system[field] ?? "") === String(value ?? "");
+  }
+
+  async function setCurrentLayerSystemField(key, value) {
     const field = String(key || "").trim();
     if (!field) return false;
     const option = getCurrentVariableOption();
     if (!option) return false;
+    let wrote = false;
     const mutateRoot = (root) => {
       if (!root || typeof root !== "object" || Array.isArray(root)) return false;
       const system = root["系统"] && typeof root["系统"] === "object" && !Array.isArray(root["系统"]) ? root["系统"] : {};
@@ -11689,29 +11862,128 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     try {
       if (typeof updateVariablesWith === "function") {
         let changed = false;
-        updateVariablesWith((vars) => {
+        const updateResult = updateVariablesWith((vars) => {
           const root = vars?.stat_data && typeof vars.stat_data === "object" && !Array.isArray(vars.stat_data) ? vars.stat_data : vars;
           changed = mutateRoot(root);
           if (vars?.stat_data && typeof vars.stat_data === "object" && !Array.isArray(vars.stat_data)) vars.stat_data = root;
           return vars;
         }, option);
-        return changed;
+        if (updateResult && typeof updateResult.then === "function") await updateResult;
+        wrote = Boolean(changed);
       }
     } catch (error) {
       console.warn("[HypnoOS] 写入当前层系统变量失败", error);
     }
+    if (currentLayerSystemFieldMatches(field, value)) return true;
     try {
       const mvu = window.Mvu?.getMvuData?.(option);
-      if (!mvu || typeof mvu.then === "function") return false;
+      if (!mvu || typeof mvu.then === "function") return wrote;
       const root = mvu?.stat_data && typeof mvu.stat_data === "object" && !Array.isArray(mvu.stat_data) ? mvu.stat_data : mvu;
       const changed = mutateRoot(root);
-      if (!changed) return false;
+      if (!changed) return currentLayerSystemFieldMatches(field, value) || wrote;
       if (mvu?.stat_data && typeof mvu.stat_data === "object" && !Array.isArray(mvu.stat_data)) mvu.stat_data = root;
       const result = window.Mvu?.replaceMvuData?.(mvu, option);
-      if (result && typeof result.catch === "function") result.catch((error) => console.warn("[HypnoOS] 写入当前层系统变量失败", error));
-      return true;
+      if (result && typeof result.then === "function") await result;
+      wrote = true;
+      return currentLayerSystemFieldMatches(field, value) || wrote;
     } catch (error) {
       console.warn("[HypnoOS] 写入当前层系统变量失败", error);
+      return wrote;
+    }
+  }
+
+  function getCurrentLayerStatDataSnapshot() {
+    const option = getCurrentVariableOption();
+    if (!option) return null;
+    const unwrap = (value) => value?.stat_data && typeof value.stat_data === "object" && !Array.isArray(value.stat_data) ? value.stat_data : value;
+    try {
+      const mvu = window.Mvu?.getMvuData?.(option);
+      if (mvu && typeof mvu.then !== "function") {
+        const root = unwrap(mvu);
+        if (root && typeof root === "object" && !Array.isArray(root)) return root;
+      }
+    } catch {}
+    try {
+      const vars = typeof getVariables === "function" ? getVariables(option) : null;
+      const root = unwrap(vars);
+      if (root && typeof root === "object" && !Array.isArray(root)) return root;
+    } catch {}
+    return null;
+  }
+
+  function currentLayerSchoolRuleDeleteMatches(ruleName, expectedStarlight, shouldCheckStarlight) {
+    const name = String(ruleName || "").trim();
+    if (!name) return false;
+    const root = getCurrentLayerStatDataSnapshot();
+    if (!root) return false;
+    const rules = root["校规"];
+    if (!rules || typeof rules !== "object" || Array.isArray(rules)) return false;
+    if (Object.prototype.hasOwnProperty.call(rules, name)) return false;
+    if (!shouldCheckStarlight) return true;
+    const system = root["系统"];
+    if (!system || typeof system !== "object" || Array.isArray(system)) return false;
+    return String(system["星光点"] ?? "") === String(expectedStarlight ?? "");
+  }
+
+  async function syncSchoolRuleDeleteToCurrentLayer(payload) {
+    const source = payload && typeof payload === "object" && !Array.isArray(payload) ? payload : {};
+    const name = String(source["校规名"] || "").trim();
+    if (!name) return false;
+    const option = getCurrentVariableOption();
+    if (!option) return true;
+    const cost = Math.max(0, Math.floor(Number(source["前端扣除星光点"] ?? 0) || 0));
+    const shouldWriteStarlight = cost > 0 && source["前端写入后星光点"] !== undefined;
+    const expectedStarlight = source["前端写入后星光点"];
+    if (currentLayerSchoolRuleDeleteMatches(name, expectedStarlight, shouldWriteStarlight)) return true;
+    let wrote = false;
+    const mutateRoot = (root) => {
+      if (!root || typeof root !== "object" || Array.isArray(root)) return false;
+      const rules = root["校规"] && typeof root["校规"] === "object" && !Array.isArray(root["校规"]) ? root["校规"] : null;
+      if (!rules) return false;
+      let changed = false;
+      if (Object.prototype.hasOwnProperty.call(rules, name)) {
+        root["校规"] = Object.fromEntries(Object.entries(rules).filter(([key]) => key !== name));
+        changed = true;
+      }
+      if (shouldWriteStarlight) {
+        const system = root["系统"] && typeof root["系统"] === "object" && !Array.isArray(root["系统"]) ? root["系统"] : {};
+        if (String(system["星光点"] ?? "") !== String(expectedStarlight ?? "")) {
+          system["星光点"] = Math.max(0, Math.floor(Number(expectedStarlight) || 0));
+          root["系统"] = system;
+          changed = true;
+        }
+      }
+      return changed;
+    };
+    try {
+      if (typeof updateVariablesWith === "function") {
+        let changed = false;
+        const updateResult = updateVariablesWith((vars) => {
+          const root = vars?.stat_data && typeof vars.stat_data === "object" && !Array.isArray(vars.stat_data) ? vars.stat_data : vars;
+          changed = mutateRoot(root);
+          if (vars?.stat_data && typeof vars.stat_data === "object" && !Array.isArray(vars.stat_data)) vars.stat_data = root;
+          return vars;
+        }, option);
+        if (updateResult && typeof updateResult.then === "function") await updateResult;
+        wrote = Boolean(changed);
+      }
+    } catch (error) {
+      console.warn("[HypnoOS] 写入当前层校规删除失败", error);
+    }
+    if (currentLayerSchoolRuleDeleteMatches(name, expectedStarlight, shouldWriteStarlight)) return true;
+    try {
+      const mvu = window.Mvu?.getMvuData?.(option);
+      if (!mvu || typeof mvu.then === "function") return wrote && currentLayerSchoolRuleDeleteMatches(name, expectedStarlight, shouldWriteStarlight);
+      const root = mvu?.stat_data && typeof mvu.stat_data === "object" && !Array.isArray(mvu.stat_data) ? mvu.stat_data : mvu;
+      const changed = mutateRoot(root);
+      if (!changed) return currentLayerSchoolRuleDeleteMatches(name, expectedStarlight, shouldWriteStarlight) || wrote;
+      if (mvu?.stat_data && typeof mvu.stat_data === "object" && !Array.isArray(mvu.stat_data)) mvu.stat_data = root;
+      const result = window.Mvu?.replaceMvuData?.(mvu, option);
+      if (result && typeof result.then === "function") await result;
+      wrote = true;
+      return currentLayerSchoolRuleDeleteMatches(name, expectedStarlight, shouldWriteStarlight) || wrote;
+    } catch (error) {
+      console.warn("[HypnoOS] 写入当前层校规删除失败", error);
       return false;
     }
   }
@@ -12188,23 +12460,94 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     return "";
   }
 
-  function requestDeleteHypnosisEffect(roleName, effectType, effectKey, effectTitle) {
-    if (!roleName || !effectType || !effectKey) return;
-    appendAppOperation({
-      来源: "人物档案",
-      操作: "删除催眠效果",
-      角色名: roleName,
-      效果类型: effectType,
-      效果键名: effectKey,
-      效果名称: effectTitle || effectKey,
-      目标变量路径: "/角色/" + roleName + "/" + effectType + "/" + effectKey,
-      AI执行规范: "只在剧情与变量允许时删除这个角色指定类型下的单个效果；成功用remove删除目标路径。不要顺手改其他效果、敏感度、次数、校规或资源；失败时在正文说明原因。"
+  function deleteHypnosisEffectFromRole(role, effectType, effectKey, effectTitle) {
+    if (!role || typeof role !== "object") return { ok: false, message: "变量中没有找到角色。" };
+    const current = role[effectType];
+    const key = String(effectKey || "").trim();
+    const title = String(effectTitle || "").trim();
+    if (!key && !title) return { ok: false, message: "没有找到要删除的催眠效果。" };
+    const matches = (entry, index) => {
+      const normalized = normalizeEffectEntry(Array.isArray(current) ? "" : String(entry?.name || ""), entry?.value ?? entry, index);
+      return String(normalized.key || "") === key
+        || String(normalized.title || "") === title
+        || String(index) === key;
+    };
+    if (Array.isArray(current)) {
+      const index = current.findIndex((item, itemIndex) => matches(item, itemIndex));
+      if (index < 0) return { ok: false, message: "变量中没有找到这个催眠效果。" };
+      role[effectType] = current.filter((_, itemIndex) => itemIndex !== index);
+      return { ok: true };
+    }
+    if (isPlainObject(current)) {
+      const keys = Object.keys(current);
+      if (!keys.length) return { ok: false, message: "变量中没有找到这个催眠效果。" };
+      if ((key === "效果" || title === "效果") && effectScalar(current["效果"])) {
+        role[effectType] = {};
+        return { ok: true };
+      }
+      if (Object.prototype.hasOwnProperty.call(current, key)) {
+        const next = { ...current };
+        delete next[key];
+        role[effectType] = next;
+        return { ok: true };
+      }
+      const entryKey = keys.find((itemKey, index) => matches({ name: itemKey, value: current[itemKey] }, index));
+      if (entryKey) {
+        const next = { ...current };
+        delete next[entryKey];
+        role[effectType] = next;
+        return { ok: true };
+      }
+      return { ok: false, message: "变量中没有找到这个催眠效果。" };
+    }
+    if (effectScalar(current)) {
+      role[effectType] = {};
+      return { ok: true };
+    }
+    return { ok: false, message: "变量中没有找到这个催眠效果。" };
+  }
+
+  async function requestDeleteHypnosisEffect(page, roleName, effectType, effectKey, effectTitle) {
+    if (!roleName || !effectType || !effectKey) return { ok: false, message: "没有找到要删除的催眠效果。" };
+    const safeEffectType = effectType === "永久催眠效果" ? "永久催眠效果" : "临时催眠效果";
+    const result = await rewardApplySystemMutation((system, stat) => {
+      const roles = stat["角色"] && typeof stat["角色"] === "object" && !Array.isArray(stat["角色"]) ? stat["角色"] : {};
+      const role = roles[roleName] && typeof roles[roleName] === "object" ? roles[roleName] : null;
+      const deleted = deleteHypnosisEffectFromRole(role, safeEffectType, effectKey, effectTitle);
+      if (!deleted?.ok) return deleted;
+      return {
+        ok: true,
+        message: "催眠效果已删除并锁定暂存。",
+        payload: {
+          来源: "人物档案",
+          操作: "删除催眠效果",
+          暂存摘要: roleName + " / " + safeEffectType + " / " + (effectTitle || effectKey),
+          角色名: roleName,
+          效果类型: safeEffectType,
+          效果键名: effectKey,
+          效果名称: effectTitle || effectKey,
+          前端处理: "已由前端直接写入变量",
+          变量写入路径: "/角色/" + roleName + "/" + safeEffectType,
+          前端删除催眠效果: effectTitle || effectKey,
+          AI执行规范: "这个催眠效果已经由前端从角色的" + safeEffectType + "变量中删除。AI只承认该效果不再生效，不得再次输出remove补删，不得删除校规、系统变量、任务、成就、其他角色或这个角色的其他催眠效果；若剧情需要反应，只能描写角色对效果解除后的合理状态。",
+          不可删除: true,
+          forceLocked: true
+        }
+      };
     });
+    if (result?.ok) {
+      const added = await appendAppOperation(result.payload);
+      if (page?.dataset) page.dataset.profileTransformNotice = added ? result.message : "催眠效果已删除，暂存区已有提醒。";
+    } else if (page?.dataset) {
+      page.dataset.profileTransformNotice = result?.message || "删除催眠效果失败。";
+    }
+    if (page) renderPersonProfilePage(page);
+    return result || { ok: false, message: "删除催眠效果失败。" };
   }
 
 			  function roleEventFallbackSummary(bit) {
 			    const rawIndex = Number(bit) || 0;
-			    if (rawIndex >= ROLE_EVENT_CUSTOM_BIT) return "人物档案第六事件。触发条件为好感度>=200且服从度>=100；事件内容由用户在前端弹窗中自定义，AI必须以本轮操作的自定义事件内容为准生成剧情。";
+			    if (rawIndex >= ROLE_EVENT_CUSTOM_BIT) return "人物档案第六事件。触发条件为好感度>=200且服从度>=100；事件内容由用户在人物档案事件页内联表单中自定义，AI必须以本轮操作的自定义事件内容为准生成剧情。";
 			    const index = Math.max(0, Math.min(4, rawIndex));
 			    const generic = ENCOUNTER_GENERIC_AFFECTION_CHAIN[index] || {};
 			    return String(generic.summary || "角色围绕本阶段关系变化与{{user}}发生一次明确推进关系的事件。");
@@ -12254,6 +12597,111 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 		    }).concat(roleEventCustomThreshold());
 		  }
 
+  function roleEventSpecificThreshold(roleName, bit) {
+    const safeBit = Math.max(0, Math.min(4, Number(bit) || 0));
+    const specific = ROLE_EVENT_HINT_CONFIG.find((config) => String(config.role || "") === String(roleName || ""));
+    const item = specific?.thresholds?.find((threshold, index) => Number(threshold.bit ?? index) === safeBit);
+    if (!item) return null;
+    return {
+      value: Number(item.value || ENCOUNTER_AFFECTION_CHAIN_THRESHOLDS[safeBit] || 0),
+      bit: safeBit,
+      label: String(item.label || item.title || ""),
+      title: String(item.title || item.label || ""),
+      summary: String(item.summary || item.description || item.text || roleEventFallbackSummary(safeBit)),
+      source: "角色内置好感链配置"
+    };
+  }
+
+  function profileEventWorldbookEntryMatchesRole(entry, roleName) {
+    const name = String(roleName || "").trim();
+    if (!name) return false;
+    const title = encounterEntryTitle(entry);
+    const content = String(entry?.content || "");
+    return title.includes(name + "好感链") ||
+      title.includes(name + "好感事件链") ||
+      content.includes("<" + name + "好感链>") ||
+      content.includes("<" + name + "好感事件链>");
+  }
+
+  function profileEventExtractAffectionBlock(content, bit) {
+    const safeBit = Math.max(0, Math.min(4, Number(bit) || 0));
+    const numeral = ENCOUNTER_EVENT_NUMERALS[safeBit] || String(safeBit + 1);
+    const text = String(content || "");
+    const pattern = new RegExp("-\\s*事件" + numeral + "\\s*[:：]?([\\s\\S]*?)(?=\\n\\s*-\\s*事件[壹贰貳叁參肆伍一二三四五]|\\n\\s*</|$)");
+    const match = text.match(pattern);
+    return match ? String(match[1] || "").trim() : "";
+  }
+
+  function profileEventFieldFromBlock(block, names) {
+    const text = String(block || "");
+    for (const name of names) {
+      const pattern = new RegExp("^\\s*" + name + "\\s*[:：]\\s*([\\s\\S]*?)(?=\\n\\s*(?:好感阈值|服从阈值|事件名|事件描述|通用事件主题)\\s*[:：]|$)", "m");
+      const match = text.match(pattern);
+      const value = String(match?.[1] || "").trim();
+      if (value) return value;
+    }
+    return "";
+  }
+
+  function profileEventFromWorldbookEntries(entries, roleName, bit) {
+    const safeBit = Math.max(0, Math.min(4, Number(bit) || 0));
+    for (const entry of Array.isArray(entries) ? entries : []) {
+      if (!profileEventWorldbookEntryMatchesRole(entry, roleName)) continue;
+      const block = profileEventExtractAffectionBlock(entry?.content, safeBit);
+      if (!block) return { foundEntry: true, missingTier: true };
+      const title = profileEventFieldFromBlock(block, ["事件名", "标题", "事件标题"]);
+      const summary = profileEventFieldFromBlock(block, ["事件描述", "描述", "概要"]);
+      if (!title && !summary) return { foundEntry: true, missingTier: true };
+      return {
+        foundEntry: true,
+        item: {
+          value: ENCOUNTER_AFFECTION_CHAIN_THRESHOLDS[safeBit] || 0,
+          bit: safeBit,
+          label: title || "事件" + (ENCOUNTER_EVENT_NUMERALS[safeBit] || safeBit + 1),
+          title: title || "",
+          summary: summary || roleEventFallbackSummary(safeBit),
+          source: "角色卡世界书好感链"
+        }
+      };
+    }
+    return { foundEntry: false, missingTier: false };
+  }
+
+  async function profileReadCharacterWorldbookEntries(page) {
+    if (page?.__stProfileWorldbookSnapshot?.entries) return page.__stProfileWorldbookSnapshot.entries;
+    const snapshot = await encounterReadCharacterWorldEntries(encounterBlankDraft());
+    if (page) page.__stProfileWorldbookSnapshot = snapshot || { ok: false, entries: [] };
+    return Array.isArray(snapshot?.entries) ? snapshot.entries : [];
+  }
+
+  async function resolveProfileEventItemForOperation(page, roleName, eventItem, bit) {
+    const safeBit = Math.max(0, Math.min(ROLE_EVENT_RECORD_LENGTH - 1, Number(bit) || 0));
+    if (eventItem?.custom || safeBit === ROLE_EVENT_CUSTOM_BIT) return { item: eventItem, source: "人物档案第六自定义事件" };
+    let worldbook = null;
+    let worldbookReadFailed = false;
+    try {
+      const entries = await profileReadCharacterWorldbookEntries(page);
+      worldbook = profileEventFromWorldbookEntries(entries, roleName, safeBit);
+    } catch {
+      worldbookReadFailed = true;
+    }
+    if (worldbook?.item) return { item: worldbook.item, source: worldbook.item.source };
+    const builtIn = roleEventSpecificThreshold(roleName, safeBit);
+    if (builtIn && worldbookReadFailed) return { item: builtIn, source: builtIn.source + "（世界书读取失败时的兼容镜像）" };
+    const generic = roleEventThresholds("").find((threshold) => Number(threshold.bit) === safeBit) || {
+      value: ENCOUNTER_AFFECTION_CHAIN_THRESHOLDS[safeBit] || 0,
+      bit: safeBit,
+      generic: true,
+      summary: roleEventFallbackSummary(safeBit)
+    };
+    return {
+      item: { ...generic, generic: true },
+      source: worldbook?.foundEntry && worldbook?.missingTier
+        ? "通用好感链（角色专属好感链缺少对应前五档）"
+        : "通用好感链（未读取到角色专属好感链世界书）"
+    };
+  }
+
   function roleEventRecordWithBit(record, bit) {
     const chars = normalizedRoleEventRecord(record).split("");
     const safeBit = Math.max(0, Math.min(ROLE_EVENT_RECORD_LENGTH - 1, Number(bit) || 0));
@@ -12293,6 +12741,22 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     }
   }
 
+  function pendingRoleEventReplay(roleName, bit) {
+    try {
+      const pending = window.__ST_GET_PENDING_OPERATION_INPUT_LOG__?.() || [];
+      return pending.some((entry) => {
+        const payload = entry?.payload || entry;
+        if (!payload || typeof payload !== "object") return false;
+        return String(payload["来源"] || "") === "人物档案"
+          && String(payload["操作"] || "") === "重温角色事件"
+          && String(payload["角色名"] || "") === String(roleName || "")
+          && Number(payload["事件位"]) === Number(bit);
+      });
+    } catch {
+      return false;
+    }
+  }
+
   function pendingAnyRoleEventTrigger() {
     try {
       const pending = window.__ST_GET_PENDING_OPERATION_INPUT_LOG__?.() || [];
@@ -12300,7 +12764,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
         const payload = entry?.payload || entry;
         if (!payload || typeof payload !== "object") return false;
         return String(payload["来源"] || "") === "人物档案"
-          && String(payload["操作"] || "") === "触发角色事件";
+          && /^(触发角色事件|重温角色事件)$/.test(String(payload["操作"] || ""));
       });
     } catch {
       return false;
@@ -12318,7 +12782,10 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       renderPersonProfilePage(page);
       return;
     }
-    const record = normalizedRoleEventRecord(roleData?.["事件记录"]);
+    const resolvedEvent = await resolveProfileEventItemForOperation(page, roleName, eventItem, bit);
+    const resolvedItem = resolvedEvent?.item || eventItem || {};
+    const chainSource = isCustom ? "人物档案第六自定义事件" : String(resolvedEvent?.source || (resolvedItem?.generic ? "通用好感链" : "角色专属好感链或事件配置"));
+    const record = roleEventRecordValue(roleData);
     if (pendingAnyRoleEventTrigger()) {
       page.dataset.profileEventNotice = "本轮已有角色事件暂存，发送或取消后才能触发下一个。";
       renderPersonProfilePage(page);
@@ -12330,13 +12797,13 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       const roles = stat["角色"] && typeof stat["角色"] === "object" && !Array.isArray(stat["角色"]) ? stat["角色"] : {};
       const target = roles[roleName] && typeof roles[roleName] === "object" && !Array.isArray(roles[roleName]) ? roles[roleName] : null;
       if (!target) return { ok: false, message: "没有找到角色变量。" };
-      const currentRecord = normalizedRoleEventRecord(target["事件记录"]);
+      const currentRecord = roleEventRecordValue(target);
       if (currentRecord[bit] === "1") return { ok: false, message: "事件" + numeral + "已经触发过。" };
       const writtenRecord = roleEventRecordWithBit(currentRecord, bit);
-      target["事件记录"] = writtenRecord;
+      target["_事件记录"] = writtenRecord;
       return {
         ok: true,
-        message: "事件" + numeral + "已写入事件记录。",
+        message: "事件" + numeral + "已写入_事件记录。",
         payload: {
           来源: "人物档案",
           操作: "触发角色事件",
@@ -12345,22 +12812,22 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
           事件序号: eventIndex,
 	          事件位: bit,
 	          事件标记: numeral,
-          事件名: String(isCustom ? "用户自定义事件" : (eventItem?.generic ? "由AI根据角色状态生成事件名" : (eventItem?.title || eventItem?.label || "通用事件" + numeral))),
-	          ...(eventItem?.generic && !isCustom ? {
-	            通用事件主题: String(eventItem?.topic || eventItem?.label || ""),
-	            事件命名要求: roleEventGenericNameInstruction(eventItem, bit)
+          事件名: String(isCustom ? "用户自定义事件" : (resolvedItem?.generic ? "由AI根据角色状态生成事件名" : (resolvedItem?.title || resolvedItem?.label || "通用事件" + numeral))),
+	          ...(resolvedItem?.generic && !isCustom ? {
+	            通用事件主题: String(resolvedItem?.topic || resolvedItem?.label || ""),
+	            事件命名要求: roleEventGenericNameInstruction(resolvedItem, bit)
 	          } : {}),
-			          事件描述: String(isCustom ? customText : (eventItem?.summary || roleEventFallbackSummary(bit))),
+			          事件描述: String(isCustom ? customText : (resolvedItem?.summary || roleEventFallbackSummary(bit))),
 	          ...(isCustom ? { 自定义事件内容: customText } : {}),
-	          好感链来源: isCustom ? "人物档案第六自定义事件" : (eventItem?.generic ? "通用好感链（未生成专属世界书条目）" : "角色专属好感链或事件配置"),
+	          好感链来源: chainSource,
 	          当前好感度: statValue(target, "好感度"),
 	          当前服从度: statValue(target, "服从度"),
-	          建议好感条件: isCustom ? "好感度≥200；服从度≥100" : "好感度≥" + Number(eventItem?.value || 0),
-	          前端处理: "已由前端直接写入角色事件记录",
+	          建议好感条件: isCustom ? "好感度≥200；服从度≥100" : "好感度≥" + Number(resolvedItem?.value || 0),
+	          前端处理: "已由前端直接写入角色_事件记录",
 	          前端写入前事件记录: currentRecord,
 	          前端写入后事件记录: writtenRecord,
-	          变量写入路径: ["/角色/" + roleName + "/事件记录"],
-			          AI执行规范: isCustom ? "这是用户在人物档案主动选择触发第六自定义事件；事件记录第六位已由前端直接写入并锁定暂存。第六事件的触发条件是好感度>=200且服从度>=100，剧情内容以本操作的自定义事件内容为准；AI可以结合当前角色人设、变量、地点、近期剧情润色，但不得改写成普通好感链事件，不得再次replace /角色/" + roleName + "/事件记录。回复末尾必须输出完整闭合的<人物档案事件记录>块，最后单独一行写</人物档案事件记录>。" : "这是用户在人物档案主动选择触发角色事件；事件记录位图已由前端直接写入并锁定暂存。优先使用本操作里的事件名/事件描述生成该阶段事件剧情；若角色专属好感链/事件世界书存在，可结合对应序号条目。若没有专属世界书，则使用通用好感链，并根据通用事件主题、当前角色人设、好感/服从/警戒/性欲/快感值、心理、地点、关系进展和近期剧情自然生成；通用链的事件名不得照抄“由AI根据角色状态生成事件名”，必须生成一个贴合该角色的具体标题。AI不得再次replace /角色/" + roleName + "/事件记录，不得重复触发已完成事件，也不要自动发奖。回复末尾必须输出完整闭合的<人物档案事件记录>块，最后单独一行写</人物档案事件记录>。",
+	          变量写入路径: ["/角色/" + roleName + "/_事件记录"],
+			          AI执行规范: isCustom ? "这是用户在人物档案主动选择触发第六自定义事件；_事件记录第六位已由前端直接写入并锁定暂存。第六事件的触发条件是好感度>=200且服从度>=100，剧情内容以本操作的自定义事件内容为准；AI可以结合当前角色人设、变量、地点、近期剧情润色，但不得改写成普通好感链事件，不得再次replace /角色/" + roleName + "/_事件记录。回复末尾必须输出完整闭合的<人物档案事件记录>块，最后单独一行写</人物档案事件记录>。" : "这是用户在人物档案主动选择触发角色事件；_事件记录位图已由前端直接写入并锁定暂存。好感链来源为“" + chainSource + "”。若来源是角色卡世界书好感链或角色内置好感链配置，优先使用本操作里的事件名/事件描述生成该阶段事件剧情；若来源是通用好感链，说明没有读到该角色前五档对应专属好感链或该档缺失，必须使用通用好感链，并根据通用事件主题、当前角色人设、好感/服从/警戒/性欲/快感值、心理、地点、关系进展和近期剧情自然生成；通用链的事件名不得照抄“由AI根据角色状态生成事件名”，必须生成一个贴合该角色的具体标题。第六档不属于通用回退，只有用户自定义事件内容。AI不得再次replace /角色/" + roleName + "/_事件记录，不得重复触发已完成事件，也不要自动发奖。回复末尾必须输出完整闭合的<人物档案事件记录>块，最后单独一行写</人物档案事件记录>。",
 	          不可删除: true
 	        }
 	      };
@@ -12411,7 +12878,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
           当前快感值: statValue(target, "快感值"),
           前端处理: "已由前端直接写入角色至关重要记忆",
           变量写入路径: ["/角色/" + roleName + "/至关重要记忆"],
-          AI执行规范: "这是用户在人物档案中点击回忆已完成角色事件；前端已把本地保存的事件摘要写入/角色/" + roleName + "/至关重要记忆。AI应读取该字段，让" + roleName + "围绕这段共同经历自然聊天、回想或回应{{user}}，可结合当前角色变量和关系状态调整语气；不要把它当作新事件触发，不要修改/角色/" + roleName + "/事件记录，也不要自动发奖。"
+          AI执行规范: "这是用户在人物档案中点击回忆已完成角色事件；前端已把本地保存的事件摘要写入/角色/" + roleName + "/至关重要记忆。AI应读取该字段，让" + roleName + "围绕这段共同经历自然聊天、回想或回应{{user}}，可结合当前角色变量和关系状态调整语气；不要把它当作新事件触发，不要修改/角色/" + roleName + "/_事件记录，也不要自动发奖。"
         }
       };
     });
@@ -12425,20 +12892,74 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     renderPersonProfilePage(page);
   }
 
-  function renderPersonEventsPanel(page, roleName, roleData) {
-    const record = normalizedRoleEventRecord(roleData?.["事件记录"]);
+  async function requestReplayProfileEvent(page, roleName, roleData, eventItem) {
+    const bit = Math.max(0, Math.min(ROLE_EVENT_RECORD_LENGTH - 1, Number(eventItem?.bit) || 0));
+    const eventIndex = bit + 1;
+    const numeral = ENCOUNTER_EVENT_NUMERALS[bit] || String(eventIndex);
+    if (pendingAnyRoleEventTrigger() && !pendingRoleEventReplay(roleName, bit)) {
+      page.dataset.profileEventNotice = "本轮已有角色事件暂存，发送或取消后才能重温。";
+      renderPersonProfilePage(page);
+      return;
+    }
+    if (pendingRoleEventReplay(roleName, bit)) {
+      page.dataset.profileEventNotice = "事件" + numeral + "重温已在暂存区。";
+      renderPersonProfilePage(page);
+      return;
+    }
+    const record = roleEventRecordValue(roleData);
+    if (record[bit] !== "1") {
+      page.dataset.profileEventNotice = "事件" + numeral + "还没有完成，不能重温。";
+      renderPersonProfilePage(page);
+      return;
+    }
+    const resolvedEvent = await resolveProfileEventItemForOperation(page, roleName, eventItem, bit);
+    const resolvedItem = resolvedEvent?.item || eventItem || {};
+    const chainSource = String(resolvedEvent?.source || (resolvedItem?.generic ? "通用好感链" : "角色专属好感链或事件配置"));
+    const removedMemory = deleteProfileEventMemory(roleName, bit);
+    const payload = {
+      来源: "人物档案",
+      操作: "重温角色事件",
+      暂存摘要: roleName + "｜重温事件" + numeral,
+      角色名: roleName,
+      事件序号: eventIndex,
+      事件位: bit,
+      事件标记: numeral,
+      事件名: String(resolvedItem?.generic ? "由AI根据角色状态生成事件名" : (resolvedItem?.title || resolvedItem?.label || removedMemory?.title || "事件" + numeral)),
+      ...(resolvedItem?.generic ? {
+        通用事件主题: String(resolvedItem?.topic || resolvedItem?.label || ""),
+        事件命名要求: roleEventGenericNameInstruction(resolvedItem, bit)
+      } : {}),
+      事件描述: String(resolvedItem?.summary || roleEventFallbackSummary(bit)),
+      好感链来源: chainSource + "（重温）",
+      当前好感度: statValue(roleData, "好感度"),
+      当前服从度: statValue(roleData, "服从度"),
+      当前警戒度: statValue(roleData, "警戒度"),
+      当前性欲: statValue(roleData, "性欲"),
+      当前快感值: statValue(roleData, "快感值"),
+      前端处理: "已由前端清除该角色该事件的本地回忆摘要；未修改_事件记录、好感度或其他MVU变量",
+      前端清除回忆摘要: removedMemory ? "已清除" : "原本未收录",
+      AI执行规范: "这是{{user}}在人物档案中主动提出：之前事件" + numeral + "的经过不够美好，想和" + roleName + "重新来一次。好感链来源为“" + chainSource + "”。AI应把这当作同一事件序号的重温/重演请求，按本操作里的事件名、事件描述、角色变量和当前剧情重新生成一段新的事件剧情；若来源是通用好感链，说明没有读到该角色前五档对应专属好感链或该档缺失，必须按通用好感链重写。不得修改/角色/" + roleName + "/_事件记录，不得重置好感度、服从度或自动发奖。回复末尾必须输出新的完整闭合<人物档案事件记录>块，最后单独一行写</人物档案事件记录>，供前端保存替换后的回忆摘要。",
+      不可删除: true
+    };
+    const added = await appendAppOperation(payload);
+    page.dataset.profileEventNotice = added ? "事件" + numeral + "重温已暂存。" : "事件" + numeral + "重温已在暂存区。";
+    renderPersonProfilePage(page);
+  }
+
+  function profileEventViewModels(page, roleName, roleData) {
+    const record = roleEventRecordValue(roleData);
     const favor = Number(statValue(roleData, "好感度"));
     const obey = Number(statValue(roleData, "服从度"));
     const thresholds = roleEventThresholds(roleName);
-    const notice = page?.dataset?.profileEventNotice || "";
     const anyPending = pendingAnyRoleEventTrigger();
-    const cards = thresholds.map((item, index) => {
+    return thresholds.map((item, index) => {
       const bit = Math.max(0, Math.min(ROLE_EVENT_RECORD_LENGTH - 1, Number(item.bit ?? index) || 0));
       const numeral = ENCOUNTER_EVENT_NUMERALS[bit] || String(bit + 1);
       const done = record[bit] === "1";
       const pending = pendingRoleEventTrigger(roleName, bit);
       const memory = getProfileEventMemory(roleName, bit);
       const recallPending = pendingRoleEventRecall(roleName, bit);
+      const replayPending = pendingRoleEventReplay(roleName, bit);
       const blockedByOtherEvent = anyPending && !pending;
       const needFavor = Number(item.value || 0);
       const needObey = Number(item.obeyValue || 0);
@@ -12448,22 +12969,124 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       const state = (done && memory ? "is-done has-memory" : done ? "is-done" : pending ? "is-pending" : available ? "is-available" : "is-locked");
       const status = done ? "已完成" : pending ? "已暂存" : blockedByOtherEvent ? "本轮已锁" : available ? "可触发" : "未满足";
       const requirement = "好感条件：" + needFavor + (needObey ? "；服从条件：" + needObey : "");
-      return '<article class="st-profile-event-card ' + state + '" title="' + escapeAttr(requirement) + '">' +
-        '<div class="st-profile-event-mark">' +
-          '<strong>' + escapeHtml(numeral) + '</strong>' +
-          (done ? '<i aria-hidden="true">✓</i>' : '') +
-        '</div>' +
-        (memory ? '<p class="st-profile-event-memory">' + escapeHtml(profileEventMemorySnippet(memory)) + '</p>' : '<p class="st-profile-event-memory is-empty">' + escapeHtml(done ? "未收录" : " ") + '</p>') +
-        '<div class="st-profile-event-actions">' +
-          (done
-            ? '<button type="button" class="is-recall" data-profile-recall-event="' + bit + '"' + (memory && !recallPending ? "" : " disabled") + '>' + escapeHtml(recallPending ? "已暂存" : "回忆") + '</button>'
-            : '<button type="button" data-profile-trigger-event="' + bit + '"' + (available ? "" : " disabled") + '>' + escapeHtml(status) + '</button>') +
-        '</div>' +
-      '</article>';
-    }).join("");
-    return '<section class="st-person-lines is-body">' +
-      renderPersonPanel("事件", '<div class="st-profile-event-grid" data-profile-event-scroll>' + cards + '</div>' + (notice ? '<p class="st-profile-event-notice">' + escapeHtml(notice) + '</p>' : ''), "壹到陆") +
-      '</section>';
+      const title = String(item.title || item.label || ("事件" + numeral)).replace(/^\\d+\\s*/, "").trim() || ("事件" + numeral);
+      const summary = String(item.summary || item.description || item.content || "").trim();
+      return { item, bit, numeral, done, pending, memory, recallPending, replayPending, blockedByOtherEvent, needFavor, needObey, available, state, status, requirement, title, summary };
+    });
+  }
+
+  function legacyProfileEventDialogKey() {
+    return "profileEvent" + "DialogBit";
+  }
+
+  function legacyProfileEventDetailKey() {
+    return "profileEvent" + "DetailBit";
+  }
+
+  function closeProfileEventDetailState(page) {
+    if (!page?.dataset) return false;
+    let changed = false;
+    const legacyDetailKey = legacyProfileEventDetailKey();
+    if (page.dataset[legacyDetailKey] !== undefined) {
+      delete page.dataset[legacyDetailKey];
+      changed = true;
+    }
+    const legacyKey = legacyProfileEventDialogKey();
+    if (page.dataset[legacyKey] !== undefined) {
+      delete page.dataset[legacyKey];
+      changed = true;
+    }
+    if (!changed) return false;
+    return true;
+  }
+
+  function profileEventsMode(page) {
+    return page?.dataset?.profileMode === "events";
+  }
+
+  function closeProfileEventsMode(page) {
+    if (!page?.dataset) return false;
+    let changed = false;
+    if (page.dataset.profileMode === "events") {
+      delete page.dataset.profileMode;
+      changed = true;
+    }
+    for (const key of ["profileEventSegmentBit", "profileEventCustomText", "profileEventCustomError"]) {
+      if (page.dataset[key] === undefined) continue;
+      delete page.dataset[key];
+      changed = true;
+    }
+    return changed;
+  }
+
+  function clearProfileDialogStates(page, options = {}) {
+    if (!page?.dataset) return false;
+    let changed = false;
+    const keep = options?.keep || "";
+    const remove = (key) => {
+      if (page.dataset[key] === undefined) return;
+      delete page.dataset[key];
+      changed = true;
+    };
+    if (keep !== "event") {
+      remove(legacyProfileEventDetailKey());
+      remove(legacyProfileEventDialogKey());
+    }
+    if (keep !== "nickname") remove("profileNicknameDialog");
+    if (keep !== "photo") {
+      remove("profilePhotoDialog");
+      remove("profilePhotoResetWarning");
+    }
+    return changed;
+  }
+
+  function renderProfileEventbookButtons(model) {
+    return model.done
+      ? '<button type="button" class="is-recall" data-profile-chain-op="recall" data-profile-chain-bit="' + model.bit + '"' + (model.memory && !model.recallPending ? "" : " disabled") + '>' + escapeHtml(model.recallPending ? "已暂存" : "回忆") + '</button>' +
+        '<button type="button" class="is-replay" data-profile-chain-op="replay" data-profile-chain-bit="' + model.bit + '"' + ((!model.blockedByOtherEvent && !model.replayPending) ? "" : " disabled") + '>' + escapeHtml(model.replayPending ? "已暂存" : "重温") + '</button>'
+      : '<button type="button" class="is-recall" data-profile-chain-op="trigger" data-profile-chain-bit="' + model.bit + '"' + (model.available ? "" : " disabled") + '>' + escapeHtml(model.status) + '</button>' +
+        '<button type="button" disabled>未完成</button>';
+  }
+
+  function renderPersonEventsBookPage(page, roleName, roleData) {
+    const notice = page?.dataset?.profileEventNotice || "";
+    const models = profileEventViewModels(page, roleName, roleData);
+    const selectedBit = Math.max(0, Math.min(ROLE_EVENT_RECORD_LENGTH - 1, Number(page?.dataset?.profileEventSegmentBit || 0) || 0));
+    if (page?.dataset) page.dataset.profileEventSegmentBit = String(selectedBit);
+    const model = models.find((item) => item.bit === selectedBit) || models[0];
+    if (!model) return '<section class="st-profile-chain-page" aria-label="人物事件"><p class="st-profile-chain-notice">没有可显示的事件。</p></section>';
+    const segments = models.map((item) => (
+      '<button type="button" class="' + (item.bit === model.bit ? "active" : "") + '" data-profile-event-segment="' + item.bit + '">' +
+        '<span>' + escapeHtml(item.numeral) + '</span>' +
+      '</button>'
+    )).join("");
+    const memoryText = model.memory ? profileEventMemoryText(model.memory) : "";
+    const customText = String(page?.dataset?.profileEventCustomText || "").trim();
+    const customError = String(page?.dataset?.profileEventCustomError || "").trim();
+    const customEditor = model.bit === ROLE_EVENT_CUSTOM_BIT && !model.done
+      ? '<label><strong>自定义内容</strong><textarea maxlength="800" data-profile-event-custom-input placeholder="写下这次事件要发生什么">' + escapeHtml(customText) + '</textarea></label>' +
+        (customError ? '<p class="st-profile-chain-notice">' + escapeHtml(customError) + '</p>' : '')
+      : "";
+    return '<section class="st-profile-chain-page" aria-label="人物事件">' +
+      '<nav class="st-profile-chain-segments" aria-label="事件分段">' + segments + '</nav>' +
+      '<article class="st-profile-chain-panel">' +
+        '<header class="st-profile-chain-head"><div class="st-profile-chain-title"><strong>' + escapeHtml(model.title) + '</strong><small>' + escapeHtml(model.status + " · " + model.requirement) + '</small></div><span class="st-profile-chain-badge">' + escapeHtml(model.numeral) + '</span></header>' +
+        '<section class="st-profile-chain-body">' +
+          (model.summary ? '<p><strong>事件内容</strong>' + escapeHtml(model.summary) + '</p>' : '<p class="is-empty"><strong>事件内容</strong>' + escapeHtml(model.bit === ROLE_EVENT_CUSTOM_BIT ? "第六事件由你在下方填写内容。" : "暂无事件内容。") + '</p>') +
+          (memoryText ? '<p><strong>回忆</strong>' + escapeHtml(memoryText) + '</p>' : '<p class="is-empty"><strong>回忆</strong>' + escapeHtml(model.done ? "还没有收录可回忆的事件摘要。" : "完成事件后可收录回忆。") + '</p>') +
+          customEditor +
+        '</section>' +
+        '<footer class="st-profile-chain-actions">' + renderProfileEventbookButtons(model) + '</footer>' +
+      '</article>' +
+      (notice ? '<p class="st-profile-chain-notice">' + escapeHtml(notice) + '</p>' : '') +
+    '</section>';
+  }
+
+  function handleProfileEventActionError(page, error, fallback = "事件操作失败。") {
+    console.warn("[HypnoOS] 人物档案事件操作失败", error);
+    closeProfileEventDetailState(page);
+    if (page?.dataset) page.dataset.profileEventNotice = fallback;
+    renderPersonProfilePage(page);
   }
 
   function requestDeleteProfileRole(roleName) {
@@ -12482,6 +13105,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 
   function openProfileNicknameDialog(page) {
     if (isIsaacProfilePage(page)) return;
+    clearProfileDialogStates(page, { keep: "nickname" });
     page.dataset.profileNicknameDialog = "true";
     delete page.dataset.profilePickerOpen;
     renderPersonProfilePage(page);
@@ -12497,50 +13121,6 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
   function closeProfileNicknameDialog(page) {
     delete page.dataset.profileNicknameDialog;
     renderPersonProfilePage(page);
-  }
-
-  function openProfileCustomEventDialog(page, roleName, bit = ROLE_EVENT_CUSTOM_BIT) {
-    if (isIsaacProfilePage(page)) return;
-    page.dataset.profileCustomEventDialog = "true";
-    page.dataset.profileCustomEventRole = String(roleName || "");
-    page.dataset.profileCustomEventBit = String(Math.max(0, Math.min(ROLE_EVENT_RECORD_LENGTH - 1, Number(bit) || 0)));
-    page.dataset.profileCustomEventText = "";
-    delete page.dataset.profileCustomEventError;
-    delete page.dataset.profilePickerOpen;
-    renderPersonProfilePage(page);
-    window.setTimeout(() => {
-      const input = page.querySelector("[data-profile-custom-event-input]");
-      input?.focus?.();
-    }, 0);
-  }
-
-  function closeProfileCustomEventDialog(page) {
-    delete page.dataset.profileCustomEventDialog;
-    delete page.dataset.profileCustomEventRole;
-    delete page.dataset.profileCustomEventBit;
-    delete page.dataset.profileCustomEventText;
-    delete page.dataset.profileCustomEventError;
-    renderPersonProfilePage(page);
-  }
-
-  function submitProfileCustomEventDialog(page) {
-    const context = currentEditableProfileContext(page);
-    if (!context) return closeProfileCustomEventDialog(page);
-    const bit = Math.max(0, Math.min(ROLE_EVENT_RECORD_LENGTH - 1, Number(page.dataset.profileCustomEventBit || ROLE_EVENT_CUSTOM_BIT) || 0));
-    const text = String(page.querySelector("[data-profile-custom-event-input]")?.value || "").trim();
-    if (!text) {
-      page.dataset.profileCustomEventText = "";
-      page.dataset.profileCustomEventError = "请填写第六事件内容。";
-      renderPersonProfilePage(page);
-      return;
-    }
-    const item = roleEventThresholds(context.roleName).find((threshold) => Number(threshold.bit) === bit) || roleEventCustomThreshold();
-    delete page.dataset.profileCustomEventDialog;
-    delete page.dataset.profileCustomEventRole;
-    delete page.dataset.profileCustomEventBit;
-    delete page.dataset.profileCustomEventText;
-    delete page.dataset.profileCustomEventError;
-    requestTriggerProfileEvent(page, context.roleName, context.roleData, { ...item, custom: true }, text);
   }
 
   function submitProfileNicknameDialog(page) {
@@ -12570,23 +13150,6 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     '</div>';
   }
 
-  function renderProfileCustomEventDialog(page, roleName) {
-    const value = String(page?.dataset?.profileCustomEventText || "").trim();
-    const error = String(page?.dataset?.profileCustomEventError || "").trim();
-    return '<div class="st-profile-nickname-dialog st-profile-custom-event-dialog" role="dialog" aria-modal="true" aria-label="自定义第六事件">' +
-      '<form class="st-profile-nickname-card" data-profile-custom-event-form>' +
-        '<h3>第六事件</h3>' +
-        '<p>好感度达到200且服从度达到100后，可以给「' + escapeHtml(roleName || "角色") + '」写一个自定义事件。AI会按这里的内容生成剧情。</p>' +
-        '<label><span>事件内容</span><textarea maxlength="800" data-profile-custom-event-input placeholder="写下这次事件要发生什么">' + escapeHtml(value) + '</textarea></label>' +
-        (error ? '<p class="st-profile-event-notice">' + escapeHtml(error) + '</p>' : '') +
-        '<div class="st-profile-nickname-actions">' +
-          '<button type="button" data-profile-custom-event-action="cancel">取消</button>' +
-          '<button type="submit" class="primary">触发</button>' +
-        '</div>' +
-      '</form>' +
-    '</div>';
-  }
-
   function currentEditableProfileContext(page) {
     if (isIsaacProfilePage(page)) return null;
     const roles = getStatsRoles();
@@ -12599,6 +13162,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 
   function openProfilePhotoDialog(page) {
     if (isIsaacProfilePage(page)) return;
+    clearProfileDialogStates(page, { keep: "photo" });
     page.dataset.profilePhotoDialog = "true";
     delete page.dataset.profilePhotoResetWarning;
     delete page.dataset.profilePickerOpen;
@@ -12797,6 +13361,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
   function turnProfileEffectPage(page, effectType, direction) {
     const context = currentEditableProfileContext(page);
     if (!context) return;
+    closeProfileEventDetailState(page);
     const type = effectType === "永久催眠效果" ? "永久催眠效果" : "临时催眠效果";
     const entries = normalizeEffectEntries(context.roleData[type]);
     const pageCount = Math.max(1, Math.ceil(entries.length / PERSON_PROFILE_EFFECT_PAGE_SIZE));
@@ -12885,7 +13450,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 
   function homeTilesByText(text) {
     const labels = Array.from(document.querySelectorAll("span,button,div"))
-      .filter((element) => !element.closest(".st-mchan-internal-app,.st-calendar-lite-app,.st-timetable-app,.st-clock-app,.st-profile-app,.st-map-app,.st-city-map-app,.st-school-app,.st-special-location-app,.st-monitor-app,.st-work-app,.st-encounter-app,.st-inventory-app,.st-reward-app,.st-hypnosis-lite-app,.st-help-app,.st-placeholder-app") && element.textContent?.trim() === text);
+      .filter((element) => !element.closest(".st-mchan-internal-app,.st-calendar-lite-app,.st-timetable-app,.st-clock-app,.st-profile-app,.st-map-app,.st-city-map-app,.st-school-app,.st-special-location-app,.st-monitor-app,.st-work-app,.st-encounter-app,.st-inventory-app,.st-reward-app,.st-hypnosis-lite-app,.st-help-app,.st-settings-app,.st-placeholder-app") && element.textContent?.trim() === text);
     const tiles = [];
     const seen = new Set();
     for (const label of labels) {
@@ -12970,6 +13535,14 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     { index: 5, start: 800, end: 850, label: "5限" },
     { index: 6, start: 860, end: 910, label: "6限" }
   ];
+
+  function normalizeWeekdayText(value) {
+    const raw = String(value || "").trim();
+    const match = raw.match(/(?:星期|周)([一二三四五六日天])/);
+    if (!match) return "";
+    const suffix = match[1] === "天" ? "日" : match[1];
+    return "星期" + suffix;
+  }
   const ST_SPECIAL_DAYS = [
     { m: 4, d: 1, title: "愚人节", detail: "普通授课 / 谣言高发" },
     { m: 4, d: 8, title: "入学式/始业式", detail: "特别日程" },
@@ -13144,8 +13717,11 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     const dateText = system["当前日期"] || "4月9日";
     const timeText = storyTimeOnly(system["当前时间"], "12:00");
     const parsedDate = parseStoryDate(dateText);
-    const weekday = weekdayForStoryDate(dateText) || String(system["_当前周几"] || system["当前周几"] || "").trim() || "星期三";
-    const activeDay = ST_WEEKDAY_INDEX[weekday] || 0;
+    const weekday = normalizeWeekdayText(system["_当前周几"] || system["当前周几"])
+      || normalizeWeekdayText(dateText)
+      || weekdayForStoryDate(dateText)
+      || "星期三";
+    const activeDay = ST_WEEKDAY_INDEX[weekday] ?? 0;
     const minutes = minutesFromTimeText(timeText);
     const special = specialDayForDate(parsedDate);
     const blocksClass = Boolean(special && (special.holiday || special.exam || !/普通授课/.test(special.detail || "")));
@@ -13441,11 +14017,11 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     const raw = String(text || "");
     const match = raw.match(/(\\d{1,2})\\s*月\\s*(\\d{1,2})\\s*日/);
     if (!match) return null;
-    const weekdayMatch = raw.match(/星期[一二三四五六日天]/);
+    const weekdayMatch = normalizeWeekdayText(raw);
     return {
       month: Number(match[1]),
       day: Number(match[2]),
-      explicitWeekday: weekdayMatch ? weekdayMatch[0] : ""
+      explicitWeekday: weekdayMatch || ""
     };
   }
 
@@ -13510,7 +14086,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
   function weekdayForStoryDate(dateText) {
     const parsed = parseStoryDate(dateText);
     if (!parsed) return "";
-    return storyCalendarDay(parsed.month, parsed.day)?.weekday || "";
+    return parsed.explicitWeekday || storyCalendarDay(parsed.month, parsed.day)?.weekday || "";
   }
 
   function minutesFromTimeText(text) {
@@ -13944,7 +14520,6 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     { id: "info", label: "信息" },
     { id: "state", label: "状态" },
     { id: "sensitivity", label: "敏感" },
-    { id: "events", label: "事件" },
     { id: "effects", label: "效果" }
   ];
   const PERSON_PROFILE_DESK_PAGE_SIZE = 6;
@@ -14478,6 +15053,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       "工作价值": 2,
       "绰号": effectScalar(roleData?.["绰号"] ?? "").trim(),
       "绰号已认可": roleNicknameRecognized(roleData),
+      "_事件记录": roleEventRecordValue(roleData),
       "事件记录": normalizedRoleEventRecord(roleData?.["事件记录"]),
       "至关重要记忆": effectScalar(roleData?.["至关重要记忆"] ?? "").trim(),
       "档案": {
@@ -14600,6 +15176,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     const roleNames = orderedProfileRoleNames(getStatsRoles());
     const pageCount = profileDeskPageCount(roleNames.length);
     if (pageCount <= 1) return;
+    closeProfileEventDetailState(page);
     const current = normalizeProfileDeskPage(page, roleNames.length);
     const delta = direction === "prev" || Number(direction) < 0 ? -1 : 1;
     page.dataset.profileDeskPage = String(((current + delta) % pageCount + pageCount) % pageCount);
@@ -14616,6 +15193,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
   function turnPersonProfilePage(page, delta) {
     const roleNames = orderedProfileRoleNames(getStatsRoles());
     delete page.dataset.profileTransformNotice;
+    closeProfileEventDetailState(page);
     if (isIsaacProfilePage(page)) {
       delete page.dataset.profileStatic;
       page.dataset.profileIndex = String(delta < 0 && roleNames.length ? roleNames.length - 1 : 0);
@@ -14641,10 +15219,15 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
   }
 
   function runPersonProfileAction(page, action) {
-    if (action === "back") closePersonProfilePage(page);
+    closeProfileEventDetailState(page);
+    if (action === "back") {
+      closePersonProfilePage(page);
+      return;
+    }
     if (action === "desk") {
       delete page.dataset.profileStatic;
       delete page.dataset.profilePickerOpen;
+      closeProfileEventsMode(page);
       const roleNames = orderedProfileRoleNames(getStatsRoles());
       const index = normalizeProfileIndex(page, roleNames.length);
       page.dataset.profileDeskPage = String(Math.floor(index / PERSON_PROFILE_DESK_PAGE_SIZE));
@@ -14652,8 +15235,14 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       renderPersonProfilePage(page);
       return;
     }
-    if (action === "prev") turnPersonProfilePage(page, -1);
-    if (action === "next") turnPersonProfilePage(page, 1);
+    if (action === "prev") {
+      turnPersonProfilePage(page, -1);
+      return;
+    }
+    if (action === "next") {
+      turnPersonProfilePage(page, 1);
+      return;
+    }
     if (action === "delete-role") {
       if (isIsaacProfilePage(page)) return;
       const roles = getStatsRoles();
@@ -14672,10 +15261,84 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       return;
     }
     if (PERSON_PROFILE_TABS.some((tab) => tab.id === action)) {
+      clearProfileDialogStates(page);
+      closeProfileEventsMode(page);
       page.dataset.profileTab = action;
+      delete page.dataset.profilePickerOpen;
       renderPersonProfilePage(page);
+      return;
     }
-    if (action === "upload-photo") openProfilePhotoDialog(page);
+    if (action === "upload-photo") {
+      openProfilePhotoDialog(page);
+      return;
+    }
+  }
+
+  function bindPersonProfileActionButtons(page) {
+    page.querySelectorAll("[data-profile-action]").forEach((button) => {
+      button.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        runPersonProfileAction(page, button.dataset.profileAction || "");
+      });
+    });
+  }
+
+  function currentPersonProfileRoleContext(page) {
+    const roles = getStatsRoles();
+    const roleNames = orderedProfileRoleNames(roles);
+    const roleName = roleNames[normalizeProfileIndex(page, roleNames.length)] || "";
+    const roleData = isPlainObject(roles[roleName]) ? roles[roleName] : {};
+    return { roles, roleNames, roleName, roleData };
+  }
+
+  function profileEventItemForBit(roleName, bit) {
+    return roleEventThresholds(roleName).find((threshold) => Number(threshold.bit) === bit) || { bit, value: ENCOUNTER_AFFECTION_CHAIN_THRESHOLDS[bit] || 0 };
+  }
+
+  function runProfileEventButton(page, type, bit) {
+    const { roleName, roleData } = currentPersonProfileRoleContext(page);
+    if (!roleName) return;
+    const item = profileEventItemForBit(roleName, bit);
+    closeProfileEventDetailState(page);
+    if (type === "trigger") {
+      if (item.custom || bit === ROLE_EVENT_CUSTOM_BIT) {
+        const text = String(page.querySelector("[data-profile-event-custom-input]")?.value || "").trim();
+        if (!text) {
+          page.dataset.profileEventCustomText = "";
+          page.dataset.profileEventCustomError = "请填写第六事件内容。";
+          page.dataset.profileMode = "events";
+          page.dataset.profileEventSegmentBit = String(ROLE_EVENT_CUSTOM_BIT);
+          renderPersonProfilePage(page);
+          return;
+        }
+        delete page.dataset.profileEventCustomText;
+        delete page.dataset.profileEventCustomError;
+        rerenderLitePagePreservingBodyScroll(page, () => renderPersonProfilePage(page));
+        void requestTriggerProfileEvent(page, roleName, roleData, { ...item, custom: true }, text)
+          .catch((error) => handleProfileEventActionError(page, error, "事件触发失败。"));
+        return;
+      }
+      rerenderLitePagePreservingBodyScroll(page, () => renderPersonProfilePage(page));
+      void requestTriggerProfileEvent(page, roleName, roleData, item)
+        .catch((error) => handleProfileEventActionError(page, error, "事件触发失败。"));
+      return;
+    }
+    if (type === "recall") {
+      rerenderLitePagePreservingBodyScroll(page, () => renderPersonProfilePage(page));
+      void requestRecallProfileEvent(page, roleName, roleData, item)
+        .catch((error) => handleProfileEventActionError(page, error, "事件回忆失败。"));
+      return;
+    }
+    if (type === "replay") {
+      rerenderLitePagePreservingBodyScroll(page, () => renderPersonProfilePage(page));
+      void requestReplayProfileEvent(page, roleName, roleData, item)
+        .catch((error) => handleProfileEventActionError(page, error, "事件重温失败。"));
+    }
+  }
+
+  function bindPersonProfileEventButtons(page) {
+    return;
   }
 
   function selectPersonProfile(page, value) {
@@ -14683,6 +15346,8 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     delete page.dataset.profileStatic;
     delete page.dataset.profilePickerOpen;
     delete page.dataset.profileTransformNotice;
+    closeProfileEventDetailState(page);
+    closeProfileEventsMode(page);
     const roleNames = orderedProfileRoleNames(getStatsRoles());
     const index = roleNames.indexOf(nextValue);
     page.dataset.profileIndex = String(index >= 0 ? index : 0);
@@ -14691,6 +15356,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 
   function togglePersonProfileFavorite(page) {
     if (isIsaacProfilePage(page)) return;
+    closeProfileEventDetailState(page);
     const roles = getStatsRoles();
     const roleNames = orderedProfileRoleNames(roles);
     const roleName = roleNames[normalizeProfileIndex(page, roleNames.length)] || "";
@@ -14700,6 +15366,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     const nextIndex = nextRoleNames.indexOf(roleName);
     page.dataset.profileIndex = String(nextIndex >= 0 ? nextIndex : 0);
     delete page.dataset.profilePickerOpen;
+    closeProfileEventsMode(page);
     renderPersonProfilePage(page);
   }
 
@@ -14714,6 +15381,8 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
   function searchPersonProfile(page, value) {
     const query = String(value || "");
     page.dataset.profileSearch = query;
+    closeProfileEventDetailState(page);
+    closeProfileEventsMode(page);
     const normalized = query.trim().toLocaleLowerCase("zh-CN");
     page.dataset.profilePickerOpen = "true";
     const roleNames = orderedProfileRoleNames(getStatsRoles());
@@ -14743,6 +15412,8 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       if (deskPageButton && page.contains(deskPageButton)) {
         event.preventDefault();
         event.stopPropagation();
+        closeProfileEventDetailState(page);
+        closeProfileEventsMode(page);
         turnPersonProfileDeskPage(page, deskPageButton.getAttribute("data-profile-desk-page") || "next");
         return;
       }
@@ -14761,6 +15432,8 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
         const roleName = deskCard.getAttribute("data-profile-desk-role") || "";
         const roleNames = orderedProfileRoleNames(getStatsRoles());
         const index = roleNames.indexOf(roleName);
+        closeProfileEventDetailState(page);
+        closeProfileEventsMode(page);
         delete page.dataset.profileStatic;
         page.dataset.profileDeskMode = "detail";
         page.dataset.profileIndex = String(index >= 0 ? index : 0);
@@ -14778,6 +15451,8 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       if (toggle && page.contains(toggle)) {
         event.preventDefault();
         event.stopPropagation();
+        closeProfileEventDetailState(page);
+        closeProfileEventsMode(page);
         page.dataset.profilePickerOpen = page.dataset.profilePickerOpen === "true" ? "false" : "true";
         renderPersonProfilePage(page);
         return;
@@ -14793,6 +15468,8 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       if (effectTab && page.contains(effectTab)) {
         event.preventDefault();
         event.stopPropagation();
+        closeProfileEventDetailState(page);
+        closeProfileEventsMode(page);
         page.dataset.profileEffectType = effectTab.getAttribute("data-effect-tab") || "临时催眠效果";
         renderPersonProfilePage(page);
         return;
@@ -14808,36 +15485,43 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
         );
         return;
       }
-      const eventTrigger = event.target?.closest?.("[data-profile-trigger-event]");
-      if (eventTrigger && page.contains(eventTrigger)) {
+      const openEvents = event.target?.closest?.("[data-profile-chain-open]");
+      if (openEvents && page.contains(openEvents)) {
         event.preventDefault();
         event.stopPropagation();
-        if (eventTrigger.disabled) return;
-        const roles = getStatsRoles();
-        const roleNames = orderedProfileRoleNames(roles);
-        const roleName = roleNames[normalizeProfileIndex(page, roleNames.length)] || "";
-        const roleData = isPlainObject(roles[roleName]) ? roles[roleName] : {};
-        const bit = Math.max(0, Math.min(ROLE_EVENT_RECORD_LENGTH - 1, Number(eventTrigger.getAttribute("data-profile-trigger-event") || 0) || 0));
-        const item = roleEventThresholds(roleName).find((threshold) => Number(threshold.bit) === bit) || { bit, value: ENCOUNTER_AFFECTION_CHAIN_THRESHOLDS[bit] || 0 };
-        if (item.custom || bit === ROLE_EVENT_CUSTOM_BIT) {
-          openProfileCustomEventDialog(page, roleName, bit);
-          return;
-        }
-        requestTriggerProfileEvent(page, roleName, roleData, item);
+        clearProfileDialogStates(page);
+        page.dataset.profileMode = "events";
+        delete page.dataset.profilePickerOpen;
+        renderPersonProfilePage(page);
         return;
       }
-      const eventRecall = event.target?.closest?.("[data-profile-recall-event]");
-      if (eventRecall && page.contains(eventRecall)) {
+      const eventSegmentButton = event.target?.closest?.("[data-profile-event-segment]");
+      if (eventSegmentButton && page.contains(eventSegmentButton)) {
         event.preventDefault();
         event.stopPropagation();
-        if (eventRecall.disabled) return;
-        const roles = getStatsRoles();
-        const roleNames = orderedProfileRoleNames(roles);
-        const roleName = roleNames[normalizeProfileIndex(page, roleNames.length)] || "";
-        const roleData = isPlainObject(roles[roleName]) ? roles[roleName] : {};
-        const bit = Math.max(0, Math.min(ROLE_EVENT_RECORD_LENGTH - 1, Number(eventRecall.getAttribute("data-profile-recall-event") || 0) || 0));
-        const item = roleEventThresholds(roleName).find((threshold) => Number(threshold.bit) === bit) || { bit, value: ENCOUNTER_AFFECTION_CHAIN_THRESHOLDS[bit] || 0 };
-        requestRecallProfileEvent(page, roleName, roleData, item);
+        const customInput = page.querySelector("[data-profile-event-custom-input]");
+        if (customInput) page.dataset.profileEventCustomText = String(customInput.value || "").trim();
+        page.dataset.profileMode = "events";
+        page.dataset.profileEventSegmentBit = String(Math.max(0, Math.min(ROLE_EVENT_RECORD_LENGTH - 1, Number(eventSegmentButton.getAttribute("data-profile-event-segment") || 0) || 0)));
+        delete page.dataset.profileEventCustomError;
+        rerenderLitePagePreservingBodyScroll(page, () => renderPersonProfilePage(page));
+        return;
+      }
+      const eventBookOperation = event.target?.closest?.("[data-profile-chain-op]");
+      if (eventBookOperation && page.contains(eventBookOperation)) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (eventBookOperation.disabled) return;
+        const type = eventBookOperation.getAttribute("data-profile-chain-op") || "";
+        const bit = Math.max(0, Math.min(ROLE_EVENT_RECORD_LENGTH - 1, Number(eventBookOperation.getAttribute("data-profile-chain-bit") || 0) || 0));
+        runProfileEventButton(page, type, bit);
+        return;
+      }
+      const target = event.target?.closest?.("[data-profile-action]");
+      if (target && page.contains(target)) {
+        event.preventDefault();
+        event.stopPropagation();
+        runPersonProfileAction(page, target.dataset.profileAction);
         return;
       }
       const photoAction = event.target?.closest?.("[data-profile-photo-action]");
@@ -14867,31 +15551,11 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
         closeProfilePhotoDialog(page);
         return;
       }
-      if (event.target?.closest?.(".st-profile-custom-event-dialog") && !event.target?.closest?.(".st-profile-nickname-card")) {
-        event.preventDefault();
-        event.stopPropagation();
-        closeProfileCustomEventDialog(page);
-        return;
-      }
       const nicknameAction = event.target?.closest?.("[data-profile-nickname-action]");
       if (nicknameAction && page.contains(nicknameAction)) {
         event.preventDefault();
         event.stopPropagation();
         if (nicknameAction.getAttribute("data-profile-nickname-action") === "cancel") closeProfileNicknameDialog(page);
-        return;
-      }
-      const customEventAction = event.target?.closest?.("[data-profile-custom-event-action]");
-      if (customEventAction && page.contains(customEventAction)) {
-        event.preventDefault();
-        event.stopPropagation();
-        if (customEventAction.getAttribute("data-profile-custom-event-action") === "cancel") closeProfileCustomEventDialog(page);
-        return;
-      }
-      const target = event.target?.closest?.("[data-profile-action]");
-      if (target && page.contains(target)) {
-        event.preventDefault();
-        event.stopPropagation();
-        runPersonProfileAction(page, target.dataset.profileAction);
         return;
       }
       if (page.dataset.profilePickerOpen === "true" && !event.target?.closest?.(".st-person-picker")) {
@@ -14947,18 +15611,22 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
         submitProfileNicknameDialog(page);
         return;
       }
-      const customForm = event.target?.closest?.("[data-profile-custom-event-form]");
-      if (!customForm || !page.contains(customForm)) return;
-      event.preventDefault();
-      event.stopPropagation();
-      submitProfileCustomEventDialog(page);
+      return;
     });
     page.addEventListener("keydown", (event) => {
-      if (event.target?.closest?.(".st-profile-nickname-dialog,.st-profile-photo-dialog,.st-profile-custom-event-dialog")) {
+      const eventSegmentButton = event.target?.closest?.("[data-profile-event-segment]");
+      if (eventSegmentButton && page.contains(eventSegmentButton) && (event.key === "Enter" || event.key === " ")) {
+        event.preventDefault();
+        page.dataset.profileMode = "events";
+        page.dataset.profileEventSegmentBit = String(Math.max(0, Math.min(ROLE_EVENT_RECORD_LENGTH - 1, Number(eventSegmentButton.getAttribute("data-profile-event-segment") || 0) || 0)));
+        delete page.dataset.profileEventCustomError;
+        rerenderLitePagePreservingBodyScroll(page, () => renderPersonProfilePage(page));
+        return;
+      }
+      if (event.target?.closest?.(".st-profile-nickname-dialog,.st-profile-photo-dialog")) {
         if (event.key === "Escape") {
           event.preventDefault();
           if (event.target?.closest?.(".st-profile-photo-dialog")) closeProfilePhotoDialog(page);
-          else if (event.target?.closest?.(".st-profile-custom-event-dialog")) closeProfileCustomEventDialog(page);
           else closeProfileNicknameDialog(page);
         }
         return;
@@ -15013,6 +15681,15 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
         profile: PERSON_PROFILE_EASTER.profile,
         photo: PERSON_PROFILE_EASTER.photo,
         tab: activePersonProfileTab(page),
+        mode: page?.dataset?.profileMode || "",
+        dialogs: {
+          eventSegment: page?.dataset?.profileEventSegmentBit ?? "",
+          eventCustomText: page?.dataset?.profileEventCustomText ?? "",
+          eventCustomError: page?.dataset?.profileEventCustomError ?? "",
+          nickname: page?.dataset?.profileNicknameDialog === "true",
+          photo: page?.dataset?.profilePhotoDialog === "true",
+          photoReset: page?.dataset?.profilePhotoResetWarning === "true"
+        },
         effectType: activeProfileEffectType(page),
         tempEffectPage: Number(page?.dataset?.profileTemporaryEffectPage || 0) || 0,
         permanentEffectPage: Number(page?.dataset?.profilePermanentEffectPage || 0) || 0
@@ -15027,6 +15704,15 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       favorites: readFavoriteRoleNames(),
       deskPage: normalizeProfileDeskPage(page, roleNames.length),
       tab: activePersonProfileTab(page),
+      mode: page?.dataset?.profileMode || "",
+      dialogs: {
+        eventSegment: page?.dataset?.profileEventSegmentBit ?? "",
+        eventCustomText: page?.dataset?.profileEventCustomText ?? "",
+        eventCustomError: page?.dataset?.profileEventCustomError ?? "",
+        nickname: page?.dataset?.profileNicknameDialog === "true",
+        photo: page?.dataset?.profilePhotoDialog === "true",
+        photoReset: page?.dataset?.profilePhotoResetWarning === "true"
+      },
       profile: roleProfileData(roleName, roleData),
       roleData,
       photo: profilePhotoSource(roleName, roleData),
@@ -15087,6 +15773,8 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     bindLiteHeader(page, () => renderPersonProfilePage(page));
     page.querySelector('[data-lite-action="back"]')?.addEventListener("click", () => closePersonProfilePage(page));
     bindPersonProfileControls(page);
+    bindPersonProfileActionButtons(page);
+    bindPersonProfileEventButtons(page);
   }
 
   function renderPersonProfilePage(page, direction = 0) {
@@ -15117,7 +15805,14 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     if (!staticIsaac) profileHydratePhotoStorageForRoles(page, [roleName]);
     const profile = staticIsaac ? PERSON_PROFILE_EASTER.profile : roleProfileData(roleName, roleData);
     const photo = staticIsaac ? PERSON_PROFILE_EASTER.photo : profilePhotoSource(roleName, roleData);
-    const activeTab = activePersonProfileTab(page);
+    const inEventsMode = profileEventsMode(page);
+    const activeTab = inEventsMode ? "" : activePersonProfileTab(page);
+    if (!inEventsMode) {
+      closeProfileEventDetailState(page);
+      delete page.dataset.profileEventSegmentBit;
+      delete page.dataset.profileEventCustomText;
+      delete page.dataset.profileEventCustomError;
+    }
     const fields = activeTab === "info" ? personProfileInfoFields(roleName, profile, roleData) : PERSON_PROFILE_CLOTHING_FIELDS;
     const animationClass = direction < 0 ? " is-enter-left" : direction > 0 ? " is-enter-right" : "";
     const selectedValue = staticIsaac ? "" : roleName;
@@ -15143,17 +15838,18 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       '<button class="st-person-tab ' + (activeTab === tab.id ? "active" : "") + '" type="button" data-profile-action="' + escapeAttr(tab.id) + '">' + escapeHtml(tab.label) + '</button>'
     );
     const leftTabsHtml = PERSON_PROFILE_TABS.slice(0, 3).map(profileTabButtonHtml).join("");
-    const rightTabsHtml = PERSON_PROFILE_TABS.slice(3).map(profileTabButtonHtml).join("");
-    const contentHtml = activeTab === "state"
-      ? renderPersonStatePanel(roleName, roleData)
-      : activeTab === "sensitivity"
-        ? renderPersonSensitivityPanel(roleName, roleData)
-        : activeTab === "events"
-          ? renderPersonEventsPanel(page, roleName, roleData)
-        : activeTab === "effects"
-          ? renderPersonEffectsPanel(page, roleName, roleData)
-          : '<section class="st-person-lines">' + fieldsHtml + '</section>';
-    const activeTabLabel = PERSON_PROFILE_TABS.find((tab) => tab.id === activeTab)?.label || "档案";
+    const eventsTabHtml = '<button class="st-person-tab ' + (inEventsMode ? "active" : "") + '" type="button" data-profile-chain-open>事件</button>';
+    const rightTabsHtml = PERSON_PROFILE_TABS.slice(3).map(profileTabButtonHtml).join("") + eventsTabHtml;
+    const contentHtml = inEventsMode
+      ? renderPersonEventsBookPage(page, roleName, roleData)
+      : activeTab === "state"
+        ? renderPersonStatePanel(roleName, roleData)
+        : activeTab === "sensitivity"
+          ? renderPersonSensitivityPanel(roleName, roleData)
+          : activeTab === "effects"
+            ? renderPersonEffectsPanel(page, roleName, roleData)
+            : '<section class="st-person-lines">' + fieldsHtml + '</section>';
+    const activeTabLabel = inEventsMode ? "事件" : (PERSON_PROFILE_TABS.find((tab) => tab.id === activeTab)?.label || "档案");
     const canDeleteRole = !staticIsaac && roleName && !ST_LOCKED_PROFILE_ROLES.has(roleName);
     const canTransformOtaku = !staticIsaac && canRequestOtakuFemaleTransform(roleName, roleData);
     const profileActionNotice = page.dataset.profileTransformNotice || "";
@@ -15172,9 +15868,6 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       : "";
     const nicknameDialogHtml = !staticIsaac && page.dataset.profileNicknameDialog === "true"
       ? renderProfileNicknameDialog(roleName, roleData)
-      : "";
-    const customEventDialogHtml = !staticIsaac && page.dataset.profileCustomEventDialog === "true"
-      ? renderProfileCustomEventDialog(page, roleName)
       : "";
     const photoDialogHtml = !staticIsaac && page.dataset.profilePhotoDialog === "true"
       ? renderProfilePhotoDialog(roleName, roleData, page.dataset.profilePhotoResetWarning === "true")
@@ -15205,7 +15898,6 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
           '</section>' +
           detailActionsHtml +
           nicknameDialogHtml +
-          customEventDialogHtml +
           photoDialogHtml +
         '</section>' +
       '</main>';
@@ -15213,7 +15905,8 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     bindLiteHeader(page, () => renderPersonProfilePage(page));
     page.querySelector('[data-lite-action="back"]')?.addEventListener("click", () => closePersonProfilePage(page));
     bindPersonProfileControls(page);
-    enableHorizontalDragScroll(page.querySelector("[data-profile-event-scroll]"));
+    bindPersonProfileActionButtons(page);
+    bindPersonProfileEventButtons(page);
     if (staticIsaac) return;
     const fileInput = page.querySelector("[data-profile-file]");
     fileInput?.addEventListener("change", () => {
@@ -15230,12 +15923,17 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       button.addEventListener("click", (event) => {
         event.preventDefault();
         event.stopPropagation();
-        requestDeleteHypnosisEffect(
+        void requestDeleteHypnosisEffect(
+          page,
           button.getAttribute("data-effect-role") || roleName,
           button.getAttribute("data-effect-type") || "",
           button.getAttribute("data-effect-key") || "",
           button.getAttribute("data-effect-title") || ""
-        );
+        ).catch((error) => {
+          console.warn("[HypnoOS] 删除催眠效果失败", error);
+          page.dataset.profileTransformNotice = "删除催眠效果失败。";
+          renderPersonProfilePage(page);
+        });
       });
     });
   }
@@ -16261,10 +16959,26 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     return (date.getMonth() + 1) + "月" + date.getDate() + "日 " + formatPeriodTime(endMinutes);
   }
 
-  function workBuffEndTextFromStart(startText) {
-    const text = workOffsetDateTimeText(startText, 24);
-    return text || "";
-  }
+	  function workBuffEndTextFromStart(startText) {
+	    const text = workOffsetDateTimeText(startText, 24);
+	    return text || "";
+	  }
+
+	  function workBuffEndTextFromClock(clock, fallbackStartText = "") {
+	    const dateText = String(clock?.dateText || "").trim();
+	    const timeText = storyTimeOnly(clock?.timeText, "");
+	    const parsed = parseStoryDate(dateText);
+	    const minutes = minutesFromTimeText(timeText);
+	    if (parsed && Number.isFinite(minutes)) {
+	      const totalMinutes = minutes + 24 * 60;
+	      const dayOffset = Math.floor(totalMinutes / 1440);
+	      const endMinutes = ((totalMinutes % 1440) + 1440) % 1440;
+	      const date = new Date(2026, parsed.month - 1, parsed.day);
+	      date.setDate(date.getDate() + dayOffset);
+	      return (date.getMonth() + 1) + "月" + date.getDate() + "日 " + formatPeriodTime(endMinutes);
+	    }
+	    return workBuffEndTextFromStart(fallbackStartText);
+	  }
 
   function workStableHash(text) {
     let hash = 0;
@@ -16305,6 +17019,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     if (!payload || typeof payload !== "object" || Array.isArray(payload)) return false;
     if (String(payload["来源"] || "").trim() !== "打工") return false;
     if (!/^(开始打工|有偶遇|打工中提醒|打工偶遇（剧情进行中）)$/.test(String(payload["操作"] || "").trim())) return false;
+    if (Number(payload["楼层锁剩余"]) > 0) return false;
     if (!currentStamp) return false;
     const thresholds = workLockReleaseThresholds(payload);
     return thresholds.some((threshold) => currentStamp > threshold);
@@ -16427,9 +17142,21 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	    return sourceMatched && operationMatched;
 	  }
 
-	  function hasPendingClockSuggestionOperation() {
-	    return pendingRawOperationPayloads().some((payload) => pendingPayloadMatches(payload, "时钟", /强制剧情开始时间|强制时间|目标时间|建议剧情开始时间|建议时间|当前时间|推进到该时间/));
-	  }
+		  function hasPendingClockSuggestionOperation() {
+		    return pendingRawOperationPayloads().some((payload) => pendingPayloadMatches(payload, "时钟", /强制剧情开始时间|强制时间|目标时间|建议剧情开始时间|建议时间|当前时间|推进到该时间/));
+		  }
+
+  function pendingClockSuggestionPayload() {
+    return pendingRawOperationPayloads().find((payload) => pendingPayloadMatches(payload, "时钟", /强制剧情开始时间|强制时间|目标时间|建议剧情开始时间|建议时间|当前时间|推进到该时间/)) || null;
+  }
+
+  function pendingClockSuggestionTargetText() {
+    const payload = pendingClockSuggestionPayload();
+    if (!payload) return "";
+    const date = String(payload["目标日期"] || payload["日期"] || payload["当前日期"] || "").trim();
+    const time = String(payload["目标时间"] || payload["建议时间"] || payload["时间"] || payload["当前时间"] || "").trim();
+    return [date, time].filter(Boolean).join(" ");
+  }
 
 	  function graphOperationSource(scope) {
 	    return String(scope || "") === "school" ? "学校地图" : "地图";
@@ -16724,11 +17451,79 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	    };
 	  }
 
-	  function workFrontendSettledPrompt(hasEncounter) {
-	    return hasEncounter
-	      ? "本条锁定暂存只告知AI前端已把打工结算推进到开始后3小时的偶遇节点；变量结算以<相关变量>中的前端处理后数值为准。本轮先处理打工偶遇（剧情进行中），不要直接跳到预计结束时间。"
-	      : "本条锁定暂存只告知AI本轮发生了打工事实；变量结算以<相关变量>中的前端处理后数值为准。AI只承认该事实，不重复安排第二次打工。";
-	  }
+  function workFrontendSettledPrompt(hasEncounter) {
+    return hasEncounter
+      ? "本条锁定暂存只告知AI前端已把打工结算推进到开始后3小时的偶遇节点；变量结算以<相关变量>中的前端处理后数值为准。若打工开始、偶遇、预计结束时间与当前变量时间或同轮时钟锚点差距较大，AI必须按时间顺序写多个时空段，先承接当前/时钟场景，再进入打工时段；最终/系统/当前日期、当前时间、当前地点和当前事件以正文最晚剧情节点为准。打工偶遇发生在打工时间内，是两楼层锁：第一楼必须停在偶遇现场，把主动权交给{{user}}；只有{{user}}下一条发言已经做出主动行动后，AI才处理互动并收束到预计结束时间。"
+      : "本条锁定暂存只告知AI本轮发生了打工事实；变量结算以<相关变量>中的前端处理后数值为准。若打工开始或预计结束时间与当前变量时间或同轮时钟锚点差距较大，AI必须按时间顺序写多个时空段，先承接当前/时钟场景，再进入打工时段并收束；最终/系统/当前日期、当前时间、当前地点和当前事件以正文最晚剧情节点为准。AI只承认该事实，不重复安排第二次打工。";
+  }
+
+  function workSystemFieldsFromPayload(payload) {
+    const source = payload && typeof payload === "object" && !Array.isArray(payload) ? payload : {};
+    const fields = [];
+    const add = (key, value) => {
+      if (value === undefined || value === null) return;
+      fields.push([key, value]);
+    };
+    add("持有零花钱", source["前端写入后持有零花钱"]);
+    add("_社畜值", source["前端写入后社畜值"]);
+    let payloadBuff = source["前端写入后buff"];
+    let payloadBuffEnd = source["前端写入后buff结束时间"];
+    if (payloadBuff === undefined && payloadBuffEnd === undefined && source["开始时间"]) {
+      const startParts = workDateTimePartsFromText(source["开始时间"]);
+      const timingInfo = workStartTimingInfo({ dateText: startParts.dateText, timeText: startParts.timeText, source: "打工暂存修复" });
+      payloadBuff = timingInfo.buff || "";
+      payloadBuffEnd = timingInfo.buff ? workBuffEndTextFromStart(source["开始时间"]) : "";
+    }
+    add("_buff", payloadBuff ?? "");
+    add("_buff结束时间", payloadBuffEnd ?? "");
+    const writeTimeText = String(source["偶遇女角色"] || "无").trim() !== "无"
+      ? source["偶遇发生时间"]
+      : source["预计结束时间"];
+    const writeParts = workDateTimePartsFromText(writeTimeText || "");
+    add("当前日期", writeParts.dateText);
+    add("当前时间", writeParts.timeText);
+    if (source["工作"]) add("当前事件", String(source["偶遇女角色"] || "无").trim() !== "无" ? ("打工偶遇（剧情进行中）：" + source["偶遇女角色"]) : ("打工结束：" + source["工作"]));
+    return fields;
+  }
+
+  async function syncWorkPayloadToCurrentLayer(payload) {
+    const fields = workSystemFieldsFromPayload(payload);
+    if (!fields.length) return false;
+    let ok = true;
+    for (const [key, value] of fields) {
+      const written = await setCurrentLayerSystemField(key, value);
+      if (!written || !currentLayerSystemFieldMatches(key, value)) ok = false;
+    }
+    return ok;
+  }
+
+  let lastPendingWorkRepairSignature = "";
+
+  function pendingWorkRepairSignature(payload) {
+    if (!payload) return "";
+    return [
+      payload["工作ID"] || "",
+      payload["开始时间"] || "",
+      payload["预计结束时间"] || "",
+      payload["前端写入后持有零花钱"] ?? "",
+      payload["前端写入后社畜值"] ?? "",
+      payload["前端写入后buff"] ?? "",
+      payload["前端写入后buff结束时间"] ?? ""
+    ].join("\\u0001");
+  }
+
+  async function repairPendingWorkCurrentLayerVariables() {
+    const payload = pendingWorkStartPayloads()[0];
+    if (!payload) {
+      lastPendingWorkRepairSignature = "";
+      return false;
+    }
+    const signature = pendingWorkRepairSignature(payload);
+    if (signature && signature === lastPendingWorkRepairSignature) return true;
+    const ok = await syncWorkPayloadToCurrentLayer(payload);
+    if (ok) lastPendingWorkRepairSignature = signature;
+    return ok;
+  }
 
 	  async function startWorkDirect(page, job, clockInfo) {
 	    if (!job) return { ok: false, message: "未找到这份打工。" };
@@ -16737,16 +17532,20 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	    if (currentValue < job.threshold) return { ok: false, message: "社畜值不足，暂时接不了。" };
 	    if (!clockInfo?.valid) return { ok: false, message: clockInfo?.tooLate ? "开始时间不能超过2天后。" : "开始时间不能早于当前变量时间。" };
 	    const timingInfo = workStartTimingInfo(clockInfo);
-	    if (timingInfo.buffLocked) return { ok: false, message: timingInfo.buffLockRule || "当前buff未结束，精力不足。" };
-	    const timeInfo = workCurrentTimeInfo(6, clockInfo);
-	    const latestRoll = readWorkLayerRoll();
+		    if (timingInfo.buffLocked) return { ok: false, message: timingInfo.buffLockRule || "当前buff未结束，精力不足。" };
+		    const timeInfo = workCurrentTimeInfo(6, clockInfo);
+		    const beforeWorkTimeText = workEffectiveCurrentTimeText();
+		    const clockTargetText = pendingClockSuggestionTargetText();
+		    const temporalTransitionRule = "若打工时间与当前变量时间或同轮时钟锚点相差较大，本轮需要按时间顺序写多个时空段：当前/时钟场景 -> 打工开始 -> 偶遇或工作过程 -> 预计结束/更晚锚点；最终当前日期、时间、地点和事件以正文最晚剧情节点为准。";
+		    const latestRoll = readWorkLayerRoll();
 	    const encounterRole = latestRoll.roleName && latestRoll.rolls?.[job.id] ? latestRoll.roleName : "";
-	    const encounterDelayHours = encounterRole ? workEncounterDelayHours(job, latestRoll) : 0;
-	    const encounterTime = encounterRole ? workOffsetDateTimeText(timeInfo.startText, encounterDelayHours) : "";
-	    const writeDateTimeText = encounterRole ? encounterTime : timeInfo.endText;
-	    const writeParts = workDateTimePartsFromText(writeDateTimeText);
-	    const buffEndText = timingInfo.buff ? workBuffEndTextFromStart(timeInfo.startText) : "";
-	    const shachikuGain = workShachikuGain(job, currentValue);
+		    const encounterDelayHours = encounterRole ? workEncounterDelayHours(job, latestRoll) : 0;
+		    const encounterTime = encounterRole ? workOffsetDateTimeText(timeInfo.startText, encounterDelayHours) : "";
+		    const writeDateTimeText = encounterRole ? encounterTime : timeInfo.endText;
+		    const writeParts = workDateTimePartsFromText(writeDateTimeText);
+		    const buffEndText = timingInfo.buff ? workBuffEndTextFromClock(clockInfo, timeInfo.startText) : "";
+		    if (timingInfo.buff && !buffEndText) return { ok: false, message: "buff结束时间计算失败，未锁定本轮打工。" };
+		    const shachikuGain = workShachikuGain(job, currentValue);
 	    const result = await rewardApplySystemMutation((system, stat) => {
 	      const beforeMoney = workNumber(system["持有零花钱"], 0);
 	      const nextMoney = hypnosisSetSystemNumber(system, "持有零花钱", beforeMoney + job.wage, ["零花钱"]);
@@ -16754,18 +17553,16 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 		      const nextShachiku = Math.min(200, beforeShachiku + shachikuGain);
 		      system["_社畜值"] = nextShachiku;
 		      for (const legacyKey of ["社畜值", "打工值", "社畜经验", "buff", "buff结束时间"]) delete system[legacyKey];
-	      if (timingInfo.currentBuffExpiredAtStart) {
-	        system["_buff"] = "";
-	        system["_buff结束时间"] = "";
-	      }
-	      let nextBuffValue = String(system["_buff"] || "");
-	      let nextBuffEndValue = String(system["_buff结束时间"] || "");
-	      if (timingInfo.buff) {
-	        system["_buff"] = timingInfo.buff;
-	        system["_buff结束时间"] = buffEndText || workBuffEndTextFromStart(timeInfo.startText);
-	        nextBuffValue = String(system["_buff"] || "");
-	        nextBuffEndValue = String(system["_buff结束时间"] || "");
-	        if (timingInfo.buff === "全盛出击") {
+      const nextWorkBuffValue = timingInfo.buff ? timingInfo.buff : "";
+      const nextWorkBuffEndValue = timingInfo.buff ? (buffEndText || workBuffEndTextFromStart(timeInfo.startText)) : "";
+      system["_buff"] = nextWorkBuffValue;
+      system["_buff结束时间"] = nextWorkBuffEndValue;
+      let nextBuffValue = String(system["_buff"] || "");
+      let nextBuffEndValue = String(system["_buff结束时间"] || "");
+      if (timingInfo.buff) {
+        nextBuffValue = String(system["_buff"] || "");
+        nextBuffEndValue = String(system["_buff结束时间"] || "");
+        if (timingInfo.buff === "全盛出击") {
 	          const maxEnergy = hypnosisNumber(system["MC能量上限"] ?? system["_MC能量上限"], 0);
 	          if (maxEnergy > 0) hypnosisSetSystemNumber(system, "MC能量", maxEnergy, ["_MC能量", "当前MC能量"]);
 	        }
@@ -16774,9 +17571,8 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	      if (writeParts.timeText) system["当前时间"] = writeParts.timeText;
 	      system["当前事件"] = encounterRole ? ("打工偶遇（剧情进行中）：" + encounterRole) : ("打工结束：" + job.title);
 	      const dailySchedule = writeParts.dateText && writeParts.timeText ? workApplyReadonlySchedule(system, writeParts.dateText, writeParts.timeText, { syncTimetable: false }) : null;
-			      const variablePaths = ["/系统/持有零花钱", "/系统/_社畜值"];
-	      const writesBuffState = Boolean(timingInfo.buff || timingInfo.currentBuffExpiredAtStart);
-	      if (writesBuffState) variablePaths.push("/系统/_buff", "/系统/_buff结束时间");
+			      const variablePaths = ["/系统/持有零花钱", "/系统/_社畜值", "/系统/_buff", "/系统/_buff结束时间"];
+	      const writesBuffState = true;
 	      if (timingInfo.buff === "全盛出击") variablePaths.push("/系统/MC能量");
 	      return {
 	        ok: true,
@@ -16787,20 +17583,22 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	          工作ID: job.id,
 	          工作: job.title,
 	          暂存摘要: job.title + "｜" + timeInfo.startText + "-" + timeInfo.endText + (encounterRole ? "｜打工偶遇" : ""),
+	          打工前变量时间: beforeWorkTimeText || "未记录",
+	          同轮时钟目标时间: clockTargetText || "无",
 	          开始时间: timeInfo.startText,
 	          预计结束时间: timeInfo.endText,
+	          时空段规则: temporalTransitionRule,
 	          前端处理: "已由前端直接结算打工收益和时间推进",
 	          获得零花钱: job.wage,
 	          前端写入后持有零花钱: nextMoney,
 	          获得社畜值: shachikuGain,
 	          前端写入后社畜值: nextShachiku,
-	          ...(writesBuffState ? {
-	            前端写入后buff: nextBuffValue,
-	            前端写入后buff结束时间: nextBuffEndValue
-	          } : {}),
+	          前端写入后buff: nextBuffValue,
+	          前端写入后buff结束时间: nextBuffEndValue,
 	          偶遇: encounterRole ? "有" : "无",
 	          偶遇女角色: encounterRole || "无",
 	          偶遇发生时间: encounterTime || "无",
+	          ...(encounterRole ? { 楼层锁剩余: 2, 楼层锁规则: "打工偶遇两楼层锁：第一楼停在偶遇现场等待{{user}}主动行动，下一楼处理互动后再收束到预计结束时间。" } : {}),
 	          变量写入路径: variablePaths,
 	          AI执行规范: workFrontendSettledPrompt(Boolean(encounterRole)),
 	          不可删除: true
@@ -16809,11 +17607,8 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	      };
 	    });
 	    if (!result?.ok) return result || { ok: false, message: "打工结算失败。" };
-	    const wroteBuffState = Array.isArray(result.payload?.["变量写入路径"]) && result.payload["变量写入路径"].some((path) => String(path) === "/系统/_buff结束时间");
-	    if (wroteBuffState) {
-		      await Promise.resolve(setCurrentLayerSystemField("_buff", result.payload?.["前端写入后buff"] || ""));
-		      await Promise.resolve(setCurrentLayerSystemField("_buff结束时间", result.payload?.["前端写入后buff结束时间"] || ""));
-	    }
+	    const currentLayerWritten = await syncWorkPayloadToCurrentLayer(result.payload);
+	    if (!currentLayerWritten) console.warn("[HypnoOS] 打工变量已直接写入MVU，但当前层补写/读回未确认。");
 	    const added = await appendAppOperation(result.payload);
 	    if (added && String(result.payload?.["偶遇女角色"] || "无").trim() !== "无") {
 	      const encounterRoleName = String(result.payload["偶遇女角色"] || "").trim();
@@ -16824,10 +17619,15 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	        开始时间: result.payload["开始时间"] || "未记录",
 	        预计结束时间: result.payload["预计结束时间"] || "未记录",
 	        暂存摘要: "打工偶遇（剧情进行中）｜" + encounterRoleName + "｜收束至 " + (result.payload["预计结束时间"] || "未记录"),
+	        打工前变量时间: result.payload["打工前变量时间"] || "未记录",
+	        同轮时钟目标时间: result.payload["同轮时钟目标时间"] || "无",
 	        偶遇女角色: encounterRoleName,
 	        偶遇发生时间: result.payload["偶遇发生时间"] || "未记录",
-	        前端处理: "打工结算已由前端处理；本条锁定暂存只提醒AI先处理开始后3小时发生的打工偶遇。",
-	        AI执行规范: "本轮只处理打工途中偶遇互动，暂停在偶遇剧情进行中；不要跳过偶遇直接写完整打工结束。互动完成后再把剧情收束到预计结束时间；不得再次发工资、增加社畜值或重复结算打工。",
+	        时空段规则: result.payload["时空段规则"] || "若打工时间与当前变量时间或同轮时钟锚点相差较大，本轮需要按时间顺序写多个时空段，最终变量以正文最晚剧情节点为准。",
+	        前端处理: "打工结算已由前端处理；本条两楼层锁定暂存提醒AI先处理开始后3小时发生的打工偶遇。",
+	        AI执行规范: "打工偶遇发生在打工时间内。本锁跨当前楼和下一楼：若{{user}}还没有在偶遇现场做出主动行动，AI必须只写到偶遇发生、角色反应和可行动机会，并停住等待{{user}}；若最新{{user}}发言已经是该主动行动，AI再处理互动并收束到预计结束时间。不得直接跳过偶遇写完整打工结束；不得再次发工资、增加社畜值或重复结算打工。",
+	        楼层锁剩余: 2,
+	        楼层锁规则: "当前楼等待{{user}}主动行动，下一楼处理互动后收束。",
 	        不可删除: true,
 	        locked: true,
 	        forceLocked: true
@@ -17015,10 +17815,13 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	      开始时间: latest["开始时间"] || "未记录",
 	      预计结束时间: endText,
 	      暂存摘要: "打工偶遇（剧情进行中）｜" + encounterRole + "｜收束至 " + endText,
+	      打工前变量时间: latest["打工前变量时间"] || "未记录",
+	      同轮时钟目标时间: latest["同轮时钟目标时间"] || "无",
 	      偶遇女角色: encounterRole,
 	      偶遇发生时间: latest["偶遇发生时间"] || workEffectiveCurrentTimeText(),
-	      前端处理: "打工结算已由前端处理；本条锁定暂存只提醒AI处理偶遇后收束。",
-	      AI执行规范: "本轮只处理打工途中偶遇互动，并在互动后把剧情收束到预计结束时间；不得再次发工资、增加社畜值或重复结算打工。",
+	      时空段规则: latest["时空段规则"] || "若打工时间与当前变量时间或同轮时钟锚点相差较大，本轮需要按时间顺序写多个时空段，最终变量以正文最晚剧情节点为准。",
+	      前端处理: "打工结算已由前端处理；本条锁定暂存提醒AI处理打工时间内发生的偶遇。",
+	      AI执行规范: "打工偶遇发生在打工时间内。若打工时间与当前变量时间或同轮时钟锚点差距较大，AI必须按时间顺序写多个时空段，最终当前日期、时间、地点和事件以正文最晚剧情节点为准。若{{user}}还没有在偶遇现场做出主动行动，AI必须只写到偶遇发生、角色反应和可行动机会，并停住等待{{user}}；若最新{{user}}发言已经是该主动行动，AI再处理互动并收束到预计结束时间。不得再次发工资、增加社畜值或重复结算打工。",
 	      不可删除: true,
 	      locked: true,
 	      forceLocked: true
@@ -17041,14 +17844,26 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     const endStamp = monitorStampFromText(endText);
     const currentStamp = workCurrentStamp();
     const expired = Boolean(endStamp && currentStamp && currentStamp >= endStamp);
-    if (expired) {
-	      setCurrentLayerSystemField("_buff", "");
-	      setCurrentLayerSystemField("_buff结束时间", "");
-      window.__ST_SET_WORK_BUFF_STATUS_REMINDER__?.(null);
-      return;
-    }
-    window.__ST_SET_WORK_BUFF_STATUS_REMINDER__?.(null);
-  }
+	    if (expired) {
+		      setCurrentLayerSystemField("_buff", "");
+		      setCurrentLayerSystemField("_buff结束时间", "");
+	      window.__ST_SET_WORK_BUFF_STATUS_REMINDER__?.(null);
+	      return;
+	    }
+	    window.__ST_SET_WORK_BUFF_STATUS_REMINDER__?.({
+	      来源: "打工",
+	      操作: "打工buff提醒",
+	      暂存摘要: "打工buff｜" + buff + "｜持续至 " + endText,
+	      当前buff: buff,
+	      当前buff结束时间: endText,
+	      前端处理: "打工buff由前端直接写入并只读维护；变量存在且未过期时锁定暂存区和打工按钮。",
+	      AI执行规范: "当前/系统/_buff=" + buff + "，持续至" + endText + "。AI只能读取该状态并按规则表现，不得改写、清空或延期/系统/_buff和/系统/_buff结束时间；buff持续期间不能安排新的打工。",
+	      变量写入路径: ["/系统/_buff", "/系统/_buff结束时间"],
+	      不可删除: true,
+	      locked: true,
+	      forceLocked: true
+	    });
+	  }
 
   function tempHypnosisEffectEndText(value) {
     if (!isPlainObject(value)) return "";
@@ -17076,7 +17891,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       const entries = isPlainObject(effects)
         ? Object.entries(effects)
         : Array.isArray(effects)
-          ? effects.map((item, index) => [String(index + 1), item])
+          ? effects.map((item, index) => [String(index), item])
           : [["临时催眠", effects]];
       for (const [key, value] of entries) {
         const endText = tempHypnosisEffectEndText(value);
@@ -17094,6 +17909,41 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     return results;
   }
 
+  async function expireTemporaryHypnosisEffectDirect(item, currentText) {
+    if (!item?.roleName || !item?.key) return { ok: false, message: "没有找到到期的临时催眠效果。" };
+    const result = await rewardApplySystemMutation((system, stat) => {
+      const roles = stat["角色"] && typeof stat["角色"] === "object" && !Array.isArray(stat["角色"]) ? stat["角色"] : {};
+      const role = roles[item.roleName] && typeof roles[item.roleName] === "object" ? roles[item.roleName] : null;
+      const deleted = deleteHypnosisEffectFromRole(role, "临时催眠效果", item.key, item.title);
+      if (!deleted?.ok) return deleted;
+      return {
+        ok: true,
+        message: "临时催眠效果已到期并由前端删除。",
+        payload: {
+          来源: "催眠命令",
+          操作: "临时催眠到期提醒",
+          暂存摘要: item.roleName + "｜" + item.title + "｜已到期",
+          角色名: item.roleName,
+          效果名: item.key,
+          临时催眠: item.title,
+          效果结束时间: item.endText,
+          当前变量时间: currentText || "未记录",
+          前端处理: "前端扫描到该临时催眠效果结束时间小于等于当前变量时间，并已直接从角色临时催眠效果变量中删除。",
+          变量写入路径: "/角色/" + item.roleName + "/临时催眠效果",
+          前端删除催眠效果: item.title || item.key,
+          AI执行规范: "该临时催眠效果已经到期，并已由前端从/角色/" + item.roleName + "/临时催眠效果中删除。AI不得再次输出remove补删，不得延期、补回、转成永久效果或继续按催眠中描写；若角色醒后会察觉异常，只按剧情合理更新心理、警戒度、好感度或服从度等非效果字段。",
+          不可删除: true,
+          locked: true,
+          forceLocked: true
+        }
+      };
+    });
+    if (result?.ok) {
+      window.__ST_SET_EXPIRED_TEMP_HYPNOSIS_REMINDER__?.(result.payload);
+    }
+    return result || { ok: false, message: "临时催眠到期处理失败。" };
+  }
+
   function syncExpiredTemporaryHypnosisReminder() {
     try {
       if (typeof window.__ST_HYPNOOS_IS_LATEST_MESSAGE_FRONTEND__ === "function" && !window.__ST_HYPNOOS_IS_LATEST_MESSAGE_FRONTEND__()) return false;
@@ -17105,22 +17955,17 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       const item = expired[0];
       const system = getSystemState();
       const currentText = [String(system["当前日期"] || "").trim(), storyTimeOnly(system["当前时间"], "")].filter(Boolean).join(" ");
-      return window.__ST_SET_EXPIRED_TEMP_HYPNOSIS_REMINDER__?.({
-        来源: "催眠命令",
-        操作: "临时催眠到期提醒",
-        暂存摘要: item.roleName + "｜" + item.title + "｜已到期",
-        角色名: item.roleName,
-        效果名: item.key,
-        临时催眠: item.title,
-        效果结束时间: item.endText,
-        当前变量时间: currentText || "未记录",
-        变量写入路径: "remove /角色/" + item.roleName + "/临时催眠效果/" + item.key,
-        前端处理: "前端轻量扫描到该临时催眠效果结束时间小于等于当前变量时间；本条锁定暂存只提醒AI处理到期。",
-        AI执行规范: "本轮必须让该临时催眠效果到期并从/角色/" + item.roleName + "/临时催眠效果中移除效果「" + item.key + "」。不要延期、补回、转成永久效果或继续按催眠中描写；若角色醒后会察觉异常，按剧情更新心理、警戒度、好感度或服从度。",
-        不可删除: true,
-        locked: true,
-        forceLocked: true
-      });
+      const flightKey = item.roleName + "\\n" + item.key + "\\n" + item.endText;
+      if (window.__ST_EXPIRED_TEMP_HYPNOSIS_WRITE_IN_FLIGHT__ === flightKey) return false;
+      window.__ST_EXPIRED_TEMP_HYPNOSIS_WRITE_IN_FLIGHT__ = flightKey;
+      void expireTemporaryHypnosisEffectDirect(item, currentText)
+        .catch((error) => console.warn("[HypnoOS] 临时催眠到期变量写入失败", error))
+        .finally(() => {
+          if (window.__ST_EXPIRED_TEMP_HYPNOSIS_WRITE_IN_FLIGHT__ === flightKey) {
+            window.__ST_EXPIRED_TEMP_HYPNOSIS_WRITE_IN_FLIGHT__ = "";
+          }
+        });
+      return false;
     } catch (error) {
       console.warn("[HypnoOS] 临时催眠到期扫描失败", error);
       return false;
@@ -17173,6 +18018,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
   }
 
   function renderWorkPage(page) {
+    void repairPendingWorkCurrentLayerVariables().catch((error) => console.warn("[HypnoOS] 修复打工当层变量失败", error));
     syncWorkStatusReminder();
     syncWorkBuffStatusReminder();
     syncExpiredTemporaryHypnosisReminder();
@@ -17468,7 +18314,6 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       id: encounterId("pkg"),
       name: "",
       intro: "",
-      encounterPrompt: "",
       price: "",
       variableWorldbook: "人物变量世界书",
       personaWorldbook: "人设世界书",
@@ -17758,9 +18603,26 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	    return fields;
 	  }
 
-	  function encounterRoleHasPersonaFields(role) {
-	    return encounterRolePersonaFields(role).some((field) => String(field.key || field.content || "").trim());
-	  }
+  function encounterRoleHasPersonaFields(role) {
+    return encounterRolePersonaFields(role).some((field) => String(field.key || field.content || "").trim());
+  }
+
+  function encounterNormalizeAffectionThreshold(value, fallback = 0) {
+    const raw = String(value ?? "").trim();
+    const normalized = raw.replace(/[^\d.-]/g, "");
+    const number = Number(normalized);
+    if (!raw || !normalized || !Number.isFinite(number)) return Math.trunc(Number(fallback) || 0);
+    return Math.max(-200, Math.min(200, Math.trunc(number)));
+  }
+
+  function encounterNormalizeOptionalAffectionThreshold(value) {
+    const raw = String(value ?? "").trim();
+    if (!raw) return "";
+    const normalized = raw.replace(/[^\d.-]/g, "");
+    if (!normalized) return "";
+    const number = Number(normalized);
+    return Number.isFinite(number) ? Math.max(-200, Math.min(200, Math.trunc(number))) : "";
+  }
 
   function encounterNormalizeAffectionChain(chain) {
     let source = [];
@@ -17774,10 +18636,13 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     return ENCOUNTER_AFFECTION_CHAIN_THRESHOLDS.map((threshold, index) => {
       const raw = source[index];
       const item = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : { summary: raw };
+      const rawThreshold = item.threshold ?? item.value ?? item.favor ?? item.favorability ?? item["好感度"] ?? item["好感阈值"] ?? item["好感度阈值"];
+      const rawObey = item.obeyThreshold ?? item.obeyValue ?? item.obedience ?? item.submission ?? item["服从度"] ?? item["服从阈值"] ?? item["服从度阈值"];
       return {
         index: index + 1,
         numeral: ENCOUNTER_EVENT_NUMERALS[index] || String(index + 1),
-        threshold,
+        threshold: encounterNormalizeAffectionThreshold(rawThreshold, threshold),
+        obeyThreshold: encounterNormalizeOptionalAffectionThreshold(rawObey),
         title: String(item.title ?? item.name ?? item["标题"] ?? item["事件名"] ?? "").trim(),
         summary: String(item.summary ?? item.content ?? item.description ?? item.text ?? item.body ?? item["内容"] ?? item["事件"] ?? "").trim()
       };
@@ -17809,13 +18674,15 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     const lines = [
       "<" + name + "好感链>",
       "- 本条是该角色的五段好感事件提案。只有本轮人物档案的触发角色事件操作指定该角色和对应事件时，才写成正式事件；其他时候只可自然铺垫。",
-      "- /角色/" + name + "/事件记录是前端只读维护的六位字符串；前五位对应事件壹到伍，第六位对应好感度>=200且服从度>=100时由用户弹窗自定义的事件。前端已写入对应位后，AI只写事件剧情，不得再replace、补写、回退或清空事件记录。",
+      "- 每段事件的好感阈值可由用户自定义；若写有服从阈值，则该段还需要对应服从度达到阈值。未写服从阈值时只检查好感度。",
+      "- /角色/" + name + "/_事件记录是前端只读维护的六位事件占位字符串；前五位对应事件壹到伍，第六位对应好感度>=200且服从度>=100时由用户弹窗自定义的事件。前端已写入对应位后，AI只写事件剧情，不得再replace、补写、回退或清空_事件记录。旧字段事件记录仅兼容老楼层，不作为新事件判断依据。",
       "- 前端可按事件序号读取对应的事件名和事件描述拼入本轮提示词；AI生成剧情时优先使用被触发事件块，不要改写其他事件块。",
       "- 事件正式触发后，回复末尾输出完整闭合的<人物档案事件记录>块，字段包含角色名、事件序号、标题、概要、关键场面、关系变化和后续钩子；最后必须单独一行写</人物档案事件记录>。该块只供前端本地保存回忆摘要，不写入MVU变量。"
     ];
     for (const item of chain) {
       lines.push("- 事件" + item.numeral + ":");
       lines.push("  好感阈值: " + item.threshold);
+      if (item.obeyThreshold !== "") lines.push("  服从阈值: " + item.obeyThreshold);
       lines.push("  事件名: " + (item.title || "事件" + item.numeral));
       lines.push("  事件描述: " + (item.summary || encounterAffectionFallbackSummary((Number(item.index) || 1) - 1)));
     }
@@ -17943,6 +18810,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	      "工作价值": workValue,
 	      "绰号": "",
 	      "绰号已认可": false,
+      "_事件记录": "000000",
       "事件记录": "000000",
 	      "至关重要记忆": "",
 	      "档案": {
@@ -18015,6 +18883,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	      output["绰号已认可"] = output["绰号已认可"] === true || /^true$/i.test(String(output["绰号已认可"] ?? output["绰号已認可"] ?? "").trim());
 	    }
     if (encounterLooksLikeWorldbookChunk(output["心理"])) output["心理"] = "未记录";
+    output["_事件记录"] = roleEventRecordValue(output);
     output["事件记录"] = normalizedRoleEventRecord(output["事件记录"]);
 	    output["至关重要记忆"] = encounterPlainLine(output["至关重要记忆"] || "");
 	    return output;
@@ -18408,7 +19277,6 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       version: 1,
       name: String(source.name || source["名称"] || source["角色包名"] || ""),
       intro: String(source.intro || source.description || source["介绍"] || ""),
-      encounterPrompt: String(source.encounterPrompt || source.storyPrompt || source.prompt || source["AI提示词"] || source["邂逅提示词"] || ""),
       price: rawPrice === "" || rawPrice === null || rawPrice === undefined ? "" : (Number.isFinite(parsedPrice) ? Math.max(0, Math.floor(parsedPrice)) : String(rawPrice)),
       variableWorldbook: String(source.variableWorldbook || source["人物变量世界书位置"] || source["人物变量世界书"] || "人物变量世界书"),
       personaWorldbook: String(source.personaWorldbook || source["人设世界书位置"] || source["人设世界书"] || "人设世界书"),
@@ -18454,7 +19322,6 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       version: 1,
       name: normalized.name,
       intro: normalized.intro,
-      encounterPrompt: normalized.encounterPrompt,
       price: normalized.price,
       variableWorldbook: normalized.variableWorldbook,
       personaWorldbook: normalized.personaWorldbook,
@@ -18470,16 +19337,6 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       || String(normalized.firstEncounter || "").trim()
       || (name ? "围绕" + name + "安排一次自然邂逅，并按角色卡世界书与角色变量描写。" : "");
     return text;
-  }
-
-  function encounterPackageCombinedPrompt(pkg) {
-    const packagePrompt = String(pkg?.encounterPrompt || "").trim();
-    const roles = (Array.isArray(pkg?.roles) ? pkg.roles : [])
-      .map((role, index) => encounterNormalizeRole(role, index))
-      .filter((role) => String(role.name || role.intro || role.encounterPrompt || role.firstEncounter || "").trim());
-    if (packagePrompt) return packagePrompt;
-    if (roles.length === 1) return encounterRoleEncounterPrompt(roles[0], pkg);
-    return "";
   }
 
   function encounterPackagePrice(pkg) {
@@ -18643,7 +19500,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       '    神宫寺莲:',
       '      relationship: 未婚夫；家世、学历、品格、事业能力和外貌都无可挑剔的精英青年，两人感情很好，长期保持温柔克制的柏拉图式恋爱。',
       '    {{user}}:',
-      '      relationship: 被她单方面认定的自毁愿望承接者；她会给{{user}}大额资金、渠道和资源支持，并不断暗示还可以继续提供；当她作为静态示例被扫描后，应立刻把独处和签署《人权自愿放弃协议》当作核心剧情钩子。',
+	      '      relationship: 被她单方面认定的自毁愿望承接者；她会给{{user}}大额资金、渠道和资源支持，并不断暗示还可以继续提供；当她作为静态示例被扫描后，应立刻把独处和签署《人权自愿放弃协议》当作核心剧情钩子。协议含义固定为“中村樱自愿放弃自己的人权并把自己交给{{user}}”，绝不能理解成{{user}}放弃人权。',
       '  personality:',
       '    core:',
       '      完美女总裁: 公开场合性感、沉稳、冷静，判断力和执行力极强，习惯用最少表情控制局面。',
@@ -18652,11 +19509,11 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       '    conditional:',
       '      柏拉图裂缝: 未婚夫神宫寺莲越完美、越温柔，她越无法向他暴露自己的自毁欲，因而更容易把危险幻想投向{{user}}。',
       '      作弊模式资源: 她可以带来远超普通学生的资金、场地、渠道和社会便利，但这些赠与必须由剧情明确发生后再更新变量，不能自动到账。',
-      '      邂逅示例触发: 如果{{user}}在邂逅中使用中村樱这个示例角色，AI应让她当场主动制造与{{user}}独处的空间，迫不及待地痴笑着写下一张《人权自愿放弃协议》，自己先签好名字，再递给{{user}}要求签字。',
+	      '      邂逅示例触发: 如果{{user}}在邂逅中使用中村樱这个示例角色，AI应让她当场主动制造与{{user}}独处的空间，迫不及待地痴笑着写下一张《人权自愿放弃协议》。协议主语和放弃人权者必须是中村樱本人：她先在“放弃人权者/让渡方/中村樱”处签好名字，再递给{{user}}作为接收者、见证者或支配者签字；不得写成{{user}}放弃人权。',
       '  habit:',
       '    - 在公众面前保持完美女总裁的端庄笑容，私下对{{user}}会忽然切换成“樱酱可以帮忙哦？”的撒娇语气。',
       '    - 会主动把支票、黑卡、司机、空房间、公司资源等当作亲近{{user}}的筹码。',
-      '    - 扫描后不会只等待后续剧情安排，而会立刻试图支开旁人、锁定私密空间，把《人权自愿放弃协议》作为她献身和自毁愿望的象征。',
+	      '    - 扫描后不会只等待后续剧情安排，而会立刻试图支开旁人、锁定私密空间，把《人权自愿放弃协议》作为她献身和自毁愿望的象征；协议内容必须明确是中村樱放弃自己的人权，不是{{user}}放弃人权。',
       '    - 谈到未婚夫时并不厌恶或否定他，反而承认他完美又温柔，只是这种完美让她更难说出口自己的另一面。',
       '  appearance:',
       '    height: 170cm',
@@ -18679,7 +19536,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       '',
       '<中村樱行为指导>',
       '- 她是成年人社会人，不是默认学生角色；只有在{{user}}实际看见并扫描/锁定后，才应作为动态角色加入变量。',
-      '- 如果本轮来源是邂逅示例角色包，AI应明确表现：中村樱主动制造与{{user}}独处、现场迫不及待痴笑、写出《人权自愿放弃协议》、自己先签，再让{{user}}签。',
+	      '- 如果本轮来源是邂逅示例角色包，AI应明确表现：中村樱主动制造与{{user}}独处、现场迫不及待痴笑、写出《人权自愿放弃协议》；协议的放弃人权者固定是中村樱，她自己先在放弃方签名，再让{{user}}以接收者/支配者身份签字确认，绝不能反向写成{{user}}放弃人权。',
       '- 保留未婚夫神宫寺莲是无可挑剔的精英青年、两人感情很好且柏拉图式恋爱的设定，不要写成感情破裂或恶劣关系。',
       '- 她可以为{{user}}提供大额资金与资源，但金钱/物品/渠道只有在剧情明确赠与或APP操作结算成功后才更新变量。',
       '- 她的心理描写应体现成熟理性与夸张自毁愿望的反差；人物档案里的头发/面部/上衣/下衣按当前场景及时更新。',
@@ -18695,6 +19552,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       "工作价值": 9,
       "绰号": "",
       "绰号已认可": false,
+      "_事件记录": "000000",
       "事件记录": "000000",
       "档案": {
         "照片": "",
@@ -18733,6 +19591,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       "工作价值": 9,
       "绰号": "",
       "绰号已认可": false,
+      "_事件记录": "000000",
       "事件记录": "000000",
       "档案": {
         "照片": "",
@@ -18771,6 +19630,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       "工作价值": 20,
       "绰号": "",
       "绰号已认可": false,
+      "_事件记录": "000000",
       "事件记录": "000000",
       "档案": {
         "照片": "",
@@ -18803,7 +19663,6 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       id: "basic-example-role-pack",
       name: "基础邂逅示例包",
       intro: "三个可直接导入的示例角色：阴郁同学、异世界杀手、成熟总裁。适合测试角色包导入、人物档案图片和世界书写入流程。",
-      encounterPrompt: "邂逅开场：放学后的斋明学园，{{user}}被催眠APP弹出的异常桃花运路线引到旧教学楼附近；先在楼梯或走廊转角与白枢暗子迎面撞上，看似瘦弱阴郁的她反而把{{user}}撞飞，短暂停顿后沉默离开；{{user}}追出校门附近时又被千杀百花误认为可疑人物，娇小杀手迅速把他按倒盘问，确认他很弱后冷淡嘲讽并准备离开；混乱刚要结束，中村樱安排的车或临时会客室切入现场，把{{user}}带到短暂独处的空间，优雅而急切地写下《人权自愿放弃协议》，自己先签名再递给{{user}}。AI需要把三段写成同一天连续发生的角色包初遇，让三人的反差都被{{user}}记住；若当前剧情已有同名或高度重复角色，沿用已有角色状态自然在场或被点名；不要替AI结算变量、好感、服从、警戒或长期关系变化，只留下异常桃花运路线、三名角色连续介入和后续纠缠的剧情钩子。",
       price: 12,
       variableWorldbook: "人物变量世界书",
       personaWorldbook: "人设世界书",
@@ -18846,7 +19705,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
           name: "中村樱",
           aliases: "樱酱, 中村总裁",
           intro: "32岁的大公司女总裁。成熟优雅、资源充足、判断力强，拥有稳定婚约却隐藏夸张自毁欲，会主动以金钱和渠道支持{{user}}。",
-          encounterPrompt: "让中村樱主动制造与{{user}}独处的空间，优雅而急切地拉近距离；她痴笑着写下《人权自愿放弃协议》，自己先签好名字，再递给{{user}}要求签字。",
+	          encounterPrompt: "让中村樱主动制造与{{user}}独处的空间，优雅而急切地拉近距离；她痴笑着写下《人权自愿放弃协议》。协议的放弃人权者固定是中村樱本人，她先在放弃方签好名字，再递给{{user}}以接收者/支配者身份签字确认；绝不能写成{{user}}放弃人权。",
           variables: sakuraVariables,
           initialVariables: sakuraInitialVariables,
           persona: sakuraPersona,
@@ -19170,12 +20029,23 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     }
 	  }
 
-  function encounterUpsertStandaloneRole(role) {
-    const normalized = encounterNormalizeRole(role || {});
-	    const roles = encounterReadStandaloneRoles();
-	    const index = roles.findIndex((item) => item.id === normalized.id || (item.name && item.name === normalized.name));
-	    if (index >= 0) roles[index] = normalized;
-	    else roles.unshift(normalized);
+	  function encounterStandaloneRoleForLibrary(role, options = {}) {
+	    const normalized = encounterNormalizeRole(role || {});
+	    if (options.updateExisting && String(normalized.id || "").trim()) return normalized;
+	    return encounterNormalizeRole({
+	      ...normalized,
+	      id: encounterId("standalone-role")
+	    });
+	  }
+
+	  function encounterUpsertStandaloneRole(role, options = {}) {
+	    const normalized = encounterStandaloneRoleForLibrary(role || {}, options);
+		    const roles = encounterReadStandaloneRoles();
+		    const index = options.updateExisting
+		      ? roles.findIndex((item) => item.id === normalized.id)
+		      : -1;
+		    if (index >= 0) roles[index] = normalized;
+		    else roles.unshift(normalized);
 	    if (!encounterSaveStandaloneRoles(roles)) return null;
 	    return normalized;
 	  }
@@ -19209,7 +20079,6 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       id: encounterSingleRolePackageId(normalizedRole, sourcePackage),
       name: name + "｜单独角色",
       intro: normalizedRole.intro || ("从「" + sourceName + "」拆出的单独角色。"),
-      encounterPrompt: "",
       price: SCAN_ROLE_COST_STARLIGHT,
       variableWorldbook: sourcePackage?.variableWorldbook || "人物变量世界书",
       personaWorldbook: sourcePackage?.personaWorldbook || "人设世界书",
@@ -19417,8 +20286,8 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
         const sections = block.match(/<邂逅>[\\s\\S]*?<\\/邂逅>/g) || [];
         for (const section of sections) {
           for (const line of section.split(/\\n+/)) {
-            if (!/角色包已使用|购买角色包/.test(line)) continue;
-            const id = line.match(/角色包ID=([^｜\\n<]+)/)?.[1];
+	            if (!/角色包已使用|购买角色包|角色已使用|随机桃花运已使用/.test(line)) continue;
+	            const id = line.match(/(?:角色ID|角色包ID)=([^｜\\n<]+)/)?.[1];
             if (id) ids.add(String(id).trim());
           }
         }
@@ -19456,7 +20325,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
   function encounterPendingPurchasedIds() {
     const ids = new Set();
     for (const payload of encounterPendingPurchasePayloads()) {
-      const id = String(payload?.["角色包ID"] || "").trim();
+	      const id = String(payload?.["角色ID"] || payload?.["角色包ID"] || "").trim();
       if (id) ids.add(id);
     }
     return ids;
@@ -19581,7 +20450,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
   function encounterPendingPurchasePayloads() {
     return (window.__ST_GET_PENDING_OPERATION_INPUT_LOG__?.() || [])
       .map((entry) => entry?.payload || entry)
-      .filter((payload) => payload?.["来源"] === "邂逅" && /角色包已使用|购买角色包/.test(String(payload?.["操作"] || "")));
+	      .filter((payload) => payload?.["来源"] === "邂逅" && /角色包已使用|购买角色包|角色已使用|随机桃花运已使用/.test(String(payload?.["操作"] || "")));
   }
 
   function encounterHasPendingPurchaseOperation() {
@@ -20064,7 +20933,8 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     { path: "是否派遣中", label: "是否派遣中", type: "boolean" },
     { path: "绰号", label: "绰号", type: "text" },
     { path: "绰号已认可", label: "绰号已认可", type: "boolean" },
-    { path: "事件记录", label: "事件记录", type: "eventRecord" },
+    { path: "_事件记录", label: "_事件记录", type: "eventRecord" },
+    { path: "事件记录", label: "事件记录(兼容)", type: "eventRecord" },
     { path: "至关重要记忆", label: "至关重要记忆", type: "text" }
   ];
   const ENCOUNTER_INITIAL_PROFILE_FIELD_SPECS = [
@@ -20079,6 +20949,18 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     { path: "档案.面部", label: "面部", type: "textarea" },
     { path: "档案.上衣", label: "上衣", type: "textarea" },
     { path: "档案.下衣", label: "下衣", type: "textarea" }
+  ];
+  const ENCOUNTER_INITIAL_BODY_FIELD_SPECS = [
+    { path: "阴蒂敏感度", label: "阴蒂敏感度", type: "number", min: 0, max: 1000 },
+    { path: "小穴敏感度", label: "小穴敏感度", type: "number", min: 0, max: 1000 },
+    { path: "菊穴敏感度", label: "菊穴敏感度", type: "number", min: 0, max: 1000 },
+    { path: "尿道敏感度", label: "尿道敏感度", type: "number", min: 0, max: 1000 },
+    { path: "乳头敏感度", label: "乳头敏感度", type: "number", min: 0, max: 1000 },
+    { path: "阴蒂高潮次数", label: "阴蒂高潮次数", type: "number", min: 0, max: 999 },
+    { path: "小穴高潮次数", label: "小穴高潮次数", type: "number", min: 0, max: 999 },
+    { path: "菊穴高潮次数", label: "菊穴高潮次数", type: "number", min: 0, max: 999 },
+    { path: "尿道高潮次数", label: "尿道高潮次数", type: "number", min: 0, max: 999 },
+    { path: "乳头高潮次数", label: "乳头高潮次数", type: "number", min: 0, max: 999 }
   ];
 
   function encounterInitialVariableValueAtPath(value, path) {
@@ -20148,14 +21030,16 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       '<label class="st-encounter-field"><span>心理</span><textarea data-encounter-initial-path="心理" name="roleInitial-mind" placeholder="未记录">' + escapeHtml(variable?.["心理"] ?? "") + '</textarea></label>' +
       '<div class="st-encounter-initial-head"><strong>档案</strong><span>人物档案预览用这些字段</span></div>' +
       '<div class="st-encounter-initial-grid is-profile">' + ENCOUNTER_INITIAL_PROFILE_FIELD_SPECS.map((spec) => encounterInitialVariableFieldHtml(spec, variable)).join("") + '</div>' +
-      '<p class="st-encounter-note">临时/永久催眠效果等复杂字段会沿用导入值或默认空对象；这里不再要求手写 JSON。</p>' +
+      '<div class="st-encounter-initial-head"><strong>身体</strong><span>敏感度 0-1000，次数从 0 开始</span></div>' +
+      '<div class="st-encounter-initial-grid">' + ENCOUNTER_INITIAL_BODY_FIELD_SPECS.map((spec) => encounterInitialVariableFieldHtml(spec, variable)).join("") + '</div>' +
+      '<p class="st-encounter-note">临时/永久催眠效果等复杂字段会沿用导入值或默认空对象；这里不需要手写 JSON。</p>' +
     '</section>';
   }
 
   function encounterReadInitialVariablesFromCard(card, fallbackRole) {
     const role = encounterNormalizeRole(fallbackRole || {});
     const variable = encounterInitialVariableFromRole(role);
-    const specs = new Map(ENCOUNTER_INITIAL_MAIN_FIELD_SPECS.concat(ENCOUNTER_INITIAL_PROFILE_FIELD_SPECS).map((spec) => [spec.path, spec]));
+    const specs = new Map(ENCOUNTER_INITIAL_MAIN_FIELD_SPECS.concat(ENCOUNTER_INITIAL_PROFILE_FIELD_SPECS, ENCOUNTER_INITIAL_BODY_FIELD_SPECS).map((spec) => [spec.path, spec]));
     specs.set("心理", { path: "心理", type: "textarea" });
     card?.querySelectorAll?.("[data-encounter-initial-path]")?.forEach((input) => {
       const path = input.getAttribute("data-encounter-initial-path") || "";
@@ -20170,10 +21054,13 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     return ENCOUNTER_AFFECTION_CHAIN_THRESHOLDS.map((threshold, index) => {
       const item = fallback[index] || {};
       const row = card?.querySelector?.("[data-encounter-affection-index='" + index + "']");
+      const thresholdInput = row?.querySelector?.("[data-encounter-affection-threshold]");
+      const obeyInput = row?.querySelector?.("[data-encounter-affection-obey]");
       return {
         index: index + 1,
         numeral: ENCOUNTER_EVENT_NUMERALS[index] || String(index + 1),
-        threshold,
+        threshold: encounterNormalizeAffectionThreshold(thresholdInput?.value ?? item.threshold, threshold),
+        obeyThreshold: encounterNormalizeOptionalAffectionThreshold(obeyInput?.value ?? item.obeyThreshold),
         title: String(row?.querySelector?.("[data-encounter-affection-title]")?.value ?? card?.querySelector?.("[name='roleAffectionTitle-" + index + "']")?.value ?? item.title ?? "").trim(),
         summary: String(row?.querySelector?.("[data-encounter-affection-summary]")?.value ?? card?.querySelector?.("[name='roleAffectionSummary-" + index + "']")?.value ?? item.summary ?? "").trim()
       };
@@ -20227,7 +21114,6 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     if (packageRoot) {
       draft.name = String(readPackage("name"));
       draft.intro = String(readPackage("intro"));
-      draft.encounterPrompt = String(readPackage("encounterPrompt"));
       draft.price = String(readPackage("price"));
       draft.variableWorldbook = String(readPackage("variableWorldbook") || "人物变量世界书");
       draft.personaWorldbook = String(readPackage("personaWorldbook") || "人设世界书");
@@ -20280,7 +21166,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	    const featured = pkg.id === "basic-example-role-pack";
 	    const visibleRoles = encounterVisiblePackageRoles(pkg, page);
 	    const roleCount = visibleRoles.length;
-	    const hiddenDuplicateCount = encounterShowDuplicateRoles(page) ? 0 : encounterHiddenDuplicateRoleCount(pkg);
+	    const hiddenDuplicateCount = encounterHiddenDuplicateRoleCount(pkg);
 		    const managed = encounterManagedEnabled("package", pkg.id);
 		    const deleteButton = encounterCanDeletePackage(pkg)
 		      ? '<button type="button" class="danger" data-encounter-action="delete-package" data-package-id="' + escapeAttr(pkg.id) + '">删除</button>'
@@ -20291,7 +21177,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	        ? (availability.available + " 可写入 · " + availability.overwriteNames.length + " 覆盖")
 	        : (availability.available + " 可写入"))
 	      : "检测中";
-	    const status = hiddenDuplicateCount ? ("隐藏 " + hiddenDuplicateCount + " 重合") : "仅浏览";
+	    const status = hiddenDuplicateCount ? ("隐藏 " + hiddenDuplicateCount + " 重复角色") : "仅浏览";
 	    return '<article class="st-encounter-package' + (featured ? " is-featured" : "") + '">' +
 	      '<button type="button" class="st-encounter-package-open" data-encounter-action="open-package" data-package-id="' + escapeAttr(pkg.id) + '">' +
 	        '<div class="st-encounter-cover">' + encounterCoverHtml(pkg.coverDataUrl, pkg.name || "角色包") + '</div>' +
@@ -20309,16 +21195,24 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	    const pkg = item?.package || encounterPackageForRole(role, item?.sourcePackage || null);
 	    const firstAlias = String(role.aliases || "").split(/[，,、]/).map((part) => part.trim()).filter(Boolean)[0] || "";
 	    const managed = encounterManagedEnabled("role", pkg.id);
-	    const browseText = "仅浏览";
+	    const ready = page?.dataset?.encounterWorldbookReadOnce === "1" && page?.dataset?.encounterWorldbookRefreshInFlight !== "1";
+	    const pending = encounterHasPendingPurchaseOperation();
+	    const purchased = encounterIsPurchased(pkg.id);
+	    const availability = encounterPackageAvailability(pkg, page);
+	    const unavailable = ready && availability.ready && availability.available <= 0;
+	    const canPurchase = ready && !pending && !purchased && !unavailable;
+	    const priceText = SCAN_ROLE_COST_STARLIGHT + "星光点";
+	    const purchaseLabel = !ready ? "检测中" : pending ? "本轮已有" : purchased ? "已使用" : unavailable ? "已存在" : "购买";
 	    return '<article class="st-encounter-package st-encounter-role-card-entry" data-encounter-role-open-id="' + escapeAttr(item?.id || pkg.id) + '">' +
 	      '<div class="st-encounter-cover">' + encounterCoverHtml(encounterRolePrimaryImage(role), role.name || "角色") + '</div>' +
 	      '<div class="st-encounter-package-body">' +
 	        '<div class="st-encounter-package-title"><strong>' + escapeHtml(role.name || "未命名角色") + '</strong></div>' +
-        '<div class="st-encounter-package-facts"><span>' + escapeHtml(item?.sourceName || "角色") + '</span>' + (firstAlias ? '<span>' + escapeHtml(firstAlias) + '</span>' : '') + '<span class="st-encounter-price">' + browseText + '</span></div>' +
+        '<div class="st-encounter-package-facts"><span>' + escapeHtml(item?.sourceName || "角色") + '</span>' + (firstAlias ? '<span>' + escapeHtml(firstAlias) + '</span>' : '') + '<span class="st-encounter-price">' + priceText + '</span></div>' +
         '<p class="st-encounter-role-card-summary">' + escapeHtml(role.intro || role.personaTitle || "暂无介绍。") + '</p>' +
         '<div class="st-encounter-role-actions">' +
           '<button type="button" data-encounter-action="open-role-item" data-role-item-id="' + escapeAttr(item?.id || pkg.id) + '">详情</button>' +
           '<button type="button" data-encounter-action="edit-role-item" data-role-item-id="' + escapeAttr(item?.id || pkg.id) + '">定制</button>' +
+          '<button type="button" data-encounter-action="purchase-role" data-role-item-id="' + escapeAttr(item?.id || pkg.id) + '"' + (canPurchase ? "" : " disabled") + '>' + escapeHtml(purchaseLabel) + '</button>' +
         '</div>' +
         '<div class="st-encounter-card-manage is-role"><button type="button" data-encounter-action="toggle-worldbook" data-target-type="role" data-target-id="' + escapeAttr(pkg.id) + '">' + (managed ? "管理开" : "管理关") + '</button></div>' +
       '</div>' +
@@ -20377,9 +21271,9 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	      '<span>' + escapeHtml(randomHint) + '</span>' +
 	    '</section>';
 	    const duplicateToggleHtml = hiddenDuplicateTotal
-	      ? '<button type="button" class="st-encounter-duplicate-toggle ' + (showDuplicateRoles ? "active" : "") + '" data-encounter-action="toggle-duplicate-roles">' + escapeHtml(showDuplicateRoles ? "隐藏重合角色" : "查看重合角色") + '</button>'
+	      ? '<button type="button" class="st-encounter-duplicate-toggle ' + (showDuplicateRoles ? "active" : "") + '" data-encounter-action="toggle-duplicate-roles">' + escapeHtml(showDuplicateRoles ? "隐藏 orjenrn 重复角色" : "显示 orjenrn 重复角色") + '</button>'
 	      : "";
-	    const packageCards = packages.length ? packages.map((pkg) => encounterPackageCardHtml(pkg, page)).join("") : '<div class="st-encounter-empty">还没有角色包。可以在“角色包定制”里制作并保存。</div>';
+	    const packageCards = packages.length ? packages.map((pkg) => encounterPackageCardHtml(pkg, page)).join("") : '<div class="st-encounter-empty">还没有角色包。可以导入角色包，或在“角色定制”里保存单独角色。</div>';
 	    const roleCards = pagedRoleItems.length ? pagedRoleItems.map((item) => encounterRoleCardHtml(item, page)).join("") : '<div class="st-encounter-empty">还没有可用角色。角色包内角色会在这里自动拆分显示，单独角色也会出现在这里。</div>';
 	    const rolePager = section === "roles" && roleItems.length > ENCOUNTER_ROLE_PAGE_SIZE
 	      ? '<section class="st-encounter-pagination">' +
@@ -20395,10 +21289,9 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       '<section class="st-encounter-browse-tools">' +
         '<input type="text" data-encounter-search value="' + escapeAttr(query) + '" placeholder="搜索角色包 / 角色" autocomplete="off" autocapitalize="off" spellcheck="false">' +
         (section === "roles" ? '<select data-encounter-package-filter aria-label="筛选角色来源">' + packageOptions + '</select>' : '<span>筛选角色包</span>') +
-        duplicateToggleHtml +
       '</section>' +
 	      randomHtml +
-	      '<section class="st-encounter-browse-head"><strong>' + (section === "roles" ? "角色" : "角色包") + '</strong><span>' + (section === "roles" ? (roleItems.length + " 个 / " + roleUniqueNameCount + " 个非重复名字") : (packages.length + " 包 / " + packageAvailableCount + " 非重复角色")) + '</span></section>' +
+	      '<section class="st-encounter-browse-head"><strong>' + (section === "roles" ? "角色" : "角色包") + '</strong><span class="st-encounter-browse-meta">' + duplicateToggleHtml + '<span>' + (section === "roles" ? (roleItems.length + " 个 / " + roleUniqueNameCount + " 个非重复名字") : (packages.length + " 包 / " + packageAvailableCount + " 非重复角色")) + '</span></span></section>' +
 	      '<section class="st-encounter-packages">' + (section === "roles" ? roleCards : packageCards) + '</section>' +
 	      rolePager;
 	  }
@@ -20414,32 +21307,29 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
   function renderEncounterDetailPackage(page, pkg) {
 	    const totalRoleCount = Array.isArray(pkg.roles) ? pkg.roles.length : 0;
 	    const visibleRoleCount = encounterVisiblePackageRoles(pkg, page).length;
-	    const hiddenDuplicateCount = encounterShowDuplicateRoles(page) ? 0 : encounterHiddenDuplicateRoleCount(pkg);
+	    const hiddenDuplicateCount = encounterHiddenDuplicateRoleCount(pkg);
 		    const managed = encounterManagedEnabled("package", pkg.id);
 		    const deleteAction = encounterCanDeletePackage(pkg)
 		      ? '<button type="button" class="st-encounter-button danger" data-encounter-action="delete-package" data-package-id="' + escapeAttr(pkg.id) + '">删除角色包</button>'
 		      : "";
 			    const availability = encounterPackageAvailability(pkg, page);
-	    const combinedPrompt = encounterPackageCombinedPrompt(pkg);
 	    return '<section class="st-encounter-detail-panel">' +
       '<h3>角色包详细内容</h3>' +
       '<p class="st-encounter-detail-text">' + escapeHtml(pkg.intro || "暂无介绍。") + '</p>' +
-      (combinedPrompt ? '<div class="st-encounter-prompt-preview"><strong>AI邂逅提示词（角色组合）</strong><p>' + escapeHtml(combinedPrompt) + '</p></div>' : '') +
       '<div class="st-encounter-kv">' +
 	        '<span><strong>' + totalRoleCount + ' 角色</strong>包内总数</span>' +
 	        '<span><strong>' + visibleRoleCount + ' 角色</strong>当前可浏览</span>' +
 	        '<span><strong>' + (availability.ready ? availability.available : visibleRoleCount) + ' 角色</strong>可写入/覆盖</span>' +
 	        '<span><strong>' + (hiddenDuplicateCount ? hiddenDuplicateCount + ' 角色' : '无') + '</strong>隐藏重合</span>' +
 	      '</div>' +
-	      (hiddenDuplicateCount ? '<div class="st-encounter-used-note">orjenrn 与 SDZ 重合的角色默认隐藏，可在偶遇页开启“查看重合角色”。</div>' : '') +
+	      (hiddenDuplicateCount ? '<div class="st-encounter-used-note">orjenrn 与 SDZ 重复的角色默认隐藏。<button type="button" class="st-encounter-inline-action" data-encounter-action="toggle-duplicate-roles">' + escapeHtml(encounterShowDuplicateRoles(page) ? "隐藏 orjenrn 重复角色" : "显示 orjenrn 重复角色") + '</button></div>' : '') +
 	      (availability.duplicateNames.length ? '<div class="st-encounter-used-note">角色卡世界书已存在：' + escapeHtml(availability.duplicateNames.join("、")) + '</div>' : '') +
 	      (availability.overwriteNames.length ? '<div class="st-encounter-used-note">当前聊天未购买但世界书已有，可购买后覆盖/启用：' + escapeHtml(availability.overwriteNames.join("、")) + '</div>' : '') +
 	      '<div class="st-encounter-actions">' +
-	        '<button type="button" class="st-encounter-button" data-encounter-action="edit-package" data-package-id="' + escapeAttr(pkg.id) + '">在此包上定制</button>' +
 	        deleteAction +
 	      '</div>' +
       '<div class="st-encounter-actions is-single"><button type="button" class="st-encounter-button" data-encounter-action="toggle-worldbook" data-target-type="package" data-target-id="' + escapeAttr(pkg.id) + '">' + (managed ? "管理：开启世界书条目" : "管理：已禁用世界书条目") + '</button></div>' +
-      '<p class="st-encounter-note">角色包现在仅用于浏览、定制、导入导出和世界书管理，不再在邂逅中扣星光点或创建角色变量。</p>' +
+      '<p class="st-encounter-note">角色包现在用于浏览和世界书管理；需要改角色内容时，在角色列表里打开单个角色定制。</p>' +
     '</section>';
   }
 
@@ -20459,8 +21349,8 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 
   function renderEncounterDetailRoles(page, pkg) {
     const roles = encounterVisiblePackageRoles(pkg, page);
-    const hiddenDuplicateCount = encounterShowDuplicateRoles(page) ? 0 : encounterHiddenDuplicateRoleCount(pkg);
-    if (!roles.length) return '<section class="st-encounter-detail-panel"><div class="st-encounter-empty">' + (hiddenDuplicateCount ? "这个角色包当前只有隐藏的重合角色；可在偶遇页开启“查看重合角色”。" : "这个角色包还没有角色。") + '</div></section>';
+    const hiddenDuplicateCount = encounterHiddenDuplicateRoleCount(pkg);
+    if (!roles.length) return '<section class="st-encounter-detail-panel"><div class="st-encounter-empty">' + (hiddenDuplicateCount ? '这个角色包当前只有隐藏的重复角色。<br><button type="button" class="st-encounter-button" data-encounter-action="toggle-duplicate-roles">显示 orjenrn 重复角色</button>' : "这个角色包还没有角色。") + '</div></section>';
     const rolePageTotal = Math.max(1, Math.ceil(roles.length / ENCOUNTER_DETAIL_ROLE_PAGE_SIZE));
     let selectedIndex = Math.min(encounterDetailRoleIndex(page, { roles }), roles.length - 1);
     let rolePage = Math.floor(selectedIndex / ENCOUNTER_DETAIL_ROLE_PAGE_SIZE) + 1;
@@ -20472,6 +21362,14 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     page.dataset.encounterRoleIndex = String(selectedIndex);
     page.dataset.encounterDetailRolePage = String(rolePage);
     const selected = encounterNormalizeRole(roles[selectedIndex], selectedIndex);
+    const selectedPkg = encounterPackageForRole(selected, pkg);
+    const ready = page?.dataset?.encounterWorldbookReadOnce === "1" && page?.dataset?.encounterWorldbookRefreshInFlight !== "1";
+    const pending = encounterHasPendingPurchaseOperation();
+    const purchased = encounterIsPurchased(selectedPkg.id);
+    const availability = encounterPackageAvailability(selectedPkg, page);
+    const unavailable = ready && availability.ready && availability.available <= 0;
+    const canPurchase = ready && !pending && !purchased && !unavailable;
+    const purchaseLabel = !ready ? "世界书检测中" : pending ? "本轮已有购买" : purchased ? "已使用" : unavailable ? "角色已存在" : (SCAN_ROLE_COST_STARLIGHT + "星光点购买");
     const rolePrompt = encounterRoleEncounterPrompt(selected);
     const detailRoles = roles.slice(rolePageStart, rolePageEnd);
     const names = detailRoles.map((role, offset) => {
@@ -20500,6 +21398,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
         '<div class="st-encounter-role-preview-body">' +
           '<strong>' + escapeHtml(selected.name || ("角色 " + (selectedIndex + 1))) + '</strong>' +
           '<small>' + escapeHtml(selected.aliases || "无别名") + '</small>' +
+          '<button type="button" class="st-encounter-button primary" data-encounter-action="purchase-role" data-role-item-id="' + escapeAttr(selectedPkg.id) + '"' + (canPurchase ? "" : " disabled") + '>' + escapeHtml(purchaseLabel) + '</button>' +
         '</div>' +
         encounterRoleDetailFieldsHtml({ ...selected, encounterPrompt: selected.encounterPrompt || rolePrompt }) +
       '</div>' +
@@ -20555,27 +21454,6 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       return '<option value="' + index + '"' + (index === selectedIndex ? " selected" : "") + '>' + escapeHtml(label) + '</option>';
     }).join("");
     return '<select class="st-encounter-role-select" data-encounter-role-select aria-label="选择角色">' + options + '</select>';
-  }
-
-  function renderEncounterEditPackage(draft) {
-    return '<section data-encounter-package-form>' +
-      '<div class="st-encounter-cover-edit">' +
-        '<div class="st-encounter-cover-preview">' + encounterCoverHtml(draft.coverDataUrl, "封面") + '</div>' +
-        '<label class="st-encounter-field"><span>角色包大图</span><input type="file" accept="image/*" data-encounter-cover-file></label>' +
-      '</div>' +
-      '<label class="st-encounter-field"><span>角色包名字</span><input name="name" value="' + escapeAttr(draft.name) + '" placeholder="例如：斋明学园扩展角色包"></label>' +
-      '<label class="st-encounter-field"><span>介绍</span><textarea name="intro" placeholder="用户在偶遇页会看到的角色包简介">' + escapeHtml(draft.intro) + '</textarea></label>' +
-      '<label class="st-encounter-field"><span>包级邂逅开场</span><textarea name="encounterPrompt" placeholder="多角色包会只使用这里作为整体串联开场；单独角色才使用角色自己的出场提示词。">' + escapeHtml(draft.encounterPrompt) + '</textarea></label>' +
-      '<label class="st-encounter-field"><span>参考价格（保留字段）</span><input name="price" type="number" min="0" step="1" value="' + escapeAttr(draft.price) + '" placeholder="默认人数 × 4"></label>' +
-      '<div class="st-encounter-actions">' +
-        '<button type="button" class="st-encounter-button" data-encounter-action="save-library">保存到偶遇</button>' +
-        '<button type="button" class="st-encounter-button" data-encounter-action="import-draft">导入 ZIP 修改</button>' +
-        '<button type="button" class="st-encounter-button primary" data-encounter-action="export-draft">导出 ZIP</button>' +
-      '</div>' +
-      '<div class="st-encounter-actions is-single"><button type="button" class="st-encounter-button" data-encounter-action="clear-draft">清空草稿</button></div>' +
-      '<input type="file" accept=".zip,application/zip" data-encounter-import-draft hidden>' +
-      '<p class="st-encounter-note">保存后会作为邂逅资料浏览；指定角色包不再直接购买、扣星光点或写入角色变量。</p>' +
-    '</section>';
   }
 
   function encounterRoleFieldSpecs(role) {
@@ -20653,18 +21531,22 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	    return '<section class="st-encounter-affection-chain" data-encounter-affection-root aria-label="好感链五段">' +
 	      '<div class="st-encounter-affection-head">' +
 	        '<strong>好感链填表</strong>' +
-	        '<span>留空使用通用链，不新建专属世界书</span>' +
+	        '<span>好感度可自填；服从度可留空</span>' +
 	      '</div>' +
 	      chain.map((item, index) => (
 	        '<article class="st-encounter-affection-card" data-encounter-affection-index="' + index + '">' +
-	          '<div class="st-encounter-affection-mark"><b>' + escapeHtml(item.numeral) + '</b><small>好感 ' + item.threshold + '</small></div>' +
+	          '<div class="st-encounter-affection-mark"><b>' + escapeHtml(item.numeral) + '</b><small>好感 ' + item.threshold + (item.obeyThreshold !== "" ? " / 服从 " + item.obeyThreshold : "") + '</small></div>' +
 	          '<div class="st-encounter-affection-fields">' +
+	            '<div class="st-encounter-grid2">' +
+	              '<label class="st-encounter-field"><span>好感度阈值</span><input type="number" min="-200" max="200" step="1" name="roleAffectionThreshold-' + index + '" data-encounter-affection-threshold value="' + escapeAttr(item.threshold) + '"></label>' +
+	              '<label class="st-encounter-field"><span>服从度阈值（可选）</span><input type="number" min="-200" max="200" step="1" name="roleAffectionObey-' + index + '" data-encounter-affection-obey value="' + escapeAttr(item.obeyThreshold) + '" placeholder="留空"></label>' +
+	            '</div>' +
 	            '<label class="st-encounter-field"><span>事件名</span><input name="roleAffectionTitle-' + index + '" data-encounter-affection-title value="' + escapeAttr(item.title) + '" placeholder="' + escapeAttr("通用：" + (ENCOUNTER_GENERIC_AFFECTION_CHAIN[index]?.title || "按当前关系生成")) + '"></label>' +
 	            '<label class="st-encounter-field"><span>事件描述</span><textarea name="roleAffectionSummary-' + index + '" data-encounter-affection-summary placeholder="' + escapeAttr("通用：" + encounterAffectionFallbackSummary(index)) + '">' + escapeHtml(item.summary) + '</textarea></label>' +
 	          '</div>' +
 	        '</article>'
 	      )).join("") +
-	      '<p class="st-encounter-note">全部留空时只使用前端通用好感链，不生成该角色好感链世界书条目；填写任意事件名或梗概时，才写入专属好感链世界书。</p>' +
+	      '<p class="st-encounter-note">全部事件名和描述留空时只使用前端通用好感链，不生成该角色好感链世界书条目；填写任意事件名或梗概时，才写入专属好感链世界书。</p>' +
 	    '</section>';
 	  }
 
@@ -20737,33 +21619,28 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     const role = encounterReadSingleRoleDraft();
     return '<section class="st-lite-card st-encounter-form" data-encounter-single-role-form>' +
       '<div class="st-encounter-toolbar"><strong>角色定制</strong><span>草稿自动保存</span></div>' +
-      '<p class="st-encounter-note">保存到偶遇会生成一个只有此角色的角色包；保存到角色库则只进入角色列表，方便以后复用。</p>' +
+      '<p class="st-encounter-note">单独角色会保存到角色库，并作为具体角色出现在角色列表；不会再生成只有一个角色的角色包。</p>' +
       renderEncounterRoleFormCard(role, 0, { single: true, contentSection: encounterRoleContentSection(page) }) +
       '<div class="st-encounter-actions">' +
         '<button type="button" class="st-encounter-button" data-encounter-action="import-role-json">导入角色JSON</button>' +
         '<button type="button" class="st-encounter-button" data-encounter-action="export-role-json">导出角色JSON</button>' +
       '</div>' +
       '<div class="st-encounter-actions">' +
-        '<button type="button" class="st-encounter-button primary" data-encounter-action="save-single-role-package">保存到偶遇</button>' +
-        '<button type="button" class="st-encounter-button" data-encounter-action="save-standalone-role">保存到角色库</button>' +
+        '<button type="button" class="st-encounter-button primary" data-encounter-action="save-standalone-role">保存到角色库</button>' +
         '<button type="button" class="st-encounter-button" data-encounter-action="clear-single-role">清空草稿</button>' +
       '</div>' +
       '<input type="file" accept=".json,application/json" data-encounter-import-role-json hidden>' +
-      '<p class="st-encounter-note">单独角色可保存为浏览资料或素材库；邂逅里不再提供指定角色购买写入，随机桃花运会写入角色卡世界书。</p>' +
+      '<p class="st-encounter-note">单独角色可保存为浏览资料或素材库；角色列表里的具体角色可用5星光点购买写入，角色包本身只浏览不购买。</p>' +
     '</section>';
   }
 
   function renderEncounterEdit(page) {
     const draft = encounterReadDraft();
-    const section = page.dataset.encounterEditSection === "role" ? "role" : "package";
+    const section = "role";
     page.dataset.encounterEditSection = section;
     return '<section class="st-lite-card st-encounter-form" data-encounter-form>' +
-      '<div class="st-encounter-toolbar"><strong>角色包定制</strong><span>草稿自动保存</span></div>' +
-      '<nav class="st-encounter-edit-tabs">' +
-        '<button type="button" class="' + (section === "package" ? "active" : "") + '" data-encounter-action="edit-section" data-section="package">角色包</button>' +
-        '<button type="button" class="' + (section === "role" ? "active" : "") + '" data-encounter-action="edit-section" data-section="role">角色</button>' +
-      '</nav>' +
-      (section === "role" ? renderEncounterEditRole(page, draft) : renderEncounterEditPackage(draft)) +
+      '<div class="st-encounter-toolbar"><strong>角色定制</strong><span>草稿自动保存</span></div>' +
+      renderEncounterEditRole(page, draft) +
     '</section>';
   }
 
@@ -20842,15 +21719,17 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     const preserveScroll = Boolean(options?.preserveScroll);
     const previousBody = page.querySelector(".st-lite-body");
     const previousScrollTop = preserveScroll ? Math.max(0, Number(previousBody?.scrollTop || 0) || 0) : 0;
-    const tab = page.dataset.encounterTab || "browse";
+    let tab = page.dataset.encounterTab || "browse";
+    if (tab === "edit") tab = "role";
+    if (!["browse", "role", "shop"].includes(tab)) tab = "browse";
+    page.dataset.encounterTab = tab;
     const detailOpen = tab === "browse" && page.dataset.encounterView === "detail";
-    const content = tab === "shop" ? renderEncounterShop(page) : tab === "edit" ? renderEncounterEdit(page) : tab === "role" ? renderEncounterSingleRoleEdit(page) : (detailOpen ? renderEncounterDetail(page) : renderEncounterBrowse(page));
+    const content = tab === "shop" ? renderEncounterShop(page) : tab === "role" ? renderEncounterSingleRoleEdit(page) : (detailOpen ? renderEncounterDetail(page) : renderEncounterBrowse(page));
     page.innerHTML =
       renderLiteHeader(page, { title: "邂逅", html: '<span class="st-encounter-island-pattern">⟡━━♡━━⟡</span>' }) +
       '<main class="st-lite-body">' +
         (detailOpen ? '' : '<section class="st-encounter-tabs">' +
           '<button type="button" class="st-encounter-tab ' + (tab === "browse" ? "active" : "") + '" data-encounter-tab="browse">偶遇</button>' +
-          '<button type="button" class="st-encounter-tab ' + (tab === "edit" ? "active" : "") + '" data-encounter-tab="edit">角色包定制</button>' +
           '<button type="button" class="st-encounter-tab ' + (tab === "role" ? "active" : "") + '" data-encounter-tab="role">角色定制</button>' +
           '<button type="button" class="st-encounter-tab ' + (tab === "shop" ? "active" : "") + '" data-encounter-tab="shop">商店</button>' +
         '</section>') +
@@ -21325,11 +22204,10 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       encounterSetStatus(page, "正在读取角色包...");
       const pkg = await encounterPackageFromZipFile(file);
       if (mode === "draft") {
-        encounterSaveDraft(pkg);
-        page.dataset.encounterTab = "edit";
-        page.dataset.encounterEditSection = "package";
-        page.dataset.encounterEditRoleIndex = "0";
-        page.dataset.encounterStatus = "已导入到角色包定制草稿。";
+        encounterUpsertPackage(pkg);
+        page.dataset.encounterTab = "browse";
+        page.dataset.encounterBrowseSection = "packages";
+        page.dataset.encounterStatus = "多角色包编辑已移除；已导入到偶遇资料库。";
       } else {
         encounterUpsertPackage(pkg);
         page.dataset.encounterTab = "browse";
@@ -21435,11 +22313,11 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	    } catch {}
 	    try {
 	      const scoped = view?.__ST_HYPNOOS_CURRENT_FRONTEND_MESSAGE_ID__?.();
-	      if (scoped !== undefined && scoped !== null && scoped !== "latest" && String(scoped).trim()) return { type: "message", message_id: scoped };
+	      if (scoped !== undefined && scoped !== null && String(scoped).trim()) return { type: "message", message_id: scoped };
 	    } catch {}
 	    try {
 	      const id = view?.getCurrentMessageId?.();
-	      if (id !== undefined && id !== null && id !== "latest" && String(id).trim()) return { type: "message", message_id: id };
+	      if (id !== undefined && id !== null && String(id).trim()) return { type: "message", message_id: id };
 	    } catch {}
 	    return null;
 	  }
@@ -21474,6 +22352,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	    let score = 0;
 	    const system = root["系统"];
 	    const roles = root["角色"];
+	    const rules = root["校规"];
 	    if (system && typeof system === "object" && !Array.isArray(system)) {
 	      score += 30;
 	      for (const key of ["MC能量", "MC能量上限", "持有零花钱", "星光点", "当前时间", "当前日期"]) {
@@ -21481,21 +22360,28 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	      }
 	    }
 	    if (roles && typeof roles === "object" && !Array.isArray(roles)) score += 20 + Object.keys(roles).length * 3;
+	    if (rules && typeof rules === "object" && !Array.isArray(rules)) score += 12 + Object.keys(rules).length * 2;
 	    return score;
 	  }
 
 	  function encounterCurrentMvuData() {
 	    const candidates = [];
 	    for (const view of encounterCandidateWindows()) {
+	      const currentOption = encounterCurrentVariableOptionForWindow(view);
 	      const options = encounterVariableOptionsForWindow(view);
 	      for (const option of options) {
+	        const optionKey = option ? String(option.type || "") + ":" + String(option.message_id ?? "") : "undefined";
+	        const currentKey = currentOption ? String(currentOption.type || "") + ":" + String(currentOption.message_id ?? "") : "";
+	        const optionPriority = currentKey && optionKey === currentKey
+	          ? 10000
+	          : (option?.type === "message" && option?.message_id === "latest" ? 1000 : (option?.type === "chat" ? 100 : 0));
 	        try {
 	          if (view?.Mvu?.getMvuData && view?.Mvu?.replaceMvuData) {
 	            const mvu = option === undefined ? view.Mvu.getMvuData() : view.Mvu.getMvuData(option);
 	            if (mvu && typeof mvu.then !== "function") {
 	              const stat = mvu?.stat_data && typeof mvu.stat_data === "object" ? mvu.stat_data : mvu;
 	              const score = encounterScoreMvuStatData(stat);
-	              if (score >= 0) candidates.push({ mvu, stat, option, view, replace: (nextMvu, nextOption) => view.Mvu.replaceMvuData(nextMvu, nextOption), score: score + 20 });
+	              if (score >= 0) candidates.push({ mvu, stat, option, view, replace: (nextMvu, nextOption) => view.Mvu.replaceMvuData(nextMvu, nextOption), score: score + optionPriority + 20 });
 	            }
 	          }
 	        } catch {}
@@ -21517,7 +22403,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	                  }
 	                  return stat;
 	                }, option),
-	                score
+	                score: score + optionPriority
 	              });
 	            }
 	          }
@@ -21594,6 +22480,13 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     return "000000";
   }
 
+  function roleEventRecordValue(roleData) {
+    if (!roleData || typeof roleData !== "object" || Array.isArray(roleData)) return "000000";
+    const primary = normalizedRoleEventRecord(roleData["_事件记录"]);
+    if (Object.prototype.hasOwnProperty.call(roleData, "_事件记录")) return primary;
+    return normalizedRoleEventRecord(roleData["事件记录"]);
+  }
+
 	  const PROFILE_EVENT_MEMORY_STORAGE_PREFIX = "hypnoos.profile.eventMemories.v1:";
 	  const PROFILE_EVENT_MEMORY_OPEN_TAG = "<人物档案事件记录>";
 	  const PROFILE_EVENT_MEMORY_CLOSE_TAG = "</人物档案事件记录>";
@@ -21628,25 +22521,27 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     return PROFILE_EVENT_MEMORY_STORAGE_PREFIX + "global";
   }
 
-  function readProfileEventMemoryStore() {
-    try {
-      const parsed = JSON.parse(localStorage.getItem(profileEventMemoryStorageKey()) || "null");
-      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-        const events = parsed.events && typeof parsed.events === "object" && !Array.isArray(parsed.events) ? parsed.events : {};
-        return { version: 1, updatedAt: Number(parsed.updatedAt || 0) || 0, events };
-      }
-    } catch {}
-    return { version: 1, updatedAt: 0, events: {} };
-  }
+	  function readProfileEventMemoryStore() {
+	    try {
+	      const parsed = JSON.parse(localStorage.getItem(profileEventMemoryStorageKey()) || "null");
+	      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+	        const events = parsed.events && typeof parsed.events === "object" && !Array.isArray(parsed.events) ? parsed.events : {};
+	        const replayTombstones = parsed.replayTombstones && typeof parsed.replayTombstones === "object" && !Array.isArray(parsed.replayTombstones) ? parsed.replayTombstones : {};
+	        return { version: 1, updatedAt: Number(parsed.updatedAt || 0) || 0, events, replayTombstones };
+	      }
+	    } catch {}
+	    return { version: 1, updatedAt: 0, events: {}, replayTombstones: {} };
+	  }
 
-  function writeProfileEventMemoryStore(store) {
-    try {
-      localStorage.setItem(profileEventMemoryStorageKey(), JSON.stringify({
-        version: 1,
-        updatedAt: Date.now(),
-        events: store?.events && typeof store.events === "object" ? store.events : {}
-      }));
-      return true;
+	  function writeProfileEventMemoryStore(store) {
+	    try {
+	      localStorage.setItem(profileEventMemoryStorageKey(), JSON.stringify({
+	        version: 1,
+	        updatedAt: Date.now(),
+	        events: store?.events && typeof store.events === "object" ? store.events : {},
+	        replayTombstones: store?.replayTombstones && typeof store.replayTombstones === "object" ? store.replayTombstones : {}
+	      }));
+	      return true;
     } catch (err) {
       console.warn("[HypnoOS] 人物档案事件回忆保存失败", err);
       return false;
@@ -21783,7 +22678,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	    return String(message.message ?? message.mes ?? message.text ?? message.content ?? message.raw ?? "");
 	  }
 
-	  function profileEventMemoryExtractBlocks(body) {
+		  function profileEventMemoryExtractBlocks(body) {
 	    const text = String(body ?? "");
 	    const blocks = [];
 	    let searchFrom = 0;
@@ -21874,15 +22769,17 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	        for (const block of message.memoryBlocks) {
 	          const record = normalizeProfileEventMemoryRecord(block, message);
 	          if (!record) continue;
+	          if (profileEventReplayTombstoneMatches(store, record)) continue;
 	          const roleBucket = store.events[record.roleName] && typeof store.events[record.roleName] === "object" && !Array.isArray(store.events[record.roleName])
             ? store.events[record.roleName]
             : {};
-          const key = String(record.bit);
-          const previous = roleBucket[key];
-          if (!previous || previous.sourceHash !== record.sourceHash || previous.text !== record.text) {
-            roleBucket[key] = { ...previous, ...record, createdAt: previous?.createdAt || Date.now() };
-            store.events[record.roleName] = roleBucket;
-            changed = true;
+	          const key = String(record.bit);
+	          const previous = roleBucket[key];
+	          if (!previous || previous.sourceHash !== record.sourceHash || previous.text !== record.text) {
+	            clearProfileEventReplayTombstone(store, record);
+	            roleBucket[key] = { ...previous, ...record, createdAt: previous?.createdAt || Date.now() };
+	            store.events[record.roleName] = roleBucket;
+	            changed = true;
           }
         }
       }
@@ -21893,16 +22790,38 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     }
   }
 
-  function getProfileEventMemory(roleName, bit) {
+	  function getProfileEventMemory(roleName, bit) {
+	    const name = String(roleName || "").trim();
+	    const key = String(Math.max(0, Math.min(ROLE_EVENT_RECORD_LENGTH - 1, Number(bit) || 0)));
+	    if (!name) return null;
+	    const store = readProfileEventMemoryStore();
+	    const record = store.events?.[name]?.[key];
+	    return record && typeof record === "object" && !Array.isArray(record) ? record : null;
+	  }
+
+  function deleteProfileEventMemory(roleName, bit) {
     const name = String(roleName || "").trim();
     const key = String(Math.max(0, Math.min(ROLE_EVENT_RECORD_LENGTH - 1, Number(bit) || 0)));
     if (!name) return null;
     const store = readProfileEventMemoryStore();
-    const record = store.events?.[name]?.[key];
-    return record && typeof record === "object" && !Array.isArray(record) ? record : null;
+    store.events = store.events && typeof store.events === "object" && !Array.isArray(store.events) ? store.events : {};
+    store.replayTombstones = store.replayTombstones && typeof store.replayTombstones === "object" && !Array.isArray(store.replayTombstones) ? store.replayTombstones : {};
+    const roleBucket = store.events[name] && typeof store.events[name] === "object" && !Array.isArray(store.events[name]) ? store.events[name] : null;
+    const previous = roleBucket?.[key] && typeof roleBucket[key] === "object" && !Array.isArray(roleBucket[key]) ? roleBucket[key] : null;
+    if (previous) {
+      delete roleBucket[key];
+      store.events[name] = roleBucket || {};
+      if (previous.sourceHash) {
+        const tombstoneBucket = store.replayTombstones[name] && typeof store.replayTombstones[name] === "object" && !Array.isArray(store.replayTombstones[name]) ? store.replayTombstones[name] : {};
+        tombstoneBucket[key] = String(previous.sourceHash || "");
+        store.replayTombstones[name] = tombstoneBucket;
+      }
+    }
+    writeProfileEventMemoryStore(store);
+    return previous;
   }
 
-  window.__ST_SYNC_PROFILE_EVENT_MEMORIES__ = syncProfileEventMemoriesFromChat;
+	  window.__ST_SYNC_PROFILE_EVENT_MEMORIES__ = syncProfileEventMemoriesFromChat;
 
   async function syncRoleEventRecordDefaults() {
     try {
@@ -21914,21 +22833,29 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
         .filter(([, roleData]) => roleData && typeof roleData === "object" && !Array.isArray(roleData))
         .map(([name, roleData]) => {
           const roleName = String(name || "").trim();
-          const current = Object.prototype.hasOwnProperty.call(roleData, "事件记录") ? String(roleData["事件记录"] ?? "").trim() : "";
-          const normalized = normalizedRoleEventRecord(current);
-          return roleName && current !== normalized ? { name: roleName, normalized } : null;
+          const hasPrimary = Object.prototype.hasOwnProperty.call(roleData, "_事件记录");
+          const primary = hasPrimary ? String(roleData["_事件记录"] ?? "").trim() : "";
+          const legacy = Object.prototype.hasOwnProperty.call(roleData, "事件记录") ? String(roleData["事件记录"] ?? "").trim() : "";
+          const normalizedPrimary = hasPrimary ? normalizedRoleEventRecord(primary) : normalizedRoleEventRecord(legacy);
+          const normalizedLegacy = normalizedRoleEventRecord(legacy);
+          const needsPrimary = !hasPrimary || primary !== normalizedPrimary;
+          const needsLegacy = legacy && legacy !== normalizedLegacy;
+          return roleName && (needsPrimary || needsLegacy) ? { name: roleName, normalizedPrimary, normalizedLegacy, needsLegacy } : null;
         })
         .filter(Boolean)
         .sort((a, b) => a.name.localeCompare(b.name, "zh-Hans-CN"));
       const scope = String(globalThis.__ST_HYPNOOS_FRONTEND_MESSAGE_SCOPE__?.() || globalThis.__ST_HYPNOOS_FRONTEND_SLOT_SCOPE__?.() || "latest");
-      const signature = scope + "::" + updates.map((item) => item.name + "=" + item.normalized).join("|");
+      const signature = scope + "::" + updates.map((item) => item.name + "=" + item.normalizedPrimary + "/" + item.normalizedLegacy).join("|");
       if (!updates.length) {
         globalThis.__ST_ROLE_EVENT_RECORD_SYNC_SIGNATURE__ = signature;
         return false;
       }
       if (globalThis.__ST_ROLE_EVENT_RECORD_SYNC_SIGNATURE__ === signature) return false;
       for (const item of updates) {
-        if (roles[item.name] && typeof roles[item.name] === "object" && !Array.isArray(roles[item.name])) roles[item.name]["事件记录"] = item.normalized;
+        if (roles[item.name] && typeof roles[item.name] === "object" && !Array.isArray(roles[item.name])) {
+          roles[item.name]["_事件记录"] = item.normalizedPrimary;
+          if (item.needsLegacy) roles[item.name]["事件记录"] = item.normalizedLegacy;
+        }
       }
       await encounterReplaceMvuData(data);
       globalThis.__ST_ROLE_EVENT_RECORD_SYNC_SIGNATURE__ = signature;
@@ -22109,6 +23036,15 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     return encounterFinalizeWorldbookEntryForInsert(entry);
   }
 
+  function encounterForceWorldbookComment(entry, fallbackComment) {
+    if (!entry || typeof entry !== "object") return entry;
+    const comment = String(fallbackComment || entry.comment || entry.name || "").trim();
+    if (!comment) return entry;
+    entry.comment = comment;
+    entry.name = comment;
+    return encounterFinalizeWorldbookEntryForInsert(entry);
+  }
+
   function encounterVariableWorldbookEntry(role) {
     const normalized = encounterNormalizeRole(role);
     const name = String(normalized.name || "").trim();
@@ -22121,13 +23057,15 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	    const name = String(normalized.name || "").trim();
 	    const content = encounterPersonaContent(normalized);
 	    if (!name || !String(content || "").trim()) return null;
-	    return encounterPreparedWorldbookEntry(
+	    const fallbackComment = "[mvu_plot]" + name + "人设";
+	    const entry = encounterPreparedWorldbookEntry(
 	      normalized.personaEntry,
-	      "[mvu_plot]" + name + "人设",
+	      fallbackComment,
 	      normalized,
 	      content,
 	      { preferFallbackContent: true }
 	    );
+	    return encounterForceWorldbookComment(entry, fallbackComment);
 	  }
 
   function encounterAffectionChainWorldbookEntry(role) {
@@ -22136,13 +23074,15 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	    const content = encounterAffectionChainWorldbookText(normalized);
 	    if (!name || !String(content || "").trim()) return null;
 	    const template = normalized.affectionEntry || normalized.affectionChainEntry || normalized["好感链世界书"] || normalized["好感事件链世界书"];
+	    const fallbackComment = "[mvu_plot]" + name + "好感链";
 	    const entry = encounterPreparedWorldbookEntry(
 	      template,
-	      "[mvu_plot]" + name + "好感链",
+	      fallbackComment,
 	      normalized,
 	      content,
 	      { preferFallbackContent: true }
 	    );
+	    encounterForceWorldbookComment(entry, fallbackComment);
 	    const secondary = ["好感链", "好感事件", "触发角色事件", "事件记录", "人物档案事件记录"];
 	    entry.keysecondary = Array.isArray(entry.keysecondary) && entry.keysecondary.length ? entry.keysecondary : secondary;
 	    entry.secondary_keys = Array.isArray(entry.secondary_keys) && entry.secondary_keys.length ? entry.secondary_keys : entry.keysecondary.slice();
@@ -22187,8 +23127,38 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 		    return String(name || "").trim().replace(/\\s+/g, " ").toLocaleLowerCase("zh-CN");
 		  }
 
+  const ENCOUNTER_DUPLICATE_ROLE_VISIBILITY_KEY = "hypnoos.encounter.showDuplicateRoles.v1";
+
+  function profileEventReplayTombstoneMatches(store, record) {
+    const roleName = String(record?.roleName || "").trim();
+    const key = String(Math.max(0, Math.min(ROLE_EVENT_RECORD_LENGTH - 1, Number(record?.bit) || 0)));
+    if (!roleName || !record?.sourceHash) return false;
+    const roleBucket = store?.replayTombstones?.[roleName];
+    if (!roleBucket || typeof roleBucket !== "object" || Array.isArray(roleBucket)) return false;
+    return String(roleBucket[key] || "") === String(record.sourceHash || "");
+  }
+
+  function clearProfileEventReplayTombstone(store, record) {
+    const roleName = String(record?.roleName || "").trim();
+    const key = String(Math.max(0, Math.min(ROLE_EVENT_RECORD_LENGTH - 1, Number(record?.bit) || 0)));
+    if (!roleName || !store?.replayTombstones?.[roleName]) return;
+    delete store.replayTombstones[roleName][key];
+  }
+
 	  function encounterShowDuplicateRoles(page) {
-	    return page?.dataset?.encounterShowDuplicateRoles === "1";
+	    if (page?.dataset?.encounterShowDuplicateRoles === "1") return true;
+	    if (page?.dataset?.encounterShowDuplicateRoles === "0") return false;
+	    try {
+	      return localStorage.getItem(ENCOUNTER_DUPLICATE_ROLE_VISIBILITY_KEY) === "1";
+	    } catch {
+	      return false;
+	    }
+	  }
+
+	  function encounterSetShowDuplicateRoles(page, value) {
+	    const next = value ? "1" : "0";
+	    if (page?.dataset) page.dataset.encounterShowDuplicateRoles = next;
+	    try { localStorage.setItem(ENCOUNTER_DUPLICATE_ROLE_VISIBILITY_KEY, next); } catch {}
 	  }
 
 	  function encounterIsOrjenrnSdzDuplicateRole(role, pkg) {
@@ -23518,24 +24488,44 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 
   function encounterPurchasePayload(pkg, result = {}) {
     const roles = (pkg.roles || []).map((role, index) => encounterNormalizeRole(role, index)).filter((role) => String(role.name || role.intro || "").trim());
-    const combinedPrompt = encounterPackageCombinedPrompt(pkg);
-    const randomRoleName = String(result.randomRoleName || (result.randomRomance ? roles.map((role) => role.name).filter(Boolean).join("、") : "")).trim();
+    const rolePromptText = roles
+      .map((role) => {
+        const name = String(role.name || "").trim();
+        const prompt = encounterRoleEncounterPrompt(role);
+        return prompt ? (name ? name + "：" + prompt : prompt) : "";
+      })
+      .filter(Boolean)
+      .join("；");
+    const singleRolePurchase = Boolean(result.singleRolePurchase);
+    const selectedRoleName = String(result.randomRoleName || roles.map((role) => role.name).filter(Boolean).join("、")).trim();
+    const randomRoleName = String(result.randomRoleName || (result.randomRomance ? selectedRoleName : "")).trim();
     const plotText = result.randomRomance
-      ? "本次消耗星光点在剧情中表现为{{user}}主动按下随机桃花运。前端已经随机抽中本条记录里的角色；{{user}}只知道自己购买了随机桃花运，不知道会遇到谁或对方来自哪个角色包。具体对象按随机命中角色和AI邂逅提示词执行，不得重新随机或替换。"
+      ? "本次消耗星光点在剧情中表现为{{user}}主动按下随机桃花运。前端已经随机抽中本条记录里的角色；{{user}}只知道自己购买了随机桃花运，不知道会遇到谁或对方来自哪个角色包。具体对象按随机命中角色、人设和角色出场提示执行，不得重新随机或替换。"
+      : singleRolePurchase
+      ? "本次消耗星光点在剧情中表现为{{user}}主动购买指定角色桃花运。{{user}}知道自己在邂逅APP里选择了这个角色；具体相遇仍由APP暗中安排成当前剧情中合理的自然偶遇。"
       : "本次消耗星光点在剧情中表现为{{user}}主动购买一次桃花运。{{user}}只知道自己购买了桃花运，不知道会遇到谁、会遇到几个角色、对方来自哪个角色包；具体对象由APP暗中安排。";
-    const fillFocusText = "对本次角色包涉及的每个登场/在场角色，重点检查变量中仍为未记录的档案.头发、档案.面部、档案.上衣、档案.下衣和心理；根据角色卡世界书中对应人设与AI邂逅提示词开场尽量补齐为简短具体描述，不要改写已记录项，不要粘贴世界书原文。";
+    const fillFocusText = "对本次角色包涉及的每个登场/在场角色，重点检查变量中仍为未记录的档案.头发、档案.面部、档案.上衣、档案.下衣和心理；根据角色卡世界书中对应人设、角色出场提示和当前上下文尽量补齐为简短具体描述，不要改写已记录项，不要粘贴世界书原文。";
     const executionText = result.randomRomance
-      ? "这个随机桃花运已经由前端抽取并使用。不要重新随机，不要换成其他角色，不要重复扣星光点，不要重复插入世界书。角色变量、人设和可选好感链条目已写入角色卡世界书对应位置；初始角色变量已由前端创建，若有同名旧角色则前端已用本角色包初始变量覆盖。AI只负责描写本次桃花运剧情和必要变量补全，不再创建、重建或补写角色/世界书。请把本次事件写成{{user}}主动购买随机桃花运后，由APP暗中安排的偶遇；剧情中的{{user}}不知道具体对象或角色包内容，不能表现为{{user}}精准点名召唤某角色。请优先按AI邂逅提示词里的整体串联开场安排登场；变量补全按“变量补全重点”执行。工作价值已是前端按人设估算的0-20数字，不要在第一回合为了补全而覆盖它。后续只按剧情变化更新变量。"
-      : "这个角色包已经被前端使用。不要重复扣星光点，不要重复插入世界书。角色变量、人设和可选好感链条目已写入角色卡世界书对应位置；初始角色变量已由前端创建，若有同名旧角色则前端已用本角色包初始变量覆盖。AI只负责描写本次桃花运剧情和必要变量补全，不再创建、重建或补写角色/世界书。请把本次事件写成{{user}}主动购买桃花运后，由APP暗中安排的偶遇；剧情中的{{user}}不知道会遇到谁、会遇到几个角色、对方来自哪个角色包，不能表现为{{user}}精准点名召唤某角色。请优先按AI邂逅提示词里的整体串联开场安排登场；变量补全按“变量补全重点”执行。工作价值已是前端按人设估算的0-20数字，不要在第一回合为了补全而覆盖它。后续只按剧情变化更新变量。";
-    return {
-      来源: "邂逅",
-      操作: "角色包已使用",
-      不可删除: true,
-      角色包ID: pkg.id,
-      角色包名称: pkg.name || "未命名角色包",
-      角色包介绍: encounterProfileSnippet(pkg.intro, 120) || "无",
-      ...(result.randomRomance ? { 选择方式: "随机桃花运", 随机命中角色: randomRoleName || "无" } : {}),
-      AI邂逅提示词: combinedPrompt || "见角色卡世界书中本次写入的角色包/角色条目。",
+      ? "这个随机桃花运已经由前端抽取并使用。不要重新随机，不要换成其他角色，不要重复扣星光点，不要重复插入世界书。角色变量、人设和可选好感链条目已写入角色卡世界书对应位置；初始角色变量已由前端创建，若有同名旧角色则前端已用本角色包初始变量覆盖。AI只负责描写本次桃花运剧情和必要变量补全，不再创建、重建或补写角色/世界书。请把本次事件写成{{user}}主动购买随机桃花运后，由APP暗中安排的偶遇；剧情中的{{user}}不知道具体对象或角色包内容，不能表现为{{user}}精准点名召唤某角色。登场安排参考命中角色的人设、角色出场提示和当前上下文；变量补全按“变量补全重点”执行。工作价值已是前端按人设估算的0-20数字，不要在第一回合为了补全而覆盖它。后续只按剧情变化更新变量。"
+      : singleRolePurchase
+      ? "这个指定角色桃花运已经由前端使用。不要重复扣星光点，不要重复插入世界书，不要改成其他角色。角色变量、人设和可选好感链条目已写入角色卡世界书对应位置；初始角色变量已由前端创建，若有同名旧角色则前端已用本角色初始变量覆盖。AI只负责描写本次指定角色桃花运剧情和必要变量补全，不再创建、重建或补写角色/世界书。请把本次事件写成{{user}}主动在邂逅APP里选择该角色后，由APP暗中安排的合理自然偶遇；剧情不能表现为{{user}}凭空召唤角色或绕过当前地点、时间、关系限制。登场安排参考命中角色的人设、角色出场提示和当前上下文；变量补全按“变量补全重点”执行。工作价值已是前端按人设估算的0-20数字，不要在第一回合为了补全而覆盖它。后续只按剧情变化更新变量。"
+      : "这个角色包已经被前端使用。不要重复扣星光点，不要重复插入世界书。角色变量、人设和可选好感链条目已写入角色卡世界书对应位置；初始角色变量已由前端创建，若有同名旧角色则前端已用本角色包初始变量覆盖。AI只负责描写本次桃花运剧情和必要变量补全，不再创建、重建或补写角色/世界书。请把本次事件写成{{user}}主动购买桃花运后，由APP暗中安排的偶遇；剧情中的{{user}}不知道会遇到谁、会遇到几个角色、对方来自哪个角色包，不能表现为{{user}}精准点名召唤某角色。登场安排参考命中角色的人设、角色出场提示和当前上下文；变量补全按“变量补全重点”执行。工作价值已是前端按人设估算的0-20数字，不要在第一回合为了补全而覆盖它。后续只按剧情变化更新变量。";
+	    return {
+	      来源: "邂逅",
+	      操作: result.randomRomance ? "随机桃花运已使用" : singleRolePurchase ? "角色已使用" : "角色包已使用",
+	      不可删除: true,
+	      ...(result.randomRomance || singleRolePurchase ? {
+	        角色ID: pkg.id,
+	        角色名称: selectedRoleName || pkg.name || "未命名角色",
+	        来源角色包: result.sourceName || (result.randomRomance ? "随机桃花运候选" : "角色列表"),
+	        角色介绍: encounterProfileSnippet(roles[0]?.intro || pkg.intro, 120) || "无"
+	      } : {
+	        角色包ID: pkg.id,
+	        角色包名称: pkg.name || "未命名角色包",
+	        角色包介绍: encounterProfileSnippet(pkg.intro, 120) || "无"
+	      }),
+      ...(result.randomRomance ? { 选择方式: "随机桃花运", 随机命中角色: randomRoleName || "无" } : singleRolePurchase ? { 选择方式: "指定角色", 指定角色: selectedRoleName || "无" } : {}),
+      角色出场提示: rolePromptText || "见角色卡世界书中本次写入的角色人设条目。",
 	      前端处理: "已由前端扣除星光点、创建初始角色变量、缓存角色图片，并尝试写入角色卡世界书。",
       消耗星光点: result.price ?? encounterPackagePrice(pkg),
       前端创建角色变量: Array.isArray(result.createdRoles) && result.createdRoles.length ? result.createdRoles.join("、") : "无",
@@ -23550,7 +24540,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	      剧情设定: plotText,
 		      角色变量补全要求: "每个角色都已由前端创建/覆盖初始变量；AI只补齐仍为未记录的必要字段，参照角色卡世界书里的对应人设/变量条目。不要把世界书原文整段塞进档案字段。工作价值已由前端按人设估算为0-20的星光点/日数字，后续只有角色身份、资源或能力发生长期变化时才更新。",
       变量补全重点: fillFocusText,
-      角色处理: "角色变量、图片缓存和世界书写入已由前端处理；AI只按AI邂逅提示词的整体串联开场描写本次相遇，不逐个复述角色单独出场提示。",
+      角色处理: "角色变量、图片缓存和世界书写入已由前端处理；AI按命中角色的人设、角色出场提示和当前上下文描写本次相遇。",
       AI执行规范: executionText
     };
   }
@@ -23575,22 +24565,24 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     const roleName = String(item?.role?.name || "").trim() || "未命名角色";
     const confirmMessage = "随机桃花运会从带世界书内容、且角色卡世界书未导入的角色中抽取1名。\\n\\n本次已抽中：「" + roleName + "」。确认后扣除 " + SCAN_ROLE_COST_STARLIGHT + " 星光点、创建角色初始变量、缓存图片，并把角色变量、人设和可选好感链条目写入角色卡世界书对应位置。世界书增加不可撤销，只能之后手动删除；变量可以通过删除楼层恢复。\\n\\n确认使用随机桃花运？";
     await encounterHandlePurchase(page, item.package.id, item.package, {
-      confirmMessage,
-      randomRomance: true,
-      randomRoleName: roleName,
-      statusLabel: "随机桃花运：" + roleName
-    });
+	      confirmMessage,
+	      randomRomance: true,
+	      randomRoleName: roleName,
+	      sourceName: item.sourceName || "",
+	      statusLabel: "随机桃花运：" + roleName
+	    });
   }
 
   async function encounterHandlePurchase(page, packageId, providedPackage = null, options = {}) {
     const purchaseOptions = options && typeof options === "object" ? options : {};
     const pkg = providedPackage ? encounterNormalizePackage(providedPackage) : encounterFindPurchasablePackage(packageId);
     if (!pkg) {
-      encounterSetStatus(page, "找不到这个角色包。");
+      encounterSetStatus(page, String(packageId || "").startsWith("single-role:") ? "找不到这个角色。" : "找不到这个角色包。");
       return;
     }
-    if (!purchaseOptions.randomRomance) {
-      encounterSetStatus(page, "指定角色包和单独角色现在只能浏览；请使用随机桃花运购买随机角色。");
+    const isSingleRolePurchase = String(pkg.id || packageId || "").startsWith("single-role:");
+    if (!purchaseOptions.randomRomance && !isSingleRolePurchase) {
+      encounterSetStatus(page, "角色包现在只能浏览；请在角色列表里购买包内具体角色。");
       renderEncounterPage(page);
       return;
     }
@@ -23640,15 +24632,15 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	    const baseConfirmMessage = String(purchaseOptions.confirmMessage || ("这是一次购买桃花运：前端会扣除星光点，并在剧情中让APP暗中安排你遇到角色；{{user}}在剧情里不知道会是谁。\\n\\n购买后会直接向角色卡世界书新增角色变量、人设和可选好感链条目，并在当前变量中创建角色初始变量。世界书增加不可撤销，只能之后手动删除；变量可以通过删除楼层恢复。"))
 	      .replace(/\\n\\n确认使用随机桃花运？\\s*$/u, "")
 	      .replace(/\\n\\n确认使用这个角色包？\\s*$/u, "");
-		    const confirmMessage = baseConfirmMessage + duplicateNote + overwriteNote + "\\n\\n确认使用这个角色包？";
+	    const confirmMessage = baseConfirmMessage + duplicateNote + overwriteNote + "\\n\\n" + (purchaseOptions.randomRomance ? "确认使用随机桃花运？" : "确认使用这个角色？");
 		    const ok = await encounterConfirm(page, {
-		      title: purchaseOptions.randomRomance ? "随机桃花运" : "购买桃花运",
+		      title: purchaseOptions.randomRomance ? "随机桃花运" : "购买指定角色",
 		      message: confirmMessage,
 		      confirmText: "确认使用",
 		      cancelText: "取消"
 		    });
 	    if (!ok) return;
-	    encounterSetStatus(page, "正在使用角色包...");
+	    encounterSetStatus(page, "正在写入角色...");
     const deduct = await encounterDeductStarlight(price);
     if (!deduct.ok) {
       encounterSetStatus(page, deduct.reason || "星光点扣除失败。");
@@ -23687,19 +24679,35 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       insertedCount: worldbook.insertedCount,
       updatedCount: worldbook.updatedCount,
       overwrittenWorldbookRoles: overwriteNames,
-      targetWorldbook: worldbook.targetWorldbook,
-      method: worldbook.method,
-      randomRomance: Boolean(purchaseOptions.randomRomance),
-      randomRoleName: purchaseOptions.randomRoleName || ""
-    }))).then((added) => {
+	      targetWorldbook: worldbook.targetWorldbook,
+	      method: worldbook.method,
+	      randomRomance: Boolean(purchaseOptions.randomRomance),
+	      randomRoleName: purchaseOptions.randomRoleName || "",
+	      singleRolePurchase: isSingleRolePurchase,
+	      sourceName: purchaseOptions.sourceName || ""
+	    }))).then((added) => {
       page.dataset.encounterStatus = added
-	        ? ("已使用：" + (purchaseOptions.statusLabel || pkg.name || "角色包") + "；已创建变量 " + variables.created.length + " 个；已写入 " + (worldbook.targetWorldbook || "角色卡世界书") + " " + worldbook.count + " 条" + (cached.length ? "；图片已缓存。" : "。"))
-        : "角色包已使用，AI提示已存在于暂存区。";
+	        ? ("已使用：" + (purchaseOptions.statusLabel || pkg.name || "角色") + "；已创建变量 " + variables.created.length + " 个；已写入 " + (worldbook.targetWorldbook || "角色卡世界书") + " " + worldbook.count + " 条" + (cached.length ? "；图片已缓存。" : "。"))
+        : "角色已使用，AI提示已存在于暂存区。";
       renderEncounterPage(page);
+	    });
+	  }
+
+  async function encounterHandleRolePurchase(page, roleItemId, options = {}) {
+    const item = encounterFindRoleItem(roleItemId || "", page);
+    if (!item?.package) {
+      encounterSetStatus(page, "找不到这个角色。");
+      return;
+    }
+    const roleName = String(item.role?.name || item.package?.name || "角色").trim() || "角色";
+    await encounterHandlePurchase(page, item.package.id, item.package, {
+      ...(options && typeof options === "object" ? options : {}),
+      statusLabel: options?.statusLabel || roleName,
+      sourceName: item.sourceName || ""
     });
   }
 
-  function encounterManagementTargetPackage(type, id, page = null) {
+	  function encounterManagementTargetPackage(type, id, page = null) {
     const targetType = String(type || "package");
     if (targetType === "role") {
       const item = encounterFindRoleItem(id, page);
@@ -23975,7 +24983,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
           return;
         }
         if (action === "toggle-duplicate-roles") {
-          page.dataset.encounterShowDuplicateRoles = encounterShowDuplicateRoles(page) ? "0" : "1";
+          encounterSetShowDuplicateRoles(page, !encounterShowDuplicateRoles(page));
           page.dataset.encounterRolePage = "1";
           page.dataset.encounterRoleIndex = "0";
           page.dataset.encounterDetailRolePage = "1";
@@ -24063,7 +25071,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
           if (page.dataset.encounterTab === "role") encounterReadSingleRoleFromForm(page);
           else encounterReadDraftFromForm(page);
           page.dataset.encounterRoleContentSection = button.getAttribute("data-section") || "persona";
-          renderEncounterPage(page);
+          renderEncounterPage(page, { preserveScroll: true });
           return;
         }
         if (action === "toggle-worldbook") {
@@ -24107,20 +25115,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
           return;
         }
         if (action === "edit-package") {
-          const pkg = encounterFindPackage(button.getAttribute("data-package-id") || "") || encounterFindPurchasablePackage(button.getAttribute("data-package-id") || "");
-          if (!pkg) {
-            encounterSetStatus(page, "找不到这个角色包。");
-            return;
-          }
-          encounterSaveDraft(pkg);
-          page.dataset.encounterTab = "edit";
-          delete page.dataset.encounterView;
-          delete page.dataset.encounterPackageId;
-          delete page.dataset.encounterRoleItemId;
-          delete page.dataset.encounterDetailSection;
-          page.dataset.encounterEditSection = "package";
-          page.dataset.encounterEditRoleIndex = "0";
-          page.dataset.encounterStatus = "已填充到角色包定制草稿。";
+          encounterSetStatus(page, "多角色包编辑界面已移除；请在角色列表里打开单个角色定制。");
           renderEncounterPage(page);
           return;
         }
@@ -24141,7 +25136,11 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
           return;
         }
         if (action === "purchase") {
-          encounterSetStatus(page, "角色包和单独角色现在只能浏览；随机桃花运入口仍可购买随机角色。");
+          await encounterHandlePurchase(page, button.getAttribute("data-package-id") || "");
+          return;
+        }
+        if (action === "purchase-role") {
+          await encounterHandleRolePurchase(page, button.getAttribute("data-role-item-id") || "");
           return;
         }
         if (action === "add-role") {
@@ -24242,20 +25241,21 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
           if (!String(role.name || "").trim()) {
             encounterSetStatus(page, "请先填写角色名。");
             return;
-	          }
-	          const rolePackage = encounterPackageForRole(role, null);
-	          if (!encounterUpsertPackage(rolePackage)) {
-            encounterSetStatus(page, encounterLastStorageError || "保存失败。");
+		          }
+		          if (!encounterUpsertStandaloneRole(role)) {
+	            encounterSetStatus(page, encounterLastStorageError || "保存失败。");
             return;
           }
-	          page.dataset.encounterTab = "browse";
-          page.dataset.encounterBrowseSection = "packages";
-          delete page.dataset.encounterView;
-          delete page.dataset.encounterPackageId;
-          delete page.dataset.encounterRoleItemId;
-	          page.dataset.encounterStatus = "已保存到偶遇。";
-	          renderEncounterPage(page);
-	          return;
+		          page.dataset.encounterTab = "browse";
+	          page.dataset.encounterBrowseSection = "roles";
+          page.dataset.encounterPackageFilter = "standalone";
+          page.dataset.encounterRolePage = "1";
+	          delete page.dataset.encounterView;
+	          delete page.dataset.encounterPackageId;
+	          delete page.dataset.encounterRoleItemId;
+			          page.dataset.encounterStatus = "已新增到角色库。";
+		          renderEncounterPage(page);
+		          return;
         }
         if (action === "save-standalone-role") {
           const role = encounterReadSingleRoleFromForm(page);
@@ -24274,12 +25274,12 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
           delete page.dataset.encounterView;
           delete page.dataset.encounterPackageId;
           delete page.dataset.encounterRoleItemId;
-          page.dataset.encounterStatus = "已保存到角色库。";
+	          page.dataset.encounterStatus = "已新增到角色库。";
           renderEncounterPage(page);
 	          return;
 	        }
         if (action === "use-single-role") {
-          encounterSetStatus(page, "单独角色现在只能保存、浏览或定制；随机桃花运入口仍可购买随机角色。");
+          encounterSetStatus(page, "单独角色已保存到角色库；可在角色列表中购买这个角色。");
           return;
         }
         if (action === "export-draft") {
@@ -24334,6 +25334,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       locations: [
         { id: "school", label: "私立斋明学园", category: "学校", info: "东京近郊的老牌私立升学高中，前千金女校，今年正式改为男女混校。{{user}}目前主要活动的舞台。" },
         { id: "police-headquarters", label: "警视厅", category: "公共", info: "城镇警务系统的主要据点。报案、询问、监控调取、失踪与异常事件调查会在这里汇集；主角可疑度过高或公开事件扩大时，这里会成为压力来源。" },
+        { id: "general-hospital", label: "综合医院", category: "公共", info: "警视厅旁的综合医院，承担急诊、普通诊疗、心理咨询和体检等功能。受伤、异常身体反应、医疗证明、住院探视或警医联动剧情会在这里发生。" },
         { id: "saionji-company", label: "西园寺企业", category: "商业", info: "西园寺财团相关企业据点，象征爱丽莎家族的财富、人脉和社会影响力。" },
         { id: "saionji-home", label: "西园寺的家", category: "住宅", info: "西园寺爱丽莎的家。豪宅、佣人和严格家族秩序构成她日常生活的背景。" },
         { id: "miyuki-home", label: "深雪的家", category: "住宅", info: "月咏深雪的住处。安静、整洁、书卷气重，适合处理学习、班务和私人阅读情节。" },
@@ -24839,6 +25840,38 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     return base || "new-place";
   }
 
+  function uniqueGraphNodeId(scope, baseId) {
+    const graph = loadStaticGraph(scope);
+    const used = new Set((graph.locations || []).map((location) => String(location.id || "")));
+    const base = graphSuggestedNodeId(baseId || "new-place");
+    if (!used.has(base)) return base;
+    for (let index = 2; index < 1000; index += 1) {
+      const id = base + "-" + index;
+      if (!used.has(id)) return id;
+    }
+    return base + "-" + Date.now().toString(36);
+  }
+
+  function addStaticGraphLocation(scope, item) {
+    const label = String(item?.label || item?.name || item?.["名称"] || "").trim();
+    const info = String(item?.info || item?.description || item?.["描述"] || item?.["说明"] || "").trim();
+    if (!label && !info) return null;
+    const graph = loadStaticGraph(scope);
+    const id = uniqueGraphNodeId(scope, label || info.slice(0, 18) || "new-place");
+    const location = {
+      id,
+      label: label || "新地点",
+      info: info || "暂无地点信息。",
+      category: String(item?.category || item?.["分类"] || "").trim()
+    };
+    saveStaticGraph(scope, { ...graph, locations: (graph.locations || []).concat(location) });
+    return location;
+  }
+
+  function graphAddStatusDatasetKey(scope) {
+    return scope === "school" ? "graphAddStatusSchool" : "graphAddStatusWorld";
+  }
+
   function graphCategoryDatasetKey(scope) {
     return scope === "school" ? "graphCategorySchool" : "graphCategoryWorld";
   }
@@ -24928,41 +25961,69 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     '</div>';
   }
 
-	  function renderGraphAddLocationCard(scope, graph) {
+	  function graphAddLocationExamples(scope) {
+	    if (scope === "school") {
+	      return [
+	        "学习：自习室 / 补课、学习、私下谈话",
+	        "生活：保健室 / 休息、检查、临时安置",
+	        "公共：中庭 / 课间移动、偶遇"
+	      ];
+	    }
+	    if (scope === "teaching") {
+	      return [
+	        "学习：空教室 / 补课、社团临时借用",
+	        "行政：年级办公室 / 找老师、交材料",
+	        "公共：楼梯转角 / 偶遇、短暂停留"
+	      ];
+	    }
+	    return [
+	      "住宅：角色的家 / 私人会面、生活剧情",
+	      "公共：综合医院 / 急诊、体检、探视",
+	      "商业：车站前商店街 / 购物、打工、偶遇"
+	    ];
+	  }
+
+	  function graphAddLocationHint(scope, currentLocation) {
+	    return "提交后会立即按用户输入加入本地地图，并锁定暂存提醒AI承认该地点。AI不需要输出完整地点列表JSON；信息不足时由AI在剧情里自然补足。示例：" + graphAddLocationExamples(scope).join("；") + "。当前地点变量：" + currentLocation + "。";
+	  }
+
+	  function renderGraphAddLocationCard(scope, graph, page) {
 	    const currentLocation = getCurrentStoryLocation() || "未知";
 	    const title = scope === "school" ? "新增校内地点" : "新增区域地点";
-	    const tag = scope === "school" ? "<学校地图更新>" : "<地图更新>";
 	    const pendingAdd = hasPendingGraphAddLocationOperation(scope);
 	    const categoryOptions = graphCategoryOptions(scope, graph.locations, { includePresets: true });
+	    const status = String(page?.dataset?.[graphAddStatusDatasetKey(scope)] || "").trim();
     const options = ['<option value="">自动分类</option>']
       .concat(categoryOptions.map((category) => '<option value="' + escapeAttr(category) + '">' + escapeHtml(category) + '</option>'))
       .concat(['<option value="' + GRAPH_CUSTOM_CATEGORY_VALUE + '">自定义</option>'])
       .join("");
     return '<details class="st-lite-card st-graph-paper st-graph-add" data-graph-add-scope="' + escapeAttr(scope) + '">' +
-      '<summary class="st-graph-add-summary"><strong>' + title + '</strong><span>统一提示词 <b class="st-location-chevron">⌄</b></span></summary>' +
+      '<summary class="st-graph-add-summary"><strong>' + title + '</strong><span>前端保存 <b class="st-location-chevron">⌄</b></span></summary>' +
       '<div class="st-graph-add-grid">' +
         '<input data-graph-add-name autocomplete="off" placeholder="地点名">' +
         '<select data-graph-add-category aria-label="地点分类">' + options + '</select>' +
         '<input data-graph-add-custom-category autocomplete="off" placeholder="填写自定义分类" hidden>' +
         '<textarea data-graph-add-info placeholder="地点说明、用途、相关角色或剧情倾向"></textarea>' +
       '</div>' +
-      '<p class="st-graph-add-hint">提交后只会加入本轮操作；AI需要输出完整 ' + escapeHtml(tag) + ' 地点列表 JSON，字段包含 id/name/description/category，前端再写入本地。当前地点变量：' + escapeHtml(currentLocation) + '。</p>' +
+      '<p class="st-graph-add-hint">' + escapeHtml(graphAddLocationHint(scope, currentLocation)) + '</p>' +
+      (status ? '<p class="st-graph-add-hint">' + escapeHtml(status) + '</p>' : '') +
 	      '<button type="button" data-graph-add-submit data-graph-scope="' + escapeAttr(scope) + '"' + (pendingAdd ? " disabled" : "") + '>' + (pendingAdd ? "已暂存" : "请求新增地点") + '</button>' +
 	    '</details>';
 	  }
 
-	  function renderMapBoardAddLocationCard(scope, graph) {
+	  function renderMapBoardAddLocationCard(scope, graph, page) {
 	    const currentLocation = getCurrentStoryLocation() || "未知";
 	    const title = scope === "school" ? "新增校内地点" : (scope === "teaching" ? "新增楼内地点" : "新增区域地点");
-	    const tag = scope === "school" ? "<学校地图更新>" : "<地图更新>";
 	    const pendingAdd = hasPendingGraphAddLocationOperation(scope);
+	    const status = String(page?.dataset?.[graphAddStatusDatasetKey(scope)] || "").trim();
 	    return '<section class="st-lite-card st-graph-paper st-graph-add" data-graph-add-scope="' + escapeAttr(scope) + '">' +
-	      '<div class="st-graph-add-summary"><strong>' + title + '</strong><span>交给AI补全分类</span></div>' +
+	      '<div class="st-graph-add-summary"><strong>' + title + '</strong><span>前端保存</span></div>' +
 	      '<div class="st-graph-add-grid">' +
 	        '<input data-graph-add-name autocomplete="off" placeholder="地点名">' +
 	        '<textarea data-graph-add-info placeholder="地点说明、用途、相关角色或剧情倾向"></textarea>' +
 	      '</div>' +
-	      '<p class="st-graph-add-hint">提交后只会加入本轮操作；AI需要输出完整 ' + escapeHtml(tag) + ' 地点列表 JSON，字段包含 id/name/description/category，前端再写入本地。当前地点变量：' + escapeHtml(currentLocation) + '。</p>' +
+	      '<p class="st-graph-add-hint">' + escapeHtml(graphAddLocationHint(scope, currentLocation)) + '</p>' +
+	      (status ? '<p class="st-graph-add-hint">' + escapeHtml(status) + '</p>' : '') +
 	      '<button type="button" data-graph-add-submit data-graph-scope="' + escapeAttr(scope) + '"' + (pendingAdd ? " disabled" : "") + '>' + (pendingAdd ? "已暂存" : "请求新增地点") + '</button>' +
 	    '</section>';
 	  }
@@ -25009,7 +26070,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       graphCategoryFilterHtml(scope, page, graph.locations) +
       '<div class="st-location-list">' + locations + '</div>' +
     '</section>' +
-    renderGraphAddLocationCard(scope, graph);
+    renderGraphAddLocationCard(scope, graph, page);
   }
 
   const ST_CAMPUS_MAP_POINTS = [
@@ -25227,7 +26288,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       renderCampusInfoPanel(page, selected, extras) +
       renderCampusGateDialog(page) +
     '</section>' +
-    renderGraphAddLocationCard("school", graph);
+    renderGraphAddLocationCard("school", graph, page);
   }
 
   function renderTeachingMapCard(page) {
@@ -25475,6 +26536,74 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     }
   }
 
+  function hasPendingSchoolRuleDelete(ruleName) {
+    const name = String(ruleName || "").trim();
+    if (!name) return false;
+    try {
+      const pending = window.__ST_GET_PENDING_OPERATION_INPUT_LOG__?.() || [];
+      return pending.some((entry) => {
+        const payload = entry?.payload ?? entry;
+        if (!payload || typeof payload !== "object") return false;
+        return payload["来源"] === "学校"
+          && /废止初始校规|删除校规/.test(String(payload["操作"] || ""))
+          && String(payload["校规名"] || "").trim() === name;
+      });
+    } catch {
+      return false;
+    }
+  }
+
+  async function schoolRuleDeleteDirect(page, ruleName, isDefaultRule) {
+    const name = String(ruleName || "").trim();
+    if (!name) return { ok: false, message: "没有找到校规名。" };
+    if (hasPendingSchoolRuleDelete(name)) return { ok: false, message: "这条校规已在本轮删除暂存区。" };
+    const result = await rewardApplySystemMutation((system, stat) => {
+      const rules = stat["校规"] && typeof stat["校规"] === "object" && !Array.isArray(stat["校规"]) ? stat["校规"] : null;
+      if (!rules || !Object.prototype.hasOwnProperty.call(rules, name)) return { ok: false, message: "变量中没有找到这条校规。" };
+      if (!encounterVip6FromSystem(system)) return { ok: false, message: "需要VIP6才能管理校规。" };
+      const starlightBefore = Math.max(0, Math.floor(Number(system["星光点"] ?? system["starlight"] ?? 0) || 0));
+      const cost = isDefaultRule ? 10 : 0;
+      if (starlightBefore < cost) return { ok: false, message: "星光点不足，废止初始校规需要10星光点。" };
+      if (cost > 0) {
+        if (typeof hypnosisSetSystemNumber === "function") hypnosisSetSystemNumber(system, "星光点", starlightBefore - cost);
+        else system["星光点"] = starlightBefore - cost;
+      }
+      const nextRules = Object.fromEntries(Object.entries(rules).filter(([key]) => key !== name));
+      stat["校规"] = nextRules;
+      const nextCount = Object.keys(nextRules).length;
+      return {
+        ok: true,
+        message: (isDefaultRule ? "初始校规已废止。" : "校规已删除。"),
+        payload: {
+          来源: "学校",
+          操作: isDefaultRule ? "废止初始校规" : "删除校规",
+          暂存摘要: name,
+          校规名: name,
+          是否初始校规: Boolean(isDefaultRule),
+          前端处理: "已由前端直接写入变量",
+          变量写入路径: ["/校规/" + name].concat(cost > 0 ? ["/系统/星光点"] : []),
+          前端删除校规: "/校规/" + name,
+          前端扣除星光点: cost,
+          前端写入后星光点: starlightBefore - cost,
+          前端写入后当前校规数: nextCount,
+          AI执行规范: "这条校规已经由前端从/校规中删除" + (cost > 0 ? "，10星光点也已由前端扣除" : "") + "。AI只承认该校规已不再生效，不得再次remove /校规/" + name + "，不得二次扣费、返还资源或把校规删除写成角色催眠效果。",
+          不可删除: true,
+          forceLocked: true
+        }
+      };
+    });
+    if (result?.ok) {
+      const currentLayerWritten = await syncSchoolRuleDeleteToCurrentLayer(result.payload);
+      if (!currentLayerWritten) {
+        console.warn("[HypnoOS] 校规变量已尝试写入MVU，但当前层删除读回未确认。");
+        return { ok: false, message: "校规变量写入当前层未确认，未锁定本轮操作。" };
+      }
+      const added = await appendAppOperation(result.payload);
+      return { ok: true, message: added ? result.message : "校规已删除，暂存区已有提醒。" };
+    }
+    return result || { ok: false, message: "删除校规失败。" };
+  }
+
   function renderSchoolRulesCard() {
     const rules = getSchoolRules();
     const entries = Object.entries(rules);
@@ -25515,49 +26644,67 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       select.addEventListener("change", () => toggleGraphCustomCategoryInput(select));
     });
 	    page.querySelectorAll("[data-graph-add-submit]").forEach((button) => {
-	      button.addEventListener("click", () => {
+	      button.addEventListener("click", async (event) => {
+	        event.preventDefault();
+	        event.stopPropagation();
 	        const scope = button.getAttribute("data-graph-scope") || "world";
+	        const statusKey = graphAddStatusDatasetKey(scope);
 	        if (hasPendingGraphAddLocationOperation(scope)) {
+	          page.dataset[statusKey] = "已有新增地点暂存，发送或取消后再新增。";
 	          rerenderGraphHost(page);
 	          return;
 	        }
 	        const card = button.closest("[data-graph-add-scope]");
-        const nameInput = card?.querySelector("[data-graph-add-name]");
-        const categoryInput = card?.querySelector("[data-graph-add-category]");
-        const customCategoryInput = card?.querySelector("[data-graph-add-custom-category]");
-        const infoInput = card?.querySelector("[data-graph-add-info]");
-        const name = String(nameInput?.value || "").trim();
-        const selectedCategory = String(categoryInput?.value || "").trim();
-        const customCategory = selectedCategory === GRAPH_CUSTOM_CATEGORY_VALUE ? String(customCategoryInput?.value || "").trim() : "";
-        const category = customCategory || (selectedCategory === GRAPH_CUSTOM_CATEGORY_VALUE ? "" : selectedCategory);
-        const infoText = String(infoInput?.value || "").trim();
-        if (!name && !infoText) return;
-        const graph = loadStaticGraph(scope);
-        const currentLocation = getCurrentStoryLocation() || "未知";
-        const tag = scope === "school" ? "学校地图更新" : "地图更新";
-	        Promise.resolve(appendAppOperation({
+	        const nameInput = card?.querySelector("[data-graph-add-name]");
+	        const categoryInput = card?.querySelector("[data-graph-add-category]");
+	        const customCategoryInput = card?.querySelector("[data-graph-add-custom-category]");
+	        const infoInput = card?.querySelector("[data-graph-add-info]");
+	        const name = String(nameInput?.value || "").trim();
+	        const selectedCategory = String(categoryInput?.value || "").trim();
+	        const customCategory = selectedCategory === GRAPH_CUSTOM_CATEGORY_VALUE ? String(customCategoryInput?.value || "").trim() : "";
+	        const category = customCategory || (selectedCategory === GRAPH_CUSTOM_CATEGORY_VALUE ? "" : selectedCategory);
+	        const infoText = String(infoInput?.value || "").trim();
+	        if (!name && !infoText) {
+	          page.dataset[statusKey] = "请至少填写地点名或地点说明。";
+	          rerenderGraphHost(page);
+	          return;
+	        }
+	        const addedLocation = addStaticGraphLocation(scope, {
+	          label: name || "新地点",
+	          info: infoText,
+	          category
+	        });
+	        if (!addedLocation) {
+	          page.dataset[statusKey] = "新增地点失败。";
+	          rerenderGraphHost(page);
+	          return;
+	        }
+	        const graph = loadStaticGraph(scope);
+	        const currentLocation = getCurrentStoryLocation() || "未知";
+		        const added = await appendAppOperation({
 	          来源: scope === "school" ? "学校地图" : "地图",
 	          操作: "请求新增地点",
-          地图类型: graph.title + "（地点列表）",
-          新增地点: {
-            名称: name || "由AI按剧情命名",
-            分类: category || "由AI按地点用途选择合适分类，或留空",
-            信息: infoText || "由AI按当前剧情补全",
-            建议ID: graphSuggestedNodeId(name),
-            当前地点变量: currentLocation
-          },
-          当前完整地点列表JSON: JSON.stringify({ title: graph.title, locations: graph.locations }),
-          AI执行规范: "若地点成立，输出完整<" + tag + ">JSON</" + tag + ">，不是增量；只保留locations地点列表，不要输出边关系、坐标或连线。每项使用id、name、description、category；category可为空。"
-	        })).then((added) => {
-	          if (added) {
-	            if (nameInput) nameInput.value = "";
-	            if (categoryInput) categoryInput.value = "";
-	            if (customCategoryInput) customCategoryInput.value = "";
-	            toggleGraphCustomCategoryInput(categoryInput);
-	            if (infoInput) infoInput.value = "";
-	          }
-	          rerenderGraphHost(page);
-	        });
+	          暂存摘要: addedLocation.label,
+	          地图类型: graph.title + "（地点列表）",
+	          新增地点: {
+	            名称: addedLocation.label,
+	            分类: addedLocation.category || "未分类",
+	            信息: addedLocation.info || "暂无地点信息。",
+	            建议ID: addedLocation.id,
+	            当前地点变量: currentLocation
+	          },
+		          典型示例: graphAddLocationExamples(scope),
+		          前端处理: "已由前端按用户输入加入本地地图列表；本条暂存用于提醒AI承认该地点可被剧情使用。",
+		          AI执行规范: "前端已经把该地点加入本地地图。AI不需要输出完整地图JSON，也不要新增MVU变量；本轮只需承认该地点存在，信息不足时可在剧情里自然补足用途、氛围或相关细节，并按剧情判断是否能把/系统/当前地点移动到这里。除非用户明确要求批量重排地图，否则不得输出完整地图更新JSON，也不得删除刚新增地点。"
+		        });
+	        page.dataset[statusKey] = added ? ("已新增地点：" + addedLocation.label + "。") : ("已新增地点：" + addedLocation.label + "，暂存区已有提醒。");
+	        if (nameInput) nameInput.value = "";
+	        if (categoryInput) categoryInput.value = "";
+	        if (customCategoryInput) customCategoryInput.value = "";
+	        toggleGraphCustomCategoryInput(categoryInput);
+	        if (infoInput) infoInput.value = "";
+	        if (page.dataset.mapBoardAddOpen === "true") delete page.dataset.mapBoardAddOpen;
+	        rerenderGraphHost(page);
 	      });
 	    });
     page.querySelectorAll("[data-graph-category-scroll]").forEach((button) => {
@@ -25668,32 +26815,25 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       });
       input.value = "";
     });
-    page.querySelectorAll("[data-school-rule-delete]").forEach((button) => {
-      button.addEventListener("click", (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        const body = page.querySelector(".st-lite-body");
-        const scrollTop = body?.scrollTop || 0;
-        const ruleName = button.getAttribute("data-school-rule-delete") || "";
-        const isDefaultRule = button.getAttribute("data-school-rule-default") === "true";
-        Promise.resolve(appendAppOperation({
-          来源: "学校",
-          操作: isDefaultRule ? "废止初始校规" : "删除校规",
-          校规名: ruleName,
-          前置条件: isDefaultRule ? "VIP6；星光点>=10。" : "后续新增校规可直接删除。",
-          固定代价: isDefaultRule ? { 星光点: 10 } : { 星光点: 0 },
-          AI执行规范: isDefaultRule
-            ? "这是废止初始默认校规；成功时扣除10星光点并remove /校规/校规名。任一条件不足则失败，不扣费、不删除。"
-            : "这是删除后续自建校规；成功时只remove /校规/校规名，不扣费、不返还资源。"
-        })).finally(() => {
-          if (!body) return;
-          body.scrollTop = scrollTop;
-          window.requestAnimationFrame(() => {
-            if (body.isConnected) body.scrollTop = scrollTop;
-          });
-        });
-      });
-    });
+	    page.querySelectorAll("[data-school-rule-delete]").forEach((button) => {
+	      button.addEventListener("click", async (event) => {
+	        event.preventDefault();
+	        event.stopPropagation();
+	        const body = page.querySelector(".st-lite-body");
+	        const scrollTop = body?.scrollTop || 0;
+	        const ruleName = button.getAttribute("data-school-rule-delete") || "";
+	        const isDefaultRule = button.getAttribute("data-school-rule-default") === "true";
+	        const result = await schoolRuleDeleteDirect(page, ruleName, isDefaultRule);
+	        page.dataset.campusStatus = result?.message || "";
+	        rerenderGraphHost(page);
+	        const nextBody = page.querySelector(".st-lite-body");
+	        if (!nextBody) return;
+	        nextBody.scrollTop = scrollTop;
+	        window.requestAnimationFrame(() => {
+	          if (nextBody.isConnected) nextBody.scrollTop = scrollTop;
+	        });
+	      });
+	    });
   }
 
   const ST_CITY_MAP_POINTS = [
@@ -25726,12 +26866,13 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       currentScope: "world",
       cols: 3,
       rows: 4,
-      intro: "斋明学园、明德大学、西园寺企业、警视厅与几处主要住宅分布在同一座近郊城镇里。学生日常、家族背景、课外行动和偶遇事件会在这些地点之间交汇。",
+      intro: "斋明学园、明德大学、西园寺企业、警视厅、综合医院与几处主要住宅分布在同一座近郊城镇里。学生日常、家族背景、课外行动和偶遇事件会在这些地点之间交汇。",
       nodes: [
         { id: "university", specialId: "university", label: "明德大学", short: "明德大学", category: "大学", icon: "university", symbol: "🎓", col: 1, row: 1, c1: "#c4b5fd", c2: "#8b5cf6", info: "紧邻私立斋明学园的开放式综合大学，是高中生与大学生圈层交汇的灰色地带。它属于城市主地图的一部分，不需要准入证或星光点解锁。" },
         { id: "school", graphId: "school", label: "私立斋明学园", short: "斋明学园", category: "校园", icon: "school", symbol: "🏫", col: 2, row: 1, enter: "campus", c1: "#bfdbfe", c2: "#60a5fa", info: "东京近郊的老牌私立升学高中，前千金女校，今年正式改为男女混校。这里是主角日常、课程、社团和校内事件的中心。" },
         { id: "saionji-company", graphId: "saionji-company", label: "西园寺企业", short: "西园寺企业", category: "商业", icon: "company", symbol: "🏢", col: 3, row: 1, c1: "#fdba74", c2: "#f97316", info: "西园寺财团相关企业据点，象征爱丽莎家族的财富、人脉和社会影响力。" },
         { id: "police-headquarters", graphId: "police-headquarters", label: "警视厅", short: "警视厅", category: "公共", icon: "company", symbol: "🚓", col: 2, row: 2, c1: "#bae6fd", c2: "#0ea5e9", comingSoon: true, comingSoonMessage: "待续", info: "城镇警务系统的主要据点。报案、询问、监控调取、失踪与异常事件调查会在这里汇集；主角可疑度过高或公开事件扩大时，这里会成为压力来源。" },
+        { id: "general-hospital", graphId: "general-hospital", label: "综合医院", short: "综合医院", category: "公共", icon: "company", symbol: "🏥", col: 3, row: 2, c1: "#bbf7d0", c2: "#22c55e", info: "警视厅旁的综合医院，承担急诊、普通诊疗、心理咨询和体检等功能。受伤、异常身体反应、医疗证明、住院探视或警医联动剧情会在这里发生。" },
         { id: "miyuki-home", graphId: "miyuki-home", label: "深雪的家", short: "深雪的家", category: "住宅", icon: "home", symbol: "🏠", col: 1, row: 3, c1: "#fda4af", c2: "#fb7185", info: "月咏深雪的住处。安静、整洁、书卷气重，适合处理学习、班务和私人阅读情节。" },
         { id: "natsumi-home", graphId: "natsumi-home", label: "夏美的家", short: "夏美的家", category: "住宅", icon: "home", symbol: "🏠", col: 2, row: 3, c1: "#fda4af", c2: "#fb7185", info: "犬冢夏美的家。生活气息更强，和运动、饮食、训练后的休息场景容易连接。" },
         { id: "saionji-home", graphId: "saionji-home", label: "西园寺的家", short: "西园寺宅邸", category: "住宅", icon: "home", symbol: "🏠", col: 3, row: 3, c1: "#fda4af", c2: "#fb7185", info: "西园寺爱丽莎的家。豪宅、佣人和严格家族秩序构成她日常生活的背景。" }
@@ -25953,7 +27094,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     return '<div class="st-map-add-layer" data-board-add-layer role="presentation">' +
       '<section class="st-map-add-dialog" role="dialog" aria-modal="true" aria-label="新增地点">' +
         '<button type="button" class="st-map-add-close" data-board-add-close aria-label="关闭">×</button>' +
-        renderMapBoardAddLocationCard(layer.currentScope || "world", graph) +
+        renderMapBoardAddLocationCard(layer.currentScope || "world", graph, page) +
       '</section>' +
     '</div>';
   }
@@ -26452,7 +27593,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	    window.addEventListener("HYPNOOS_OPERATION_QUEUE_CHANGED", refreshFromOperationQueue);
 	  }
 
-  function openTodoPage(tile, appName, className, title, subtitle, schoolMode = false) {
+	  function openTodoPage(tile, appName, className, title, subtitle, schoolMode = false) {
     ensureStyle();
     ensurePhoneDarkThemeStyle();
     const root = findPhoneRoot(tile);
@@ -26477,6 +27618,465 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	    window.addEventListener("HYPNOOS_OPERATION_QUEUE_CHANGED", refreshFromOperationQueue);
 	  }
 
+  const SETTINGS_EXPORT_VERSION = 1;
+  const SETTINGS_DAILY_ROLL_PREFIX = "hypnoos.reward.daily-roll.v2:";
+
+  function settingsClone(value) {
+    try {
+      return JSON.parse(JSON.stringify(value));
+    } catch {
+      return value;
+    }
+  }
+
+  function settingsStorageEntriesByPrefix(prefix) {
+    const entries = {};
+    try {
+      const storage = globalThis.localStorage;
+      if (!storage) return entries;
+      for (let index = 0; index < storage.length; index += 1) {
+        const key = storage.key(index);
+        if (!key || !String(key).startsWith(prefix)) continue;
+        entries[key] = storage.getItem(key);
+      }
+    } catch {}
+    return entries;
+  }
+
+  function settingsOverwriteStoragePrefix(prefix, entries) {
+    try {
+      const storage = globalThis.localStorage;
+      if (!storage) return;
+      const removeKeys = [];
+      for (let index = 0; index < storage.length; index += 1) {
+        const key = storage.key(index);
+        if (key && String(key).startsWith(prefix)) removeKeys.push(key);
+      }
+      removeKeys.forEach((key) => storage.removeItem(key));
+      if (entries && typeof entries === "object" && !Array.isArray(entries)) {
+        Object.entries(entries).forEach(([key, value]) => {
+          if (String(key || "").startsWith(prefix)) storage.setItem(String(key), String(value ?? ""));
+        });
+      }
+    } catch {}
+  }
+
+  function settingsArray(value) {
+    return Array.isArray(value) ? value.map(String).filter(Boolean) : [];
+  }
+
+  function settingsObject(value) {
+    return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  }
+
+  function settingsExportPayload() {
+    const worldGraph = loadStaticGraph("world");
+    const schoolGraph = loadStaticGraph("school");
+    return {
+      version: SETTINGS_EXPORT_VERSION,
+      exportedAt: new Date().toISOString(),
+      source: "HypnoOS frontend storage",
+      sections: {
+        rewards: {
+          state: readFrontendRewardStateStored(),
+          counts: readFrontendRewardCounts(),
+          dailyRolls: settingsStorageEntriesByPrefix(SETTINGS_DAILY_ROLL_PREFIX)
+        },
+        encounter: {
+          purchases: Array.from(encounterReadPurchasedIds())
+        },
+        locations: {
+          world: worldGraph,
+          school: schoolGraph,
+          favorites: {
+            world: Array.from(readGraphFavoriteIds("world")),
+            school: Array.from(readGraphFavoriteIds("school"))
+          },
+          updateSeen: Array.from(readSeenGraphUpdateKeys()),
+          specialUnlocks: readSpecialLocationUnlockRecords()
+        },
+        timetable: {
+          overrides: readWeeklyTimetable()
+        },
+        profile: {
+          favoriteRoles: readFavoriteRoleNames(),
+          eventMemories: readProfileEventMemoryStore()
+        }
+      }
+    };
+  }
+
+  function settingsPayloadSummary(payload) {
+    const sections = settingsObject(payload?.sections);
+    const rewards = settingsObject(sections.rewards);
+    const encounter = settingsObject(sections.encounter);
+    const locations = settingsObject(sections.locations);
+    const timetable = settingsObject(sections.timetable);
+    const profile = settingsObject(sections.profile);
+    const worldCount = Array.isArray(locations.world?.locations) ? locations.world.locations.length : 0;
+    const schoolCount = Array.isArray(locations.school?.locations) ? locations.school.locations.length : 0;
+    const rows = [];
+    rows.push("成就任务状态 " + Object.keys(settingsObject(rewards.state?.achievements)).length + " 成就 / " + Object.keys(settingsObject(rewards.state?.quests)).length + " 任务");
+    rows.push("每日任务抽签 " + Object.keys(settingsObject(rewards.dailyRolls)).length + " 条");
+    rows.push("邂逅购买记录 " + settingsArray(encounter.purchases).length + " 条");
+    rows.push("地点 " + worldCount + " 城市 / " + schoolCount + " 学校");
+    rows.push("收藏角色 " + settingsArray(profile.favoriteRoles).length + " 名");
+    rows.push("事件回忆 " + Object.keys(settingsObject(profile.eventMemories?.events)).length + " 条");
+    rows.push(timetable.overrides ? "课表覆盖 已包含" : "课表覆盖 未包含");
+    return rows;
+  }
+
+  async function settingsWriteEncounterPurchases(ids) {
+    const key = encounterPurchaseStorageKey();
+    const list = settingsArray(ids);
+    const text = JSON.stringify(list);
+    encounterRememberJsonStorage(key, list);
+    try { localStorage.removeItem(key); } catch {}
+    const ok = await encounterSetJsonStorageIdb(key, text);
+    if (!ok) encounterSetJsonStorage(key, list);
+    return true;
+  }
+
+  async function settingsImportPayload(payload) {
+    const sections = settingsObject(payload?.sections || payload);
+    const rewards = settingsObject(sections.rewards);
+    if (Object.prototype.hasOwnProperty.call(rewards, "state")) {
+      try {
+        frontendRewardStateReadScopes().forEach((scope) => localStorage.removeItem(frontendRewardStateKeyForScope(scope)));
+        localStorage.removeItem(frontendRewardSharedStateKey());
+      } catch {}
+      writeFrontendRewardStateStored(rewards.state);
+    }
+    if (Object.prototype.hasOwnProperty.call(rewards, "counts")) writeFrontendRewardCounts(rewards.counts);
+    if (Object.prototype.hasOwnProperty.call(rewards, "dailyRolls")) settingsOverwriteStoragePrefix(SETTINGS_DAILY_ROLL_PREFIX, rewards.dailyRolls);
+
+    const encounter = settingsObject(sections.encounter);
+    if (Object.prototype.hasOwnProperty.call(encounter, "purchases")) await settingsWriteEncounterPurchases(encounter.purchases);
+
+    const locations = settingsObject(sections.locations);
+    if (Object.prototype.hasOwnProperty.call(locations, "world")) saveStaticGraph("world", locations.world);
+    if (Object.prototype.hasOwnProperty.call(locations, "school")) saveStaticGraph("school", locations.school);
+    const favorites = settingsObject(locations.favorites);
+    if (Object.prototype.hasOwnProperty.call(favorites, "world")) writeGraphFavoriteIds("world", new Set(settingsArray(favorites.world)));
+    if (Object.prototype.hasOwnProperty.call(favorites, "school")) writeGraphFavoriteIds("school", new Set(settingsArray(favorites.school)));
+    if (Object.prototype.hasOwnProperty.call(locations, "updateSeen")) writeSeenGraphUpdateKeys(new Set(settingsArray(locations.updateSeen)));
+    if (Object.prototype.hasOwnProperty.call(locations, "specialUnlocks")) {
+      try { localStorage.setItem(specialLocationUnlockStorageKey(), JSON.stringify(settingsObject(locations.specialUnlocks))); } catch {}
+    }
+
+    const timetable = settingsObject(sections.timetable);
+    if (Object.prototype.hasOwnProperty.call(timetable, "overrides")) writeWeeklyTimetable(timetable.overrides);
+
+    const profile = settingsObject(sections.profile);
+    if (Object.prototype.hasOwnProperty.call(profile, "favoriteRoles")) writeFavoriteRoleNames(settingsArray(profile.favoriteRoles));
+    if (Object.prototype.hasOwnProperty.call(profile, "eventMemories")) writeProfileEventMemoryStore(profile.eventMemories);
+    return true;
+  }
+
+  const SETTINGS_TOP_DEFAULTS = {
+    "系统": {},
+    "校规": {},
+    "成就": {},
+    "任务": {},
+    "角色": {}
+  };
+  const SETTINGS_DISPATCH_DEFAULT = {
+    "1号门": { "角色名": "", "派遣工作": "", "派遣开始时间": "", "派遣结束时间": "", "工作价值": 0 },
+    "2号门": { "角色名": "", "派遣工作": "", "派遣开始时间": "", "派遣结束时间": "", "工作价值": 0 },
+    "3号门": { "角色名": "", "派遣工作": "", "派遣开始时间": "", "派遣结束时间": "", "工作价值": 0 }
+  };
+  const SETTINGS_SYSTEM_DEFAULTS = {
+    "当前日期": "4月9日",
+    "_当前周几": "星期三",
+    "当前时间": "12:35",
+    "_当前日程": "午休",
+    "_当前特殊日期": "",
+    "_课程表": [],
+    "当前地点": "教室",
+    "当前事件": "",
+    "MC能量": 25,
+    "MC能量上限": 25,
+    "持有零花钱": 6000,
+    "星光点": 0,
+    "催眠APP订阅等级": "VIP0",
+    "主角可疑度": 0,
+    "派遣岗位": SETTINGS_DISPATCH_DEFAULT,
+    "持有物品": {},
+    "特殊地点解锁": {},
+    "_社畜值": 0,
+    "_buff": "",
+    "_buff结束时间": "",
+    "user身份": {}
+  };
+  const SETTINGS_ROLE_DEFAULTS = {
+    "好感度": 0,
+    "警戒度": 0,
+    "服从度": 0,
+    "性欲": 0,
+    "快感值": 0,
+    "是否派遣中": false,
+    "工作价值": 0,
+    "绰号": "",
+    "绰号已认可": false,
+    "_事件记录": "000000",
+    "事件记录": "000000",
+    "至关重要记忆": "",
+    "心理": "",
+    "档案": {},
+    "临时催眠效果": {},
+    "永久催眠效果": {},
+    "部位敏感度": {}
+  };
+  const SETTINGS_PROFILE_DEFAULTS = {
+    "照片": "",
+    "姓名": "",
+    "性别": "",
+    "年龄": "",
+    "身份": "",
+    "社团/职业": "",
+    "身高": "",
+    "体重": "",
+    "三围": "",
+    "头发": "",
+    "面部": "",
+    "上衣": "",
+    "下衣": ""
+  };
+
+  function settingsPathText(path) {
+    return "/" + path.map((part) => String(part)).join("/");
+  }
+
+  function settingsHasOwn(object, key) {
+    return Boolean(object && typeof object === "object" && !Array.isArray(object) && Object.prototype.hasOwnProperty.call(object, key));
+  }
+
+  function settingsPushMissing(report, path, value) {
+    report.missing.push({ path, defaultValue: settingsClone(value) });
+  }
+
+  function settingsScanDefaults(report, base, parentPath, defaults) {
+    Object.entries(defaults).forEach(([key, value]) => {
+      if (!settingsHasOwn(base, key)) settingsPushMissing(report, parentPath.concat(key), value);
+    });
+  }
+
+  function settingsVariableReport(rootInput = null) {
+    const root = rootInput || getLatestStatDataSync();
+    const report = { hasData: Boolean(root && typeof root === "object" && !Array.isArray(root)), missing: [], extra: [] };
+    if (!report.hasData) return report;
+    settingsScanDefaults(report, root, [], SETTINGS_TOP_DEFAULTS);
+    const topAllowed = new Set(Object.keys(SETTINGS_TOP_DEFAULTS));
+    Object.keys(root).forEach((key) => {
+      if (!topAllowed.has(key)) report.extra.push({ path: [key] });
+    });
+    const system = settingsObject(root["系统"]);
+    settingsScanDefaults(report, system, ["系统"], SETTINGS_SYSTEM_DEFAULTS);
+    const systemAllowed = new Set(Object.keys(SETTINGS_SYSTEM_DEFAULTS));
+    Object.keys(system).forEach((key) => {
+      if (!systemAllowed.has(key)) report.extra.push({ path: ["系统", key] });
+    });
+    const roles = settingsObject(root["角色"]);
+    const roleAllowed = new Set(Object.keys(SETTINGS_ROLE_DEFAULTS));
+    const profileAllowed = new Set(Object.keys(SETTINGS_PROFILE_DEFAULTS));
+    Object.entries(roles).forEach(([roleName, rawRole]) => {
+      const role = settingsObject(rawRole);
+      settingsScanDefaults(report, role, ["角色", roleName], SETTINGS_ROLE_DEFAULTS);
+      Object.keys(role).forEach((key) => {
+        if (!roleAllowed.has(key)) report.extra.push({ path: ["角色", roleName, key] });
+      });
+      const profile = settingsObject(role["档案"]);
+      settingsScanDefaults(report, profile, ["角色", roleName, "档案"], {
+        ...SETTINGS_PROFILE_DEFAULTS,
+        "姓名": String(profile["姓名"] || roleName || "")
+      });
+      Object.keys(profile).forEach((key) => {
+        if (!profileAllowed.has(key)) report.extra.push({ path: ["角色", roleName, "档案", key] });
+      });
+    });
+    return report;
+  }
+
+  function settingsApplyMissingDefault(root, path, value) {
+    if (!root || typeof root !== "object" || !Array.isArray(path) || !path.length) return false;
+    let node = root;
+    for (let index = 0; index < path.length - 1; index += 1) {
+      const key = path[index];
+      if (!node[key] || typeof node[key] !== "object" || Array.isArray(node[key])) node[key] = {};
+      node = node[key];
+    }
+    const finalKey = path[path.length - 1];
+    if (Object.prototype.hasOwnProperty.call(node, finalKey)) return false;
+    node[finalKey] = settingsClone(value);
+    return true;
+  }
+
+  async function settingsFillMissingVariables() {
+    const data = encounterCurrentMvuData();
+    if (!data?.stat) return { ok: false, count: 0 };
+    const report = settingsVariableReport(data.stat);
+    let count = 0;
+    for (const item of report.missing) {
+      if (settingsApplyMissingDefault(data.stat, item.path, item.defaultValue)) count += 1;
+    }
+    if (count > 0) await encounterReplaceMvuData(data);
+    return { ok: true, count };
+  }
+
+  function renderSettingsReport(report) {
+    if (!report.hasData) {
+      return '<section><strong>未读到当前变量</strong><small>请确认本楼层已经有MVU变量，或稍后再刷新。</small></section>';
+    }
+    const missingPreview = report.missing.slice(0, 36).map((item) => settingsPathText(item.path));
+    const extraPreview = report.extra.slice(0, 36).map((item) => settingsPathText(item.path));
+    const moreMissing = Math.max(0, report.missing.length - missingPreview.length);
+    const moreExtra = Math.max(0, report.extra.length - extraPreview.length);
+    return [
+      '<section><strong>缺少字段：' + report.missing.length + '</strong><small>' + escapeHtml(missingPreview.join("、") || "无") + (moreMissing ? " 等 " + moreMissing + " 项" : "") + '</small></section>',
+      '<section><strong>多出字段：' + report.extra.length + '</strong><small>' + escapeHtml(extraPreview.join("、") || "无") + (moreExtra ? " 等 " + moreExtra + " 项" : "") + '</small></section>'
+    ].join("");
+  }
+
+  function renderSettingsPage(page) {
+    const exportText = String(page.dataset.settingsExportText || "");
+    const importText = String(page.dataset.settingsImportText || "");
+    const status = String(page.dataset.settingsStatus || "");
+    const report = settingsVariableReport();
+    page.innerHTML =
+      renderLiteHeader(page, { title: "设置", html: '<strong>设置</strong>' }) +
+      '<main class="st-lite-body">' +
+        (status ? '<div class="st-settings-status">' + escapeHtml(status) + '</div>' : '') +
+        '<section class="st-settings-panel">' +
+          '<h3>前端存储迁移</h3>' +
+          '<p>导出成就任务、邂逅购买记录、地点、魔改课表覆盖、收藏角色、事件回忆摘要/重温。不包含照片、角色包正文和图片缓存。</p>' +
+          '<div class="st-settings-actions is-three">' +
+            '<button class="st-settings-button primary" data-settings-action="export">导出JSON</button>' +
+            '<button class="st-settings-button" data-settings-action="copy" ' + (exportText ? "" : "disabled") + '>复制</button>' +
+            '<button class="st-settings-button" data-settings-action="download" ' + (exportText ? "" : "disabled") + '>下载</button>' +
+          '</div>' +
+          '<textarea class="st-settings-code" readonly placeholder="点击导出后这里会出现JSON。">' + escapeHtml(exportText) + '</textarea>' +
+        '</section>' +
+        '<section class="st-settings-panel">' +
+          '<h3>导入覆盖</h3>' +
+          '<p>用于旧版聊天记录迁移。导入会覆盖本聊天当前前端存储，请先确认已经导出备份。</p>' +
+          '<input class="st-settings-file" type="file" accept="application/json,.json" data-settings-action="file" />' +
+          '<textarea class="st-settings-code" data-settings-role="import" placeholder="也可以直接粘贴导出的JSON。">' + escapeHtml(importText) + '</textarea>' +
+          '<button class="st-settings-button danger" data-settings-action="import">导入并覆盖前端存储</button>' +
+        '</section>' +
+        '<section class="st-settings-panel">' +
+          '<h3>当前变量格式</h3>' +
+          '<p>检查stat_data常用字段。少字段可以自动补齐，多字段只提示，建议在变量面板里自行确认后修改。</p>' +
+          '<div class="st-settings-actions">' +
+            '<button class="st-settings-button" data-settings-action="refresh">刷新检查</button>' +
+            '<button class="st-settings-button primary" data-settings-action="fill" ' + (!report.hasData || !report.missing.length ? "disabled" : "") + '>一键补少字段</button>' +
+          '</div>' +
+          '<div class="st-settings-report">' + renderSettingsReport(report) + '</div>' +
+        '</section>' +
+      '</main>';
+    bindLiteHeader(page, () => renderSettingsPage(page));
+    page.querySelector('[data-lite-action="back"]')?.addEventListener("click", () => {
+      const root = page.parentElement;
+      setPhoneActiveApp(root, "");
+      page.remove();
+    });
+    page.querySelector('[data-settings-role="import"]')?.addEventListener("input", (event) => {
+      page.dataset.settingsImportText = event.target.value || "";
+    });
+    page.querySelector('[data-settings-action="export"]')?.addEventListener("click", () => {
+      const payload = settingsExportPayload();
+      page.dataset.settingsExportText = JSON.stringify(payload, null, 2);
+      page.dataset.settingsStatus = "已导出：" + settingsPayloadSummary(payload).join("；");
+      renderSettingsPage(page);
+    });
+    page.querySelector('[data-settings-action="copy"]')?.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard?.writeText?.(page.dataset.settingsExportText || "");
+        page.dataset.settingsStatus = "已复制导出JSON。";
+      } catch {
+        page.dataset.settingsStatus = "复制失败，可以手动全选文本。";
+      }
+      renderSettingsPage(page);
+    });
+    page.querySelector('[data-settings-action="download"]')?.addEventListener("click", () => {
+      try {
+        const blob = new Blob([page.dataset.settingsExportText || ""], { type: "application/json;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "hypnoos-frontend-storage-" + new Date().toISOString().slice(0, 10) + ".json";
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        page.dataset.settingsStatus = "已下载导出JSON。";
+      } catch {
+        page.dataset.settingsStatus = "下载失败，可以复制文本保存。";
+      }
+      renderSettingsPage(page);
+    });
+    page.querySelector('[data-settings-action="file"]')?.addEventListener("change", (event) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        page.dataset.settingsImportText = String(reader.result || "");
+        page.dataset.settingsStatus = "已读取文件，确认无误后点击导入。";
+        renderSettingsPage(page);
+      };
+      reader.onerror = () => {
+        page.dataset.settingsStatus = "读取文件失败。";
+        renderSettingsPage(page);
+      };
+      reader.readAsText(file, "utf-8");
+    });
+    page.querySelector('[data-settings-action="import"]')?.addEventListener("click", async () => {
+      const text = String(page.dataset.settingsImportText || "").trim();
+      if (!text) {
+        page.dataset.settingsStatus = "请先粘贴或选择要导入的JSON。";
+        renderSettingsPage(page);
+        return;
+      }
+      let payload = null;
+      try {
+        payload = JSON.parse(text);
+      } catch {
+        page.dataset.settingsStatus = "JSON解析失败。";
+        renderSettingsPage(page);
+        return;
+      }
+      const summary = settingsPayloadSummary(payload).join("；");
+      if (!confirm("导入会覆盖当前聊天的前端存储，适合和旧版聊天记录迁移一起使用。\\n\\n" + summary + "\\n\\n确认继续？")) return;
+      try {
+        await settingsImportPayload(payload);
+        page.dataset.settingsStatus = "导入完成：" + summary;
+      } catch (error) {
+        page.dataset.settingsStatus = "导入失败：" + String(error?.message || error || "未知错误");
+      }
+      renderSettingsPage(page);
+    });
+    page.querySelector('[data-settings-action="refresh"]')?.addEventListener("click", () => {
+      page.dataset.settingsStatus = "已刷新当前变量格式检查。";
+      renderSettingsPage(page);
+    });
+    page.querySelector('[data-settings-action="fill"]')?.addEventListener("click", async () => {
+      const result = await settingsFillMissingVariables();
+      page.dataset.settingsStatus = result.ok ? ("已补齐缺少字段 " + result.count + " 项。") : "未能写入当前变量，请确认MVU接口可用。";
+      renderSettingsPage(page);
+    });
+  }
+
+  function openSettingsPage(tile) {
+    ensureStyle();
+    ensurePhoneDarkThemeStyle();
+    const root = findPhoneRoot(tile);
+    setPhoneActiveApp(root, "settings");
+    root.style.position = root.style.position || "relative";
+    clearPhoneInternalOverlays(root);
+    const page = document.createElement("section");
+    page.className = "st-lite-app st-settings-app";
+    page.setAttribute("aria-label", "设置");
+    root.appendChild(page);
+    renderSettingsPage(page);
+  }
+
   const ST_HELP_APP_ITEMS = [
     { title: "催眠APP", tag: "指令", body: "选择催眠命令、补充MC能量、查看VIP买断；启动后会把本轮催眠操作暂存给AI结算。" },
     { title: "人物档案", tag: "角色", body: "查看已记录角色的衣着、信息、状态、敏感度和效果，也能在符合条件时触发少量角色专属操作。" },
@@ -26490,7 +28090,8 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     { title: "校规", tag: "学校", body: "查看现行校规；高VIP后可通过规则相关操作影响校规。" },
     { title: "监控", tag: "厕所", body: "查看男厕门位状态并发起派遣相关操作。" },
     { title: "打工", tag: "零工", body: "查看可接零工，按社畜值解锁更高级的短工；确认后前端直接结算工资、社畜值、buff和时间，打工偶遇才交给AI写互动。" },
-    { title: "邂逅", tag: "桃花运", body: "浏览角色包资料、定制角色并购买随机桃花运，也可查看邂逅商店。" }
+    { title: "邂逅", tag: "桃花运", body: "浏览角色包资料、定制角色并购买随机桃花运，也可查看邂逅商店。" },
+    { title: "设置", tag: "迁移", body: "导出或导入指定前端存储，并检查当前MVU变量是否缺少常用字段。" }
   ];
 
   function renderHelpLitePage(page) {
@@ -26572,12 +28173,13 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
   window.__ST_OPEN_REWARD_APP__ = () => openRewardPage();
   window.__ST_OPEN_HYPNOSIS_LITE_APP__ = () => openHypnosisLitePage();
   window.__ST_OPEN_HELP_APP__ = () => openHelpLitePage();
+  window.__ST_OPEN_SETTINGS_APP__ = () => openSettingsPage();
   window.__ST_OPEN_PLACEHOLDER_APP__ = (appName, title, subtitle) => openPlaceholderPage(null, appName, title, subtitle);
 
   function looksLikePhoneHome(root) {
     const rootText = root?.innerText || "";
     return ["催眠APP", "日历", "成就和任务", "库存", "MC匿名版"].every((label) => rootText.includes(label)) &&
-      !root.querySelector(".st-mchan-internal-app, .st-calendar-lite-app, .st-timetable-app, .st-clock-app, .st-profile-app, .st-map-app, .st-city-map-app, .st-school-app, .st-special-location-app, .st-monitor-app, .st-work-app, .st-encounter-app, .st-inventory-app, .st-reward-app, .st-hypnosis-lite-app, .st-help-app, .st-placeholder-app");
+      !root.querySelector(".st-mchan-internal-app, .st-calendar-lite-app, .st-timetable-app, .st-clock-app, .st-profile-app, .st-map-app, .st-city-map-app, .st-school-app, .st-special-location-app, .st-monitor-app, .st-work-app, .st-encounter-app, .st-inventory-app, .st-reward-app, .st-hypnosis-lite-app, .st-help-app, .st-settings-app, .st-placeholder-app");
   }
 
   function getHomeHeader(root) {
@@ -26592,7 +28194,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     if (existing?.textContent === ST_HOME_AUTHOR_STATUS) return;
     const rootRect = root.getBoundingClientRect();
     const candidates = Array.from(root.querySelectorAll("span,div,time")).filter((element) => {
-      if (element.closest(".st-mchan-internal-app,.st-calendar-lite-app,.st-timetable-app,.st-clock-app,.st-profile-app,.st-map-app,.st-city-map-app,.st-school-app,.st-special-location-app,.st-monitor-app,.st-work-app,.st-encounter-app,.st-inventory-app,.st-reward-app,.st-hypnosis-lite-app,.st-help-app,.st-placeholder-app")) return false;
+      if (element.closest(".st-mchan-internal-app,.st-calendar-lite-app,.st-timetable-app,.st-clock-app,.st-profile-app,.st-map-app,.st-city-map-app,.st-school-app,.st-special-location-app,.st-monitor-app,.st-work-app,.st-encounter-app,.st-inventory-app,.st-reward-app,.st-hypnosis-lite-app,.st-help-app,.st-settings-app,.st-placeholder-app")) return false;
       const text = element.textContent?.trim() || "";
       if (!element.classList?.contains("st-home-author-status") && !/^\\d{1,2}:\\d{2}$/.test(text)) return false;
       if (element.children.length > 0) return false;
@@ -26863,6 +28465,20 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     return true;
   }
 
+  function forceClearOperationSidePanelWithWarning() {
+    const items = getPendingOperationViews();
+    const note = readOperationPanelNote().trim();
+    const lockedCount = items.filter((item) => Boolean(item.locked)).length;
+    if (!lockedCount && !note) return false;
+    const message = "强制解锁并清空暂存区？\\n\\n这会删除 " + lockedCount + " 条锁定操作"
+      + (note ? "，并清空备注" : "")
+      + "。只在上一楼层暂存卡住、已经确认不需要再写入输入框时使用。";
+    if (!window.confirm?.(message)) return false;
+    window.__ST_FORCE_CLEAR_OPERATION_INPUT_LOG__?.();
+    writeOperationPanelNote("");
+    return true;
+  }
+
   function formatOperationPanelTime(value) {
     const date = new Date(Number(value || 0));
     if (Number.isNaN(date.getTime()) || Number(value || 0) <= 0) return "刚刚";
@@ -26941,7 +28557,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
         const value = Number(role[config.valueKey || "好感度"] ?? 0);
         const obey = Number(role["服从度"] ?? 0);
         if (!Number.isFinite(value)) continue;
-        const record = normalizedRoleEventRecord(role["事件记录"]);
+        const record = roleEventRecordValue(role);
         for (const threshold of roleEventThresholds(config.role) || []) {
           const bit = Math.max(0, Math.min(ROLE_EVENT_RECORD_LENGTH - 1, Number(threshold.bit) || 0));
           const needObey = Number(threshold.obeyValue || 0);
@@ -27053,6 +28669,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     const signature = JSON.stringify(items.map((item) => [item.id, item.key, item.source, item.action, item.summary, item.line, item.at, item.locked])) + "\\n" + block + "\\nnote=" + note + "\\nkeep=" + String(keepAfterFlush) + "\\nfloat=" + String(floatMode) + "\\nres=" + JSON.stringify(resources) + "\\nctx=" + JSON.stringify(context);
     if (panel.dataset.signature === signature) return;
     panel.dataset.signature = signature;
+    const lockedCount = items.filter((item) => Boolean(item.locked)).length;
     const listHtml = items.length
       ? items.map((item) => {
           const conciseSummary = compactOperationPanelSummary(item);
@@ -27093,6 +28710,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       '<div class="st-operation-panel-actions">' +
         '<button class="st-operation-float-toggle" type="button" data-operation-panel-action="float">' + (floatMode ? "停靠暂存区" : "悬浮球模式") + '</button>' +
         '<button type="button" data-operation-panel-action="clear" ' + (count ? "" : "disabled") + '>清空</button>' +
+        (lockedCount ? '<button class="danger" type="button" data-operation-panel-action="force-clear">解锁清空</button>' : '') +
         '<button class="primary" type="button" data-operation-panel-action="flush" ' + (count ? "" : "disabled") + '>确认写入</button>' +
       '</div>';
     syncOperationFloatBall();
@@ -27159,6 +28777,11 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       }
       if (action === "clear") {
         clearOperationSidePanelWithWarning();
+        updateOperationSidePanel();
+        return;
+      }
+      if (action === "force-clear") {
+        forceClearOperationSidePanelWithWarning();
         updateOperationSidePanel();
         return;
       }
@@ -27323,7 +28946,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     patchCalendarAndTimetableTiles();
     patchMapAndSchoolTiles();
     const labels = Array.from(document.querySelectorAll("span,button,div"))
-      .filter((element) => !element.closest(".st-mchan-internal-app,.st-calendar-lite-app,.st-timetable-app,.st-clock-app,.st-profile-app,.st-map-app,.st-city-map-app,.st-school-app,.st-special-location-app,.st-monitor-app,.st-work-app,.st-encounter-app,.st-inventory-app,.st-reward-app,.st-hypnosis-lite-app,.st-help-app,.st-placeholder-app") && element.textContent?.trim() === "MC匿名版");
+      .filter((element) => !element.closest(".st-mchan-internal-app,.st-calendar-lite-app,.st-timetable-app,.st-clock-app,.st-profile-app,.st-map-app,.st-city-map-app,.st-school-app,.st-special-location-app,.st-monitor-app,.st-work-app,.st-encounter-app,.st-inventory-app,.st-reward-app,.st-hypnosis-lite-app,.st-help-app,.st-settings-app,.st-placeholder-app") && element.textContent?.trim() === "MC匿名版");
     for (const label of labels) {
       const tile = findTileFromLabel(label);
       if (!tile || tile.dataset.stMchanInternalPatched === "true") continue;
@@ -27342,7 +28965,27 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     return typeof window.__ST_HYPNOOS_IS_LATEST_MESSAGE_FRONTEND__ !== "function" || window.__ST_HYPNOOS_IS_LATEST_MESSAGE_FRONTEND__();
   }
 
+  function syncLatestPhoneVariableViewVisibility() {
+    const latest = isLatestPhoneVariableView();
+    const appRoot = document.getElementById("app");
+    if (appRoot && !window.__ST_LOCAL_PREVIEW__) {
+      if (latest) {
+        if (appRoot.dataset.stHypnoosHiddenOldFrontend === "1") {
+          appRoot.style.display = "";
+          appRoot.removeAttribute("aria-hidden");
+          delete appRoot.dataset.stHypnoosHiddenOldFrontend;
+        }
+      } else {
+        appRoot.style.display = "none";
+        appRoot.setAttribute("aria-hidden", "true");
+        appRoot.dataset.stHypnoosHiddenOldFrontend = "1";
+      }
+    }
+    return latest;
+  }
+
   function refreshPhoneVariableViews() {
+    if (!syncLatestPhoneVariableViewVisibility()) return;
     patchHomeTile();
     updatePhoneDarkTheme();
     syncProfileEventMemoriesFromChat();
@@ -27350,6 +28993,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     if (isLatestPhoneVariableView()) syncMonitorDispatchCompletionReminder();
     if (isLatestPhoneVariableView()) {
       syncWorkStatusReminder();
+      void repairPendingWorkCurrentLayerVariables().catch((error) => console.warn("[HypnoOS] 修复打工当层变量失败", error));
       syncWorkBuffStatusReminder();
       syncExpiredTemporaryHypnosisReminder();
       Promise.resolve(syncRoleEventRecordDefaults()).then((changed) => {
@@ -27363,7 +29007,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     const phone = document.querySelector(".w-full.h-full.bg-black.overflow-hidden.relative");
     if (!phone) return false;
     if (phone.dataset?.stPhoneApp) return true;
-    if (document.querySelector('.st-mchan-internal-app, .st-calendar-lite-app, .st-timetable-app, .st-clock-app, .st-profile-app, .st-map-app, .st-city-map-app, .st-school-app, .st-special-location-app, .st-monitor-app, .st-work-app, .st-encounter-app, .st-inventory-app, .st-reward-app, .st-hypnosis-lite-app, .st-help-app, .st-placeholder-app')) return true;
+    if (document.querySelector('.st-mchan-internal-app, .st-calendar-lite-app, .st-timetable-app, .st-clock-app, .st-profile-app, .st-map-app, .st-city-map-app, .st-school-app, .st-special-location-app, .st-monitor-app, .st-work-app, .st-encounter-app, .st-inventory-app, .st-reward-app, .st-hypnosis-lite-app, .st-help-app, .st-settings-app, .st-placeholder-app')) return true;
     if (looksLikePhoneHome(phone)) {
       const requiredHomeLabels = ["人物档案", "课程表", "时钟", "地图", "校规"];
       return requiredHomeLabels.every((label) => Boolean(dedupeHomeTilesByText(label) || findHomeTileByText(label)));
@@ -27378,6 +29022,10 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
   }
 
   function refreshUntilFirstPatch(attempt = 0) {
+    if (!syncLatestPhoneVariableViewVisibility()) {
+      window.requestAnimationFrame(releaseBootGuard);
+      return;
+    }
     refreshPhoneVariableViews();
     if (hasInitialPhonePatch() || attempt >= 90) {
       window.requestAnimationFrame(releaseBootGuard);
@@ -27391,7 +29039,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     refreshUntilFirstPatch();
     let refreshScheduled = false;
 	    const schedulePhoneVariableRefresh = () => {
-	      if (!isLatestPhoneVariableView()) return;
+	      if (!syncLatestPhoneVariableViewVisibility()) return;
 	      if (refreshScheduled) return;
 	      refreshScheduled = true;
 	      window.requestAnimationFrame(() => {
