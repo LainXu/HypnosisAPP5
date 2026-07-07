@@ -553,12 +553,13 @@ html.st-hypnoos-phone-port .st-operation-panel-preview pre {
 	      if (first) return "messages:" + __stHypnoosHash([first.id, first.body.slice(0, 240)].join("|"));
 	      return __stHypnoosSessionFrontendScope;
 	    };
-	    const __stHypnoosLatestMessageIds = () => {
-	      const ids = new Set();
-	      const latest = __stHypnoosFrontendMessages().slice(-1)[0];
-	      if (latest?.id) ids.add(String(latest.id));
-	      return ids;
-	    };
+		    const __stHypnoosLatestMessageIds = (count = 2) => {
+		      const ids = new Set();
+		      for (const item of __stHypnoosFrontendMessages().slice(-Math.max(1, Math.trunc(Number(count) || 2)))) {
+		        if (item?.id) ids.add(String(item.id));
+		      }
+		      return ids;
+		    };
 	    window.__ST_HYPNOOS_LATEST_FRONTEND_MESSAGE_ID__ = () => __stHypnoosFrontendMessages().slice(-1)[0]?.id ?? "";
 	    window.__ST_HYPNOOS_CURRENT_FRONTEND_MESSAGE_ID__ = () => __stHypnoosCurrentMessageId();
 	    const __stHypnoosFrontendScopeForId = (id) => "frontend:" + __stHypnoosChatScope() + ":message-" + __stHypnoosHash(String(id || "unknown"));
@@ -622,7 +623,7 @@ html.st-hypnoos-phone-port .st-operation-panel-preview pre {
 	    window.__ST_HYPNOOS_IS_LATEST_MESSAGE_FRONTEND__ = () => {
 	      if (window.__ST_LOCAL_PREVIEW__) return true;
 	      const current = __stHypnoosCurrentMessageId();
-      const latestIds = __stHypnoosLatestMessageIds();
+	      const latestIds = __stHypnoosLatestMessageIds(2);
       if (!current || latestIds.size === 0) return true;
       return latestIds.has(current);
     };
@@ -1008,7 +1009,7 @@ html.st-hypnoos-phone-port .st-operation-panel-preview pre {
 	        return ["- AI执行规范｜前端已扣星光点、创建/覆盖初始角色变量并写入角色卡世界书；AI只按命中角色的人设、角色出场提示和当前上下文安排登场，并补未记录变量，不再创建或补写角色/世界书。"];
 	      }
 	      if (/^(地图|学校地图|主教学楼地图)$/.test(text)) {
-	        return ["- AI执行规范｜地点建议不是瞬移；请求新增地点由前端按用户输入保存，AI只承认该地点存在并可补剧情细节，不要输出完整地图JSON；特殊地点需持有对应准入证，未持证时不要写成普通通行成功。"];
+	        return ["- AI执行规范｜地点建议不是瞬移；请求新增地点由前端按用户输入保存，AI只承认该地点存在并可补剧情细节；若暂存要求补充地点信息，只能输出<新增地点补充>{...}</新增地点补充>单地点JSON，不要输出完整地图JSON；特殊地点需持有对应准入证，未持证时不要写成普通通行成功。"];
 	      }
 	      if (text === "学校") {
 	        return ["- AI执行规范｜校规按VIP、券、星光点和数量限制判定；校规不是催眠效果，禁止写入角色临时/永久催眠效果。"];
@@ -1130,6 +1131,10 @@ html.st-hypnoos-phone-port .st-operation-panel-preview pre {
       return [cleanOperationText(record.source || "APP"), cleanOperationText(record.action || "操作"), fields.join("|")].join("\u0001");
     };
 	    const operationSingleSlotKey = (payload) => {
+	      const object = payload && typeof payload === "object" && !Array.isArray(payload) ? payload : {};
+	      const source = cleanOperationText(readOperationKey(object, OPERATION_SOURCE_KEYS, ""));
+	      const action = cleanOperationText(readOperationKey(object, OPERATION_ACTION_KEYS, ""));
+	      if (/^催眠APP$/.test(source) && /^购买VIP等级$/.test(action)) return "hypnosis:vip:purchase";
 	      return "";
 	    };
     const operationBusinessKey = (payload) => {
@@ -1957,22 +1962,56 @@ html.st-hypnoos-phone-port .st-operation-panel-preview pre {
       targetEntry.locked = true;
       return true;
     };
+    const mergeHypnosisVipPurchaseOperationEntry = (targetEntry, incomingEntry) => {
+      const target = targetEntry?.payload;
+      const incoming = incomingEntry?.payload;
+      if (!target || !incoming || typeof target !== "object" || typeof incoming !== "object") return false;
+      if (String(target["来源"] || "") !== "催眠APP" || String(incoming["来源"] || "") !== "催眠APP") return false;
+      if (String(target["操作"] || "") !== "购买VIP等级" || String(incoming["操作"] || "") !== "购买VIP等级") return false;
+      const previousLevel = cleanOperationText(target["初始购买等级"] || target["等级"] || "");
+      const targetCost = operationNumericValue(target["累计消耗零花钱"] ?? target["消耗零花钱"] ?? target["买断价格"]);
+      const incomingCost = operationNumericValue(incoming["消耗零花钱"] ?? incoming["买断价格"]);
+      const targetStarlight = operationNumericValue(target["累计消耗星光点"] ?? target["消耗星光点"]);
+      const incomingStarlight = operationNumericValue(incoming["消耗星光点"]);
+      const finalTier = cleanOperationText(incoming["等级"] || incoming["前端写入后催眠APP订阅等级"] || target["等级"] || "");
+      target["初始购买等级"] = previousLevel || finalTier;
+      target["等级"] = finalTier;
+      target["最终等级"] = finalTier;
+      target["本轮VIP购买链"] = [cleanOperationText(target["本轮VIP购买链"] || previousLevel), cleanOperationText(incoming["等级"] || "")].filter(Boolean).join(" -> ");
+      target["累计消耗零花钱"] = targetCost + incomingCost;
+      target["累计消耗星光点"] = targetStarlight + incomingStarlight;
+      target["买断价格"] = "累计 ¥" + Math.floor(target["累计消耗零花钱"]).toLocaleString();
+      target["消耗零花钱"] = target["累计消耗零花钱"];
+      target["消耗星光点"] = target["累计消耗星光点"];
+      target["暂存摘要"] = "VIP买断｜最终 " + finalTier + "｜累计 ¥" + Math.floor(target["累计消耗零花钱"]).toLocaleString() + (target["累计消耗星光点"] ? " + " + target["累计消耗星光点"] + "星光点" : "");
+      target["前端写入后持有零花钱"] = incoming["前端写入后持有零花钱"];
+      target["前端写入后星光点"] = incoming["前端写入后星光点"];
+      target["前端写入后催眠APP订阅等级"] = incoming["前端写入后催眠APP订阅等级"] || finalTier;
+      target["前端处理"] = incoming["前端处理"] || target["前端处理"] || "已由前端直接写入变量";
+      target["AI执行规范"] = incoming["AI执行规范"] || target["AI执行规范"];
+      target["VIP购买限制"] = "本轮允许用户连续购买多级VIP；前端已逐级扣费并写入最终等级，暂存区只保留这一格锁定事实。AI不得再次扣费或回退VIP等级。";
+      target["合并次数"] = Math.max(1, operationNumericValue(target["合并次数"]) || 1) + 1;
+      target["不可删除"] = true;
+      targetEntry.key = operationRecordKey(target);
+      targetEntry.locked = true;
+      return true;
+    };
     window.__ST_APPEND_OPERATION_TO_INPUT__ = async (payload) => {
       const entry = makeOperationEntry(payload);
+      const businessKey = operationBusinessKey(entry.payload);
+      if (businessKey) {
+        const mergeTarget = window.__ST_OPERATION_INPUT_LOG__.find((item) => operationBusinessKey(operationEntryPayload(item)) === businessKey);
+        if (mergeTarget && (mergeHypnosisSupplyOperationEntry(mergeTarget, entry) || mergeHypnosisVipPurchaseOperationEntry(mergeTarget, entry))) {
+          emitOperationQueueChanged();
+          console.info("[HypnoOS] APP操作已合并进暂存列表", payload);
+          return true;
+        }
+      }
       const singleSlot = operationSingleSlotKey(entry.payload);
       if (singleSlot) {
         window.__ST_OPERATION_INPUT_LOG__ = window.__ST_OPERATION_INPUT_LOG__.filter((item) => {
           return operationSingleSlotKey(operationEntryPayload(item)) !== singleSlot;
         });
-      }
-      const businessKey = operationBusinessKey(entry.payload);
-      if (businessKey) {
-        const mergeTarget = window.__ST_OPERATION_INPUT_LOG__.find((item) => operationBusinessKey(operationEntryPayload(item)) === businessKey);
-        if (mergeTarget && mergeHypnosisSupplyOperationEntry(mergeTarget, entry)) {
-          emitOperationQueueChanged();
-          console.info("[HypnoOS] APP补给操作已合并进暂存列表", payload);
-          return true;
-        }
       }
       const duplicate = window.__ST_OPERATION_INPUT_LOG__.some((item) => {
         if (describeOperationEntry(item).key === entry.key) return true;
@@ -5060,9 +5099,9 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       const missingPrevious = !bought && rank > currentRank + 1;
       const missingMoney = !bought && !missingPrevious && money < price;
       const missingStarlight = !bought && !missingPrevious && starlight < starlightCost;
-      const disabled = bought || pendingVip || missingPrevious || missingMoney || missingStarlight;
-      const label = bought ? "已买断" : pendingVip ? "已暂存" : missingPrevious ? ("需VIP" + (rank - 1)) : missingMoney ? "钱不足" : missingStarlight ? "星光点不足" : "购买";
-      return '<button type="button" class="st-hypnosis-vip" data-hypnosis-drawer-action="vip" data-tier="' + escapeAttr(tier) + '"' + (disabled ? " disabled" : "") + '>' +
+      const disabled = bought || missingPrevious || missingMoney || missingStarlight;
+      const label = bought ? "已买断" : missingPrevious ? ("需VIP" + (rank - 1)) : missingMoney ? "钱不足" : missingStarlight ? "星光点不足" : (pendingVip ? "继续购买" : "购买");
+      return '<button type="button" class="st-hypnosis-vip' + (pendingVip && !bought ? " is-pending" : "") + '" data-hypnosis-drawer-action="vip" data-tier="' + escapeAttr(tier) + '"' + (disabled ? " disabled" : "") + '>' +
         '<strong>' + escapeHtml(tier) + '</strong>' +
         '<small>¥' + price.toLocaleString() + (starlightCost ? " + " + starlightCost + "星光点" : "") + " · " + label + '</small>' +
       '</button>';
@@ -5233,7 +5272,6 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       return { ok: Boolean(added), message: result.message };
     }
     if (action === "vip") {
-      if (hasPendingHypnosisVipOperation()) return { ok: false, message: "已有VIP购买锁定暂存，本轮不能连续买多级。" };
       const cleanTier = HYP_REACT_VIP_TIERS.includes(String(tier || "").toUpperCase()) ? String(tier || "").toUpperCase() : "";
       if (!cleanTier) return { ok: false, message: "VIP等级无效。" };
       const result = await hypnosisApplySystemMutation((system) => {
@@ -5270,7 +5308,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
             前端写入后催眠APP订阅等级: cleanTier,
             变量写入路径: ["/系统/持有零花钱", "/系统/星光点", "/系统/催眠APP订阅等级"],
             AI执行规范: hypnosisFrontendSettledPrompt(),
-            VIP购买限制: "VIP仍然不支持一次购买多级；本轮如有第二个VIP购买请求应视为无效。",
+            VIP购买限制: "允许用户在同一轮前端连续购买多级VIP；前端会逐级扣费并写入最终等级，暂存区只保留/合并一个VIP购买锁定事实。",
             不可删除: true
           }
         };
@@ -6638,7 +6676,6 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
   function renderHypnosisVip(page, system) {
     const currentTier = reactCurrentVipTier(system);
     const currentRank = reactVipRank(currentTier);
-    const pendingVip = hasPendingHypnosisVipOperation();
     const rows = HYP_REACT_VIP_TIERS.map((tier) => {
       const rank = reactVipRank(tier);
       const price = HYP_REACT_VIP_PRICE[tier] || 0;
@@ -6647,7 +6684,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       const canBuy = !bought && rank === currentRank + 1;
       return '<article class="st-hypnosis-vip-row">' +
         '<div><strong>' + escapeHtml(tier) + '</strong><small>买断 ¥' + price.toLocaleString() + (starlightCost ? " + " + starlightCost + "星光点" : "") + '</small></div>' +
-        '<button class="st-hypnosis-button' + (pendingVip && !bought ? " is-pending" : "") + '" type="button" data-hypnosis-vip-tier="' + escapeAttr(tier) + '"' + (canBuy && !pendingVip ? "" : " disabled") + '>' + (bought ? "已买断" : pendingVip ? "已暂存" : canBuy ? "购买" : "需VIP" + (rank - 1)) + '</button>' +
+        '<button class="st-hypnosis-button" type="button" data-hypnosis-vip-tier="' + escapeAttr(tier) + '"' + (canBuy ? "" : " disabled") + '>' + (bought ? "已买断" : canBuy ? "购买" : "需VIP" + (rank - 1)) + '</button>' +
       '</article>';
     }).join("");
     return '<section class="st-lite-card st-graph-paper st-hypnosis-vip-list">' +
@@ -21218,9 +21255,56 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     return favorites.has(id);
   }
 
+  function graphSupplementScope(value) {
+    const text = String(value || "").trim().toLowerCase();
+    if (/school|学校|校内|校园|教学楼|teaching/.test(text)) return "school";
+    return "world";
+  }
+
+  function readStoredStaticGraph(scope) {
+    const normalizedScope = graphSupplementScope(scope);
+    try {
+      const stored = JSON.parse(localStorage.getItem(graphStorageKey(normalizedScope)) || "null");
+      if (stored) return normalizeGraphGraph(stored, normalizedScope);
+    } catch {}
+    try {
+      const legacy = JSON.parse(localStorage.getItem(graphLegacyStorageKey(normalizedScope)) || "null");
+      if (legacy) return normalizeGraphGraph(legacy, normalizedScope);
+    } catch {}
+    return normalizeGraphGraph(cloneGraph(STATIC_GRAPH_DEFAULTS[normalizedScope]), normalizedScope);
+  }
+
+  function applyGraphLocationSupplement(raw) {
+    const item = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+    const scope = graphSupplementScope(item.scope ?? item["地图"] ?? item["地图类型"] ?? item.map ?? item["范围"]);
+    const id = String(item.id ?? item["地点ID"] ?? item["建议ID"] ?? item.key ?? "").trim();
+    const name = String(item.name ?? item.label ?? item["名称"] ?? item["地点名"] ?? item["地点"] ?? "").trim();
+    const info = String(item.info ?? item.description ?? item.desc ?? item["信息"] ?? item["地点说明"] ?? item["描述"] ?? item["说明"] ?? "").trim();
+    const category = String(item.category ?? item["分类"] ?? item.type ?? item["类型"] ?? "").trim();
+    if (!id && !name) return false;
+    if (!info && !category) return false;
+    const graph = readStoredStaticGraph(scope);
+    const locations = Array.isArray(graph.locations) ? graph.locations.slice() : [];
+    const index = locations.findIndex((location) => {
+      const locationId = String(location?.id || "").trim();
+      const locationName = String(location?.label || location?.name || location?.["地点"] || "").trim();
+      return Boolean((id && locationId === id) || (name && locationName === name));
+    });
+    if (index < 0) return false;
+    const current = locations[index] && typeof locations[index] === "object" ? locations[index] : {};
+    locations[index] = {
+      ...current,
+      label: name || current.label || id,
+      info: info || current.info || "暂无地点信息。",
+      category: category || current.category || ""
+    };
+    saveStaticGraph(scope, { ...graph, locations });
+    return true;
+  }
+
   function parseStaticGraphUpdateText(text) {
     const source = String(text || "");
-    if (!source.includes("<地图更新>") && !source.includes("<学校地图更新>")) return 0;
+    if (!source.includes("<地图更新>") && !source.includes("<学校地图更新>") && !source.includes("<新增地点补充>")) return 0;
     let applied = 0;
     const specs = [
       { scope: "world", re: /<地图更新>([\s\S]*?)<\/地图更新>/g },
@@ -21233,6 +21317,15 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
           applied += 1;
         } catch {}
       }
+    }
+    for (const match of source.matchAll(/<新增地点补充>([\s\S]*?)<\/新增地点补充>/g)) {
+      try {
+        const parsed = JSON.parse(String(match[1] || "").trim());
+        const items = Array.isArray(parsed) ? parsed : [parsed];
+        for (const item of items) {
+          if (applyGraphLocationSupplement(item)) applied += 1;
+        }
+      } catch {}
     }
     return applied;
   }
@@ -21261,7 +21354,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     if (!Array.isArray(source)) return;
     source.forEach((message, index) => {
       const body = graphMessageBody(message);
-      if (!body.includes("<地图更新>") && !body.includes("<学校地图更新>")) return;
+      if (!body.includes("<地图更新>") && !body.includes("<学校地图更新>") && !body.includes("<新增地点补充>")) return;
       const id = message && typeof message === "object"
         ? (message.message_id ?? message.mesid ?? message.id ?? index)
         : index;
@@ -21477,7 +21570,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	  }
 
 	  function graphAddLocationHint(scope, currentLocation) {
-	    return "提交后会立即按用户输入加入本地地图，并锁定暂存提醒AI承认该地点。AI不需要输出完整地点列表JSON；信息不足时由AI在剧情里自然补足。示例：" + graphAddLocationExamples(scope).join("；") + "。当前地点变量：" + currentLocation + "。";
+	    return "提交后会立即按用户输入加入本地地图，并锁定暂存提醒AI承认该地点。AI不需要输出完整地点列表JSON；信息不足时应在回复末尾输出单地点补充JSON，前端会自动写回。示例：" + graphAddLocationExamples(scope).join("；") + "。当前地点变量：" + currentLocation + "。";
 	  }
 
 	  function renderGraphAddLocationCard(scope, graph, page) {
@@ -22174,6 +22267,14 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	        }
 	        const graph = loadStaticGraph(scope);
 	        const currentLocation = getCurrentStoryLocation() || "未知";
+	        const needsAiSupplement = !infoText;
+	        const supplementFormat = "<新增地点补充>" + JSON.stringify({
+	          地图: scope === "school" ? "school" : "world",
+	          id: addedLocation.id,
+	          名称: addedLocation.label,
+	          分类: "由AI决定",
+	          信息: "由AI补充地点用途、氛围、相关角色或剧情倾向"
+	        }) + "</新增地点补充>";
 		        const added = await appendAppOperation({
 	          来源: scope === "school" ? "学校地图" : "地图",
 	          操作: "请求新增地点",
@@ -22187,8 +22288,12 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	            当前地点变量: currentLocation
 	          },
 		          典型示例: graphAddLocationExamples(scope),
+		          需要AI补充地点描述: needsAiSupplement,
+		          补充写回格式: supplementFormat,
 		          前端处理: "已由前端按用户输入加入本地地图列表；本条暂存用于提醒AI承认该地点可被剧情使用。",
-		          AI执行规范: "前端已经把该地点加入本地地图。AI不需要输出完整地图JSON，也不要新增MVU变量；本轮只需承认该地点存在，信息不足时可在剧情里自然补足用途、氛围或相关细节，并按剧情判断是否能把/系统/当前地点移动到这里。除非用户明确要求批量重排地图，否则不得输出完整地图更新JSON，也不得删除刚新增地点。"
+		          AI执行规范: needsAiSupplement
+		            ? "前端已经把该地点加入本地地图。AI不需要输出完整地图JSON，也不要新增MVU变量；本轮必须在回复末尾输出一个<新增地点补充>{...}</新增地点补充>单地点JSON，按建议ID补充该地点的信息/分类，前端会自动写回。除非用户明确要求批量重排地图，否则不得输出完整地图更新JSON，也不得删除刚新增地点。"
+		            : "前端已经把该地点加入本地地图。AI不需要输出完整地图JSON，也不要新增MVU变量；本轮只需承认该地点存在，并按剧情判断是否能把/系统/当前地点移动到这里。若需要修正说明，只能输出<新增地点补充>{...}</新增地点补充>单地点JSON；不得删除刚新增地点。"
 		        });
 	        page.dataset[statusKey] = added ? ("已新增地点：" + addedLocation.label + "。") : ("已新增地点：" + addedLocation.label + "，暂存区已有提醒。");
 	        if (nameInput) nameInput.value = "";
@@ -23136,7 +23241,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	    return entries;
 	  }
 
-	  function settingsStorageEntriesByKeys(keys) {
+		  function settingsStorageEntriesByKeys(keys) {
 	    const entries = {};
 	    try {
 	      const storage = globalThis.localStorage;
@@ -23146,25 +23251,105 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	        if (value !== null) entries[key] = value;
 	      }
 	    } catch {}
-	    return entries;
-	  }
+		    return entries;
+		  }
 
-	  function settingsManagedLocalStorageKeys() {
-	    return [
-	      frontendRewardStateKey(),
-	      frontendRewardSharedStateKey(),
-	      frontendRewardCountKey(),
-	      timetableStorageKey(),
-	      roleFavoriteStorageKey(),
-	      profileEventMemoryStorageKey(),
+		  function settingsJsonFromStorage(key, fallback = null) {
+		    try {
+		      const raw = globalThis.localStorage?.getItem?.(String(key || ""));
+		      if (!raw) return fallback;
+		      return JSON.parse(raw);
+		    } catch {
+		      return fallback;
+		    }
+		  }
+
+		  function settingsFirstJsonByPrefix(prefixes, fallback = null) {
+		    const values = [];
+		    try {
+		      const storage = globalThis.localStorage;
+		      if (!storage) return fallback;
+		      const prefixList = (Array.isArray(prefixes) ? prefixes : [prefixes]).map(String).filter(Boolean);
+		      for (let index = 0; index < storage.length; index += 1) {
+		        const key = storage.key(index);
+		        if (!key || !prefixList.some((prefix) => String(key).startsWith(prefix))) continue;
+		        const parsed = settingsJsonFromStorage(key, null);
+		        if (parsed && typeof parsed === "object") values.push(parsed);
+		      }
+		    } catch {}
+		    return values[0] || fallback;
+		  }
+
+		  function settingsReadFrontendRewardStateSafe() {
+		    try {
+		      if (typeof readFrontendRewardStateStored === "function") return readFrontendRewardStateStored();
+		    } catch {}
+		    try {
+		      if (typeof globalThis.__HYPNOOS_READ_FRONTEND_REWARD_STATE__ === "function") return globalThis.__HYPNOOS_READ_FRONTEND_REWARD_STATE__();
+		    } catch {}
+		    return settingsFirstJsonByPrefix(["hypnoos.frontend-rewards.common.v1:", "hypnoos.frontend-rewards.v1:"], { achievements: {}, quests: {} });
+		  }
+
+		  function settingsReadFrontendRewardCountsSafe() {
+		    try {
+		      if (typeof readFrontendRewardCounts === "function") return readFrontendRewardCounts();
+		    } catch {}
+		    return settingsFirstJsonByPrefix("hypnoos:frontend-achievement-task-counts:v1:", { achievements: 0, quests: 0 });
+		  }
+
+		  function settingsWriteFrontendRewardStateSafe(state) {
+		    try {
+		      if (typeof frontendRewardStateReadScopes === "function" && typeof frontendRewardStateKeyForScope === "function") {
+		        frontendRewardStateReadScopes().forEach((scope) => localStorage.removeItem(frontendRewardStateKeyForScope(scope)));
+		      }
+		      if (typeof frontendRewardSharedStateKey === "function") localStorage.removeItem(frontendRewardSharedStateKey());
+		    } catch {}
+		    try {
+		      if (typeof writeFrontendRewardStateStored === "function") {
+		        writeFrontendRewardStateStored(state);
+		        return;
+		      }
+		    } catch {}
+		    try {
+		      const scope = typeof globalThis.__HYPNOOS_FRONTEND_REWARD_SHARED_SCOPE__ === "function"
+		        ? globalThis.__HYPNOOS_FRONTEND_REWARD_SHARED_SCOPE__()
+		        : (globalThis.__ST_HYPNOOS_CHAT_STORAGE_SCOPE__?.() || "global");
+		      localStorage.setItem("hypnoos.frontend-rewards.common.v1:" + String(scope || "global"), JSON.stringify(settingsObject(state)));
+		    } catch {}
+		  }
+
+		  function settingsWriteFrontendRewardCountsSafe(counts) {
+		    try {
+		      if (typeof writeFrontendRewardCounts === "function") {
+		        writeFrontendRewardCounts(counts);
+		        return;
+		      }
+		    } catch {}
+		    try {
+		      const scope = typeof globalThis.__HYPNOOS_FRONTEND_REWARD_SCOPE__ === "function"
+		        ? globalThis.__HYPNOOS_FRONTEND_REWARD_SCOPE__()
+		        : (globalThis.__ST_HYPNOOS_CHAT_STORAGE_SCOPE__?.() || "global");
+		      localStorage.setItem("hypnoos:frontend-achievement-task-counts:v1:" + String(scope || "global"), JSON.stringify(settingsObject(counts)));
+		    } catch {}
+		  }
+
+		  function settingsManagedLocalStorageKeys() {
+		    const keys = [
+		      typeof frontendRewardStateKey === "function" ? frontendRewardStateKey() : "",
+		      typeof frontendRewardSharedStateKey === "function" ? frontendRewardSharedStateKey() : "",
+		      typeof frontendRewardCountKey === "function" ? frontendRewardCountKey() : "",
+		      timetableStorageKey(),
+		      roleFavoriteStorageKey(),
+		      profileEventMemoryStorageKey(),
 	      graphStorageKey("world"),
 	      graphStorageKey("school"),
 	      graphFavoriteStorageKey("world"),
 	      graphFavoriteStorageKey("school"),
 	      graphUpdateSeenStorageKey(),
 	      specialLocationUnlockStorageKey()
-	    ].filter(Boolean);
-	  }
+		    ];
+		    return keys.filter(Boolean);
+		  }
 
 	  function settingsManagedLocalStoragePrefixes() {
 	    return [
@@ -23245,10 +23430,10 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       exportedAt: new Date().toISOString(),
       source: "HypnoOS frontend storage",
       sections: {
-        rewards: {
-          state: readFrontendRewardStateStored(),
-          counts: readFrontendRewardCounts(),
-          dailyRolls: settingsStorageEntriesByPrefix(SETTINGS_DAILY_ROLL_PREFIX)
+	        rewards: {
+	          state: settingsReadFrontendRewardStateSafe(),
+	          counts: settingsReadFrontendRewardCountsSafe(),
+	          dailyRolls: settingsStorageEntriesByPrefix(SETTINGS_DAILY_ROLL_PREFIX)
         },
         encounter: {
           purchases: Array.from(encounterReadPurchasedIds())
@@ -23320,13 +23505,9 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	    }
 	    const rewards = settingsObject(sections.rewards);
 	    if (Object.prototype.hasOwnProperty.call(rewards, "state")) {
-	      try {
-        frontendRewardStateReadScopes().forEach((scope) => localStorage.removeItem(frontendRewardStateKeyForScope(scope)));
-        localStorage.removeItem(frontendRewardSharedStateKey());
-      } catch {}
-      writeFrontendRewardStateStored(rewards.state);
-    }
-    if (Object.prototype.hasOwnProperty.call(rewards, "counts")) writeFrontendRewardCounts(rewards.counts);
+	      settingsWriteFrontendRewardStateSafe(rewards.state);
+	    }
+	    if (Object.prototype.hasOwnProperty.call(rewards, "counts")) settingsWriteFrontendRewardCountsSafe(rewards.counts);
     if (Object.prototype.hasOwnProperty.call(rewards, "dailyRolls")) settingsOverwriteStoragePrefix(SETTINGS_DAILY_ROLL_PREFIX, rewards.dailyRolls);
 
     const encounter = settingsObject(sections.encounter);

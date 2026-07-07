@@ -2479,6 +2479,7 @@ function identityFrontendLoader(commit) {
   const url = ${JSON.stringify(url)};
   const assetBase = ${JSON.stringify(assetBase)};
 	  const identityCommit = ${JSON.stringify(commit)};
+	  const identityScriptElement = document.currentScript;
 	  window.__ST_HYPNOOS_ASSET_BASE__ = assetBase;
 	  window.__ST_HYPNOOS_IDENTITY_FRONTEND_COMMIT__ = identityCommit;
 	  window.__ST_HYPNOOS_IDENTITY_FRONTEND_URL__ = url;
@@ -2513,6 +2514,96 @@ function identityFrontendLoader(commit) {
 	      if (text) return text.replace(/[^\\w\\-.:@]/g, "_").slice(0, 120);
 	    }
 	    return "global";
+	  }
+	  function identityIdText(value) {
+	    if (value === undefined || value === null) return "";
+	    const text = String(value).trim();
+	    return text && text !== "latest" ? text : "";
+	  }
+	  function identityContext(win) {
+	    try {
+	      return win?.SillyTavern?.getContext?.() || win?.getContext?.() || null;
+	    } catch {
+	      return null;
+	    }
+	  }
+	  function identityMessageBody(message) {
+	    if (typeof message === "string") return message;
+	    if (!message || typeof message !== "object") return "";
+	    return String(message.message ?? message.mes ?? message.text ?? message.content ?? message.raw ?? "");
+	  }
+	  function identityMessageId(message, index) {
+	    if (!message || typeof message !== "object") return String(index);
+	    return identityIdText(message.message_id ?? message.mesid ?? message.id ?? message.swipe_id ?? index) || String(index);
+	  }
+	  function identityIsUserMessage(message) {
+	    if (!message || typeof message !== "object") return false;
+	    if (message.is_user === true || message.is_user === "true") return true;
+	    if (message.role === "user") return true;
+	    if (message.type === "user") return true;
+	    return false;
+	  }
+	  function identityChatMessages() {
+	    const buckets = [];
+	    for (const win of [window, window.parent, window.top]) {
+	      try {
+	        const context = identityContext(win);
+	        if (Array.isArray(context?.chat)) buckets.push(context.chat);
+	      } catch {}
+	      try {
+	        if (Array.isArray(win?.chat)) buckets.push(win.chat);
+	      } catch {}
+	    }
+	    return buckets.find((bucket) => bucket.length) || [];
+	  }
+	  function identityFrontendMessages() {
+	    return identityChatMessages()
+	      .map((message, index) => ({ id: identityMessageId(message, index), body: identityMessageBody(message), message, index }))
+	      .filter((item) => !identityIsUserMessage(item.message) && (item.body.includes("identityRoot") || item.body.includes("st-hypnoos-identity") || item.body.includes("__ST_HYPNOOS_IDENTITY_FRONTEND_URL__")));
+	  }
+	  function identityDomMessageId() {
+	    let node = identityScriptElement || null;
+	    while (node && node !== document.documentElement) {
+	      for (const name of ["mesid", "message_id", "data-message-id", "data-mes-id", "data-messageid", "data-index"]) {
+	        try {
+	          const value = node.getAttribute?.(name);
+	          const text = identityIdText(value);
+	          if (text) return text;
+	        } catch {}
+	      }
+	      node = node.parentElement;
+	    }
+	    return "";
+	  }
+	  function identityCurrentMessageId() {
+	    const domId = identityDomMessageId();
+	    if (domId) return domId;
+	    for (const win of [window, window.parent, window.top]) {
+	      try {
+	        const text = identityIdText(win?.getCurrentMessageId?.());
+	        if (text) return text;
+	      } catch {}
+	      const context = identityContext(win);
+	      for (const value of [context?.messageId, context?.message_id, context?.currentMessageId, context?.current_message_id]) {
+	        const text = identityIdText(value);
+	        if (text) return text;
+	      }
+	    }
+	    return "";
+	  }
+	  function identityRecentFrontendMessageIds(count = 2) {
+	    const ids = new Set();
+	    for (const item of identityFrontendMessages().slice(-Math.max(1, Math.trunc(Number(count) || 2)))) {
+	      if (item?.id) ids.add(String(item.id));
+	    }
+	    return ids;
+	  }
+	  function isIdentityRecentFrontend() {
+	    if (window.__ST_LOCAL_PREVIEW__) return true;
+	    const current = identityCurrentMessageId();
+	    const recentIds = identityRecentFrontendMessageIds(2);
+	    if (!current || recentIds.size === 0) return true;
+	    return recentIds.has(String(current));
 	  }
   function storageKey(prefix) {
     return prefix + identityScope();
@@ -2603,7 +2694,7 @@ function identityFrontendLoader(commit) {
 	      for (const selector of selectors) {
 	        try {
 	          doc.querySelectorAll(selector).forEach((node) => {
-	            if (node && node !== document.currentScript) node.remove();
+	            if (node && node !== identityScriptElement) node.remove();
 	          });
 	        } catch {}
 	      }
@@ -2612,7 +2703,7 @@ function identityFrontendLoader(commit) {
 	  }
 	  function hideIdentityPlaceholder() {
 	    cleanupIdentityFrontend();
-	    const mount = document.currentScript?.parentElement || null;
+	    const mount = identityScriptElement?.parentElement || null;
 	    if (!mount?.style) return;
 	    try { mount.textContent = ""; } catch {}
 	    const styles = {
@@ -2719,6 +2810,16 @@ function identityFrontendLoader(commit) {
       markIdentityCompleted();
 	    }
 	    return sent;
+	  }
+	  const staleIdentityTimer = window.setInterval(() => {
+	    if (isIdentityRecentFrontend()) return;
+	    window.clearInterval(staleIdentityTimer);
+	    hideIdentityPlaceholder();
+	  }, 2500);
+	  if (!isIdentityRecentFrontend()) {
+	    window.clearInterval(staleIdentityTimer);
+	    hideIdentityPlaceholder();
+	    return;
 	  }
 	  const pendingAtBoot = readPendingPrompt();
 	  if (pendingAtBoot && consumePendingPrompt(pendingAtBoot)) {
