@@ -778,7 +778,10 @@ html.st-hypnoos-booting.st-hypnoos-boot-failed body::after{content:"前端加载
 	      if (text === "成就和任务") {
 	        const parts = [];
 	        if (operationHasAction(records, /领取/)) parts.push("领取奖励已由前端发放并记录/删除，AI不得二次发奖或写成就变量");
-	        if (operationHasAction(records, /接取|取消|新增任务/)) parts.push("接取、取消、新增任务只按本条字段维护任务状态");
+	        const hasDirectQuestAccept = (records || []).some((record) => /接取任务/.test(cleanOperationText(record?.action || "")) && /前端.*写入|直接写入/.test(operationVisibleValueToDenseText(record?.details || {})));
+	        if (hasDirectQuestAccept) parts.push("固定初始任务接取已由前端直接写入/任务，AI只承认已接取，不得新增任务、改名或重写任务内容");
+	        if (operationHasAction(records, /新增任务/)) parts.push("只有新增任务/每日任务由AI按本条目标生成新任务名和完成条件并写入/任务");
+	        if (operationHasAction(records, /取消任务/)) parts.push("取消任务只按本条字段维护任务状态");
 	        return parts.length ? ["- AI执行规范｜" + parts.join("；") + "。"] : [];
 	      }
 	      if (text === "库存") {
@@ -2329,7 +2332,7 @@ function patchAchievementAppModule(code) {
             }
             : { ...payload, 前端成就任务计数: { 领取前: counts, 本次: kind, 领取后: nextCounts } };
     };
-    const getRewardStarlight = () => ${DEFAULT_FRONTEND_REWARD_STARLIGHT};
+    const getRewardStarlight = (entry) => Math.max(0, Math.trunc(Number(entry?.rewardStarlight ?? entry?.rewardMoney ?? entry?.["奖励星光点"] ?? ${DEFAULT_FRONTEND_REWARD_STARLIGHT}) || 0));
     const getRewardItems = (entry) => {
         const raw = Array.isArray(entry?.rewardItems) ? entry.rewardItems : Array.isArray(entry?.reward?.items) ? entry.reward.items : [];
         return raw
@@ -2424,6 +2427,19 @@ function patchAchievementAppModule(code) {
         }
         if (hasPendingRewardOperation('接取任务', quest.id, quest.title)) {
             setNotice('该任务已在本轮操作暂存区');
+            return;
+        }
+        const accept = globalThis.__HYPNOOS_ACCEPT_STATIC_QUEST_DIRECT__;
+        if (typeof accept === 'function') {
+            const result = await accept({
+                id: quest.id,
+                title: quest.title,
+                description: quest.description,
+                rewardStarlight: getRewardStarlight(quest),
+                rewardItems: getRewardItems(quest),
+            });
+            setNotice(result?.message || '固定任务已接取');
+            requestRefresh();
             return;
         }
         recordOperationIntent(withFirstRewardHint({
@@ -5575,6 +5591,8 @@ globalThis.__HYPNOOS_MARK_FRONTEND_ACHIEVEMENT_HANDLED__ = (achievement) => {
     }
 };
 globalThis.__HYPNOOS_MARK_FRONTEND_QUEST_HANDLED__ = (quest) => {
+    if (firstNonEmptyText(quest?.dailyQuestDate, quest?.每日任务日期, quest?.变量日期))
+        return false;
     const state = readFrontendRewardStateRaw();
     markStoredQuest(state, {
         任务ID: quest?.id,
@@ -5622,6 +5640,8 @@ globalThis.__HYPNOOS_MARK_SENT_REWARD_OPERATIONS__ = (entries) => {
             changed = true;
         }
         if (/领取任务奖励/.test(action)) {
+            if (firstNonEmptyText(payload.每日任务日期, payload.变量日期, payload.dailyQuestDate, payload.dateKey))
+                continue;
             markStoredQuest(state, {
                 任务ID: payload.任务ID,
                 任务: payload.任务,
@@ -5635,6 +5655,8 @@ globalThis.__HYPNOOS_MARK_SENT_REWARD_OPERATIONS__ = (entries) => {
             changed = true;
         }
         if (/取消任务/.test(action)) {
+            if (firstNonEmptyText(payload.每日任务日期, payload.变量日期, payload.dailyQuestDate, payload.dateKey))
+                continue;
             markStoredQuest(state, {
                 任务ID: payload.任务ID,
                 任务: payload.任务,
@@ -10163,6 +10185,18 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     return name;
   }
 
+  function rewardTaskItemsObject(items) {
+    const output = {};
+    for (const item of normalizeRewardItems(items)) {
+      const name = rewardInventoryItemName(item);
+      if (!name) continue;
+      const quantity = Math.max(1, Math.trunc(Number(item?.quantity ?? item?.["数量"] ?? 1) || 1));
+      const description = String(item?.description || item?.["描述"] || "").trim();
+      output[name] = { 描述: description || "成就和任务奖励物品", 数量: quantity };
+    }
+    return output;
+  }
+
   function rewardClaimItem(kind, row) {
     const source = row && typeof row === "object" && !Array.isArray(row) ? row : {};
     const title = firstNonEmptyText(source.title, source.name, source["任务"], source["成就"], source.id, "未命名奖励");
@@ -10177,6 +10211,18 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       dailyQuestTarget: firstNonEmptyText(source.dailyQuestTarget, source["任务目标"]),
       dailyQuestChatName: firstNonEmptyText(source.dailyQuestChatName, source["每日任务聊天"], source["聊天名"]),
       kind
+    };
+  }
+
+  function rewardStaticQuestItem(row) {
+    const source = row && typeof row === "object" && !Array.isArray(row) ? row : {};
+    const title = firstNonEmptyText(source.title, source.name, source["任务"], source.id, "未命名任务");
+    return {
+      id: firstNonEmptyText(source.id, source["任务ID"], title),
+      title,
+      description: firstNonEmptyText(source.description, source.condition, source["完成条件"], "等待剧情完成固定任务条件。"),
+      rewardStarlight: Math.max(0, Math.trunc(rewardNumber(source.rewardStarlight ?? source.rewardMoney ?? source["奖励星光点"], ${DEFAULT_FRONTEND_REWARD_STARLIGHT}))),
+      rewardItems: normalizeRewardItems(source.rewardItems ?? source["奖励物品"])
     };
   }
 
@@ -10216,6 +10262,56 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 
   function rewardClaimAiSpec(kind) {
     return "本奖励已由前端直接发放并写入变量；若是任务奖励，对应任务变量也已由前端删除。这条锁定暂存只用于告知AI本轮已经发生的领取事实。AI不得再次增加星光点或物品，不得写入/成就变量，不得恢复已领取任务，也不得补记历史奖励。";
+  }
+
+  function rewardAcceptStaticQuestAiSpec() {
+    return "固定初始任务已由前端直接写入/任务变量；这不是新增任务，也不是每日任务。AI只承认本轮已经接取该固定任务，不得add新任务、不得改任务名、不得重写完成条件、不得把它解释成待AI命名任务。后续只有剧情明确满足完成条件时，才把同一个任务变量的已完成改为true。";
+  }
+
+  async function rewardAcceptStaticQuestDirect(row) {
+    const item = rewardStaticQuestItem(row);
+    if (pendingOperationHas("成就和任务", /接取任务/, item.id, item.title)) {
+      return { ok: false, message: "该任务已在本轮操作暂存区。" };
+    }
+    const result = await rewardApplySystemMutation((system, stat) => {
+      stat["任务"] = stat["任务"] && typeof stat["任务"] === "object" && !Array.isArray(stat["任务"]) ? stat["任务"] : {};
+      const existingKey = rewardFindTaskKey(stat, item);
+      if (existingKey) return { ok: false, message: "该任务已经在变量任务中。" };
+      const activeCount = Object.values(stat["任务"]).filter((raw) => raw && typeof raw === "object" && !Array.isArray(raw)).length;
+      if (activeCount >= 3) return { ok: false, message: "变量中已有 3 个任务，不能再接取。" };
+      const rewardItems = rewardTaskItemsObject(item.rewardItems);
+      const task = {
+        任务ID: item.id,
+        任务: item.title,
+        完成条件: item.description,
+        奖励星光点: item.rewardStarlight,
+        已完成: false
+      };
+      if (Object.keys(rewardItems).length) task["奖励物品"] = rewardItems;
+      stat["任务"][item.title] = task;
+      return {
+        ok: true,
+        message: "固定任务已接取并写入变量。",
+        payload: {
+          来源: "成就和任务",
+          操作: "接取任务",
+          任务ID: item.id,
+          任务: item.title,
+          条件: item.description,
+          奖励星光点: item.rewardStarlight,
+          ...(item.rewardItems.length ? { 奖励物品: item.rewardItems } : {}),
+          任务来源: "固定初始任务",
+          前端处理: "已由前端直接写入/任务/" + item.title + "，本轮只锁定接取事实",
+          变量写入路径: ["/任务/" + item.title],
+          AI执行规范: rewardAcceptStaticQuestAiSpec(),
+          不可删除: true
+        },
+        item
+      };
+    });
+    if (!result.ok) return result;
+    const added = await appendAppOperation(result.payload);
+    return { ok: Boolean(added), message: result.message };
   }
 
   async function rewardClaimDirect(kind, row) {
@@ -10273,6 +10369,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
   }
 
   globalThis.__HYPNOOS_CLAIM_REWARD_DIRECT__ = rewardClaimDirect;
+  globalThis.__HYPNOOS_ACCEPT_STATIC_QUEST_DIRECT__ = rewardAcceptStaticQuestDirect;
 
   function rewardVariablesTasks() {
     const variables = getLatestStatDataSync() || {};
@@ -10287,7 +10384,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
         id: firstNonEmptyText(raw.任务ID, raw.id, raw.ID, "dynamic:" + title),
         title,
         description: firstNonEmptyText(raw.完成条件, raw.条件, raw.description, raw.desc),
-        rewardStarlight: ${DEFAULT_FRONTEND_REWARD_STARLIGHT},
+        rewardStarlight: Math.max(0, Math.trunc(rewardNumber(raw.奖励星光点 ?? raw.rewardStarlight ?? raw.rewardMoney ?? raw["星光点"], ${DEFAULT_FRONTEND_REWARD_STARLIGHT}))),
         rewardItems: normalizeRewardItems(raw.奖励物品 ?? raw.rewardItems),
         dailyQuestDate: firstNonEmptyText(raw.每日任务日期, raw.变量日期, raw.dailyQuestDate, raw.dateKey),
         dailyQuestTarget: firstNonEmptyText(raw.任务目标, raw.dailyQuestTarget, raw.targetRole),
@@ -10312,6 +10409,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
         if (String(payload["来源"] || "").trim() !== "成就和任务") continue;
         const operation = String(payload["操作"] || "").trim();
         if (operation !== "接取任务" && operation !== "新增任务") continue;
+        if (operation === "接取任务" && /前端.*写入|直接写入/.test(firstNonEmptyText(payload["前端处理"], payload["AI执行规范"]))) continue;
         const key = firstNonEmptyText(payload["任务ID"], payload["任务"], operation + ":" + seen.size);
         seen.add(operation + ":" + key);
       }
@@ -10452,25 +10550,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     const dateKey = rewardCurrentDateKey(system);
     const chatName = rewardCurrentChatName();
     const seed = "daily-new-quest\\u0001" + dateKey + "\\u0001" + chatName;
-    const storageKey = rewardDailyRollStorageKey(dateKey, chatName);
-    let name = "";
-    try {
-      const parsed = JSON.parse(localStorage.getItem(storageKey) || "null");
-      if (parsed && String(parsed.dateKey || "") === String(dateKey || "") && String(parsed.chatName || "") === String(chatName || "") && candidates.includes(parsed.name)) {
-        name = parsed.name;
-      }
-    } catch {}
-    if (!name) {
-      name = candidates[rewardHashText(seed) % candidates.length] || candidates[0];
-      try {
-        localStorage.setItem(storageKey, JSON.stringify({
-          dateKey,
-          chatName,
-          name,
-          seedHash: rewardHashText(seed).toString(36)
-        }));
-      } catch {}
-    }
+    const name = candidates[rewardHashText(seed) % candidates.length] || candidates[0];
     const seedHash = rewardHashText(seed).toString(36);
     return {
       id: "daily-new-quest:" + dateKey + ":" + seedHash + ":" + name,
@@ -10684,17 +10764,10 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
         return;
       }
       if (!item || item.status !== "AVAILABLE") return;
-      appendAppOperation({
-        来源: "成就和任务",
-        操作: "接取任务",
-        任务ID: item.id,
-        任务: item.title,
-        条件: item.description,
-        奖励星光点: item.rewardStarlight,
-        奖励物品: item.rewardItems || []
+      rewardAcceptStaticQuestDirect(item).then((result) => {
+        page.dataset.rewardNotice = result?.message || "固定任务已接取。";
+        renderRewardPage(page);
       });
-      page.dataset.rewardNotice = "任务接取已暂存。";
-      renderRewardPage(page);
     }));
     page.querySelectorAll("[data-reward-cancel-quest]").forEach((button) => button.addEventListener("click", () => {
       const id = button.getAttribute("data-reward-cancel-quest") || "";
