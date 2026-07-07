@@ -6,7 +6,10 @@ const REQUIRED_SECTIONS = ["系统", "校规", "成就", "任务", "角色"];
 const DEFAULT_ROLES = ["西园寺爱丽莎", "月咏深雪", "犬冢夏美", "阿宅"];
 const BANNED_INITIAL_ROLES = ["阿宅君"];
 const DEFAULT_SCHOOL_RULES = ["仪容礼仪", "出勤学习", "校内安全", "校内风纪", "环境卫生"];
-const BANNED_ENTRY_COMMENTS = ["[mvu_update]特殊地点准入证规则"];
+const BANNED_ENTRY_COMMENTS = [
+  "[mvu_update]特殊地点准入证规则",
+  "[mvu_update](分步更新变量的时候开)变量更新任务说明"
+];
 const DAILY_SETTLEMENT_SCRIPT_ID = "77618567-3f61-4303-908f-9ee59ab45cd2";
 const DAILY_SETTLEMENT_SCRIPT_NAME = "数值控制脚本";
 const BANNED_TEXT_PATTERNS = [
@@ -87,6 +90,20 @@ for (let index = 1; index < REQUIRED_SECTIONS.length; index += 1) {
   assert(positions[prev] < positions[current], `bad init section order: ${prev} before ${current}`);
 }
 
+const systemBlock = initContent.slice(positions["系统"], positions["校规"]);
+for (const [name, pattern] of Object.entries({
+  "_社畜值": /^\s{2}_社畜值:\s*0\s*$/m,
+  "_buff": /^\s{2}_buff:\s*""\s*$/m,
+  "_buff结束时间": /^\s{2}_buff结束时间:\s*""\s*$/m,
+  "_课程表": /^\s{2}_课程表:\s*$/m
+})) {
+  assert(pattern.test(systemBlock), `missing readonly init variable: ${name}`);
+}
+assert(
+  !/^\s{2}(社畜值|buff|buff结束时间|课程表):\s*/m.test(systemBlock),
+  "legacy writable work/schedule variable leaked into system init block"
+);
+
 const schoolBlock = initContent.slice(positions["校规"], positions["成就"]);
 const missingSchoolRules = DEFAULT_SCHOOL_RULES.filter((name) => !schoolBlock.includes(name));
 assert(!missingSchoolRules.length, `missing default school rules: ${missingSchoolRules.join(", ")}`);
@@ -150,6 +167,9 @@ for (const comment of BANNED_ENTRY_COMMENTS) {
 
 const allWorldbookText = entries.map((entry) => String(entry.content || "")).join("\n");
 assertNoBannedText("worldbook", allWorldbookText);
+for (const needle of ["/系统/_社畜值", "/系统/_buff", "/系统/_buff结束时间", "/系统/_课程表"]) {
+  assert(allWorldbookText.includes(needle), `worldbook missing readonly path: ${needle}`);
+}
 
 const regexText = JSON.stringify(data.extensions?.regex_scripts || []);
 assert(regexText.includes(`cdn.jsdelivr.net/gh/${DIST_REPO}@`), "card regex does not use commit-pinned CDN");
@@ -204,6 +224,9 @@ const frontendTexts = [
 ].join("\n");
 for (const needle of BANNED_FRONTEND_TEXT) {
   assert(!frontendTexts.includes(needle), `banned frontend text still exists: ${needle}`);
+}
+for (const needle of ['system["_buff结束时间"]', 'setCurrentLayerSystemField("_buff结束时间"', "/系统/_buff结束时间"]) {
+  assert(frontendTexts.includes(needle), `frontend missing work buff end write path: ${needle}`);
 }
 assert(frontendTexts.includes("st-hypnoos-identity-port"), "identity frontend missing phone-style port wrapper");
 assert(!frontendTexts.includes("st-hypnoos-identity-portal-frame"), "identity frontend must not create a top-level portal frame");

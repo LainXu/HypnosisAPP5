@@ -509,7 +509,7 @@ html.st-hypnoos-booting.st-hypnoos-boot-failed body::after{content:"前端加载
 	      let score = 0;
 	      if (system && typeof system === "object" && !Array.isArray(system)) {
 	        score += 20;
-	        for (const key of ["MC能量", "_MC能量", "MC能量上限", "_MC能量上限", "持有零花钱", "社畜值", "buff", "催眠APP订阅等级", "_催眠APP订阅等级"]) {
+	        for (const key of ["MC能量", "_MC能量", "MC能量上限", "_MC能量上限", "持有零花钱", "_社畜值", "_buff", "_buff结束时间", "催眠APP订阅等级", "_催眠APP订阅等级"]) {
 	          if (system[key] !== undefined) score += 3;
 	        }
 	      }
@@ -576,9 +576,9 @@ html.st-hypnoos-booting.st-hypnoos-boot-failed body::after{content:"前端加载
 	      copyField("星光点", "星光点");
 	      copyField("持有零花钱", "持有零花钱");
 	      copyField("持有物品", "持有物品");
-	      copyField("社畜值", "社畜值");
-	      copyField("buff", "buff");
-	      copyField("buff结束时间", "buff结束时间");
+	      copyField("社畜值", "_社畜值");
+	      copyField("buff", "_buff");
+	      copyField("buff结束时间", "_buff结束时间");
 	      copyField("阿宅性别", "阿宅性别", "阿宅性別", "阿宅身体性别");
 	      copyField("当前日期", "当前日期");
 	      copyField("_当前周几", "_当前周几", "当前周几");
@@ -586,7 +586,7 @@ html.st-hypnoos-booting.st-hypnoos-boot-failed body::after{content:"前端加载
 	      copyField("当前地点", "当前地点");
 	      copyField("_当前日程", "_当前日程", "当前日程");
 	      copyField("_当前特殊日期", "_当前特殊日期", "当前特殊日期");
-	      copyField("课程表", "课程表");
+	      copyField("课程表", "_课程表");
 	      copyField("派遣岗位", "派遣岗位");
 	      copyField("主角可疑度", "主角可疑度");
 	      copyField("特殊地点解锁", "特殊地点解锁", "特殊地点权限", "已解锁特殊地点");
@@ -613,6 +613,7 @@ html.st-hypnoos-booting.st-hypnoos-boot-failed body::after{content:"前端加载
 	      if (/^时钟$/.test(source)) addOperationVariableFields(fields, ["当前日期", "当前时间", "当前地点"]);
 	      if (/^(地图|学校地图)$/.test(source)) addOperationVariableFields(fields, ["当前日期", "当前时间", "当前地点"]);
 	      if (/启动催眠|追加催眠/.test(action)) addOperationVariableFields(fields, ["MC能量"]);
+	      if (/^催眠命令$/.test(source) && /^临时催眠到期提醒$/.test(action)) addOperationVariableFields(fields, ["当前日期", "当前时间"]);
 	      if (/购买VIP等级/.test(action)) addOperationVariableFields(fields, ["持有零花钱", "星光点", "催眠APP订阅等级"]);
 	      if (/领取成就|领取任务奖励|领取奖励|完成任务|任务完成|成就奖励|任务奖励/.test(action)) addOperationVariableFields(fields, ["星光点", "持有物品"]);
 	      if (/派遣结束提醒|取消派遣/.test(action)) addOperationVariableFields(fields, ["当前日期", "当前时间", "星光点", "派遣岗位"]);
@@ -692,7 +693,9 @@ html.st-hypnoos-booting.st-hypnoos-boot-failed body::after{content:"前端加载
 	      "初始变量跳过角色",
 	      "世界书写入条目数",
 	      "世界书新增条目数",
-	      "当前对话世界书",
+	      "世界书覆盖条目数",
+	      "世界书覆盖角色",
+	      "目标世界书",
 	      "世界书写入方式",
 	      "变量写入路径",
 	      "合并次数",
@@ -753,6 +756,7 @@ html.st-hypnoos-booting.st-hypnoos-boot-failed body::after{content:"前端加载
 	        const parts = [];
 	        if (operationHasAction(records, /启动催眠|追加催眠/)) parts.push("启动/追加催眠代表{{user}}已实际施术；条件满足则成功，条件不足/越级/强阻碍才失败或部分失败；不得写看屏不足、系统警告或事前劝退，失败需承担相应后果");
 	        if (operationHasAction(records, /取消催眠/)) parts.push("取消催眠只结束当前临时催眠状态，不移除永久催眠效果");
+	        if (operationHasAction(records, /临时催眠到期提醒/)) parts.push("临时催眠结束时间已到或已过；AI必须按目标效果到期处理，移除对应临时催眠效果，不要延期、补回或把它当永久效果");
 	        return parts.length ? ["- AI执行规范｜" + parts.join("；") + "。"] : [];
 	      }
 	      if (text === "催眠资源") {
@@ -786,7 +790,7 @@ html.st-hypnoos-booting.st-hypnoos-boot-failed body::after{content:"前端加载
 	        return ["- AI执行规范｜打工只承载本轮已发生的工作事实；打工偶遇（剧情进行中）时只处理互动并收束到预计结束时间，不要把打工写成催眠APP效果或角色赠送资源。"];
 	      }
 	      if (text === "邂逅") {
-	        return ["- AI执行规范｜前端已扣星光点、创建/覆盖初始角色变量并写入当前对话Chat Lorebook；AI只按AI邂逅提示词安排登场和补未记录变量，不再创建或补写角色/世界书。"];
+	        return ["- AI执行规范｜前端已扣星光点、创建/覆盖初始角色变量并写入角色卡世界书；AI只按AI邂逅提示词安排登场和补未记录变量，不再创建或补写角色/世界书。"];
 	      }
 	      if (/^(地图|学校地图|主教学楼地图)$/.test(text)) {
 	        return ["- AI执行规范｜地点建议不是瞬移；请求新增地点需输出完整地点列表JSON；特殊地点需持有对应准入证，未持证时不要写成普通通行成功。"];
@@ -979,6 +983,11 @@ html.st-hypnoos-booting.st-hypnoos-boot-failed body::after{content:"前端加载
           if (/提升MC能量上限/.test(item)) return "hypnosis:supply:max-energy";
         }
         if (/^购买VIP等级$/.test(action)) return "hypnosis:vip:purchase";
+      }
+      if (/^催眠命令$/.test(source) && /^临时催眠到期提醒$/.test(action)) {
+        const role = cleanOperationText(object["角色名"] ?? object["目标角色"] ?? "");
+        const effect = cleanOperationText(object["效果名"] ?? object["临时催眠"] ?? "");
+        return "hypnosis:expired-temp:" + role + ":" + effect;
       }
       if (/^邂逅$/.test(source) && /购买角色包|角色包已使用/.test(action)) {
         return "encounter:purchase:active";
@@ -1192,6 +1201,9 @@ html.st-hypnoos-booting.st-hypnoos-boot-failed body::after{content:"前端加载
 		      }
       if (/^人物档案$/.test(source) && /触发角色事件|回忆角色事件/.test(action)) {
         addOperationRoleVariableFields(selected, variables, roleName, ["好感度", "服从度", "警戒度", "性欲", "快感值", "事件记录", "至关重要记忆"]);
+      }
+      if (/^催眠命令$/.test(source) && /^临时催眠到期提醒$/.test(action)) {
+        addOperationRoleVariableFields(selected, variables, roleName, ["临时催眠效果", "好感度", "警戒度", "服从度"]);
       }
 		    };
 		    const operationFrontendDeductedStarlightNotice = (entries) => {
@@ -1569,6 +1581,26 @@ html.st-hypnoos-booting.st-hypnoos-boot-failed body::after{content:"前端加载
       }
 	      const shouldLock = Boolean(payload?.["不可删除"] || payload?.locked || payload?.forceLocked);
 	      const nextEntry = makeOperationEntry(shouldLock ? { ...payload, 不可删除: true } : payload);
+      const existing = window.__ST_OPERATION_INPUT_LOG__.filter(isTarget);
+      if (existing.length === 1 && describeOperationEntry(existing[0]).key === nextEntry.key) return false;
+      window.__ST_OPERATION_INPUT_LOG__ = window.__ST_OPERATION_INPUT_LOG__.filter((entry) => !isTarget(entry));
+      window.__ST_OPERATION_INPUT_LOG__.push(nextEntry);
+      emitOperationQueueChanged();
+      return true;
+    };
+    window.__ST_SET_EXPIRED_TEMP_HYPNOSIS_REMINDER__ = (payload) => {
+      const isTarget = (entry) => {
+        const item = operationEntryPayload(entry);
+        return item?.["来源"] === "催眠命令" && item?.["操作"] === "临时催眠到期提醒";
+      };
+      if (!payload) {
+        const before = window.__ST_OPERATION_INPUT_LOG__.length;
+        window.__ST_OPERATION_INPUT_LOG__ = window.__ST_OPERATION_INPUT_LOG__.filter((entry) => !isTarget(entry));
+        const changed = before !== window.__ST_OPERATION_INPUT_LOG__.length;
+        if (changed) emitOperationQueueChanged();
+        return changed;
+      }
+      const nextEntry = makeOperationEntry({ ...payload, 不可删除: true, locked: true, forceLocked: true });
       const existing = window.__ST_OPERATION_INPUT_LOG__.filter(isTarget);
       if (existing.length === 1 && describeOperationEntry(existing[0]).key === nextEntry.key) return false;
       window.__ST_OPERATION_INPUT_LOG__ = window.__ST_OPERATION_INPUT_LOG__.filter((entry) => !isTarget(entry));
@@ -3187,14 +3219,14 @@ async function getMvuData() {
 		            let changed = false;
 		            const system = mvu?.stat_data?.["系统"];
 		            if (system) {
-		                for (const key of ["当天课程表", "当天原课程表", "当天魔改课程表"]) {
+			                for (const key of ["当天课程表", "当天原课程表", "当天魔改课程表", "课程表"]) {
 		                    if (Object.prototype.hasOwnProperty.call(system, key)) {
 		                        delete system[key];
 		                        changed = true;
 		                    }
 		                }
 		            }
-		            if (await setIfChanged(mvu, '系统.课程表', timetableRows))
+		            if (await setIfChanged(mvu, '系统._课程表', timetableRows))
 		                changed = true;
             if (await setIfChanged(mvu, '系统._当前周几', weekdayText || ''))
                 changed = true;
@@ -4116,6 +4148,7 @@ function patchHypnosisDataServiceModule(code) {
     money: 6000,
     shachiku: 0,
     buff: '',
+    buffEndTime: '',
     suspicion: 0,
 };`
   );
@@ -4128,9 +4161,9 @@ function patchHypnosisDataServiceModule(code) {
     `    MC能量: zod__WEBPACK_IMPORTED_MODULE_0__.z.coerce.number().default(DEFAULT_USER_DATA.mcEnergy),
     MC能量上限: zod__WEBPACK_IMPORTED_MODULE_0__.z.coerce.number().default(DEFAULT_USER_DATA.mcEnergyMax),
     星光点: zod__WEBPACK_IMPORTED_MODULE_0__.z.coerce.number().default(0),
-    社畜值: zod__WEBPACK_IMPORTED_MODULE_0__.z.coerce.number().default(DEFAULT_USER_DATA.shachiku),
-    buff: zod__WEBPACK_IMPORTED_MODULE_0__.z.string().default(DEFAULT_USER_DATA.buff),
-    buff结束时间: zod__WEBPACK_IMPORTED_MODULE_0__.z.string().default(DEFAULT_USER_DATA.buffEndTime),
+    _社畜值: zod__WEBPACK_IMPORTED_MODULE_0__.z.coerce.number().default(DEFAULT_USER_DATA.shachiku),
+    _buff: zod__WEBPACK_IMPORTED_MODULE_0__.z.string().default(DEFAULT_USER_DATA.buff),
+    _buff结束时间: zod__WEBPACK_IMPORTED_MODULE_0__.z.string().default(DEFAULT_USER_DATA.buffEndTime),
     持有零花钱: zod__WEBPACK_IMPORTED_MODULE_0__.z.coerce.number().default(DEFAULT_USER_DATA.money),`
   );
   output = output.replace(
@@ -4145,16 +4178,17 @@ function patchHypnosisDataServiceModule(code) {
     };
 }`,
     `function systemToUserResources(system) {
-    return {
-        mcEnergy: system.MC能量,
-        mcEnergyMax: system.MC能量上限,
-        starlight: system.星光点,
-        money: system.持有零花钱,
-        shachiku: system.社畜值,
-        buff: system.buff,
-        suspicion: system.主角可疑度,
-    };
-}`
+	    return {
+	        mcEnergy: system.MC能量,
+	        mcEnergyMax: system.MC能量上限,
+	        starlight: system.星光点,
+	        money: system.持有零花钱,
+	        shachiku: system._社畜值,
+	        buff: system._buff,
+	        buffEndTime: system._buff结束时间,
+	        suspicion: system.主角可疑度,
+	    };
+	}`
   );
   output = output.replace(
     /const SUBSCRIPTION_PRICES = \{[\s\S]*?\};/,
@@ -4537,7 +4571,7 @@ function scoreStatDataCandidate(value) {
 	            score += 3;
         if (system['持有零花钱'] != null)
             score += 5;
-        if (system['社畜值'] != null)
+	        if (system['_社畜值'] != null)
             score += 5;
         const store = isPlainVariableObject(system['hypnoos']) ? system['hypnoos'] : system['_hypnoos'];
         if (isPlainVariableObject(store))
@@ -5153,7 +5187,7 @@ function configuredConditionValue(userData, key) {
         'MC能量上限': source.mcEnergyMax,
         '持有零花钱': source.money,
         '星光点': source.starlight,
-        '社畜值': source.shachiku,
+	        '_社畜值': source.shachiku,
         '主角可疑度': source.suspicion,
     };
     return values[normalizedKey];
@@ -5654,7 +5688,7 @@ globalThis.__HYPNOOS_NORMALIZE_REWARD_ITEMS__ = normalizeRewardItems;
     mcEnergyMax: ['MC能量上限', '_MC能量上限', '当前MC能量上限', '最大MC能量', 'MC最大能量', '能量上限', 'mcEnergyMax'],
     starlight: ['星光点', 'starlight'],
     money: ['持有零花钱', '零花钱', '持有金钱', '持有资金', '当前资金', '资金', '金钱', 'money'],
-    shachiku: ['社畜值', '打工值', '社畜经验', 'workValue', 'shachiku'],
+    shachiku: ['_社畜值', 'workValue', 'shachiku'],
     suspicion: ['主角可疑度', '可疑度', '当前可疑度', '_可疑度', 'suspicion'],
 };
 const USER_RESOURCE_CANONICAL_KEYS = {
@@ -5662,7 +5696,7 @@ const USER_RESOURCE_CANONICAL_KEYS = {
     mcEnergyMax: 'MC能量上限',
     starlight: '星光点',
     money: '持有零花钱',
-    shachiku: '社畜值',
+    shachiku: '_社畜值',
     suspicion: '主角可疑度',
 };
 function readSystemAliasNumber(systemRaw, keys) {
@@ -5699,11 +5733,14 @@ function readExplicitUserResourcePatch(systemRaw) {
         if (value !== null)
             patch[field] = value;
     }
-    const buff = readSystemAliasText(systemRaw, ['buff']);
-    if (buff !== null)
-        patch.buff = buff;
-    return Object.keys(patch).length > 0 ? patch : null;
-}
+	    const buff = readSystemAliasText(systemRaw, ['_buff']);
+	    if (buff !== null)
+	        patch.buff = buff;
+	    const buffEndTime = readSystemAliasText(systemRaw, ['_buff结束时间']);
+	    if (buffEndTime !== null)
+	        patch.buffEndTime = buffEndTime;
+	    return Object.keys(patch).length > 0 ? patch : null;
+	}
 function normalizeSystemAliases(systemRaw) {
     const system = isPlainVariableObject(systemRaw) ? systemRaw : {};
     for (const [field, keys] of Object.entries(USER_RESOURCE_ALIASES)) {
@@ -5714,10 +5751,10 @@ function normalizeSystemAliases(systemRaw) {
         if (value !== null)
             system[canonicalKey] = value;
     }
-    if (system.buff === undefined || system.buff === null)
-        system.buff = '';
-    if (system.buff结束时间 === undefined || system.buff结束时间 === null)
-        system.buff结束时间 = '';
+    if (system._buff === undefined || system._buff === null)
+        system._buff = '';
+    if (system._buff结束时间 === undefined || system._buff结束时间 === null)
+        system._buff结束时间 = '';
     return system;
 }`
   );
@@ -5736,7 +5773,9 @@ function normalizeSystemAliases(systemRaw) {
         mcEnergyMax: system.MC能量上限,
         starlight: system.星光点,
         money: system.持有零花钱,
-        shachiku: system.社畜值,
+	        shachiku: system._社畜值,
+	        buff: system._buff,
+	        buffEndTime: system._buff结束时间,
         suspicion: system.主角可疑度,
     };
 }
@@ -6235,15 +6274,17 @@ function getEffectiveSubscription(store, system) {
   output = output.replace(
     /function systemToUserResources\(system\) \{[\s\S]*?        suspicion: system\.主角可疑度,\n    \};\n\}/,
     `function systemToUserResources(system) {
-    return {
-        mcEnergy: system.MC能量,
-        mcEnergyMax: system.MC能量上限,
-        starlight: system.星光点,
-        money: system.持有零花钱,
-        buff: system.buff,
-        suspicion: system.主角可疑度,
-    };
-}`
+	    return {
+	        mcEnergy: system.MC能量,
+	        mcEnergyMax: system.MC能量上限,
+	        starlight: system.星光点,
+	        money: system.持有零花钱,
+	        shachiku: system._社畜值,
+	        buff: system._buff,
+	        buffEndTime: system._buff结束时间,
+	        suspicion: system.主角可疑度,
+	    };
+	}`
   );
   if (!output.includes("function chooseUserResourcesFromSystems(systems)")) {
     output = output.replace(
@@ -6712,7 +6753,7 @@ function upgradeInternalMchanApp(html) {
 	      if (system["当前地点"] != null || system["当前位置"] != null || system["地点"] != null || system["所在地点"] != null || system["位置"] != null) score += 4;
 	      if (system["当前事件"] != null || system["当前场景"] != null || system["事件"] != null) score += 3;
 	      if (system["持有零花钱"] != null) score += 5;
-      if (system["社畜值"] != null) score += 5;
+      if (system["_社畜值"] != null) score += 5;
       const store = system["hypnoos"] && typeof system["hypnoos"] === "object" && !Array.isArray(system["hypnoos"])
         ? system["hypnoos"]
         : system["_hypnoos"];
@@ -6808,6 +6849,7 @@ function upgradeInternalMchanApp(html) {
 
   function refreshPhoneVariableViews() {
     syncWorkBuffStatusReminder();
+    syncExpiredTemporaryHypnosisReminder();
     patchHomeTile();
     updatePhoneDarkTheme();
   }
@@ -8228,6 +8270,16 @@ button.st-work-notice{cursor:pointer}
 .st-encounter-field textarea{min-height:64px;resize:vertical}
 .st-encounter-field input:focus,.st-encounter-field textarea:focus{border-color:rgba(217,155,55,.45);box-shadow:0 0 0 3px rgba(217,155,55,.12);background:#fff}
 .st-encounter-grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.st-encounter-initial-form{display:grid;gap:8px;border:1px solid rgba(127,88,47,.14);border-radius:8px;background:rgba(255,255,255,.5);padding:8px;scroll-margin-top:18px}
+.st-encounter-initial-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.st-encounter-initial-head strong{color:#352b25;font-size:12px;font-weight:950}
+.st-encounter-initial-head span{color:rgba(70,57,47,.56);font-size:10px;font-weight:850;text-align:right}
+.st-encounter-initial-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.st-encounter-initial-grid.is-profile{grid-template-columns:repeat(2,minmax(0,1fr))}
+.st-encounter-initial-grid .st-encounter-field textarea{min-height:58px}
+.st-encounter-initial-check{min-width:0;min-height:34px;border:1px solid rgba(127,88,47,.14);border-radius:8px;background:rgba(255,251,235,.7);display:flex;align-items:center;gap:6px;padding:7px 8px;color:rgba(70,57,47,.72);font-size:10px;font-weight:950;cursor:pointer}
+.st-encounter-initial-check input{width:15px;height:15px;accent-color:#0f766e;flex:0 0 auto}
+.st-encounter-initial-check span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .st-encounter-cover-edit{display:grid;grid-template-columns:92px 1fr;gap:9px;align-items:center}
 .st-encounter-cover-preview{width:92px;height:68px;border:1px solid rgba(127,88,47,.14);border-radius:8px;background:#fff7ed;display:grid;place-items:center;overflow:hidden;color:rgba(70,57,47,.46);font-size:10px;font-weight:900;text-align:center}
 .st-encounter-cover-preview img{width:100%;height:100%;object-fit:cover;display:block}
@@ -9473,7 +9525,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
         const money = hypnosisNumber(system["持有零花钱"], 0);
         const maxEnergy = hypnosisNumber(system["MC能量上限"] ?? system["_MC能量上限"], 0);
         const currentEnergy = hypnosisNumber(system["MC能量"] ?? system["_MC能量"], 0);
-        const sleepy = /无精打采/.test(String(system["buff"] || ""));
+        const sleepy = /无精打采/.test(String(system["_buff"] || ""));
         const gainRate = sleepy ? 0.5 : 1;
         const requestedCost = qty * 10;
         if (money < requestedCost) return { ok: false, message: "零花钱不足，无法补充MC能量。" };
@@ -9620,7 +9672,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       mcEnergyMax: Number(system["MC能量上限"] ?? system["_MC能量上限"] ?? 0) || 0,
       money: Number(system["持有零花钱"] ?? 0) || 0,
       starlight: Number(system["星光点"] ?? 0) || 0,
-      shachiku: Number(system["社畜值"] ?? 0) || 0,
+      shachiku: Number(system["_社畜值"] ?? 0) || 0,
       suspicion: Number(system["主角可疑度"] ?? 0) || 0
     };
   }
@@ -9730,7 +9782,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       "MC能量上限": source.mcEnergyMax,
       "持有零花钱": source.money,
       "星光点": source.starlight,
-      "社畜值": source.shachiku,
+      "_社畜值": source.shachiku,
       "主角可疑度": source.suspicion
     };
     return values[normalizedKey];
@@ -11559,7 +11611,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	      if (system["当前地点"] != null || system["当前位置"] != null || system["地点"] != null || system["所在地点"] != null || system["位置"] != null) score += 4;
 	      if (system["当前事件"] != null || system["当前场景"] != null || system["事件"] != null) score += 3;
 	      if (system["持有零花钱"] != null) score += 5;
-      if (system["社畜值"] != null) score += 5;
+      if (system["_社畜值"] != null) score += 5;
       const store = system["hypnoos"] && typeof system["hypnoos"] === "object" && !Array.isArray(system["hypnoos"])
         ? system["hypnoos"]
         : system["_hypnoos"];
@@ -12417,7 +12469,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
   function requestDeleteProfileRole(roleName) {
     const name = String(roleName || "").trim();
     if (!name) return;
-    const ok = window.confirm("删除人物变量「" + name + "」？\\n\\n这只会请求 AI 删除 /角色/" + name + " 变量，不会删除或禁用邂逅写入的当前对话世界书条目。若需要彻底停用该角色，请到邂逅的管理开关里禁用对应世界书，或之后手动删除世界书条目。");
+    const ok = window.confirm("删除人物变量「" + name + "」？\\n\\n这只会请求 AI 删除 /角色/" + name + " 变量，不会删除或禁用邂逅写入的角色卡世界书条目。若需要彻底停用该角色，请到邂逅的管理开关里禁用对应世界书，或之后手动删除世界书条目。");
     if (!ok) return;
     appendAppOperation({
       来源: "人物档案",
@@ -13045,14 +13097,14 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	        system["_当前周几"],
 	        system["_当前日程"],
 	        system["_当前特殊日期"],
-		        system["课程表"]
+		        system["_课程表"]
 	      ]);
 	      workApplyReadonlySchedule(system, dateText, timeText);
 	      const after = JSON.stringify([
 	        system["_当前周几"],
 	        system["_当前日程"],
 	        system["_当前特殊日期"],
-		        system["课程表"]
+		        system["_课程表"]
 	      ]);
 	      return before === after
 	        ? { ok: false, message: "只读课程表变量无需同步。" }
@@ -13181,7 +13233,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       原课程名: details.originalSubject || "",
       魔改课程名: details.nextSubject || "",
       前端处理: "已由前端扣除课程表魔改券，并把本次单格修改保存到本聊天本地魔改课程表。",
-	      AI执行规范: "课程表魔改券已由前端扣除；AI不得再次扣券或扣星光点。本券一次只能修改当天剩余课程中的一节，课程表内容由前端本地保存，并同步/系统/课程表只读日程字段；其中科目为原课程，是否魔改标记差异，魔改课程为空表示未魔改。"
+	      AI执行规范: "课程表魔改券已由前端扣除；AI不得再次扣券或扣星光点。本券一次只能修改当天剩余课程中的一节，课程表内容由前端本地保存，并同步/系统/_课程表只读日程字段；其中科目为原课程，是否魔改标记差异，魔改课程为空表示未魔改。"
     });
     return { ok: true, remaining: Math.max(0, beforeCount - 1) };
   }
@@ -13214,7 +13266,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 
   function liteIslandBuffInfo() {
     const system = getSystemState();
-    const raw = system["buff"] ?? system["Buff"] ?? system["BUFF"];
+    const raw = system["_buff"] ?? system["Buff"] ?? system["BUFF"];
     if (isPlainObject(raw)) {
       const title = liteIslandMeaningfulText(raw["名称"] ?? raw["名字"] ?? raw["name"] ?? raw["效果"] ?? raw["内容"]);
       if (title) return { title };
@@ -15468,7 +15520,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	        目标日期: info.targetDateText,
 	        目标时间: suggested,
 	        时间解释: "前端已由用户选择目标日期和目标时间，并校验目标不早于当前变量时间、且不超过当前变量时间后2天。",
-	        AI执行规范: "这是用户设置的强制剧情时间锚点，不是可忽略建议。AI必须让本轮剧情从目标日期与目标时间开始或推进到该时间点；除非用户最新正文明确取消或改时间，不得绕开、忽略或另选时间。前端已经判断目标日期：直接按/目标日期和/目标时间执行，不要重新判断是否跨天。只更新/系统/当前时间和必要的/系统/当前事件；目标日期不同于当前日期时同步更新/系统/当前日期。/系统/_当前周几、/系统/_当前日程、/系统/_当前特殊日期和/系统/课程表为前端只读同步字段，AI不要手写这些字段。"
+	        AI执行规范: "这是用户设置的强制剧情时间锚点，不是可忽略建议。AI必须让本轮剧情从目标日期与目标时间开始或推进到该时间点；除非用户最新正文明确取消或改时间，不得绕开、忽略或另选时间。前端已经判断目标日期：直接按/目标日期和/目标时间执行，不要重新判断是否跨天。只更新/系统/当前时间和必要的/系统/当前事件；目标日期不同于当前日期时同步更新/系统/当前日期。/系统/_当前周几、/系统/_当前日程、/系统/_当前特殊日期和/系统/_课程表为前端只读同步字段，AI不要手写这些字段。"
 	      })).then(() => renderClockPage(page));
 	    });
     updateClockFace(page);
@@ -16062,7 +16114,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 
   function currentShachikuValue() {
     const system = getSystemState();
-    return Math.max(0, Math.min(200, Math.floor(workNumber(system["社畜值"] ?? system["打工值"] ?? system["社畜经验"], 0))));
+	    return Math.max(0, Math.min(200, Math.floor(workNumber(system["_社畜值"], 0))));
   }
 
   function workMoneyText(value) {
@@ -16354,7 +16406,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
   }
 
   function workSystemBuffEndText(system = getSystemState()) {
-    return String(system["buff结束时间"] || "").trim();
+    return String(system["_buff结束时间"] || "").trim();
   }
 
 	  function pendingRawOperationPayloads() {
@@ -16465,7 +16517,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     const isFreeDay = !isSchoolDay;
     const isNormalWorkStart = (isSchoolDay && minutes >= 970 && minutes <= 1080) || (isFreeDay && minutes >= 360 && minutes <= 1080);
 	    const isNightWork = minutes > 1080 || minutes < 360;
-	    const currentBuffRaw = String(system["buff"] || "").trim();
+	    const currentBuffRaw = String(system["_buff"] || "").trim();
 	    const currentBuffEndText = workSystemBuffEndText(system);
 	    const currentBuffEndStamp = currentBuffEndText ? monitorStampFromText(currentBuffEndText) : 0;
 	    const startStamp = workClockStampFromInfo(clock);
@@ -16488,7 +16540,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	        currentBuffExpiredAtStart: currentBuffExpired,
 	        timeSource: clock.source,
 	        dayRule,
-        rule: "上课日8:30-16:10内逃课打工，被其他人发现或议论后遭到蔑视；成功开始/结算本次打工时将/系统/buff写为“社会的蔑视”。该buff本质是“逃学被其他人蔑视”，从打工开始时间起持续1天；存在期间所有角色好感度不能提升，只能不变或按剧情下降，且不能开始新的打工。周末或假日不触发该buff。"
+        rule: "上课日8:30-16:10内逃课打工，被其他人发现或议论后遭到蔑视；成功开始/结算本次打工时将/系统/_buff写为“社会的蔑视”。该buff本质是“逃学被其他人蔑视”，从打工开始时间起持续1天；存在期间所有角色好感度不能提升，只能不变或按剧情下降，且不能开始新的打工。周末或假日不触发该buff。"
       };
     }
     if (isNormalWorkStart) {
@@ -16501,7 +16553,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	        currentBuffExpiredAtStart: currentBuffExpired,
 	        timeSource: clock.source,
 	        dayRule,
-        rule: "上课日16:10-18:00期间，或周末/假日6:00-18:00期间开始打工，视为正常时间；成功开始/结算本次打工时将/系统/buff写为“全盛出击”，并把/系统/MC能量一次性恢复到/系统/MC能量上限。该buff效果只触发一次但显示从打工开始时间起持续1天；持续期间不能开始新的打工。"
+        rule: "上课日16:10-18:00期间，或周末/假日6:00-18:00期间开始打工，视为正常时间；成功开始/结算本次打工时将/系统/_buff写为“全盛出击”，并把/系统/MC能量一次性恢复到/系统/MC能量上限。该buff效果只触发一次但显示从打工开始时间起持续1天；持续期间不能开始新的打工。"
       };
     }
     if (isNightWork) {
@@ -16514,7 +16566,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	        currentBuffExpiredAtStart: currentBuffExpired,
 	        timeSource: clock.source,
 	        dayRule,
-        rule: "夜班打工；成功开始/结算本次打工时将/系统/buff写为“无精打采”。该buff从打工开始时间起持续1天；存在期间补充MC能量时获得量减半，且不能开始新的打工。"
+        rule: "夜班打工；成功开始/结算本次打工时将/系统/_buff写为“无精打采”。该buff从打工开始时间起持续1天；存在期间补充MC能量时获得量减半，且不能开始新的打工。"
       };
     }
     return {
@@ -16548,7 +16600,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
   }
 
   function hasActiveWorkBuffAtCurrentTime(system = getSystemState()) {
-    const buff = String(system["buff"] || "").trim();
+    const buff = String(system["_buff"] || "").trim();
     if (!buff || buff === "无") return false;
     const endText = workSystemBuffEndText(system);
     const endStamp = endText ? monitorStampFromText(endText) : 0;
@@ -16656,10 +16708,10 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 		    system["_当前特殊日期"] = String(dailySchedule.当前特殊日期 || "");
 		    const syncTimetable = options.syncTimetable !== false;
 		    if (syncTimetable) {
-			    for (const key of ["当天课程表", "当天原课程表", "当天魔改课程表"]) {
+				    for (const key of ["当天课程表", "当天原课程表", "当天魔改课程表", "课程表"]) {
 			      if (Object.prototype.hasOwnProperty.call(system, key)) delete system[key];
 			    }
-			    system["课程表"] = Array.isArray(dailySchedule.课程表) ? dailySchedule.课程表 : [];
+			    system["_课程表"] = Array.isArray(dailySchedule.课程表) ? dailySchedule.课程表 : [];
 		    }
 		    return dailySchedule;
 		  }
@@ -16698,16 +16750,21 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	    const result = await rewardApplySystemMutation((system, stat) => {
 	      const beforeMoney = workNumber(system["持有零花钱"], 0);
 	      const nextMoney = hypnosisSetSystemNumber(system, "持有零花钱", beforeMoney + job.wage, ["零花钱"]);
-	      const beforeShachiku = workNumber(system["社畜值"] ?? system["打工值"] ?? system["社畜经验"], 0);
-	      const nextShachiku = Math.min(200, beforeShachiku + shachikuGain);
-	      hypnosisSetSystemNumber(system, "社畜值", nextShachiku, ["打工值", "社畜经验"]);
+		      const beforeShachiku = workNumber(system["_社畜值"], 0);
+		      const nextShachiku = Math.min(200, beforeShachiku + shachikuGain);
+		      system["_社畜值"] = nextShachiku;
+		      for (const legacyKey of ["社畜值", "打工值", "社畜经验", "buff", "buff结束时间"]) delete system[legacyKey];
 	      if (timingInfo.currentBuffExpiredAtStart) {
-	        system["buff"] = "";
-	        system["buff结束时间"] = "";
+	        system["_buff"] = "";
+	        system["_buff结束时间"] = "";
 	      }
+	      let nextBuffValue = String(system["_buff"] || "");
+	      let nextBuffEndValue = String(system["_buff结束时间"] || "");
 	      if (timingInfo.buff) {
-	        system["buff"] = timingInfo.buff;
-	        system["buff结束时间"] = buffEndText || workBuffEndTextFromStart(timeInfo.startText);
+	        system["_buff"] = timingInfo.buff;
+	        system["_buff结束时间"] = buffEndText || workBuffEndTextFromStart(timeInfo.startText);
+	        nextBuffValue = String(system["_buff"] || "");
+	        nextBuffEndValue = String(system["_buff结束时间"] || "");
 	        if (timingInfo.buff === "全盛出击") {
 	          const maxEnergy = hypnosisNumber(system["MC能量上限"] ?? system["_MC能量上限"], 0);
 	          if (maxEnergy > 0) hypnosisSetSystemNumber(system, "MC能量", maxEnergy, ["_MC能量", "当前MC能量"]);
@@ -16717,7 +16774,9 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	      if (writeParts.timeText) system["当前时间"] = writeParts.timeText;
 	      system["当前事件"] = encounterRole ? ("打工偶遇（剧情进行中）：" + encounterRole) : ("打工结束：" + job.title);
 	      const dailySchedule = writeParts.dateText && writeParts.timeText ? workApplyReadonlySchedule(system, writeParts.dateText, writeParts.timeText, { syncTimetable: false }) : null;
-			      const variablePaths = ["/系统/持有零花钱", "/系统/社畜值"];
+			      const variablePaths = ["/系统/持有零花钱", "/系统/_社畜值"];
+	      const writesBuffState = Boolean(timingInfo.buff || timingInfo.currentBuffExpiredAtStart);
+	      if (writesBuffState) variablePaths.push("/系统/_buff", "/系统/_buff结束时间");
 	      if (timingInfo.buff === "全盛出击") variablePaths.push("/系统/MC能量");
 	      return {
 	        ok: true,
@@ -16735,6 +16794,10 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	          前端写入后持有零花钱: nextMoney,
 	          获得社畜值: shachikuGain,
 	          前端写入后社畜值: nextShachiku,
+	          ...(writesBuffState ? {
+	            前端写入后buff: nextBuffValue,
+	            前端写入后buff结束时间: nextBuffEndValue
+	          } : {}),
 	          偶遇: encounterRole ? "有" : "无",
 	          偶遇女角色: encounterRole || "无",
 	          偶遇发生时间: encounterTime || "无",
@@ -16746,6 +16809,11 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	      };
 	    });
 	    if (!result?.ok) return result || { ok: false, message: "打工结算失败。" };
+	    const wroteBuffState = Array.isArray(result.payload?.["变量写入路径"]) && result.payload["变量写入路径"].some((path) => String(path) === "/系统/_buff结束时间");
+	    if (wroteBuffState) {
+		      await Promise.resolve(setCurrentLayerSystemField("_buff", result.payload?.["前端写入后buff"] || ""));
+		      await Promise.resolve(setCurrentLayerSystemField("_buff结束时间", result.payload?.["前端写入后buff结束时间"] || ""));
+	    }
 	    const added = await appendAppOperation(result.payload);
 	    if (added && String(result.payload?.["偶遇女角色"] || "无").trim() !== "无") {
 	      const encounterRoleName = String(result.payload["偶遇女角色"] || "").trim();
@@ -16959,10 +17027,10 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 
   function syncWorkBuffStatusReminder() {
     const system = getSystemState();
-    const buff = String(system["buff"] || "").trim();
+    const buff = String(system["_buff"] || "").trim();
     const endText = workSystemBuffEndText(system);
     if (!buff || buff === "无") {
-      if (endText) setCurrentLayerSystemField("buff结束时间", "");
+	      if (endText) setCurrentLayerSystemField("_buff结束时间", "");
       window.__ST_SET_WORK_BUFF_STATUS_REMINDER__?.(null);
       return;
     }
@@ -16974,12 +17042,89 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     const currentStamp = workCurrentStamp();
     const expired = Boolean(endStamp && currentStamp && currentStamp >= endStamp);
     if (expired) {
-      setCurrentLayerSystemField("buff", "");
-      setCurrentLayerSystemField("buff结束时间", "");
+	      setCurrentLayerSystemField("_buff", "");
+	      setCurrentLayerSystemField("_buff结束时间", "");
       window.__ST_SET_WORK_BUFF_STATUS_REMINDER__?.(null);
       return;
     }
     window.__ST_SET_WORK_BUFF_STATUS_REMINDER__?.(null);
+  }
+
+  function tempHypnosisEffectEndText(value) {
+    if (!isPlainObject(value)) return "";
+    for (const key of ["结束时间", "到期时间", "持续至", "结束", "endTime", "expiresAt", "until"]) {
+      const text = effectScalar(value[key]).trim();
+      if (text) return text;
+    }
+    return "";
+  }
+
+  function tempHypnosisEffectSummary(key, value) {
+    if (!isPlainObject(value)) return effectScalar(value) || String(key || "临时催眠").trim() || "临时催眠";
+    return effectScalar(value["效果"] ?? value["名称"] ?? value["内容"] ?? value["描述"] ?? key) || String(key || "临时催眠").trim() || "临时催眠";
+  }
+
+  function collectExpiredTemporaryHypnosisEffects(limit = 1) {
+    const currentStamp = monitorCurrentStamp();
+    if (!Number.isFinite(currentStamp) || currentStamp <= 0) return [];
+    const roles = getStatsRoles();
+    const results = [];
+    for (const [roleName, roleData] of Object.entries(roles || {})) {
+      if (!isPlainObject(roleData)) continue;
+      const effects = roleData["临时催眠效果"];
+      if (!effects) continue;
+      const entries = isPlainObject(effects)
+        ? Object.entries(effects)
+        : Array.isArray(effects)
+          ? effects.map((item, index) => [String(index + 1), item])
+          : [["临时催眠", effects]];
+      for (const [key, value] of entries) {
+        const endText = tempHypnosisEffectEndText(value);
+        const endStamp = monitorStampFromText(endText);
+        if (!endText || !endStamp || currentStamp < endStamp) continue;
+        results.push({
+          roleName,
+          key: String(key || "临时催眠").trim() || "临时催眠",
+          title: tempHypnosisEffectSummary(key, value),
+          endText
+        });
+        if (results.length >= limit) return results;
+      }
+    }
+    return results;
+  }
+
+  function syncExpiredTemporaryHypnosisReminder() {
+    try {
+      if (typeof window.__ST_HYPNOOS_IS_LATEST_MESSAGE_FRONTEND__ === "function" && !window.__ST_HYPNOOS_IS_LATEST_MESSAGE_FRONTEND__()) return false;
+      const expired = collectExpiredTemporaryHypnosisEffects(1);
+      if (!expired.length) {
+        window.__ST_SET_EXPIRED_TEMP_HYPNOSIS_REMINDER__?.(null);
+        return false;
+      }
+      const item = expired[0];
+      const system = getSystemState();
+      const currentText = [String(system["当前日期"] || "").trim(), storyTimeOnly(system["当前时间"], "")].filter(Boolean).join(" ");
+      return window.__ST_SET_EXPIRED_TEMP_HYPNOSIS_REMINDER__?.({
+        来源: "催眠命令",
+        操作: "临时催眠到期提醒",
+        暂存摘要: item.roleName + "｜" + item.title + "｜已到期",
+        角色名: item.roleName,
+        效果名: item.key,
+        临时催眠: item.title,
+        效果结束时间: item.endText,
+        当前变量时间: currentText || "未记录",
+        变量写入路径: "remove /角色/" + item.roleName + "/临时催眠效果/" + item.key,
+        前端处理: "前端轻量扫描到该临时催眠效果结束时间小于等于当前变量时间；本条锁定暂存只提醒AI处理到期。",
+        AI执行规范: "本轮必须让该临时催眠效果到期并从/角色/" + item.roleName + "/临时催眠效果中移除效果「" + item.key + "」。不要延期、补回、转成永久效果或继续按催眠中描写；若角色醒后会察觉异常，按剧情更新心理、警戒度、好感度或服从度。",
+        不可删除: true,
+        locked: true,
+        forceLocked: true
+      });
+    } catch (error) {
+      console.warn("[HypnoOS] 临时催眠到期扫描失败", error);
+      return false;
+    }
   }
 
   function flashWorkButton(button, text) {
@@ -17030,6 +17175,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
   function renderWorkPage(page) {
     syncWorkStatusReminder();
     syncWorkBuffStatusReminder();
+    syncExpiredTemporaryHypnosisReminder();
     const shachiku = currentShachikuValue();
     const pendingWork = hasPendingWorkOperation();
     readWorkLayerRoll();
@@ -17233,7 +17379,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
   const ENCOUNTER_IMAGE_DATA_URL_SOFT_LIMIT = 420000;
   const ENCOUNTER_IMAGE_RESIZE_STEPS = [720, 540];
 		  const ENCOUNTER_FEATURED_ROLE_ORDER = [
-		    { name: "月咏皋月", packageId: "orjenrn-role-pack" },
+		    { name: "月咏皋月", packageId: "sdz-aser-role-pack" },
 		    { name: "西园寺美织", packageId: "baikai-role-pack" }
 		  ];
 
@@ -18322,7 +18468,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     const name = String(normalized.name || "").trim();
     const text = String(normalized.encounterPrompt || "").trim()
       || String(normalized.firstEncounter || "").trim()
-      || (name ? "围绕" + name + "安排一次自然邂逅，并按当前对话世界书与角色变量描写。" : "");
+      || (name ? "围绕" + name + "安排一次自然邂逅，并按角色卡世界书与角色变量描写。" : "");
     return text;
   }
 
@@ -19338,6 +19484,70 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     return null;
   }
 
+  function encounterWorldbookSyncPackages(page) {
+    const map = new Map();
+    const add = (pkg) => {
+      const normalized = encounterNormalizePackage(pkg || {});
+      const id = String(normalized.id || "").trim();
+      if (!id || map.has(id)) return;
+      if (!encounterWorldbookEntryList(normalized).length) return;
+      map.set(id, normalized);
+    };
+    try { encounterReadPackages().forEach(add); } catch {}
+    try {
+      for (const item of encounterRoleLibraryItems(page)) add(item?.package || encounterPackageForRole(item?.role || {}, item?.sourcePackage || null));
+    } catch {}
+    return Array.from(map.values());
+  }
+
+  async function encounterSyncCharacterWorldbookPurchaseState(page, snapshot = null) {
+    if (!page || !snapshot?.ok) return { changed: false };
+    const worldNameFromSnapshot = String(snapshot.targetWorldbook || "").trim();
+    const purchased = encounterReadPurchasedIds();
+    const pending = encounterPendingPurchasedIds();
+    const packages = encounterWorldbookSyncPackages(page);
+    if (!packages.length) return { changed: false };
+    for (const win of encounterCandidateWindows()) {
+      const mod = await encounterImportWorldInfoModule(win);
+      if (!mod || typeof mod.loadWorldInfo !== "function" || typeof mod.saveWorldInfo !== "function") continue;
+      const worldName = worldNameFromSnapshot || encounterCurrentCharacterPrimaryWorldName(win);
+      if (!worldName) continue;
+      try {
+        const data = await mod.loadWorldInfo(worldName);
+        const entries = encounterWorldEntryValues(data);
+        if (!entries.length) continue;
+        let changed = false;
+        const disabledNames = [];
+        const enabledNames = [];
+        for (const pkg of packages) {
+          const pkgId = String(pkg.id || "").trim();
+          if (!pkgId) continue;
+          const comments = new Set(encounterWorldbookEntryList(pkg).map((entry) => String(entry.comment || entry.name || "").trim()).filter(Boolean));
+          if (!comments.size) continue;
+          const matched = entries.filter((entry) => encounterEntryMatchesComments(entry, comments));
+          if (!matched.length) continue;
+          const managementEnabled = encounterManagedEnabled("package", pkgId) && encounterManagedEnabled("role", pkgId);
+          const shouldEnable = Boolean((purchased.has(pkgId) || pending.has(pkgId)) && managementEnabled);
+          for (const entry of matched) {
+            const wasDisabled = Boolean(entry.disable || entry.disabled || entry.enabled === false);
+            if (encounterSetEntryEnabled(entry, shouldEnable)) {
+              const nowDisabled = !shouldEnable;
+              if (wasDisabled !== nowDisabled) changed = true;
+            }
+          }
+          const roleNames = (pkg.roles || []).map((role) => String(role?.name || "").trim()).filter(Boolean);
+          if (shouldEnable) enabledNames.push(...roleNames);
+          else disabledNames.push(...roleNames);
+        }
+        if (!changed) return { changed: false };
+        await mod.saveWorldInfo(worldName, data, true);
+        try { await mod.updateWorldInfoList?.(); } catch {}
+        return { changed: true, targetWorldbook: worldName, disabledNames, enabledNames };
+      } catch {}
+    }
+    return { changed: false };
+  }
+
   function encounterReadManagementState() {
     try {
       const parsed = encounterGetJsonStorage(encounterLibraryStorageKey(ENCOUNTER_MANAGEMENT_STORAGE_KEY)) || {};
@@ -19384,11 +19594,10 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     if (status) status.textContent = page.dataset.encounterStatus;
   }
 
-	  async function encounterReadCurrentChatWorldbookName() {
+	  async function encounterReadCurrentCharacterWorldbookName() {
 	    for (const win of encounterCandidateWindows()) {
 	      try {
-	        const scriptMod = await encounterImportScriptModule(win);
-	        const worldName = encounterReadChatWorldbookMetadata(win, scriptMod);
+	        const worldName = encounterCurrentCharacterPrimaryWorldName(win);
 	        if (worldName) return worldName;
 	      } catch {}
 	    }
@@ -19408,9 +19617,13 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	    page.dataset.encounterWorldbookRefreshInFlight = "1";
 	    const label = page.querySelector("[data-encounter-current-worldbook]");
 	    if (label && !page.dataset.encounterCurrentWorldbookLabel) label.textContent = "读取中";
-	    const snapshot = await encounterReadCharacterWorldEntries(encounterBlankDraft());
+	    let snapshot = await encounterReadCharacterWorldEntries(encounterBlankDraft());
+	    const purchaseSync = await encounterSyncCharacterWorldbookPurchaseState(page, snapshot);
+	    if (purchaseSync?.changed) {
+	      snapshot = await encounterReadCharacterWorldEntries(encounterBlankDraft());
+	    }
 	    const roleNames = snapshot.ok ? encounterWorldbookRoleNamesFromEntries(snapshot.entries || []) : [];
-	    const worldName = snapshot.targetWorldbook || await encounterReadCurrentChatWorldbookName();
+	    const worldName = snapshot.targetWorldbook || await encounterReadCurrentCharacterWorldbookName();
 	    const ready = snapshot.ok ? "1" : "0";
 	    if (!page.isConnected || page.dataset.encounterWorldbookRefreshToken !== token) return snapshot;
 	    page.dataset.encounterWorldbookRefreshInFlight = "0";
@@ -19420,7 +19633,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	      || page.dataset.encounterWorldbookRoleNames !== namesJson
 	      || page.dataset.encounterWorldbookRolesReady !== ready;
 	    page.dataset.encounterCurrentWorldbook = worldName || "";
-	    page.dataset.encounterCurrentWorldbookLabel = worldName ? (snapshot.ok ? worldName : worldName + "（读取中）") : "未绑定，首次购买会创建";
+	    page.dataset.encounterCurrentWorldbookLabel = worldName ? (snapshot.ok ? worldName : worldName + "（读取中）") : "未绑定，随机桃花运会创建角色卡世界书";
 	    page.dataset.encounterWorldbookRoleNames = namesJson;
 	    page.dataset.encounterWorldbookRolesReady = ready;
 	    page.__stEncounterWorldbookLoaded = true;
@@ -19841,6 +20054,132 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     return '<div class="st-encounter-role-image-row"><div class="st-encounter-role-image-slots">' + cells + '</div></div>';
   }
 
+  const ENCOUNTER_INITIAL_MAIN_FIELD_SPECS = [
+    { path: "好感度", label: "好感度", type: "number", min: -200, max: 200 },
+    { path: "警戒度", label: "警戒度", type: "number", min: -200, max: 200 },
+    { path: "服从度", label: "服从度", type: "number", min: -200, max: 200 },
+    { path: "性欲", label: "性欲", type: "number", min: -200, max: 200 },
+    { path: "快感值", label: "快感值", type: "number", min: -200, max: 200 },
+    { path: "工作价值", label: "工作价值", type: "number", min: 0, max: 20 },
+    { path: "是否派遣中", label: "是否派遣中", type: "boolean" },
+    { path: "绰号", label: "绰号", type: "text" },
+    { path: "绰号已认可", label: "绰号已认可", type: "boolean" },
+    { path: "事件记录", label: "事件记录", type: "eventRecord" },
+    { path: "至关重要记忆", label: "至关重要记忆", type: "text" }
+  ];
+  const ENCOUNTER_INITIAL_PROFILE_FIELD_SPECS = [
+    { path: "档案.照片", label: "照片", type: "text" },
+    { path: "档案.姓名", label: "姓名", type: "text" },
+    { path: "档案.年龄", label: "年龄", type: "text" },
+    { path: "档案.社团/职业", label: "社团/职业", type: "text" },
+    { path: "档案.身高", label: "身高", type: "text" },
+    { path: "档案.体重", label: "体重", type: "text" },
+    { path: "档案.三围", label: "三围", type: "text" },
+    { path: "档案.头发", label: "头发", type: "textarea" },
+    { path: "档案.面部", label: "面部", type: "textarea" },
+    { path: "档案.上衣", label: "上衣", type: "textarea" },
+    { path: "档案.下衣", label: "下衣", type: "textarea" }
+  ];
+
+  function encounterInitialVariableValueAtPath(value, path) {
+    return String(path || "").split(".").reduce((target, key) => {
+      if (!target || typeof target !== "object") return undefined;
+      return target[key];
+    }, value);
+  }
+
+  function encounterSetInitialVariablePath(target, path, value) {
+    const parts = String(path || "").split(".").filter(Boolean);
+    if (!parts.length || !target || typeof target !== "object") return;
+    let cursor = target;
+    for (let index = 0; index < parts.length - 1; index += 1) {
+      const key = parts[index];
+      if (!cursor[key] || typeof cursor[key] !== "object" || Array.isArray(cursor[key])) cursor[key] = {};
+      cursor = cursor[key];
+    }
+    cursor[parts[parts.length - 1]] = value;
+  }
+
+  function encounterCoerceInitialFieldValue(input, spec) {
+    if (!spec) return "";
+    if (spec.type === "boolean") return Boolean(input?.checked);
+    const raw = String(input?.value ?? "");
+    if (spec.type === "number") {
+      const number = Number(raw);
+      const fallback = Number(spec.min) > 0 ? Number(spec.min) : 0;
+      if (!Number.isFinite(number)) return fallback;
+      const min = Number.isFinite(Number(spec.min)) ? Number(spec.min) : -Infinity;
+      const max = Number.isFinite(Number(spec.max)) ? Number(spec.max) : Infinity;
+      return Math.max(min, Math.min(max, Math.trunc(number)));
+    }
+    if (spec.type === "eventRecord") return normalizedRoleEventRecord(raw);
+    return raw.trim();
+  }
+
+  function encounterInitialVariableFromRole(role) {
+    try {
+      return encounterInitialVariablesObject(role);
+    } catch {
+      return encounterDefaultInitialVariableObject(role);
+    }
+  }
+
+  function encounterInitialVariableFieldHtml(spec, variable) {
+    const value = encounterInitialVariableValueAtPath(variable, spec.path);
+    const name = "roleInitial-" + spec.path.replace(/[^\\p{L}\\p{N}_-]+/gu, "-");
+    const attrs = ' data-encounter-initial-path="' + escapeAttr(spec.path) + '"';
+    if (spec.type === "boolean") {
+      return '<label class="st-encounter-initial-check"><input type="checkbox" name="' + escapeAttr(name) + '"' + attrs + (value ? " checked" : "") + '><span>' + escapeHtml(spec.label) + '</span></label>';
+    }
+    if (spec.type === "textarea") {
+      return '<label class="st-encounter-field"><span>' + escapeHtml(spec.label) + '</span><textarea name="' + escapeAttr(name) + '"' + attrs + ' placeholder="未记录">' + escapeHtml(value ?? "") + '</textarea></label>';
+    }
+    const type = spec.type === "number" ? "number" : "text";
+    const min = spec.type === "number" && Number.isFinite(Number(spec.min)) ? ' min="' + escapeAttr(spec.min) + '"' : "";
+    const max = spec.type === "number" && Number.isFinite(Number(spec.max)) ? ' max="' + escapeAttr(spec.max) + '"' : "";
+    return '<label class="st-encounter-field"><span>' + escapeHtml(spec.label) + '</span><input type="' + type + '" name="' + escapeAttr(name) + '"' + attrs + min + max + ' value="' + escapeAttr(value ?? "") + '" placeholder="未记录"></label>';
+  }
+
+  function encounterInitialVariablesFormHtml(role) {
+    const variable = encounterInitialVariableFromRole(role);
+    return '<section class="st-encounter-initial-form" data-encounter-initial-root>' +
+      '<div class="st-encounter-initial-head"><strong>初始变量</strong><span>表格会自动整理为角色变量对象</span></div>' +
+      '<div class="st-encounter-initial-grid">' + ENCOUNTER_INITIAL_MAIN_FIELD_SPECS.map((spec) => encounterInitialVariableFieldHtml(spec, variable)).join("") + '</div>' +
+      '<label class="st-encounter-field"><span>心理</span><textarea data-encounter-initial-path="心理" name="roleInitial-mind" placeholder="未记录">' + escapeHtml(variable?.["心理"] ?? "") + '</textarea></label>' +
+      '<div class="st-encounter-initial-head"><strong>档案</strong><span>人物档案预览用这些字段</span></div>' +
+      '<div class="st-encounter-initial-grid is-profile">' + ENCOUNTER_INITIAL_PROFILE_FIELD_SPECS.map((spec) => encounterInitialVariableFieldHtml(spec, variable)).join("") + '</div>' +
+      '<p class="st-encounter-note">临时/永久催眠效果等复杂字段会沿用导入值或默认空对象；这里不再要求手写 JSON。</p>' +
+    '</section>';
+  }
+
+  function encounterReadInitialVariablesFromCard(card, fallbackRole) {
+    const role = encounterNormalizeRole(fallbackRole || {});
+    const variable = encounterInitialVariableFromRole(role);
+    const specs = new Map(ENCOUNTER_INITIAL_MAIN_FIELD_SPECS.concat(ENCOUNTER_INITIAL_PROFILE_FIELD_SPECS).map((spec) => [spec.path, spec]));
+    specs.set("心理", { path: "心理", type: "textarea" });
+    card?.querySelectorAll?.("[data-encounter-initial-path]")?.forEach((input) => {
+      const path = input.getAttribute("data-encounter-initial-path") || "";
+      const spec = specs.get(path) || { path, type: input.tagName === "TEXTAREA" ? "textarea" : "text" };
+      encounterSetInitialVariablePath(variable, path, encounterCoerceInitialFieldValue(input, spec));
+    });
+    return JSON.stringify(encounterSanitizeInitialRoleVariableObject(variable, role), null, 2);
+  }
+
+  function encounterReadAffectionChainFromCard(card, fallbackRole) {
+    const fallback = encounterRoleAffectionChain(fallbackRole || {});
+    return ENCOUNTER_AFFECTION_CHAIN_THRESHOLDS.map((threshold, index) => {
+      const item = fallback[index] || {};
+      const row = card?.querySelector?.("[data-encounter-affection-index='" + index + "']");
+      return {
+        index: index + 1,
+        numeral: ENCOUNTER_EVENT_NUMERALS[index] || String(index + 1),
+        threshold,
+        title: String(row?.querySelector?.("[data-encounter-affection-title]")?.value ?? card?.querySelector?.("[name='roleAffectionTitle-" + index + "']")?.value ?? item.title ?? "").trim(),
+        summary: String(row?.querySelector?.("[data-encounter-affection-summary]")?.value ?? card?.querySelector?.("[name='roleAffectionSummary-" + index + "']")?.value ?? item.summary ?? "").trim()
+      };
+    });
+  }
+
   function encounterReadRoleFromCard(card, fallbackRole) {
     const role = encounterNormalizeRole(fallbackRole || {});
     if (!card) return role;
@@ -19851,8 +20190,9 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     role.encounterPrompt = String(roleRead("roleEncounterPrompt"));
     const variableField = card.querySelector("[name='roleVariables']");
     role.variables = variableField ? String(variableField.value || "") : encounterDefaultVariableContent(role.name);
-    const initialVariableField = card.querySelector("[name='roleInitialVariables']");
-    role.initialVariables = initialVariableField ? String(initialVariableField.value || "") : encounterInitialVariablesText(role);
+    role.initialVariables = card.querySelector("[data-encounter-initial-root]")
+      ? encounterReadInitialVariablesFromCard(card, role)
+      : encounterInitialVariablesText(role);
     role.personaTitle = String(roleRead("rolePersonaTitle"));
     role.gender = String(roleRead("roleGender"));
     role.age = String(roleRead("roleAge"));
@@ -19874,13 +20214,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
         content: String(content)
       };
     });
-    role.affectionChain = ENCOUNTER_AFFECTION_CHAIN_THRESHOLDS.map((threshold, index) => ({
-      index: index + 1,
-      numeral: ENCOUNTER_EVENT_NUMERALS[index] || String(index + 1),
-      threshold,
-      title: String(card.querySelector("[name='roleAffectionTitle-" + index + "']")?.value || ""),
-      summary: String(card.querySelector("[name='roleAffectionSummary-" + index + "']")?.value || "")
-    }));
+    role.affectionChain = encounterReadAffectionChainFromCard(card, role);
     return encounterNormalizeRole(role);
   }
 
@@ -19952,14 +20286,18 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 		      ? '<button type="button" class="danger" data-encounter-action="delete-package" data-package-id="' + escapeAttr(pkg.id) + '">删除</button>'
 		      : "";
 		    const availability = encounterPackageAvailability(pkg, page);
-	    const nonRepeatText = availability.ready ? (availability.available + " 非重复") : "检测中";
+	    const availableText = availability.ready
+	      ? (availability.overwriteNames.length
+	        ? (availability.available + " 可写入 · " + availability.overwriteNames.length + " 覆盖")
+	        : (availability.available + " 可写入"))
+	      : "检测中";
 	    const status = hiddenDuplicateCount ? ("隐藏 " + hiddenDuplicateCount + " 重合") : "仅浏览";
 	    return '<article class="st-encounter-package' + (featured ? " is-featured" : "") + '">' +
 	      '<button type="button" class="st-encounter-package-open" data-encounter-action="open-package" data-package-id="' + escapeAttr(pkg.id) + '">' +
 	        '<div class="st-encounter-cover">' + encounterCoverHtml(pkg.coverDataUrl, pkg.name || "角色包") + '</div>' +
 	        '<div class="st-encounter-package-body">' +
 	          '<div class="st-encounter-package-title"><strong>' + escapeHtml(pkg.name || "未命名角色包") + '</strong></div>' +
-	          '<div class="st-encounter-package-facts"><span>' + roleCount + ' 角色</span><span>' + escapeHtml(nonRepeatText) + '</span><span class="st-encounter-price">' + escapeHtml(status) + '</span></div>' +
+	          '<div class="st-encounter-package-facts"><span>' + roleCount + ' 角色</span><span>' + escapeHtml(availableText) + '</span><span class="st-encounter-price">' + escapeHtml(status) + '</span></div>' +
 	        '</div>' +
 	      '</button>' +
 		      '<div class="st-encounter-card-manage"><button type="button" data-encounter-action="toggle-worldbook" data-target-type="package" data-target-id="' + escapeAttr(pkg.id) + '">' + (managed ? "管理开" : "管理关") + '</button>' + deleteButton + '</div>' +
@@ -20090,11 +20428,12 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       '<div class="st-encounter-kv">' +
 	        '<span><strong>' + totalRoleCount + ' 角色</strong>包内总数</span>' +
 	        '<span><strong>' + visibleRoleCount + ' 角色</strong>当前可浏览</span>' +
-	        '<span><strong>' + (availability.ready ? availability.available : visibleRoleCount) + ' 角色</strong>非重复</span>' +
+	        '<span><strong>' + (availability.ready ? availability.available : visibleRoleCount) + ' 角色</strong>可写入/覆盖</span>' +
 	        '<span><strong>' + (hiddenDuplicateCount ? hiddenDuplicateCount + ' 角色' : '无') + '</strong>隐藏重合</span>' +
 	      '</div>' +
 	      (hiddenDuplicateCount ? '<div class="st-encounter-used-note">orjenrn 与 SDZ 重合的角色默认隐藏，可在偶遇页开启“查看重合角色”。</div>' : '') +
-	      (availability.duplicateNames.length ? '<div class="st-encounter-used-note">当前聊天世界书已存在：' + escapeHtml(availability.duplicateNames.join("、")) + '</div>' : '') +
+	      (availability.duplicateNames.length ? '<div class="st-encounter-used-note">角色卡世界书已存在：' + escapeHtml(availability.duplicateNames.join("、")) + '</div>' : '') +
+	      (availability.overwriteNames.length ? '<div class="st-encounter-used-note">当前聊天未购买但世界书已有，可购买后覆盖/启用：' + escapeHtml(availability.overwriteNames.join("、")) + '</div>' : '') +
 	      '<div class="st-encounter-actions">' +
 	        '<button type="button" class="st-encounter-button" data-encounter-action="edit-package" data-package-id="' + escapeAttr(pkg.id) + '">在此包上定制</button>' +
 	        deleteAction +
@@ -20183,7 +20522,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
         '<div class="st-encounter-detail-cover">' + encounterCoverHtml(pkg.coverDataUrl, pkg.name || "角色包") + '</div>' +
         '<div class="st-encounter-detail-main">' +
           '<h2>' + escapeHtml(pkg.name || "未命名角色包") + '</h2>' +
-          '<div class="st-encounter-package-facts"><span>' + roleCount + ' 角色</span><span>当前对话世界书</span></div>' +
+          '<div class="st-encounter-package-facts"><span>' + roleCount + ' 角色</span><span>角色卡世界书</span></div>' +
           '<p>' + escapeHtml(pkg.intro || "暂无介绍。") + '</p>' +
         '</div>' +
       '</section>' +
@@ -20311,17 +20650,17 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 
 	  function encounterRoleAffectionChainHtml(role) {
 	    const chain = encounterRoleAffectionChain(role);
-	    return '<section class="st-encounter-affection-chain" aria-label="好感链五段">' +
+	    return '<section class="st-encounter-affection-chain" data-encounter-affection-root aria-label="好感链五段">' +
 	      '<div class="st-encounter-affection-head">' +
-	        '<strong>好感链</strong>' +
+	        '<strong>好感链填表</strong>' +
 	        '<span>留空使用通用链，不新建专属世界书</span>' +
 	      '</div>' +
 	      chain.map((item, index) => (
-	        '<article class="st-encounter-affection-card">' +
+	        '<article class="st-encounter-affection-card" data-encounter-affection-index="' + index + '">' +
 	          '<div class="st-encounter-affection-mark"><b>' + escapeHtml(item.numeral) + '</b><small>好感 ' + item.threshold + '</small></div>' +
 	          '<div class="st-encounter-affection-fields">' +
-	            '<label class="st-encounter-field"><span>短标题</span><input name="roleAffectionTitle-' + index + '" value="' + escapeAttr(item.title) + '" placeholder="' + escapeAttr("通用：" + (ENCOUNTER_GENERIC_AFFECTION_CHAIN[index]?.title || "按当前关系生成")) + '"></label>' +
-	            '<label class="st-encounter-field"><span>事件梗概</span><textarea name="roleAffectionSummary-' + index + '" placeholder="' + escapeAttr("通用：" + encounterAffectionFallbackSummary(index)) + '">' + escapeHtml(item.summary) + '</textarea></label>' +
+	            '<label class="st-encounter-field"><span>事件名</span><input name="roleAffectionTitle-' + index + '" data-encounter-affection-title value="' + escapeAttr(item.title) + '" placeholder="' + escapeAttr("通用：" + (ENCOUNTER_GENERIC_AFFECTION_CHAIN[index]?.title || "按当前关系生成")) + '"></label>' +
+	            '<label class="st-encounter-field"><span>事件描述</span><textarea name="roleAffectionSummary-' + index + '" data-encounter-affection-summary placeholder="' + escapeAttr("通用：" + encounterAffectionFallbackSummary(index)) + '">' + escapeHtml(item.summary) + '</textarea></label>' +
 	          '</div>' +
 	        '</article>'
 	      )).join("") +
@@ -20348,7 +20687,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
         '<button type="button" class="' + (contentSection === "initial" ? "active" : "") + '" data-encounter-action="role-content-section" data-section="initial">初始变量</button>' +
       '</nav>' +
       '<section class="st-encounter-role-pane ' + (contentSection === "initial" ? "active" : "") + '" data-role-pane="initial">' +
-        '<label class="st-encounter-field"><span>初始变量（JSON）</span><textarea name="roleInitialVariables" placeholder="购买/使用时写入 stat_data.角色.角色名 的初始变量">' + escapeHtml(encounterInitialVariablesText(normalized)) + '</textarea></label>' +
+        encounterInitialVariablesFormHtml(normalized) +
       '</section>' +
       '<section class="st-encounter-role-pane ' + (contentSection === "affection" ? "active" : "") + '" data-role-pane="affection">' +
         encounterRoleAffectionChainHtml(normalized) +
@@ -20390,7 +20729,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       '</div>' +
       '<div class="st-encounter-actions is-single"><button type="button" class="st-encounter-button primary" data-encounter-action="save-library">保存到偶遇</button></div>' +
       '<input type="file" accept=".json,application/json" data-encounter-import-role-json hidden>' +
-      '<p class="st-encounter-note">人物变量 entry 会按角色名自动生成固定格式；初始变量会在购买/使用时写入当前楼层变量；人设 entry 会由 title/gender 等固定字段重新拼成固定格式，并统一写入当前对话 Chat Lorebook。角色JSON导入/导出不覆盖4张角色图片。</p>' +
+      '<p class="st-encounter-note">人物变量 entry 会按角色名自动生成固定格式；初始变量会在随机桃花运使用时写入当前楼层变量；人设 entry 会由 title/gender 等固定字段重新拼成固定格式，并统一写入角色卡世界书。角色JSON导入/导出不覆盖4张角色图片。</p>' +
     '</section>';
   }
 
@@ -20410,7 +20749,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
         '<button type="button" class="st-encounter-button" data-encounter-action="clear-single-role">清空草稿</button>' +
       '</div>' +
       '<input type="file" accept=".json,application/json" data-encounter-import-role-json hidden>' +
-      '<p class="st-encounter-note">单独角色可保存为浏览资料或素材库；邂逅里不再提供指定角色购买写入。</p>' +
+      '<p class="st-encounter-note">单独角色可保存为浏览资料或素材库；邂逅里不再提供指定角色购买写入，随机桃花运会写入角色卡世界书。</p>' +
     '</section>';
   }
 
@@ -20515,7 +20854,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
           '<button type="button" class="st-encounter-tab ' + (tab === "role" ? "active" : "") + '" data-encounter-tab="role">角色定制</button>' +
           '<button type="button" class="st-encounter-tab ' + (tab === "shop" ? "active" : "") + '" data-encounter-tab="shop">商店</button>' +
         '</section>') +
-        '<section class="st-encounter-worldbook-status"><span>当前聊天世界书</span><strong data-encounter-current-worldbook>' + escapeHtml(page.dataset.encounterCurrentWorldbookLabel || page.dataset.encounterCurrentWorldbook || "读取中") + '</strong></section>' +
+        '<section class="st-encounter-worldbook-status"><span>角色卡世界书</span><strong data-encounter-current-worldbook>' + escapeHtml(page.dataset.encounterCurrentWorldbookLabel || page.dataset.encounterCurrentWorldbook || "读取中") + '</strong></section>' +
         content +
         '<div class="st-encounter-status" aria-live="polite">' + escapeHtml(page.dataset.encounterStatus || "") + '</div>' +
       '</main>';
@@ -21898,16 +22237,54 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	    return new Set();
 	  }
 
+	  function encounterPageWorldbookEntries(page) {
+	    const entries = page?.__stEncounterWorldbookSnapshot?.entries;
+	    return Array.isArray(entries) ? entries : [];
+	  }
+
+	  function encounterRoleExpectedWorldbookComments(role) {
+	    return new Set(encounterWorldbookEntryList({ roles: [encounterNormalizeRole(role || {})] })
+	      .map((entry) => String(entry.comment || entry.name || "").trim())
+	      .filter(Boolean));
+	  }
+
+	  function encounterRoleHasExpectedWorldbookEntries(entries, role) {
+	    const comments = encounterRoleExpectedWorldbookComments(role);
+	    if (!comments.size) return false;
+	    return (Array.isArray(entries) ? entries : []).some((entry) => encounterEntryMatchesComments(entry, comments));
+	  }
+
+	  function encounterPackageExistingRoleNamesByComments(pkg, page) {
+	    const entries = encounterPageWorldbookEntries(page);
+	    if (!entries.length) return [];
+	    const names = [];
+	    for (const role of encounterNormalizePackage(pkg).roles || []) {
+	      const nextRole = encounterNormalizeRole(role);
+	      const name = String(nextRole.name || "").trim();
+	      if (name && encounterRoleHasExpectedWorldbookEntries(entries, nextRole)) names.push(name);
+	    }
+	    return names;
+	  }
+
 	  function encounterPackageAvailability(pkg, page) {
 	    const ready = page?.dataset?.encounterWorldbookReadOnce === "1";
 	    const existing = encounterPageWorldbookRoleNameSet(page);
+	    const entries = encounterPageWorldbookEntries(page);
 	    const roles = encounterVisiblePackageRoles(pkg, page)
 	      .filter((role) => String(role.name || role.intro || "").trim());
 	    const duplicated = [];
+	    const overwrite = [];
 	    const fresh = [];
 	    for (const role of roles) {
 	      const name = String(role.name || "").trim();
-	      if (name && existing.has(encounterRoleNameKey(name))) duplicated.push(name);
+	      if (name && existing.has(encounterRoleNameKey(name))) {
+	        if (ready && encounterRoleHasExpectedWorldbookEntries(entries, role) && !encounterIsPurchased(pkg?.id)) {
+	          overwrite.push(name);
+	          fresh.push(role);
+	        } else {
+	          duplicated.push(name);
+	        }
+	      }
 	      else fresh.push(role);
 	    }
 	    return {
@@ -21915,7 +22292,8 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	      total: roles.length,
 	      available: ready ? fresh.length : roles.length,
 	      duplicate: ready ? duplicated.length : 0,
-	      duplicateNames: duplicated
+	      duplicateNames: duplicated,
+	      overwriteNames: overwrite
 	    };
 	  }
 
@@ -22201,6 +22579,40 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     });
   }
 
+  function encounterFindWorldEntryDuplicate(entries, entry) {
+    const comment = String(entry?.comment || entry?.name || "").trim();
+    const content = String(entry?.content || "").trim();
+    return (Array.isArray(entries) ? entries : []).find((item) => {
+      const itemComment = String(item?.comment || item?.name || "").trim();
+      const itemContent = String(item?.content || "").trim();
+      return Boolean((comment && itemComment === comment) || (!comment && content && itemContent === content));
+    }) || null;
+  }
+
+  function encounterOverwriteWorldEntry(target, entry) {
+    if (!target || !entry || typeof target !== "object" || typeof entry !== "object") return false;
+    const uid = target.uid;
+    const id = target.id;
+    const oldExtensions = target.extensions && typeof target.extensions === "object" && !Array.isArray(target.extensions) ? { ...target.extensions } : {};
+    const nextExtensions = entry.extensions && typeof entry.extensions === "object" && !Array.isArray(entry.extensions) ? entry.extensions : {};
+    for (const key of Object.keys(target)) delete target[key];
+    Object.assign(target, entry);
+    if (uid !== undefined) target.uid = uid;
+    if (id !== undefined) target.id = id;
+    target.extensions = { ...oldExtensions, ...nextExtensions };
+    encounterSetEntryEnabled(target, true);
+    return true;
+  }
+
+  function encounterUpsertWorldEntry(data, entry) {
+    const entries = encounterWorldEntryValues(data);
+    const existing = encounterFindWorldEntryDuplicate(entries, entry);
+    if (existing) {
+      return encounterOverwriteWorldEntry(existing, entry) ? "updated" : "";
+    }
+    return encounterAppendWorldEntry(data, entry) ? "inserted" : "";
+  }
+
   function encounterTavernHelperTargets(win) {
     const targets = [];
     const push = (item) => {
@@ -22348,7 +22760,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	  function encounterChatWorldbookBaseName(chatId) {
 	    const raw = String(chatId || "当前对话").trim();
 	    const id = raw || "当前对话";
-	    return encounterSafeWorldbookName("Chat Book " + id);
+	    return encounterSafeWorldbookName("Legacy Book " + id);
 	  }
 
   function encounterTimestampWorldbookLabel() {
@@ -22522,7 +22934,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       if (pending.length) {
         await bound.target.createWorldbookEntries(bound.worldName, pending.map(encounterToTavernHelperEntry), { render: "immediate" });
       }
-      return { ok: true, count: entries.length, insertedCount: pending.length, targetWorldbook: bound.worldName, method: bound.method };
+      return { ok: true, count: entries.length, insertedCount: pending.length, updatedCount: 0, targetWorldbook: bound.worldName, method: bound.method };
     } catch {
       return null;
     }
@@ -22604,10 +23016,10 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	    if (!taken.has(candidate)) return candidate;
 	    for (let index = 2; index < 100; index += 1) {
 	      const suffix = " " + index;
-	      candidate = encounterSafeWorldbookName(String(base || "邂逅当前对话世界书").slice(0, 80 - suffix.length) + suffix);
+	      candidate = encounterSafeWorldbookName(String(base || "邂逅遗留世界书").slice(0, 80 - suffix.length) + suffix);
 	      if (!taken.has(candidate)) return candidate;
 	    }
-	    return encounterSafeWorldbookName(String(base || "邂逅当前对话世界书") + " " + Date.now());
+	    return encounterSafeWorldbookName(String(base || "邂逅遗留世界书") + " " + Date.now());
 	  }
 
 	  async function encounterReadCharacterWorldEntriesForLayout(win) {
@@ -22800,7 +23212,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	        if (!metadataWrote && !helperWrote) return null;
 	        await encounterPersistChatWorldbookBinding(win, scriptMod);
 	      }
-	      return { mod, scriptMod, worldName, method: "Chat Lorebook" };
+	      return { mod, scriptMod, worldName, method: "Legacy worldbook" };
 	    } catch {
 	      return null;
 	    }
@@ -22842,24 +23254,17 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       if (!data || typeof data !== "object") data = { entries: {} };
       const currentEntries = encounterWorldEntryValues(data);
       const laidOutEntries = encounterApplyCharacterWorldbookLayout(entries, currentEntries);
-      const pending = laidOutEntries.filter((entry) => !encounterWorldEntryDuplicate(currentEntries, entry));
-      for (const entry of pending) {
-        if (typeof bound.mod.createWorldInfoEntry === "function" && data.entries && typeof data.entries === "object" && !Array.isArray(data.entries)) {
-          const created = bound.mod.createWorldInfoEntry(bound.worldName, data);
-          if (!created) return null;
-          const uid = created.uid;
-          const createdExtensions = created.extensions && typeof created.extensions === "object" && !Array.isArray(created.extensions) ? { ...created.extensions } : {};
-          const entryExtensions = entry.extensions && typeof entry.extensions === "object" && !Array.isArray(entry.extensions) ? entry.extensions : {};
-          Object.assign(created, entry);
-          created.extensions = { ...createdExtensions, ...entryExtensions };
-          created.uid = uid;
-        } else if (!encounterAppendWorldEntry(data, entry)) {
-          return null;
-        }
+      let insertedCount = 0;
+      let updatedCount = 0;
+      for (const entry of laidOutEntries) {
+        const status = encounterUpsertWorldEntry(data, entry);
+        if (status === "inserted") insertedCount += 1;
+        else if (status === "updated") updatedCount += 1;
+        else return null;
       }
-      if (pending.length) await bound.mod.saveWorldInfo(bound.worldName, data, true);
+      if (insertedCount || updatedCount) await bound.mod.saveWorldInfo(bound.worldName, data, true);
       try { await bound.mod.updateWorldInfoList?.(); } catch {}
-      return { ok: true, count: entries.length, insertedCount: pending.length, targetWorldbook: bound.worldName, method: bound.method };
+      return { ok: true, count: entries.length, insertedCount, updatedCount, targetWorldbook: bound.worldName, method: bound.method };
     } catch {
       return null;
 	    }
@@ -22907,13 +23312,27 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	  }
 
 	  async function encounterReadCharacterWorldEntries(pkg) {
-	    const fallbackName = encounterDefaultChatWorldbookName(pkg);
+	    const fallbackName = encounterDefaultCharacterWorldbookName(pkg);
 	    for (const win of encounterCandidateWindows()) {
-	      const bound = await encounterEnsureChatWorldbookWithSillyTavernModule(win, fallbackName, { create: false });
-	      if (!bound || typeof bound.mod?.loadWorldInfo !== "function") continue;
+	      for (const target of encounterTavernHelperTargets(win)) {
+	        if (typeof target?.getCharWorldbookNames !== "function" || typeof target?.getWorldbook !== "function") continue;
+	        try {
+	          const existing = encounterBoundWorldbookNameFromBooks(target.getCharWorldbookNames("current") || {});
+	          if (!existing) continue;
+	          const data = await target.getWorldbook(existing);
+	          return { ok: true, entries: encounterWorldEntryValues(data), targetWorldbook: existing, method: "TavernHelper", raw: data, target };
+	        } catch {}
+	      }
+	    }
+	    for (const win of encounterCandidateWindows()) {
+	      const mod = await encounterImportWorldInfoModule(win);
+	      if (!mod || typeof mod.loadWorldInfo !== "function") continue;
 	      try {
-	        const data = await bound.mod.loadWorldInfo(bound.worldName);
-	        return { ok: true, entries: encounterWorldEntryValues(data), targetWorldbook: bound.worldName, method: bound.method, raw: data, mod: bound.mod };
+	        let worldName = encounterCurrentCharacterPrimaryWorldName(win);
+	        if (!worldName) worldName = fallbackName;
+	        if (!worldName) continue;
+	        const data = await mod.loadWorldInfo(worldName);
+	        return { ok: true, entries: encounterWorldEntryValues(data), targetWorldbook: worldName, method: "SillyTavern", raw: data, mod };
 	      } catch {}
     }
     return { ok: false, entries: [], targetWorldbook: "", method: "" };
@@ -22951,14 +23370,17 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
   function encounterPackageWithoutCachedRoles(pkg, page) {
     const normalized = encounterNormalizePackage(pkg);
     const existing = encounterPageWorldbookRoleNameSet(page);
+    const entries = encounterPageWorldbookEntries(page);
     const skipped = [];
     const roles = [];
     for (const role of normalized.roles || []) {
       const nextRole = encounterNormalizeRole(role);
       const name = String(nextRole.name || "").trim();
       if (name && existing.has(encounterRoleNameKey(name))) {
-        skipped.push(name);
-        continue;
+        if (!encounterRoleHasExpectedWorldbookEntries(entries, nextRole)) {
+          skipped.push(name);
+          continue;
+        }
       }
       roles.push(nextRole);
     }
@@ -22997,9 +23419,9 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	  async function encounterSetWorldbookEntriesEnabled(pkg, enabled) {
 	    const comments = new Set(encounterWorldbookEntryList(pkg).map((entry) => String(entry.comment || "").trim()).filter(Boolean));
 	    if (!comments.size) return { ok: false, count: 0, reason: "没有可管理的世界书条目。" };
-	    const fallbackName = encounterDefaultChatWorldbookName(pkg);
+	    const fallbackName = encounterDefaultCharacterWorldbookName(pkg);
 	    for (const win of encounterCandidateWindows()) {
-	      const bound = await encounterEnsureChatWorldbookWithSillyTavernModule(win, fallbackName, { create: false });
+	      const bound = await encounterEnsureCharacterWorldbookWithSillyTavernModule(win, fallbackName);
 	      if (!bound || typeof bound.mod?.loadWorldInfo !== "function" || typeof bound.mod?.saveWorldInfo !== "function") continue;
 	      try {
 	        const data = await bound.mod.loadWorldInfo(bound.worldName);
@@ -23016,21 +23438,23 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	        }
 	      } catch {}
 	    }
-	    return { ok: false, count: 0, reason: "没有在当前对话世界书中找到对应条目。" };
+	    return { ok: false, count: 0, reason: "没有在角色卡世界书中找到对应条目。" };
 	  }
 
 	  async function encounterInsertPackageWorldbooks(pkg) {
 	    const entries = encounterWorldbookEntryList(pkg);
 	    if (!entries.length) return { ok: true, count: 0, failed: [] };
-	    const fallbackName = encounterDefaultChatWorldbookName(pkg);
+	    const fallbackName = encounterDefaultCharacterWorldbookName(pkg);
 	    for (const win of encounterCandidateWindows()) {
-	      const result = await encounterInsertEntriesWithChatWorldbook(win, entries, fallbackName);
+	      const result = await encounterInsertEntriesWithSillyTavernModule(win, entries, fallbackName);
 	      if (result?.ok) return { ...result, failed: [] };
+	      const helperResult = await encounterInsertEntriesWithTavernHelper(win, entries, fallbackName);
+	      if (helperResult?.ok) return { ...helperResult, failed: [] };
 	    }
 	    return {
 	      ok: false,
 	      count: 0,
-	      failed: entries.map((entry) => "当前对话世界书 / " + String(entry.comment || entry.name || "未命名条目"))
+	      failed: entries.map((entry) => "角色卡世界书 / " + String(entry.comment || entry.name || "未命名条目"))
 	    };
 	  }
 
@@ -23099,10 +23523,10 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     const plotText = result.randomRomance
       ? "本次消耗星光点在剧情中表现为{{user}}主动按下随机桃花运。前端已经随机抽中本条记录里的角色；{{user}}只知道自己购买了随机桃花运，不知道会遇到谁或对方来自哪个角色包。具体对象按随机命中角色和AI邂逅提示词执行，不得重新随机或替换。"
       : "本次消耗星光点在剧情中表现为{{user}}主动购买一次桃花运。{{user}}只知道自己购买了桃花运，不知道会遇到谁、会遇到几个角色、对方来自哪个角色包；具体对象由APP暗中安排。";
-    const fillFocusText = "对本次角色包涉及的每个登场/在场角色，重点检查变量中仍为未记录的档案.头发、档案.面部、档案.上衣、档案.下衣和心理；根据已写入的人设世界书与AI邂逅提示词开场尽量补齐为简短具体描述，不要改写已记录项，不要粘贴世界书原文。";
+    const fillFocusText = "对本次角色包涉及的每个登场/在场角色，重点检查变量中仍为未记录的档案.头发、档案.面部、档案.上衣、档案.下衣和心理；根据角色卡世界书中对应人设与AI邂逅提示词开场尽量补齐为简短具体描述，不要改写已记录项，不要粘贴世界书原文。";
     const executionText = result.randomRomance
-      ? "这个随机桃花运已经由前端抽取并使用。不要重新随机，不要换成其他角色，不要重复扣星光点，不要重复插入世界书。世界书条目已写入当前对话独有的 Chat Lorebook；初始角色变量已由前端创建，若有同名旧角色则前端已用本角色包初始变量覆盖。AI只负责描写本次桃花运剧情和必要变量补全，不再创建、重建或补写角色/世界书。请把本次事件写成{{user}}主动购买随机桃花运后，由APP暗中安排的偶遇；剧情中的{{user}}不知道具体对象或角色包内容，不能表现为{{user}}精准点名召唤某角色。请优先按AI邂逅提示词里的整体串联开场安排登场；变量补全按“变量补全重点”执行。工作价值已是前端按人设估算的0-20数字，不要在第一回合为了补全而覆盖它。后续只按剧情变化更新变量。"
-      : "这个角色包已经被前端使用。不要重复扣星光点，不要重复插入世界书。世界书条目已写入当前对话独有的 Chat Lorebook；初始角色变量已由前端创建，若有同名旧角色则前端已用本角色包初始变量覆盖。AI只负责描写本次桃花运剧情和必要变量补全，不再创建、重建或补写角色/世界书。请把本次事件写成{{user}}主动购买桃花运后，由APP暗中安排的偶遇；剧情中的{{user}}不知道会遇到谁、会遇到几个角色、对方来自哪个角色包，不能表现为{{user}}精准点名召唤某角色。请优先按AI邂逅提示词里的整体串联开场安排登场；变量补全按“变量补全重点”执行。工作价值已是前端按人设估算的0-20数字，不要在第一回合为了补全而覆盖它。后续只按剧情变化更新变量。";
+      ? "这个随机桃花运已经由前端抽取并使用。不要重新随机，不要换成其他角色，不要重复扣星光点，不要重复插入世界书。角色变量、人设和可选好感链条目已写入角色卡世界书对应位置；初始角色变量已由前端创建，若有同名旧角色则前端已用本角色包初始变量覆盖。AI只负责描写本次桃花运剧情和必要变量补全，不再创建、重建或补写角色/世界书。请把本次事件写成{{user}}主动购买随机桃花运后，由APP暗中安排的偶遇；剧情中的{{user}}不知道具体对象或角色包内容，不能表现为{{user}}精准点名召唤某角色。请优先按AI邂逅提示词里的整体串联开场安排登场；变量补全按“变量补全重点”执行。工作价值已是前端按人设估算的0-20数字，不要在第一回合为了补全而覆盖它。后续只按剧情变化更新变量。"
+      : "这个角色包已经被前端使用。不要重复扣星光点，不要重复插入世界书。角色变量、人设和可选好感链条目已写入角色卡世界书对应位置；初始角色变量已由前端创建，若有同名旧角色则前端已用本角色包初始变量覆盖。AI只负责描写本次桃花运剧情和必要变量补全，不再创建、重建或补写角色/世界书。请把本次事件写成{{user}}主动购买桃花运后，由APP暗中安排的偶遇；剧情中的{{user}}不知道会遇到谁、会遇到几个角色、对方来自哪个角色包，不能表现为{{user}}精准点名召唤某角色。请优先按AI邂逅提示词里的整体串联开场安排登场；变量补全按“变量补全重点”执行。工作价值已是前端按人设估算的0-20数字，不要在第一回合为了补全而覆盖它。后续只按剧情变化更新变量。";
     return {
       来源: "邂逅",
       操作: "角色包已使用",
@@ -23111,18 +23535,20 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       角色包名称: pkg.name || "未命名角色包",
       角色包介绍: encounterProfileSnippet(pkg.intro, 120) || "无",
       ...(result.randomRomance ? { 选择方式: "随机桃花运", 随机命中角色: randomRoleName || "无" } : {}),
-      AI邂逅提示词: combinedPrompt || "见当前对话 Chat Lorebook 中本次写入的角色包/角色条目。",
-	      前端处理: "已由前端扣除星光点、创建初始角色变量、缓存角色图片，并尝试写入当前对话独有的 Chat Lorebook。",
+      AI邂逅提示词: combinedPrompt || "见角色卡世界书中本次写入的角色包/角色条目。",
+	      前端处理: "已由前端扣除星光点、创建初始角色变量、缓存角色图片，并尝试写入角色卡世界书。",
       消耗星光点: result.price ?? encounterPackagePrice(pkg),
       前端创建角色变量: Array.isArray(result.createdRoles) && result.createdRoles.length ? result.createdRoles.join("、") : "无",
       初始变量覆盖角色: Array.isArray(result.overwrittenRoles) && result.overwrittenRoles.length ? result.overwrittenRoles.join("、") : "无",
       初始变量跳过角色: Array.isArray(result.skippedRoles) && result.skippedRoles.length ? result.skippedRoles.join("、") : "无",
       世界书写入条目数: result.worldbookCount ?? 0,
       世界书新增条目数: result.insertedCount ?? result.worldbookCount ?? 0,
-	      当前对话世界书: result.targetWorldbook || "当前对话 Chat Lorebook",
+      世界书覆盖条目数: result.updatedCount ?? 0,
+      世界书覆盖角色: Array.isArray(result.overwrittenWorldbookRoles) && result.overwrittenWorldbookRoles.length ? result.overwrittenWorldbookRoles.join("、") : "无",
+	      目标世界书: result.targetWorldbook || "角色卡世界书",
 	      世界书写入方式: result.method || "前端自动写入",
 	      剧情设定: plotText,
-		      角色变量补全要求: "每个角色都已由前端创建/覆盖初始变量；AI只补齐仍为未记录的必要字段，参照当前对话 Chat Lorebook 里的对应人设/变量条目。不要把世界书原文整段塞进档案字段。工作价值已由前端按人设估算为0-20的星光点/日数字，后续只有角色身份、资源或能力发生长期变化时才更新。",
+		      角色变量补全要求: "每个角色都已由前端创建/覆盖初始变量；AI只补齐仍为未记录的必要字段，参照角色卡世界书里的对应人设/变量条目。不要把世界书原文整段塞进档案字段。工作价值已由前端按人设估算为0-20的星光点/日数字，后续只有角色身份、资源或能力发生长期变化时才更新。",
       变量补全重点: fillFocusText,
       角色处理: "角色变量、图片缓存和世界书写入已由前端处理；AI只按AI邂逅提示词的整体串联开场描写本次相遇，不逐个复述角色单独出场提示。",
       AI执行规范: executionText
@@ -23131,7 +23557,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 
   async function encounterHandleRandomRomance(page) {
     if (page.dataset.encounterWorldbookRefreshInFlight === "1" || page.dataset.encounterWorldbookReadOnce !== "1") {
-      encounterSetStatus(page, "当前聊天世界书仍在读取，请稍后再随机桃花运。");
+      encounterSetStatus(page, "角色卡世界书仍在读取，请稍后再随机桃花运。");
       return;
     }
     if (encounterHasPendingPurchaseOperation()) {
@@ -23141,13 +23567,13 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     }
     const candidates = encounterRandomRomanceCandidates(page);
     if (!candidates.length) {
-      encounterSetStatus(page, "没有可随机的非重复角色。随机桃花运只会从带世界书内容、且当前对话未导入的角色中抽取。");
+      encounterSetStatus(page, "没有可随机的非重复角色。随机桃花运只会从带世界书内容、且角色卡世界书未导入的角色中抽取。");
       renderEncounterPage(page);
       return;
     }
     const item = candidates[Math.floor(Math.random() * candidates.length)];
     const roleName = String(item?.role?.name || "").trim() || "未命名角色";
-    const confirmMessage = "随机桃花运会从带世界书内容、且当前对话未导入的角色中抽取1名。\\n\\n本次已抽中：「" + roleName + "」。确认后扣除 " + SCAN_ROLE_COST_STARLIGHT + " 星光点、创建角色初始变量、缓存图片，并写入当前对话独有的 Chat Lorebook；如果当前对话没有绑定世界书，会先创建并绑定一本。世界书增加不可撤销，只能之后手动删除；变量可以通过删除楼层恢复。\\n\\n确认使用随机桃花运？";
+    const confirmMessage = "随机桃花运会从带世界书内容、且角色卡世界书未导入的角色中抽取1名。\\n\\n本次已抽中：「" + roleName + "」。确认后扣除 " + SCAN_ROLE_COST_STARLIGHT + " 星光点、创建角色初始变量、缓存图片，并把角色变量、人设和可选好感链条目写入角色卡世界书对应位置。世界书增加不可撤销，只能之后手动删除；变量可以通过删除楼层恢复。\\n\\n确认使用随机桃花运？";
     await encounterHandlePurchase(page, item.package.id, item.package, {
       confirmMessage,
       randomRomance: true,
@@ -23193,21 +23619,28 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       return;
     }
 	    if (page.dataset.encounterWorldbookRefreshInFlight === "1" || page.dataset.encounterWorldbookReadOnce !== "1") {
-	      encounterSetStatus(page, "当前聊天世界书仍在读取，请稍后再购买。");
+	      encounterSetStatus(page, "角色卡世界书仍在读取，请稍后再购买。");
 	      return;
 	    }
 	    const filtered = encounterPackageWithoutCachedRoles(pkg, page);
 	    const effectivePkg = filtered.pkg;
 	    const skippedByWorldbook = filtered.skipped;
 	    if (!effectivePkg.roles.length) {
-		      encounterSetStatus(page, "当前对话世界书中已经存在这些角色，已阻止重复购买：" + skippedByWorldbook.join("、"));
+		      encounterSetStatus(page, "角色卡世界书中已经存在这些角色，已阻止重复购买：" + skippedByWorldbook.join("、"));
 	      renderEncounterPage(page);
 	      return;
 	    }
+	    const overwriteNames = encounterPackageExistingRoleNamesByComments(effectivePkg, page);
 	    const duplicateNote = skippedByWorldbook.length
-	      ? "\\n\\n当前聊天世界书已存在：" + skippedByWorldbook.join("、") + "；本次会自动跳过这些角色，只导入 " + effectivePkg.roles.length + " 个非重复角色。"
+	      ? "\\n\\n角色卡世界书已存在：" + skippedByWorldbook.join("、") + "；本次会自动跳过这些角色，只导入 " + effectivePkg.roles.length + " 个非重复角色。"
 	      : "";
-		    const confirmMessage = purchaseOptions.confirmMessage || ("这是一次购买桃花运：前端会扣除星光点，并在剧情中让APP暗中安排你遇到角色；{{user}}在剧情里不知道会是谁。\\n\\n购买后会直接向当前对话独有的 Chat Lorebook 新增条目，并在当前变量中创建角色初始变量；如果当前对话没有绑定世界书，会先创建并绑定一本。世界书增加不可撤销，只能之后手动删除；变量可以通过删除楼层恢复。" + duplicateNote + "\\n\\n确认使用这个角色包？");
+	    const overwriteNote = overwriteNames.length
+	      ? "\\n\\n检测到角色卡世界书里已有本角色条目，但当前聊天未记录为已购买：" + overwriteNames.join("、") + "。确认后会覆盖这些同名条目内容并启用它们，不重复新增同名条目。"
+	      : "";
+	    const baseConfirmMessage = String(purchaseOptions.confirmMessage || ("这是一次购买桃花运：前端会扣除星光点，并在剧情中让APP暗中安排你遇到角色；{{user}}在剧情里不知道会是谁。\\n\\n购买后会直接向角色卡世界书新增角色变量、人设和可选好感链条目，并在当前变量中创建角色初始变量。世界书增加不可撤销，只能之后手动删除；变量可以通过删除楼层恢复。"))
+	      .replace(/\\n\\n确认使用随机桃花运？\\s*$/u, "")
+	      .replace(/\\n\\n确认使用这个角色包？\\s*$/u, "");
+		    const confirmMessage = baseConfirmMessage + duplicateNote + overwriteNote + "\\n\\n确认使用这个角色包？";
 		    const ok = await encounterConfirm(page, {
 		      title: purchaseOptions.randomRomance ? "随机桃花运" : "购买桃花运",
 		      message: confirmMessage,
@@ -23238,7 +23671,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     if (!worldbook.ok) {
       await encounterRestoreRoleVariables(variables.snapshot);
       if (deduct.previous !== undefined) await encounterSetStarlight(deduct.previous);
-	      encounterSetStatus(page, "当前对话世界书写入失败，已尝试退回星光点。失败条目：" + worldbook.failed.slice(0, 2).join("；"));
+	      encounterSetStatus(page, "角色卡世界书写入失败，已尝试退回星光点。失败条目：" + worldbook.failed.slice(0, 2).join("；"));
       return;
     }
     page.dataset.encounterCurrentWorldbook = worldbook.targetWorldbook || page.dataset.encounterCurrentWorldbook || "";
@@ -23252,13 +23685,15 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       overwrittenRoles: variables.overwritten,
       worldbookCount: worldbook.count,
       insertedCount: worldbook.insertedCount,
+      updatedCount: worldbook.updatedCount,
+      overwrittenWorldbookRoles: overwriteNames,
       targetWorldbook: worldbook.targetWorldbook,
       method: worldbook.method,
       randomRomance: Boolean(purchaseOptions.randomRomance),
       randomRoleName: purchaseOptions.randomRoleName || ""
     }))).then((added) => {
       page.dataset.encounterStatus = added
-	        ? ("已使用：" + (purchaseOptions.statusLabel || pkg.name || "角色包") + "；已创建变量 " + variables.created.length + " 个；已写入 " + (worldbook.targetWorldbook || "当前对话世界书") + " " + worldbook.count + " 条" + (cached.length ? "；图片已缓存。" : "。"))
+	        ? ("已使用：" + (purchaseOptions.statusLabel || pkg.name || "角色包") + "；已创建变量 " + variables.created.length + " 个；已写入 " + (worldbook.targetWorldbook || "角色卡世界书") + " " + worldbook.count + " 条" + (cached.length ? "；图片已缓存。" : "。"))
         : "角色包已使用，AI提示已存在于暂存区。";
       renderEncounterPage(page);
     });
@@ -23283,7 +23718,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     const nextEnabled = !currentlyEnabled;
     if (!nextEnabled) {
       const label = type === "role" ? ((pkg.roles || [])[0]?.name || pkg.name || "这个角色") : (pkg.name || "这个角色包");
-	      const ok = window.confirm("关闭管理会把「" + label + "」对应的当前对话世界书条目标记为 disable。\\n\\n不建议在角色已经有剧情时这样做，可能导致后续引用断裂。确认关闭？");
+	      const ok = window.confirm("关闭管理会把「" + label + "」对应的角色卡世界书条目标记为 disable。\\n\\n不建议在角色已经有剧情时这样做，可能导致后续引用断裂。确认关闭？");
       if (!ok) return;
     }
     encounterSetStatus(page, nextEnabled ? "正在启用世界书条目..." : "正在禁用世界书条目...");
@@ -23420,18 +23855,19 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
         if (name === "roleInitialVariables") page.dataset.encounterRoleContentSection = "initial";
         else if (/^roleAffection/u.test(name)) page.dataset.encounterRoleContentSection = "affection";
         else page.dataset.encounterRoleContentSection = "persona";
-        if (!card?.querySelector("[name='" + name + "']")?.offsetParent) {
+        const fieldSelector = name === "roleInitialVariables" ? "[data-encounter-initial-root]" : "[name='" + name + "']";
+        if (!card?.querySelector(fieldSelector)?.offsetParent) {
           renderEncounterPage(page);
           window.setTimeout(() => {
             const nextCard = page.querySelector("[data-encounter-role-card]");
-            const field = nextCard?.querySelector("[name='" + name + "']");
+            const field = nextCard?.querySelector(fieldSelector);
             const target = field?.closest(".st-encounter-field") || field;
             try { target?.scrollIntoView?.({ block: "center", behavior: "smooth" }); } catch {}
             try { field?.focus?.({ preventScroll: true }); } catch { field?.focus?.(); }
           }, 0);
           return;
         }
-        const field = card?.querySelector("[name='" + name + "']");
+        const field = card?.querySelector(fieldSelector);
         const target = field?.closest(".st-encounter-field") || field;
         try { target?.scrollIntoView?.({ block: "center", behavior: "smooth" }); } catch {}
         try { field?.focus?.({ preventScroll: true }); } catch { field?.focus?.(); }
@@ -23577,7 +24013,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	          const label = pkg.name || "未命名角色包";
 	          const ok = await encounterConfirm(page, {
 	            title: "删除角色包",
-	            message: "删除「" + label + "」？\\n\\n这只会从当前聊天的偶遇库移除该自定义/导入角色包；已经写入当前对话世界书的条目、已经创建的角色变量、已经消耗的星光点都不会自动撤销。\\n\\n删除后需要重新导入或重新定制才能再次在偶遇库看到它。",
+	            message: "删除「" + label + "」？\\n\\n这只会从当前聊天的偶遇库移除该自定义/导入角色包；已经写入角色卡世界书的条目、已经创建的角色变量、已经消耗的星光点都不会自动撤销。\\n\\n删除后需要重新导入或重新定制才能再次在偶遇库看到它。",
 	            confirmText: "删除",
 	            cancelText: "取消"
 	          });
@@ -24983,7 +25419,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
             描述: location.info || point.info || "暂无地点信息。",
             地图类型: "主教学楼案内図"
           },
-          AI执行规范: "这只是用户希望剧情地点设在这里的建议；前端不能直接改当前地点。AI应按剧情、时间和移动条件判断是否成立，成立时更新/系统/当前地点和/系统/当前事件；/系统/_当前周几、/系统/_当前日程、/系统/_当前特殊日期和/系统/课程表为前端只读同步字段，AI不要手写这些字段。不合理时可拒绝或延后。"
+          AI执行规范: "这只是用户希望剧情地点设在这里的建议；前端不能直接改当前地点。AI应按剧情、时间和移动条件判断是否成立，成立时更新/系统/当前地点和/系统/当前事件；/系统/_当前周几、/系统/_当前日程、/系统/_当前特殊日期和/系统/_课程表为前端只读同步字段，AI不要手写这些字段。不合理时可拒绝或延后。"
         })).then(() => renderCampusPage(page));
       });
     });
@@ -25176,7 +25612,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
             描述: location.info || "暂无地点信息。",
             地图类型: graph.title
           },
-	          AI执行规范: "这只是用户希望剧情地点设在这里的建议；前端不能直接改当前地点。AI应按剧情、时间和移动条件判断是否成立，成立时更新/系统/当前地点和/系统/当前事件；/系统/_当前周几、/系统/_当前日程、/系统/_当前特殊日期和/系统/课程表为前端只读同步字段，AI不要手写这些字段。不合理时可拒绝或延后。"
+	          AI执行规范: "这只是用户希望剧情地点设在这里的建议；前端不能直接改当前地点。AI应按剧情、时间和移动条件判断是否成立，成立时更新/系统/当前地点和/系统/当前事件；/系统/_当前周几、/系统/_当前日程、/系统/_当前特殊日期和/系统/_课程表为前端只读同步字段，AI不要手写这些字段。不合理时可拒绝或延后。"
 	        })).then(() => {
 	          rerenderGraphHost(page);
 	        });
@@ -25592,7 +26028,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       },
       AI执行规范: specialLocation
         ? "这只是用户希望剧情进入该校内特殊地点的建议；前端不能直接改当前地点。AI应按剧情、时间、权限和世界观判断是否成立，成立时更新/系统/当前地点并展开对应特殊地点剧情；不合理时可拒绝、延后或给出进入条件。"
-        : "这只是用户希望剧情地点设在这里的建议；前端不能直接改当前地点。AI应按剧情、时间和移动条件判断是否成立，成立时更新/系统/当前地点和/系统/当前事件；/系统/_当前周几、/系统/_当前日程、/系统/_当前特殊日期和/系统/课程表为前端只读同步字段，AI不要手写这些字段。不合理时可拒绝或延后。"
+        : "这只是用户希望剧情地点设在这里的建议；前端不能直接改当前地点。AI应按剧情、时间和移动条件判断是否成立，成立时更新/系统/当前地点和/系统/当前事件；/系统/_当前周几、/系统/_当前日程、/系统/_当前特殊日期和/系统/_课程表为前端只读同步字段，AI不要手写这些字段。不合理时可拒绝或延后。"
     })).then(() => renderCityMapPage(page));
   }
 
@@ -26915,6 +27351,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     if (isLatestPhoneVariableView()) {
       syncWorkStatusReminder();
       syncWorkBuffStatusReminder();
+      syncExpiredTemporaryHypnosisReminder();
       Promise.resolve(syncRoleEventRecordDefaults()).then((changed) => {
         if (changed) updateOpenPersonProfilePage();
       }).catch(() => {});
@@ -27007,16 +27444,16 @@ const __stDefaultVariables = () => ({
     "MC能量": 25,
     "MC能量上限": 25,
     "持有零花钱": 6000,
-    "社畜值": 0,
-    "buff": "",
-    "buff结束时间": "",
+	    "_社畜值": 0,
+	    "_buff": "",
+	    "_buff结束时间": "",
     "主角可疑度": 0,
     "当前日期": "4月9日",
     "_当前周几": "星期三",
     "当前时间": "12:30",
     "_当前日程": "午休",
     "_当前特殊日期": "",
-	    "课程表": [
+		    "_课程表": [
 	      { "课节": "1限", "科目": "英语", "是否魔改": false, "魔改课程": "" },
 	      { "课节": "2限", "科目": "世界史", "是否魔改": false, "魔改课程": "" },
 	      { "课节": "3限", "科目": "生物", "是否魔改": false, "魔改课程": "" },
