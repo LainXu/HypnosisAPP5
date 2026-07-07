@@ -805,7 +805,7 @@ html.st-hypnoos-booting.st-hypnoos-boot-failed body::after{content:"前端加载
 	        return ["- AI执行规范｜前端已扣星光点、创建/覆盖初始角色变量并写入角色卡世界书；AI只按命中角色的人设、角色出场提示和当前上下文安排登场，并补未记录变量，不再创建或补写角色/世界书。"];
 	      }
 	      if (/^(地图|学校地图|主教学楼地图)$/.test(text)) {
-	        return ["- AI执行规范｜地点建议不是瞬移；请求新增地点由前端按用户输入保存，AI只承认该地点存在并可补剧情细节；若暂存要求补充地点信息，只能输出<新增地点补充>{...}</新增地点补充>单地点JSON；用户建议已有地点时，只有用户行动造成地点环境或用途重大改变，才可低频输出<地点信息更新>{...}</地点信息更新>单地点JSON，不要输出完整地图JSON；特殊地点需持有对应准入证，未持证时不要写成普通通行成功。"];
+	        return ["- AI执行规范｜地点建议不是瞬移；请求新增地点只是用户建议，前端尚未写入地图；AI需要按当前剧情判断是否接受，接受时只输出<新增地点补充>{...}</新增地点补充>单地点JSON，前端收到后才保存；用户建议已有地点时，只有用户行动造成地点环境或用途重大改变，才可低频输出<地点信息更新>{...}</地点信息更新>单地点JSON，不要输出完整地图JSON；特殊地点需持有对应准入证，未持证时不要写成普通通行成功。"];
 	      }
 	      if (text === "学校") {
 	        return ["- AI执行规范｜校规按VIP、券、星光点和数量限制判定；校规不是催眠效果，禁止写入角色临时/永久催眠效果。"];
@@ -25935,7 +25935,16 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       const locationName = String(location?.label || location?.name || location?.["地点"] || "").trim();
       return Boolean((id && locationId === id) || (name && locationName === name));
     });
-    if (index < 0) return false;
+    if (index < 0) {
+      locations.push({
+        id: id || uniqueGraphNodeId(scope, name || info.slice(0, 18) || "new-place"),
+        label: name || id || "新地点",
+        info: info || graphFallbackLocationInfo(scope, name || id || "新地点", category),
+        category
+      });
+      saveStaticGraph(scope, { ...graph, locations });
+      return true;
+    }
     const current = locations[index] && typeof locations[index] === "object" ? locations[index] : {};
     locations[index] = {
       ...current,
@@ -26137,12 +26146,14 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
   }
 
   function graphLocationSupplementFormat(scope, location) {
+    const category = String(location?.category || "").trim();
+    const info = String(location?.info || location?.description || "").trim();
     return "<新增地点补充>" + JSON.stringify({
       地图: graphSupplementScope(scope),
       id: String(location?.id || ""),
       名称: String(location?.label || location?.name || "地点"),
-      分类: "由AI决定",
-      信息: "由AI补充地点用途、氛围、相关角色或剧情倾向"
+      分类: category || "由AI决定",
+      信息: info && !isGraphPlaceholderLocationInfo(info) ? info : "由AI补充地点用途、氛围、相关角色或剧情倾向"
     }) + "</新增地点补充>";
   }
 
@@ -26278,7 +26289,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	  }
 
 	  function graphAddLocationHint(scope, currentLocation) {
-	    return "提交后会立即按用户输入加入本地地图，并锁定暂存提醒AI承认该地点。AI不需要输出完整地点列表JSON；信息不足时应在回复末尾输出单地点补充JSON，前端会自动写回。示例：" + graphAddLocationExamples(scope).join("；") + "。当前地点变量：" + currentLocation + "。";
+	    return "提交后只会暂存新增地点请求，前端不会立即写入本地地图。AI需要按剧情判断是否接受；接受时在回复末尾输出单地点补充JSON，前端收到后才会保存。示例：" + graphAddLocationExamples(scope).join("；") + "。当前地点变量：" + currentLocation + "。";
 	  }
 
 	  function renderGraphAddLocationCard(scope, graph, page) {
@@ -26292,7 +26303,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       .concat(['<option value="' + GRAPH_CUSTOM_CATEGORY_VALUE + '">自定义</option>'])
       .join("");
     return '<details class="st-lite-card st-graph-paper st-graph-add" data-graph-add-scope="' + escapeAttr(scope) + '">' +
-      '<summary class="st-graph-add-summary"><strong>' + title + '</strong><span>前端保存 <b class="st-location-chevron">⌄</b></span></summary>' +
+      '<summary class="st-graph-add-summary"><strong>' + title + '</strong><span>AI确认 <b class="st-location-chevron">⌄</b></span></summary>' +
       '<div class="st-graph-add-grid">' +
         '<input data-graph-add-name autocomplete="off" placeholder="地点名">' +
         '<select data-graph-add-category aria-label="地点分类">' + options + '</select>' +
@@ -26311,7 +26322,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	    const pendingAdd = hasPendingGraphAddLocationOperation(scope);
 	    const status = String(page?.dataset?.[graphAddStatusDatasetKey(scope)] || "").trim();
 	    return '<section class="st-lite-card st-graph-paper st-graph-add" data-graph-add-scope="' + escapeAttr(scope) + '">' +
-	      '<div class="st-graph-add-summary"><strong>' + title + '</strong><span>前端保存</span></div>' +
+	      '<div class="st-graph-add-summary"><strong>' + title + '</strong><span>AI确认</span></div>' +
 	      '<div class="st-graph-add-grid">' +
 	        '<input data-graph-add-name autocomplete="off" placeholder="地点名">' +
 	        '<textarea data-graph-add-info placeholder="地点说明、用途、相关角色或剧情倾向"></textarea>' +
@@ -26963,41 +26974,34 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 	          rerenderGraphHost(page);
 	          return;
 	        }
-	        const addedLocation = addStaticGraphLocation(scope, {
-	          label: name || "新地点",
-	          info: infoText,
-	          category
-	        });
-	        if (!addedLocation) {
-	          page.dataset[statusKey] = "新增地点失败。";
-	          rerenderGraphHost(page);
-	          return;
-	        }
 	        const graph = loadStaticGraph(scope);
 	        const currentLocation = getCurrentStoryLocation() || "未知";
-	        const needsAiSupplement = !infoText;
-	        const supplementFormat = graphLocationSupplementFormat(scope, addedLocation);
+	        const suggestedLocation = {
+	          id: uniqueGraphNodeId(scope, name || infoText.slice(0, 18) || "new-place"),
+	          label: name || "由AI决定",
+	          info: infoText,
+	          category
+	        };
+	        const supplementFormat = graphLocationSupplementFormat(scope, suggestedLocation);
 		        const added = await appendAppOperation({
 	          来源: scope === "school" ? "学校地图" : "地图",
 	          操作: "请求新增地点",
-	          暂存摘要: addedLocation.label,
+	          暂存摘要: suggestedLocation.label,
 	          地图类型: graph.title + "（地点列表）",
 	          新增地点: {
-	            名称: addedLocation.label,
-	            分类: addedLocation.category || "未分类",
-	            信息: addedLocation.info || "暂无地点信息。",
-	            建议ID: addedLocation.id,
+	            名称: suggestedLocation.label,
+	            分类: suggestedLocation.category || "由AI决定",
+	            用户填写说明: infoText || "未填写，需由AI决定",
+	            建议ID: suggestedLocation.id,
 	            当前地点变量: currentLocation
 	          },
 		          典型示例: graphAddLocationExamples(scope),
-		          需要AI补充地点描述: needsAiSupplement,
+		          需要AI决定是否新增地点: true,
 		          补充写回格式: supplementFormat,
-		          前端处理: "已由前端按用户输入加入本地地图列表；本条暂存用于提醒AI承认该地点可被剧情使用。",
-		          AI执行规范: needsAiSupplement
-		            ? "前端已经把该地点加入本地地图。AI不需要输出完整地图JSON，也不要新增MVU变量；本轮必须在回复末尾输出一个<新增地点补充>{...}</新增地点补充>单地点JSON，按建议ID补充该地点的信息/分类，前端会自动写回。除非用户明确要求批量重排地图，否则不得输出完整地图更新JSON，也不得删除刚新增地点。"
-		            : "前端已经把该地点加入本地地图。AI不需要输出完整地图JSON，也不要新增MVU变量；本轮只需承认该地点存在，并按剧情判断是否能把/系统/当前地点移动到这里。若需要修正说明，只能输出<新增地点补充>{...}</新增地点补充>单地点JSON；不得删除刚新增地点。"
+		          前端处理: "前端尚未写入地图；本条暂存只是用户希望新增地点的建议。",
+		          AI执行规范: "前端没有把该地点加入本地地图。AI必须按当前地点、剧情、世界观和用户行动判断是否接受新增；接受时只在回复末尾输出一个<新增地点补充>{...}</新增地点补充>单地点JSON，前端会据此保存到地图。可以沿用建议ID，也可以调整名称、分类和信息；不得输出完整地图JSON，不得新增MVU变量。不接受时正文说明原因且不要输出新增地点补充块。"
 		        });
-	        page.dataset[statusKey] = added ? ("已新增地点：" + addedLocation.label + "。") : ("已新增地点：" + addedLocation.label + "，暂存区已有提醒。");
+	        page.dataset[statusKey] = added ? ("新增地点请求已暂存：" + suggestedLocation.label + "。") : ("新增地点请求已在暂存区：" + suggestedLocation.label + "。");
 	        if (nameInput) nameInput.value = "";
 	        if (categoryInput) categoryInput.value = "";
 	        if (customCategoryInput) customCategoryInput.value = "";
