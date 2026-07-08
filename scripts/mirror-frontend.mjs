@@ -5285,6 +5285,10 @@ function toMoneyNumber(value) {
     const number = Number(value);
     return Number.isFinite(number) ? number : 0;
 }
+function rewardNumber(value, fallback = 0) {
+    const number = Number(String(value ?? '').replace(/,/g, ''));
+    return Number.isFinite(number) ? number : fallback;
+}
 function normalizeRewardItems(value) {
     const raw = Array.isArray(value)
         ? value
@@ -10443,10 +10447,19 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       };
     });
     if (!result.ok) return result;
-    if (kind === "achievement") globalThis.__HYPNOOS_MARK_FRONTEND_ACHIEVEMENT_HANDLED__?.(item);
-    else globalThis.__HYPNOOS_MARK_FRONTEND_QUEST_HANDLED__?.(item);
-    const added = await appendAppOperation(result.payload);
-    return { ok: Boolean(added), message: result.message };
+    let added = false;
+    try {
+      added = Boolean(await appendAppOperation(result.payload));
+    } catch (error) {
+      console.warn("[HypnoOS] 奖励领取已写入变量，但暂存区记录失败", error);
+    }
+    try {
+      if (kind === "achievement") globalThis.__HYPNOOS_MARK_FRONTEND_ACHIEVEMENT_HANDLED__?.(item);
+      else globalThis.__HYPNOOS_MARK_FRONTEND_QUEST_HANDLED__?.(item);
+    } catch (error) {
+      console.warn("[HypnoOS] 奖励领取状态写入前端存储失败", error);
+    }
+    return { ok: true, message: added ? result.message : result.message + "（变量已写入；暂存区可能已有重复提醒。）" };
   }
 
   async function rewardCancelQuestDirect(row) {
@@ -10793,7 +10806,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       const pendingAccept = pendingOperationHas("成就和任务", /接取任务/, quest.id, quest.name);
       const pendingCancel = pendingOperationHas("成就和任务", /取消任务|取消接受任务/, quest.id, quest.name);
       const pendingClaim = pendingOperationHas("成就和任务", /领取任务奖励/, quest.id, quest.name);
-      if (pendingCancel || pendingClaim || (pendingAccept && !existing)) {
+      if (pendingClaim || (pendingCancel && existing) || (pendingAccept && !existing)) {
         if (existing) taskByTitle.delete(quest.name);
         continue;
       }
@@ -10806,7 +10819,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
         status: existing?.status || "AVAILABLE",
         source: existing ? "variable" : "configured",
         pendingAccept,
-        pendingCancel,
+        pendingCancel: Boolean(existing && pendingCancel),
         pendingClaim
       });
       if (existing) taskByTitle.delete(quest.name);
@@ -10852,6 +10865,17 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
         '<button class="st-reward-button secondary" type="button" data-reward-cancel-quest="' + escapeAttr(row.id) + '"' + (canCancel ? "" : " disabled") + '>' + (row.pendingCancel ? "已暂存" : row.status === "COMPLETED" ? "已完成" : "取消任务") + '</button>' +
       '</div>' +
     '</article>';
+  }
+
+  function rerenderRewardPagePreservingScroll(page) {
+    const body = page?.querySelector?.(".st-lite-body");
+    const scrollTop = Number(body?.scrollTop ?? page?.scrollTop ?? 0) || 0;
+    renderRewardPage(page);
+    requestAnimationFrame(() => {
+      const nextBody = page?.querySelector?.(".st-lite-body");
+      if (nextBody) nextBody.scrollTop = scrollTop;
+      if (page) page.scrollTop = scrollTop;
+    });
   }
 
   function renderRewardPage(page) {
@@ -10904,9 +10928,15 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       const id = button.getAttribute("data-reward-claim-achievement") || "";
       const item = internalAchievementRows().find((row) => row.id === id);
       if (!item || !item.unlocked) return;
+      button.disabled = true;
+      button.textContent = "处理中";
       rewardClaimDirect("achievement", item).then((result) => {
         page.dataset.rewardNotice = result?.message || "成就奖励已领取。";
-        renderRewardPage(page);
+        rerenderRewardPagePreservingScroll(page);
+      }).catch((error) => {
+        console.warn("[HypnoOS] 成就领取失败", error);
+        page.dataset.rewardNotice = "成就领取失败：" + (error?.message || error || "未知错误");
+        rerenderRewardPagePreservingScroll(page);
       });
     }));
     page.querySelectorAll("[data-reward-claim-quest]").forEach((button) => button.addEventListener("click", () => {
@@ -10915,7 +10945,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       if (!item || item.status !== "COMPLETED") return;
       rewardClaimDirect("quest", item).then((result) => {
         page.dataset.rewardNotice = result?.message || "任务奖励已领取。";
-        renderRewardPage(page);
+        rerenderRewardPagePreservingScroll(page);
       });
     }));
     page.querySelectorAll("[data-reward-accept-quest]").forEach((button) => button.addEventListener("click", () => {
@@ -10923,13 +10953,13 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       const item = internalQuestRows().find((row) => row.id === id);
       if (rewardOccupiedTaskCount() >= 3) {
         page.dataset.rewardNotice = "变量和暂存区合计已有 3 个任务，不能再接取。";
-        renderRewardPage(page);
+        rerenderRewardPagePreservingScroll(page);
         return;
       }
       if (!item || item.status !== "AVAILABLE") return;
       rewardAcceptStaticQuestDirect(item).then((result) => {
         page.dataset.rewardNotice = result?.message || "固定任务已接取。";
-        renderRewardPage(page);
+        rerenderRewardPagePreservingScroll(page);
       });
     }));
     page.querySelectorAll("[data-reward-cancel-quest]").forEach((button) => button.addEventListener("click", () => {
@@ -10938,7 +10968,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       if (!item || item.status !== "ACTIVE") return;
       rewardCancelQuestDirect(item).then((result) => {
         page.dataset.rewardNotice = result?.message || "任务已取消。";
-        renderRewardPage(page);
+        rerenderRewardPagePreservingScroll(page);
       });
     }));
     page.querySelectorAll("[data-reward-new-submit]").forEach((button) => button.addEventListener("click", () => {
@@ -17213,8 +17243,8 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
     })[job?.id] || job?.title || "寻工启事";
   }
 
-  function workStorageKey() {
-    return "hypnoos.work.roll.v1:" + graphScopeKey();
+  function workEncounterProgressStorageKey() {
+    return "hypnoos.work.encounter-progress.v1:" + graphScopeKey();
   }
 
   function workRoleText(role) {
@@ -17233,7 +17263,7 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
 
   function workFemaleRoleNames() {
     const roles = getStatsRoles();
-    return sortedStatsRoleNames(roles).filter((roleName) => {
+    const names = sortedStatsRoleNames(roles).filter((roleName) => {
       const name = String(roleName || "").trim();
       if (!name || name === "以撒" || name === "阿宅君" || name === "{{user}}" || name === "主角") return false;
       const text = workRoleText(roles[name]);
@@ -17241,34 +17271,58 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       if (/女|女性|女生|少女|姐姐|母|太太|人妻|女总裁/.test(text)) return true;
       return true;
     });
+    if (names.length) return names;
+    return (Array.isArray(DEFAULT_ROLE_NAMES) ? DEFAULT_ROLE_NAMES : [])
+      .map((name) => String(name || "").trim())
+      .filter((name) => name && !/阿宅|以撒|主角|user/i.test(name));
   }
 
   function readWorkLayerRoll() {
-    const roleNames = workFemaleRoleNames();
-    const signature = roleNames.join("|") + "::" + ST_WORK_JOBS.map((job) => job.id + ":" + job.chance).join("|");
-    const fallback = () => {
-      const roleName = roleNames.length ? roleNames[Math.floor(Math.random() * roleNames.length)] : "";
-      const rolls = {};
-      for (const job of ST_WORK_JOBS) {
-        rolls[job.id] = Boolean(roleName && Math.random() < job.chance);
-      }
-      return { signature, roleName, rolls, createdAt: Date.now() };
+    const progress = readWorkEncounterProgressState();
+    return {
+      signature: "progress-v1",
+      roleName: "",
+      rolls: {},
+      progress: progress.progress,
+      createdAt: progress.updatedAt || Date.now()
+    };
+  }
+
+  function readWorkEncounterProgressState() {
+    try {
+      const raw = localStorage.getItem(workEncounterProgressStorageKey());
+      if (!raw) return { progress: 100, updatedAt: 0 };
+      const parsed = JSON.parse(raw);
+      if (Number(parsed?.version) !== 2) return { progress: 100, updatedAt: Number(parsed?.updatedAt) || 0 };
+      const progress = Math.max(0, Math.min(999, Number(parsed?.progress) || 0));
+      return { progress, updatedAt: Number(parsed?.updatedAt) || 0 };
+    } catch {}
+    return { progress: 100, updatedAt: 0 };
+  }
+
+  function writeWorkEncounterProgressState(progress) {
+    const next = {
+      version: 2,
+      progress: Math.max(0, Math.min(999, Number(progress) || 0)),
+      updatedAt: Date.now()
     };
     try {
-      const parsed = JSON.parse(localStorage.getItem(workStorageKey()) || "null");
-      if (parsed && parsed.signature === signature && parsed.rolls && typeof parsed.rolls === "object") return parsed;
-    } catch {}
-    const next = fallback();
-    try {
-      localStorage.setItem(workStorageKey(), JSON.stringify(next));
+      localStorage.setItem(workEncounterProgressStorageKey(), JSON.stringify(next));
     } catch {}
     return next;
   }
 
   function rollWorkEncounterForAttempt(job, startText = "") {
     const roleNames = workFemaleRoleNames();
-    const roleName = roleNames.length ? roleNames[Math.floor(Math.random() * roleNames.length)] : "";
-    const hit = Boolean(roleName && Math.random() < Math.max(0, Math.min(1, Number(job?.chance) || 0)));
+    const chance = Math.max(0, Math.min(1, Number(job?.chance) || 0));
+    const progressState = readWorkEncounterProgressState();
+    const progressBefore = progressState.progress;
+    const progressGain = chance * 100;
+    const progressCandidate = roleNames.length ? progressBefore + progressGain : progressBefore;
+    const hit = Boolean(roleNames.length && progressCandidate >= 100);
+    const progressAfter = hit ? 0 : progressCandidate;
+    writeWorkEncounterProgressState(progressAfter);
+    const roleName = hit ? roleNames[Math.floor(Math.random() * roleNames.length)] : "";
     const delayMinutes = hit ? Math.floor(Math.random() * (6 * 60 + 1)) : 0;
     const result = {
       signature: [graphScopeKey(), job?.id || "", startText || "", Date.now(), Math.random().toString(36).slice(2)].join("::"),
@@ -17276,7 +17330,11 @@ html.st-hypnoos-phone-port #st-operation-float-ball,html.st-hypnoos-phone-port .
       candidateRoleName: roleName,
       hit,
       rolls: { [job?.id || ""]: hit },
-      chance: Math.max(0, Math.min(1, Number(job?.chance) || 0)),
+      chance,
+      progressBefore,
+      progressGain,
+      progressAfter,
+      progressThreshold: 100,
       delayMinutes,
       delayHours: delayMinutes / 60,
       createdAt: Date.now()
