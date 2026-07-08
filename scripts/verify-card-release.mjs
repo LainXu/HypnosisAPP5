@@ -199,8 +199,8 @@ for (const needle of ["/系统/_社畜值", "/系统/_buff", "/系统/_buff结�
 const finalizerText = await readText("scripts/finalize-card-v1_6.mjs");
 assert(
   finalizerText.includes("dynamicRecordSchema")
-  && ["校规", "任务", "临时催眠效果", "永久催眠效果"].every((key) => finalizerText.includes(`"${key}"`)),
-  "finalizer must keep dynamic MVU dictionary schema repair for school rules, tasks and hypnosis effects"
+  && ["校规", "任务", "角色", "持有物品", "库存", "道具", "奖励物品", "临时催眠效果", "永久催眠效果"].every((key) => finalizerText.includes(`"${key}"`)),
+  "finalizer must keep dynamic MVU dictionary schema repair for school rules, tasks, roles, inventory and hypnosis effects"
 );
 
 const regexText = JSON.stringify(data.extensions?.regex_scripts || []);
@@ -252,7 +252,7 @@ for (const needle of BANNED_FRONTEND_TEXT) {
 for (const needle of ['system["_buff结束时间"]', 'setCurrentLayerSystemField("_buff结束时间"', "/系统/_buff结束时间"]) {
   assert(frontendTexts.includes(needle), `frontend missing work buff end write path: ${needle}`);
 }
-for (const needle of ["repairCurrentMvuDynamicSchema", "repairDynamicMvuSchemaTree", "recursiveExtensible", "删除/废止校规若标明前端处理"]) {
+for (const needle of ["repairCurrentMvuDynamicSchema", "repairDynamicMvuSchemaTree", "recursiveExtensible", "持有物品", "奖励物品", "删除/废止校规若标明前端处理"]) {
   assert(frontendTexts.includes(needle), `frontend missing dynamic schema/school-rule safety text: ${needle}`);
 }
 assert(frontendTexts.includes("st-hypnoos-identity-port"), "identity frontend missing phone-style port wrapper");

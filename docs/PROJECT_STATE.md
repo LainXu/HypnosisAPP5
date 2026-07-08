@@ -1,11 +1,11 @@
-# 催眠app二改MVU v2.4 项目状态
+# 催眠app二改MVU v2.5 项目状态
 
 这份文档是新对话的交接入口。接手时先读这里；若任务需要拆分协作，再读 `docs/MULTI_AGENT_WORKFLOW.md`，按多 agent 轻量工作流只启动相关层。
 
 ## 当前真源
 
-- 当前版本：`v2.4`
-- 本地卡输出：`public/cards/催眠app二改MVU v2.4.png`（`public/cards/` 已忽略，不提交到主仓库）
+- 当前版本：`v2.5`
+- 本地卡输出：`public/cards/催眠app二改MVU v2.5.png`（`public/cards/` 已忽略，不提交到主仓库）
 - 本地前端镜像：`public/frontends/hypnosis-app/`
 - 手机前端镜像：`public/frontends/hypnosis-app-phone/`
 - 前端生成脚本：`scripts/mirror-frontend.mjs`
@@ -119,5 +119,5 @@
 可以直接这样说：
 
 ```text
-读取 docs/PROJECT_STATE.md 和 docs/MULTI_AGENT_WORKFLOW.md。按多 agent 轻量工作流继续，只启动相关 agent。当前版本是 v2.4。
+读取 docs/PROJECT_STATE.md 和 docs/MULTI_AGENT_WORKFLOW.md。按多 agent 轻量工作流继续，只启动相关 agent。当前版本是 v2.5。
 ```

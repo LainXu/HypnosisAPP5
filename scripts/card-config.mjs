@@ -1,4 +1,4 @@
-export const VERSION_NAME = process.env.HYPNOOS_VERSION_NAME || "v2.4";
+export const VERSION_NAME = process.env.HYPNOOS_VERSION_NAME || "v2.5";
 export const CARD_BASENAME = process.env.HYPNOOS_CARD_BASENAME || `催眠app二改MVU ${VERSION_NAME}.png`;
 export const CARD_PATH = process.env.HYPNOOS_CARD_PATH || `public/cards/${CARD_BASENAME}`;
 export const DIST_REPO = "LainXu/HypnosisAPP5-dist";
